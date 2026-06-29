@@ -1,7 +1,7 @@
 // Translated from Lingo: behavior_editor-colorable menu item.ls
 
 class BehaviorEditorColorableMenuItem {
-    var s: Sprite?
+    var s: LingoSprite?
     var b: String = ""
 
     func beginSprite(_ spriteNum: Int) {
@@ -19,7 +19,7 @@ class BehaviorEditorColorableMenuItem {
         if let m = member(memberName), m.memberNum > 0 {
             s?.member = m
         } else {
-            print("\(b) \(c) failed")
+            debugLog("\(b) \(c) failed")
         }
     }
 }

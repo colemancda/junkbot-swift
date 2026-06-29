@@ -1,18 +1,24 @@
 // Translated from Lingo: parent_game manager.ls
 
-class GameManager {
-    var gameState: String = "#PREGAME"
-    var currentLevel: Any? = nil
-    var currentLevelIndex: Int = 1
-    var levelList: [Any]? = nil
+public class GameManager {
+    public var gameState: String = "#PREGAME"
+    public var currentLevel: LV = .void
+    public var currentLevelIndex: Int = 1
+    public var levelList: LingoList? = nil
 
-    init() {
+    public init() {
         gameState = "#PREGAME"
         prepareLevelMenu()
     }
 
-    func prepareLevelMenu() {
-        Glob.shared["building"] = [["state": "#open", "LEVELS": [Any]()]]
+    public func prepareLevelMenu() {
+        let firstBuilding = PropList()
+        firstBuilding["state"] = .string("#open")
+        firstBuilding["LEVELS"] = .list(LingoList())
+        let buildingList = LingoList()
+        buildingList.add(.propList(firstBuilding))
+        Glob.shared["building"] = .list(buildingList)
+
         var building = 1
         var level = 1
         // NOTE: Lingo iterates castMembers of castLib "levels"; stub out here
@@ -23,75 +29,74 @@ class GameManager {
             // leveldata.info.title = Glob.shared.config_manager.restoreCommas(leveldata.info.title)
             // leveldata.info.hint = Glob.shared.config_manager.restoreCommas(leveldata.info.hint)
             // Glob.shared.building[building].LEVELS[level] = [...]
-            var keys: Int? = nil // stub: externalParamValue("sw2")
-            if keys == nil {
-                keys = 10
-            }
-            Glob.shared["keyrequired"] = 10
-            Glob.shared["current"] = ["building": 1, "level": 1, "moves": 0]
+            Glob.shared["keyrequired"] = .int(10)
+            let current = PropList()
+            current["building"] = .int(1)
+            current["level"] = .int(1)
+            current["moves"] = .int(0)
+            Glob.shared["current"] = .propList(current)
             level += 1
             if level > 15 {
                 level = 1
                 building += 1
-                if var buildings = Glob.shared["building"] as? [[String: Any]] {
-                    while buildings.count < building {
-                        buildings.append([:])
+                if let buildingLV = Glob.shared["building"].asList {
+                    while buildingLV.count < building {
+                        let b = PropList()
+                        b["state"] = .string("#locked")
+                        b["LEVELS"] = .list(LingoList())
+                        buildingLV.add(.propList(b))
                     }
-                    buildings[building - 1] = ["state": "#locked", "LEVELS": [Any]()]
-                    Glob.shared["building"] = buildings
                 }
             }
-            Glob.shared["plaque"] = "welcome"
+            Glob.shared["plaque"] = .string("welcome")
         }
-        Glob.shared["hof"] = 60
-        if var rankdata = Glob.shared["rankdata"] as? [String: Any] {
-            rankdata["serverState"] = "#network"
-            Glob.shared["rankdata"] = rankdata
+        Glob.shared["hof"] = .int(60)
+        if let rankdata = Glob.shared["rankdata"].asPropList {
+            rankdata["serverState"] = .string("#network")
         }
         // let record = Glob.shared.database_manager.getRecord() -- stub
-        let record: [String: Any]? = nil // stub
+        let record: PropList? = nil // stub
         if let record = record {
             decodeRecord(record)
         }
         totalKeys()
-        if let rankdata = Glob.shared["rankdata"] as? [String: Any],
-           let keys = rankdata["keys"] as? Int,
-           let hof = Glob.shared["hof"] as? Int,
+        if let rankdata = Glob.shared["rankdata"].asPropList,
+           let keys = rankdata["keys"].asInt,
+           let hof = Glob.shared["hof"].asInt,
            keys >= hof {
-            var rd = rankdata
-            rd["AlreadySawHOF"] = "#YES"
-            Glob.shared["rankdata"] = rd
+            rankdata["AlreadySawHOF"] = .string("#YES")
         }
     }
 
-    func encodeRecord() -> [String: Any] {
-        var rec = [String: Any]()
+    public func encodeRecord() -> PropList {
+        let rec = PropList()
         var state = 2
         var record = ""
         var total = 0
-        guard let buildings = Glob.shared["building"] as? [[String: Any]] else { return rec }
-        guard let current = Glob.shared["current"] as? [String: Any] else { return rec }
-        let currentBuilding = current["building"] as? Int ?? 0
-        let currentLevelIdx = current["level"] as? Int ?? 0
-        let currentMoves = current["moves"] as? Int ?? 0
-        for (bn, b) in buildings.enumerated() {
+        guard let buildings = Glob.shared["building"].asList else { return rec }
+        guard let current = Glob.shared["current"].asPropList else { return rec }
+        let currentBuilding = current["building"].asInt ?? 0
+        let currentLevelIdx = current["level"].asInt ?? 0
+        let currentMoves = current["moves"].asInt ?? 0
+        for bn in 0..<buildings.count {
             let bnIdx = bn + 1
-            guard let levels = b["LEVELS"] as? [[String: Any]] else { continue }
-            for (ln, L) in levels.enumerated() {
+            guard let b = buildings[bnIdx].asPropList else { continue }
+            guard let levels = b["LEVELS"].asList else { continue }
+            for ln in 0..<levels.count {
                 let lnIdx = ln + 1
-                var m: Any
+                guard let L = levels[lnIdx].asPropList else { continue }
+                let mInt: Int
                 if (bnIdx == currentBuilding) && (lnIdx == currentLevelIdx) {
-                    m = currentMoves
+                    mInt = currentMoves
                 } else {
-                    m = L["moves"] as? Int ?? 0
+                    mInt = L["moves"].asInt ?? 0
                 }
-                let mInt = m as? Int ?? 0
                 if mInt == 0 {
                     state = 0
                     continue
                 }
                 total += mInt
-                let goal = L["goal"] as? Int ?? 0
+                let goal = L["goal"].asInt ?? 0
                 if (state > 0) && (mInt > goal) {
                     state = 1
                 }
@@ -101,7 +106,7 @@ class GameManager {
                 } else {
                     mStr = String(mInt)
                 }
-                let index = L["index"] as? Int ?? 0
+                let index = L["index"].asInt ?? 0
                 record += "\(index) \(mStr),"
             }
         }
@@ -109,89 +114,86 @@ class GameManager {
         if record.hasSuffix(",") {
             record.removeLast()
         }
-        rec["state"] = state
-        rec["total"] = total
-        rec["record"] = record
+        rec["state"] = .int(state)
+        rec["total"] = .int(total)
+        rec["record"] = .string(record)
         totalKeys()
-        if var rankdata = Glob.shared["rankdata"] as? [String: Any] {
-            rankdata["moves"] = total
-            Glob.shared["rankdata"] = rankdata
+        if let rankdata = Glob.shared["rankdata"].asPropList {
+            rankdata["moves"] = .int(total)
         }
         return rec
     }
 
-    func decodeRecord(_ rec: [String: Any]) {
-        guard let recordStr = rec["record"] as? String else { return }
-        let items = recordStr.components(separatedBy: ",")
+    public func decodeRecord(_ rec: PropList) {
+        guard let recordStr = rec["record"].asString else { return }
+        let items = recordStr.split(separator: ",")
         for entry in items {
-            let words = entry.trimmingCharacters(in: .whitespaces).components(separatedBy: " ").filter { !$0.isEmpty }
-            guard words.count >= 2,
-                  let n = Int(words[0]),
-                  let m = Int(words[1]) else { continue }
+            let trimmed = entry.drop(while: { $0 == " " })
+            let parts = trimmed.split(separator: " ")
+            guard parts.count >= 2,
+                  let n = Int(parts[0]),
+                  let m = Int(parts[1]) else { continue }
             let building = (n - 1) / 15 + 1
             let level = n - (15 * (building - 1))
-            if var buildings = Glob.shared["building"] as? [[String: Any]],
-               buildings.count >= building {
-                if var levels = buildings[building - 1]["LEVELS"] as? [[String: Any]],
-                   levels.count >= level {
-                    levels[level - 1]["moves"] = m
-                    buildings[building - 1]["LEVELS"] = levels
-                    Glob.shared["building"] = buildings
-                }
+            if let buildingList = Glob.shared["building"].asList,
+               buildingList.count >= building,
+               let b = buildingList[building].asPropList,
+               let levels = b["LEVELS"].asList,
+               levels.count >= level,
+               let L = levels[level].asPropList {
+                L["moves"] = .int(m)
             }
         }
-        if var rankdata = Glob.shared["rankdata"] as? [String: Any] {
+        if let rankdata = Glob.shared["rankdata"].asPropList {
             rankdata["moves"] = rec["total"]
-            Glob.shared["rankdata"] = rankdata
         }
     }
 
-    func setGame(_ L: [Any]) {
+    public func setGame(_ L: LingoList) {
         levelList = L
         currentLevelIndex = 1
     }
 
-    func selectlevel() {
+    public func selectlevel() {
         exitGame()
-        go("levels") // stub
+        go("levels")
     }
 
-    func startGame() {
-        go("play") // stub
+    public func startGame() {
+        go("play")
         startLevel()
     }
 
-    func restartLevel() {
+    public func restartLevel() {
         // Glob.shared.PLAYER.play_manager.leave()
         // Glob.shared.PLAYER.play_manager.setLevel(currentLevel)
         // Glob.shared.PLAYER.play_manager.startLevel()
     }
 
-    func pauseLevel(_ flag: Bool) {
+    public func pauseLevel(_ flag: Bool) {
         if gameState == "#INLEVEL" {
             // Glob.shared.PLAYER.play_manager.pauseLevel(flag)
         }
     }
 
-    func exitGame() {
+    public func exitGame() {
         // Glob.shared.PLAYER.play_manager.leave()
-        SndMusicEnd() // stub
+        SndMusicEnd()
     }
 
-    func gameOverButton() {
+    public func gameOverButton() {
         // Glob.shared.PLAYER.play_manager.leave()
         gameState = "#PREGAME"
-        SndMusicEnd() // stub
+        SndMusicEnd()
         // Glob.shared.download_manager.mainmenu()
     }
 
-    func callback(_ p: String) {
+    public func callback(_ p: String) {
         switch p {
         case "#com_nextlevel":
-            if var current = Glob.shared["current"] as? [String: Any],
-               let lv = current["level"] as? Int {
-                current["level"] = lv + 1
-                Glob.shared["current"] = current
+            if let current = Glob.shared["current"].asPropList,
+               let lv = current["level"].asInt {
+                current["level"] = .int(lv + 1)
             }
             startLevel()
         case "#title_done":
@@ -206,15 +208,15 @@ class GameManager {
         }
     }
 
-    func endLevel(_ winOrLose: String) {
-        SndMusicEnd() // stub
-        setCursor("#none") // stub
+    public func endLevel(_ winOrLose: String) {
+        SndMusicEnd()
+        setCursor("#none")
         if winOrLose == "#WIN" {
-            if var current = Glob.shared["current"] as? [String: Any] {
+            if let current = Glob.shared["current"].asPropList {
                 // current["moves"] = Glob.shared.PLAYER.play_manager.gamestatus.moves
-                Glob.shared["current"] = current
+                _ = current
             }
-            SndSFX("voice_ohyeah") // stub
+            SndSFX("voice_ohyeah")
             intermission()
             // Glob.shared.database_manager.setRecord(encodeRecord())
         } else {
@@ -222,82 +224,82 @@ class GameManager {
         }
     }
 
-    func startLevel() {
+    public func startLevel() {
         // Glob.shared.PLAYER.play_manager.leave()
-        SndMusicStart("level\(Int.random(in: 1...5))") // stub
+        SndMusicStart("level\(lingoRandom(5))")
         if levelList == nil {
-            guard let current = Glob.shared["current"] as? [String: Any],
-                  let buildingIdx = current["building"] as? Int,
-                  let levelIdx = current["level"] as? Int,
-                  let buildings = Glob.shared["building"] as? [[String: Any]],
+            guard let current = Glob.shared["current"].asPropList,
+                  let buildingIdx = current["building"].asInt,
+                  let levelIdx = current["level"].asInt,
+                  let buildings = Glob.shared["building"].asList,
                   buildings.count >= buildingIdx,
-                  let levels = buildings[buildingIdx - 1]["LEVELS"] as? [[String: Any]] else { return }
+                  let b = buildings[buildingIdx].asPropList,
+                  let levels = b["LEVELS"].asList else { return }
             if levelIdx > levels.count {
                 selectlevel()
             } else {
-                let lvl = levels[levelIdx - 1]
+                guard let lvl = levels[levelIdx].asPropList else { return }
                 currentLevel = lvl["data"]
                 // Glob.shared.PLAYER.play_manager.setLevel(currentLevel)
-                // Glob.shared.title_obj.updateData([buildingIdx, levelIdx, lvl["title"]], ["object": self, "parameter": "#title_done"])
+                // Glob.shared.title_obj.updateData(...)
             }
         } else if let list = levelList {
-            currentLevel = list[currentLevelIndex - 1]
+            currentLevel = list[currentLevelIndex]
             // Glob.shared.PLAYER.play_manager.setLevel(currentLevel)
             // Glob.shared.PLAYER.play_manager.startLevel()
         }
     }
 
-    func loseGame() {
-        SndMusicEnd() // stub
+    public func loseGame() {
+        SndMusicEnd()
         gameState = "#loseGame"
         // Glob.shared.fail_msg_obj.updateData()
     }
 
-    func finishGame() {
-        SndMusicEnd() // stub
+    public func finishGame() {
+        SndMusicEnd()
         gameState = "#finishGame"
         // Glob.shared.PLAYER["signsprite"].showSign("signGameFinish", "#gameOverButton")
     }
 
-    func intermission() {
+    public func intermission() {
         gameState = "#INTERLEVEL"
         // Glob.shared["master_obj"].dropBox()
     }
 
-    func totalKeys() {
+    public func totalKeys() {
         var keys = 0
-        guard let buildings = Glob.shared["building"] as? [[String: Any]] else { return }
-        for i in 0..<min(4, buildings.count) {
-            if let levels = buildings[i]["LEVELS"] as? [[String: Any]] {
-                for j in 0..<levels.count {
-                    if let moves = levels[j]["moves"] as? Int, moves > 0 {
+        guard let buildings = Glob.shared["building"].asList else { return }
+        for i in 1...max(1, min(4, buildings.count)) {
+            if let b = buildings[i].asPropList,
+               let levels = b["LEVELS"].asList {
+                for j in 1...max(1, levels.count) {
+                    if let L = levels[j].asPropList,
+                       let moves = L["moves"].asInt, moves > 0 {
                         keys += 1
                     }
                 }
             }
         }
-        if var rankdata = Glob.shared["rankdata"] as? [String: Any] {
-            rankdata["keys"] = keys
-            Glob.shared["rankdata"] = rankdata
+        if let rankdata = Glob.shared["rankdata"].asPropList {
+            rankdata["keys"] = .int(keys)
         }
     }
 
-    func goldTotal() -> Int {
+    public func goldTotal() -> Int {
         var gotgold = 0
-        guard let buildings = Glob.shared["building"] as? [[String: Any]] else { return 0 }
-        for buildingIdx in 0..<min(4, buildings.count) {
-            if var levels = buildings[buildingIdx]["LEVELS"] as? [[String: Any]] {
-                for levelIdx in 0..<min(15, levels.count) {
-                    let moves = levels[levelIdx]["moves"] as? Int ?? 0
-                    let goal = levels[levelIdx]["goal"] as? Int ?? 0
-                    if (moves > 0) && (goal >= moves) {
-                        gotgold += 1
-                        levels[levelIdx]["gold"] = 1
-                        var b = buildings[buildingIdx]
-                        b["LEVELS"] = levels
-                        var mutableBuildings = buildings
-                        mutableBuildings[buildingIdx] = b
-                        Glob.shared["building"] = mutableBuildings
+        guard let buildings = Glob.shared["building"].asList else { return 0 }
+        for buildingIdx in 1...max(1, min(4, buildings.count)) {
+            if let b = buildings[buildingIdx].asPropList,
+               let levels = b["LEVELS"].asList {
+                for levelIdx in 1...max(1, min(15, levels.count)) {
+                    if let L = levels[levelIdx].asPropList {
+                        let moves = L["moves"].asInt ?? 0
+                        let goal = L["goal"].asInt ?? 0
+                        if (moves > 0) && (goal >= moves) {
+                            gotgold += 1
+                            L["gold"] = .int(1)
+                        }
                     }
                 }
             }
@@ -305,29 +307,21 @@ class GameManager {
         return gotgold
     }
 
-    func updatePlaque() -> Int {
+    public func updatePlaque() -> Int {
         let gotgold = goldTotal()
         if gotgold == 60 {
-            Glob.shared["plaque"] = "president"
+            Glob.shared["plaque"] = .string("president")
         } else if gotgold >= 40 {
-            Glob.shared["plaque"] = "year"
+            Glob.shared["plaque"] = .string("year")
         } else if gotgold >= 30 {
-            Glob.shared["plaque"] = "Month"
+            Glob.shared["plaque"] = .string("Month")
         } else if gotgold >= 20 {
-            Glob.shared["plaque"] = "week"
+            Glob.shared["plaque"] = .string("week")
         } else if gotgold >= 10 {
-            Glob.shared["plaque"] = "day"
+            Glob.shared["plaque"] = .string("day")
         } else {
-            Glob.shared["plaque"] = "welcome"
+            Glob.shared["plaque"] = .string("welcome")
         }
         return gotgold
     }
 }
-
-// Stubs for Director-specific global functions
-func go(_ scene: String) { /* stub */ }
-func setCursor(_ cursor: String) { /* stub */ }
-func SndSFX(_ name: String) { /* stub */ }
-func SndSFX(_ name: String, _ arg1: Any?, _ arg2: Int) { /* stub */ }
-func SndMusicStart(_ name: String) { /* stub */ }
-func SndMusicEnd() { /* stub */ }

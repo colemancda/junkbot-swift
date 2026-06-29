@@ -4,15 +4,15 @@ class BehaviorRankMeter {
     var spriteNum: Int = 0
 
     func beginSprite() {
-        let rankdata = glob["rankdata"] as! [String: Any]
-        let rankKeys = rankdata["keys"] as! Int
-        let hof = glob["hof"] as! Int
+        let rankdata = Glob.shared["rankdata"].asPropList!
+        let rankKeys = rankdata["keys"].asInt!
+        let hof = Glob.shared["hof"].asInt!
         if rankKeys < hof {
             // no-op
         } else {
             let barwidth = 125
-            let rank = rankdata["rank"] as! Int
-            let total = rankdata["players"] as! Int
+            let rank = rankdata["rank"].asInt!
+            let total = rankdata["players"].asInt!
             let mybar: Int
             if rank == 0 {
                 mybar = barwidth
@@ -25,9 +25,10 @@ class BehaviorRankMeter {
             if frameLabel == "levels" || frameLabel == "credits" {
                 sprite(spriteNum).loc = Point(x: 497, y: 296)
             } else {
-                if let masterObj = glob["master_obj"] {
-                    let masterProp = (masterObj as AnyObject).prop as? [String: Any]
-                    if let masterState = masterProp?["state"] as? String {
+                let masterObjLV = Glob.shared["master_obj"]
+                if !masterObjLV.isVoid {
+                    let masterObj = masterObjLV.asPropList
+                    if let masterState = masterObj?["state"].asString {
                         if masterState == "hide" {
                             sprite(spriteNum).loc = Point(x: 1000, y: 1000)
                         } else {

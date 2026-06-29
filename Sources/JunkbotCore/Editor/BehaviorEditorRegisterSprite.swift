@@ -7,7 +7,13 @@ class BehaviorEditorRegisterSprite {
         glob.EDITOR[myName] = sprite(spriteNum)
     }
 
-    func getPropertyDescriptionList() -> [String: Any] {
-        return ["myName": ["comment": "Sprite name:", "format": "symbol", "default": nil as Any?]]
+    func getPropertyDescriptionList() -> PropList {
+        let L = PropList()
+        let desc = PropList()
+        desc["comment"] = .string("Sprite name:")
+        desc["format"] = .string("symbol")
+        desc["default"] = .void
+        L["myName"] = .propList(desc)
+        return L
     }
 }

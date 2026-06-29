@@ -7,7 +7,7 @@ class BehaviorListRoHiLite {
 
     func beginSprite() {
         snum = spriteNum - 1
-        glob["levelList"] = self
+        Glob.shared["levelList"] = .void  // set externally as object reference
     }
 
     func mouseWithin(mouseV: Int) {
@@ -23,8 +23,8 @@ class BehaviorListRoHiLite {
         if (roLineNum > 14) || (roLineNum < 0) {
             return
         }
-        (glob["current"] as AnyObject).level = roLineNum + 1
+        Glob.shared["current"].asPropList!["level"] = .int(roLineNum + 1)
         SndSFX("jump2")
-        (glob["PLAYER"] as AnyObject).game_manager.startGame()
+        (Glob.shared["PLAYER"] as AnyObject).game_manager.startGame()
     }
 }

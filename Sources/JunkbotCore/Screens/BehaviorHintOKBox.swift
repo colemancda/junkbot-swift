@@ -2,6 +2,6 @@
 
 class BehaviorHintOKBox {
     func mouseUp() {
-        (glob["hint_obj"] as AnyObject).updateState("move2")
+        (Glob.shared["hint_obj"] as AnyObject).updateState("move2")
     }
 }

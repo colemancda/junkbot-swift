@@ -2,44 +2,52 @@
 
 struct MovieDummyDataManager {
     static func initDummy() {
-        glob["keyrequired"] = 2
-        glob["current"] = ["building": 1, "level": 1, "moves": 30] as [String: Any]
-        var buildings = [Any]()
+        Glob.shared["keyrequired"] = .int(2)
+        let current = PropList()
+        current["building"] = .int(1)
+        current["level"] = .int(1)
+        current["moves"] = .int(30)
+        Glob.shared["current"] = .propList(current)
+        let buildings = LingoList()
         for i in 1...4 {
-            var temp = [Any]()
+            let levels = LingoList()
             for _ in 1...15 {
-                temp.append(["title": "Dummy TITLE HAHA", "goal": 20, "moves": 0] as [String: Any])
+                let lvl = PropList()
+                lvl["title"] = .string("Dummy TITLE HAHA")
+                lvl["goal"] = .int(20)
+                lvl["moves"] = .int(0)
+                levels.add(.propList(lvl))
             }
             let state: String = (i == 1) ? "open" : "locked"
-            buildings.append(["state": state, "LEVELS": temp] as [String: Any])
+            let building = PropList()
+            building["state"] = .string(state)
+            building["LEVELS"] = .list(levels)
+            buildings.add(.propList(building))
         }
-        glob["building"] = buildings
+        Glob.shared["building"] = .list(buildings)
     }
 
-    static func updateDummyData(_ data: [AnyHashable: Any]) {
-        var buildings = glob["building"] as! [[String: Any]]
-        let buildingIdx = (data[1] as! Int) - 1
-        let levelIdx = (data[2] as! Int) - 1
-        var tempLevel = (buildings[buildingIdx]["LEVELS"] as! [[String: Any]])[levelIdx]
-        if let title = data["title"] as? String {
-            tempLevel["title"] = title
+    static func updateDummyData(_ data: PropList) {
+        let buildings = Glob.shared["building"].asList!
+        let buildingIdx = data["building"].asInt!
+        let levelIdx = data["level"].asInt!
+        let buildingEntry = buildings[buildingIdx].asPropList!
+        let levels = buildingEntry["LEVELS"].asList!
+        let tempLevel = levels[levelIdx].asPropList!
+        if let title = data["title"].asString {
+            tempLevel["title"] = .string(title)
         }
-        if let goal = data["goal"] as? Int {
-            tempLevel["goal"] = goal
+        if let goal = data["goal"].asInt {
+            tempLevel["goal"] = .int(goal)
         }
-        if let moves = data["moves"] as? Int {
-            tempLevel["moves"] = moves
+        if let moves = data["moves"].asInt {
+            tempLevel["moves"] = .int(moves)
         }
-        var levels = buildings[buildingIdx]["LEVELS"] as! [[String: Any]]
-        levels[levelIdx] = tempLevel
-        buildings[buildingIdx]["LEVELS"] = levels
-        glob["building"] = buildings
     }
 
-    static func updateBuilding(_ data: [Any]) {
-        var buildings = glob["building"] as! [[String: Any]]
-        let idx = (data[0] as! Int) - 1
-        buildings[idx]["state"] = data[1] as! String
-        glob["building"] = buildings
+    static func updateBuilding(_ data: LingoList) {
+        let buildings = Glob.shared["building"].asList!
+        let idx = data[1].asInt!
+        buildings[idx].asPropList!["state"] = data[2]
     }
 }

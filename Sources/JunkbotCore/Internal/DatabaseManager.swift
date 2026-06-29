@@ -1,26 +1,22 @@
 // Translated from Lingo: parent_database manager.ls
 
-import Foundation
-
-class DatabaseManager {
-    var state: [String: Any] = [:]
-    var rank: [String: Any]? = nil
-    var hallOfFame: [String: Any]? = nil
-    var loggedin: Int? = nil
-    var user_name: String? = nil
-    var netID: Any? = nil
-    var hofnetID: Any? = nil
+class DatabaseManager: BehaviorBase {
+    var state: PropList = PropList()
+    var rank: PropList? = nil
+    var hallOfFame: PropList? = nil
+    var loggedin: Int = 0
+    var user_name: String = ""
+    var netID: LV = .void
+    var hofnetID: LV = .void
     var site: String = ""
     var prefix: String = "/build/junkbot/"
     var suffix: String = ".asp"
 
-    // Reference to global state (injected externally)
-    var glob: [String: Any] = [:]
-
-    init() {
-        netID = nil
-        hofnetID = nil
-        loggedin = nil
+    override init() {
+        super.init()
+        netID = .void
+        hofnetID = .void
+        loggedin = 0
         site = ""
         prefix = "/build/junkbot/"
         suffix = ".asp"
@@ -32,7 +28,7 @@ class DatabaseManager {
     }
 
     func READY() -> Bool {
-        return netID == nil
+        return netID.isVoid
     }
 
     func getState() {
@@ -45,30 +41,28 @@ class DatabaseManager {
         // Stub: post state to server
     }
 
-    func setRecord(info: [String: Any]) {
+    func setRecord(info: PropList) {
         guard loggedin == 1 else { return }
-        if var rankdata = glob["rankdata"] as? [String: Any] {
-            rankdata["serverState"] = "network"
-            glob["rankdata"] = rankdata
+        if let rankdata = Glob.shared["rankdata"].asPropList {
+            rankdata["serverState"] = .string("network")
         }
         state["total"] = info["total"]
         state["state"] = info["state"]
         state["record"] = info["record"]
-        state["userName"] = user_name
-        let timestamp = "\(Date())"
-        let checkvalue = "\(info["record"] ?? "") \(user_name ?? "") \(info["total"] ?? "") \(info["state"] ?? "") \(timestamp)"
+        state["userName"] = .string(user_name)
+        let timestamp = "\(currentMilliseconds)"
+        let checkvalue = "\(info["record"].asString ?? "") \(user_name) \(info["total"].asString ?? "") \(info["state"].asString ?? "") \(timestamp)"
         let checksum = checksumString(checkvalue)
-        state["time"] = "\(timestamp) \(checksum)"
+        state["time"] = .string("\(timestamp) \(checksum)")
         setState()
     }
 
-    func getRecord() -> [String: Any]? {
+    func getRecord() -> PropList? {
         guard loggedin == 1 else { return nil }
-        if var rankdata = glob["rankdata"] as? [String: Any] {
-            rankdata["serverState"] = "network"
-            glob["rankdata"] = rankdata
+        if let rankdata = Glob.shared["rankdata"].asPropList {
+            rankdata["serverState"] = .string("network")
         }
-        var info: [String: Any] = [:]
+        let info = PropList()
         info["total"] = state["total"]
         info["state"] = state["state"]
         info["record"] = state["record"]
@@ -76,54 +70,54 @@ class DatabaseManager {
     }
 
     func hofReady() -> Bool {
-        return hofnetID == nil
+        return hofnetID.isVoid
     }
 
-    func loadHallOfFame(callbackobject: Any?, callbackhandler: String?) {
+    func loadHallOfFame() {
         guard hofReady() else { return }
         // hofnetID = getNetText(site + prefix + "getTopTen" + suffix)
         // Stub: initiate network request
     }
 
-    func getHallOfFame() -> [String: Any]? {
+    func getHallOfFame() -> PropList? {
         return hallOfFame
     }
 
     /// Called once per frame by the actor list to process pending network results.
     func stepFrame() {
         // Process main netID
-        if netID != nil {
+        if !netID.isVoid {
             // if netDone(netID):
             //   t = netTextResult(netID)
             //   answer = decodeMulti(t)
-            //   netID = nil
+            //   netID = .void
             //   handle rank / state / notloggedin answers
             // else if netError(netID) != "":
-            //   netID = nil
+            //   netID = .void
             // Stub: async network completion handled externally
         }
 
         // Process hall-of-fame netID
-        if hofnetID != nil {
+        if !hofnetID.isVoid {
             // if netDone(hofnetID):
             //   t = netTextResult(hofnetID)
-            //   hofnetID = nil
+            //   hofnetID = .void
             //   hallOfFame = decodeMulti(t)
             // Stub: async network completion handled externally
         }
     }
 
-    /// Decode an HTTP query-string response ("key=value&key=value...") into a dictionary.
-    func decodeMulti(_ s: String) -> [String: String] {
-        var ret: [String: String] = [:]
-        let pairs = s.components(separatedBy: "&")
+    /// Decode an HTTP query-string response ("key=value&key=value...") into a prop list.
+    func decodeMulti(_ s: String) -> PropList {
+        let ret = PropList()
+        let pairs = splitOn(s, sep: "&")
         for pair in pairs {
-            let parts = pair.components(separatedBy: "=")
-            guard parts.count >= 1 else { continue }
+            let parts = splitOn(pair, sep: "=")
+            guard !parts.isEmpty else { continue }
             let k = parts[0]
             if k.isEmpty { continue }
             let v = parts.dropFirst().joined(separator: "=")
-            ret[k] = v
+            ret[k] = .string(v)
         }
         return ret
     }
@@ -139,5 +133,22 @@ class DatabaseManager {
             sum = (sum + a) % 94113
         }
         return sum
+    }
+
+    // MARK: - String helpers
+
+    func splitOn(_ s: String, sep: Character) -> [String] {
+        var parts: [String] = []
+        var current = ""
+        for c in s {
+            if c == sep {
+                parts.append(current)
+                current = ""
+            } else {
+                current.append(c)
+            }
+        }
+        parts.append(current)
+        return parts
     }
 }

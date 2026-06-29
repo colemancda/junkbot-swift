@@ -1,13 +1,10 @@
 // Translated from Lingo: behavior_authorMode_vis_toggle.ls
 
-class BehaviorAuthorModeVisToggle {
+class BehaviorAuthorModeVisToggle: BehaviorBase {
     var spriteNum: Int = 0
 
-    // Reference to global state (injected externally)
-    var glob: [String: Any]? = nil
-
     func beginSprite() {
-        let authorMode = (glob?["authorMode"] as? Bool) ?? false
+        let authorMode = Glob.shared["authorMode"].asInt == 1
         if authorMode {
             // nothing()
         } else {

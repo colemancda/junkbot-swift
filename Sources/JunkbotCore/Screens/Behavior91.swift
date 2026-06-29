@@ -2,6 +2,6 @@
 
 class Behavior91 {
     func mouseUp() {
-        (glob["award_obj"] as AnyObject).updateState("move2")
+        (Glob.shared["award_obj"] as AnyObject).updateState("move2")
     }
 }

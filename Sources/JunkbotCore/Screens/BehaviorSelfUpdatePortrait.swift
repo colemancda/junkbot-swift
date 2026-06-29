@@ -4,9 +4,9 @@ class BehaviorSelfUpdatePortrait {
     var spriteNum: Int = 0
 
     func beginSprite() {
-        let rankdata = glob["rankdata"] as! [String: Any]
-        let hof = glob["hof"] as! Int
-        if (rankdata["keys"] as! Int) < hof {
+        let rankdata = Glob.shared["rankdata"].asPropList!
+        let hof = Glob.shared["hof"].asInt!
+        if (rankdata["keys"].asInt ?? 0) < hof {
             sprite(spriteNum).member = member("portrait_1")
             sprite(spriteNum).width = 148
             sprite(spriteNum).height = 130

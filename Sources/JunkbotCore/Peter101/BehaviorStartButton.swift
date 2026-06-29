@@ -1,21 +1,21 @@
 // Translated from Lingo: behavior_STARTBUTTON.ls
 
 class BehaviorStartButton {
-    var my: Any? = nil
+    var my: LingoSprite? = nil
     var myName: String = ""
     var spriteNum: Int = 0
 
     func beginSprite() {
         my = sprite(spriteNum)
-        myName = (my as AnyObject).member.name as! String
-        (my as AnyObject).blend = 100
+        myName = my?.member.name ?? ""
+        my?.blend = 100
     }
 
     func mouseUp() {
-        if !((glob["memo"] as? String) == "DidIt") {
-            glob["memo"] = "show"
+        if !(Glob.shared["memo"].asString == "DidIt") {
+            Glob.shared["memo"] = .string("show")
         }
-        (my as AnyObject).member = member(myName)
+        my?.member = member(myName)
         SndMusicEnd()
         go("levels")
     }
@@ -25,10 +25,10 @@ class BehaviorStartButton {
     }
 
     func mouseWithin() {
-        (my as AnyObject).member = member(myName + "_ro")
+        my?.member = member(myName + "_ro")
     }
 
     func mouseLeave() {
-        (my as AnyObject).member = member(myName)
+        my?.member = member(myName)
     }
 }

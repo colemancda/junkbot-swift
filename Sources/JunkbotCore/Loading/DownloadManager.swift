@@ -3,9 +3,9 @@
 class DownloadManager {
     var files: [String] = []
     var state: String = "preload"
-    var displaysprites: [String: [Sprite]] = [:]
+    var displaysprites: [String: [LingoSprite]] = [:]
     var displaysaveloc: [ObjectIdentifier: Point] = [:]
-    var loadingbricksprites: [[String: Any]] = []
+    var loadingbricksprites: [PropList] = []
     var nextbrick: Int = 1
     var readybrick: Int = 0
     var brickdropspeed: Int = 60
@@ -35,7 +35,7 @@ class DownloadManager {
     }
 
     func begin() {
-        bumpertimer = Int(Date().timeIntervalSince1970 * 60)
+        bumpertimer = currentTicks
         actorList.append(self)
         db("begin")
         nextbrick = 1
@@ -69,12 +69,15 @@ class DownloadManager {
         for i in 21...34 {
             let spr = sprite(i)
             let origLocV = spr.locV
-            loadingbricksprites.append(["sprite": spr, "locV": origLocV])
+            let entry = PropList()
+            entry["sprite"] = .object(spr)
+            entry["locV"] = .int(origLocV)
+            loadingbricksprites.append(entry)
             spr.locV = (origLocV % brickdropspeed) - brickdropspeed - 20
             spr.visible = true
         }
         state = "intro_anim"
-        blinktimer = Int(Date().timeIntervalSince1970 * 60)
+        blinktimer = currentTicks
     }
 
     func mainmenu() {
@@ -85,7 +88,7 @@ class DownloadManager {
         animDone()
         show(["go_btn"], v: true)
         for lbs in loadingbricksprites {
-            (lbs["sprite"] as? Sprite)?.visible = true
+            (lbs["sprite"].asObject() as? LingoSprite)?.visible = true
         }
     }
 
@@ -178,7 +181,7 @@ class DownloadManager {
     func stepFrame() {
         db("stepframe nextbrick \(nextbrick) readybrick \(readybrick)")
         if state == "preload" {
-            let ticks = Int(Date().timeIntervalSince1970 * 60)
+            let ticks = currentTicks
             if frameReady(1, marker: "loading") && (ticks > (bumpertimer + 110)) {
                 loadingframe()
             }
@@ -188,13 +191,13 @@ class DownloadManager {
             } else if nextbrick > loadingbricksprites.count && glob.database_manager.READY() {
                 show(["go_btn"], v: true)
                 displaysprites["loading_msg"]?[0].member?.text = "READY TO PLAY"
-                blinktimer = Int(Date().timeIntervalSince1970 * 60)
+                blinktimer = currentTicks
                 loadp = true
                 movieloaded()
             } else if readybrick >= nextbrick {
                 let nb = loadingbricksprites[nextbrick - 1]
-                let spr = nb["sprite"] as? Sprite
-                let targetLocV = nb["locV"] as? Int ?? 0
+                let spr = nb["sprite"].asObject() as? LingoSprite
+                let targetLocV = nb["locV"].asInt ?? 0
                 if spr?.locV == targetLocV {
                     nextbrick += 1
                 } else {

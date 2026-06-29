@@ -4,10 +4,10 @@ class BehaviorUpdateTotalMoves {
     var spriteNum: Int = 0
 
     func beginSprite() {
-        let rankdata = glob["rankdata"] as! [String: Any]
-        if (rankdata["keys"] as! Int) < (glob["hof"] as! Int) {
+        let rankdata = Glob.shared["rankdata"].asPropList!
+        if (rankdata["keys"].asInt ?? 0) < (Glob.shared["hof"].asInt ?? 0) {
             return
         }
-        sprite(spriteNum).member.text = String((glob["rankdata"] as! [String: Any])["moves"] as! Int)
+        sprite(spriteNum).member.text = String(Glob.shared["rankdata"].asPropList!["moves"].asInt!)
     }
 }

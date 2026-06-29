@@ -1,49 +1,49 @@
 // Translated from Lingo: parent_hazard slick jump parent.ls
 
-class HazardSlickJumpParent {
-    var playfield_manager: Any? = nil
-    var play_manager: PlayManager? = nil
-    var part: [String: Any]
-    var last_jump: Int = 0
-    var active_ticks: Any? = nil
-    var dir: Any? = nil
-    var paused: Int = 0
+public class HazardSlickJumpParent {
+    public var playfield_manager: LV = .void
+    public var play_manager: PlayManager? = nil
+    public var part: PropList
+    public var last_jump: Int = 0
+    public var active_ticks: Int? = nil
+    public var dir: LV = .void
+    public var paused: Int = 0
 
-    init(_ p: [String: Any]) {
+    public init(_ p: PropList) {
         part = p
         // part["behavior"] = self -- set by caller
         play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = nil // play_manager.playfield_manager
+        playfield_manager = .void // play_manager.playfield_manager
         last_jump = 0
     }
 
-    func done() {
-        play_manager?.actorDone(self)
+    public func done() {
+        if let pm = play_manager { pm.actorDone(self) }
     }
 
-    func pause() {
+    public func pause() {
         paused = 1
     }
 
-    func resume() {
+    public func resume() {
         paused = 0
-        part["state"] = "#dormant"
-        part["frame"] = 1
+        part["state"] = .string("#dormant")
+        part["frame"] = .int(1)
     }
 
-    func notify(_ notes: [String: Any]) {
-        if let destroyed = notes["destroyed"] as? Int, destroyed == 1 {
+    public func notify(_ notes: PropList) {
+        if let destroyed = notes["destroyed"].asInt, destroyed == 1 {
             done()
-        } else if notes["pos"] != nil {
-            part["pos"] = notes["pos"]!
-        } else if let stop = notes["stop"] as? Int, stop == 1 {
+        } else if !notes["pos"].isVoid {
+            part["pos"] = notes["pos"]
+        } else if let stop = notes["stop"].asInt, stop == 1 {
             pause()
-        } else if let start = notes["Start"] as? Int, start == 1 {
+        } else if let start = notes["Start"].asInt, start == 1 {
             resume()
         }
     }
 
-    func stepFrame() {
+    public func stepFrame() {
         if paused == 1 { return }
         // playfield_manager.erasePiece(part.pos) -- stub
         stepAnim()
@@ -51,40 +51,34 @@ class HazardSlickJumpParent {
         // playfield_manager.placePiece(part) -- stub
     }
 
-    func stepAnim() {
+    public func stepAnim() {
         // No animation logic in original
     }
 
-    func checkMiniFig() {
+    public func checkMiniFig() {
         // fig = playfield_manager.checkFitOrMinifig(part.pos + point(0, -1), "#BRICK_01") -- stub
-        let fig: Any? = nil // stub
+        let fig: LV = .void // stub
         // fig2 = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_01") -- stub
-        let fig2: Any? = nil // stub
-        let ticks = Int(Date().timeIntervalSince1970 * 60)
+        let fig2: LV = .void // stub
+        let ticks = currentTicks
 
-        let figIsDict = fig is [String: Any]
-        let fig2IsDict = fig2 is [String: Any]
-        // Check: (fig == fig2) && ilk(fig) == #propList && (ticks - last_jump) > 60
-        // Since both are stubs (nil), guard will fail; shown for structure fidelity
-        if figIsDict && fig2IsDict && (ticks - last_jump) > 60 {
-            if let figDict = fig as? [String: Any], let fig2Dict = fig2 as? [String: Any] {
-                // check fig === fig2 (same object)
-                _ = figDict; _ = fig2Dict
-                SndSFX("jump3")
-                // fig.behavior.notify(["jump": part]) -- stub
-                part["state"] = "#Active"
-                part["frame"] = 1
-                last_jump = ticks
-            }
+        // Check: fig == fig2 && fig.isPropList && (ticks - last_jump) > 60
+        if fig.isPropList && fig2.isPropList && (ticks - last_jump) > 60 {
+            // check fig === fig2 (same object) — only possible to verify at runtime with identity
+            SndSFX("jump3")
+            // fig.asPropList!.behavior.notify(["jump": part]) -- stub
+            part["state"] = .string("#Active")
+            part["frame"] = .int(1)
+            last_jump = ticks
         } else {
-            let state = part["state"] as? String ?? ""
+            let state = part["state"].asString ?? ""
             if state == "#Active" {
-                let frame = (part["frame"] as? Int ?? 0) + 1
+                let frame = (part["frame"].asInt ?? 0) + 1
                 if frame > 4 {
-                    part["frame"] = 1
-                    part["state"] = "#dormant"
+                    part["frame"] = .int(1)
+                    part["state"] = .string("#dormant")
                 } else {
-                    part["frame"] = frame
+                    part["frame"] = .int(frame)
                 }
             }
         }

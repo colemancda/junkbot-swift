@@ -1,43 +1,34 @@
 // Translated from Lingo: movie_main.ls
 
-import Foundation
-
-/// Top-level application state, mirroring the Lingo `glob` global.
-var glob: [String: Any] = [:]
 var version: String = ""
 
 func prepareMovie() {
     // the actorList = []
     // the itemDelimiter = ","
-    glob = [
-        "EDITOR": [String: Any](),
-        "catalog": [String: Any](),
-        "PLAYER": [String: Any]()
-    ]
-    glob["config_manager"] = BehaviorConfigManager()
-    // glob["download_manager"] = new(script("download manager"))
-    glob["legoparts_manager"] = BehaviorLegopartsManager()
-    // glob.PLAYER["play_manager"] = new(script("play manager"))
-    glob["database_manager"] = DatabaseManager()
+    let g = Glob.shared
+    g["EDITOR"] = .propList(PropList())
+    g["catalog"] = .propList(PropList())
+    g["PLAYER"] = .propList(PropList())
+    g["config_manager"] = .void  // BehaviorConfigManager instance stored externally
+    g["legoparts_manager"] = .void  // BehaviorLegopartsManager instance stored externally
+    g["database_manager"] = .void  // DatabaseManager instance stored externally
     initSound()
-    glob["authorMode"] = 0
-    glob["split_tall_members"] = 1
+    g["authorMode"] = .int(0)
+    g["split_tall_members"] = .int(1)
     // put "0" into field "editor par field"
     // put "" into field "catalog title"
     // put "" into field "editor hint field"
 }
 
 func startMovie() {
-    var rankdata: [String: Any] = [:]
-    rankdata["keys"] = 0
-    rankdata["moves"] = 0
-    rankdata["rank"] = 0
-    rankdata["players"] = 0
-    glob["rankdata"] = rankdata
+    let rankdata = PropList()
+    rankdata["keys"] = .int(0)
+    rankdata["moves"] = .int(0)
+    rankdata["rank"] = .int(0)
+    rankdata["players"] = .int(0)
+    Glob.shared["rankdata"] = .propList(rankdata)
     // glob.download_manager.begin()
-    if let dm = glob["database_manager"] as? DatabaseManager {
-        dm.getState()
-    }
+    // glob.database_manager.getState()
 }
 
 func movieloaded() {
@@ -50,7 +41,7 @@ func stopMovie() {
     // the actorList = []
 }
 
-func streamStatus(url: String, state: Any, bytesSoFar: Int, bytesTotal: Int, error: Any?) {
+func streamStatus(url: String, bytesSoFar: Int, bytesTotal: Int) {
     // glob.download_manager.streamStatus(url, state, bytesSoFar, bytesTotal)
 }
 
@@ -90,51 +81,54 @@ func do_player() {
 }
 
 func setCursorEffect(_ ce: String) {
-    if glob["cursor"] == nil {
-        glob["cursor"] = [String: Any]()
+    let g = Glob.shared
+    if g["cursor"].isVoid {
+        g["cursor"] = .propList(PropList())
     }
-    if var cursor = glob["cursor"] as? [String: Any] {
-        cursor[ce] = 1
-        glob["cursor"] = cursor
+    if let cursor = g["cursor"].asPropList {
+        cursor[ce] = .int(1)
     }
     setCursor(nil)
 }
 
 func clearCursorEffect(_ ce: String) {
-    if glob["cursor"] == nil {
-        glob["cursor"] = [String: Any]()
+    let g = Glob.shared
+    if g["cursor"].isVoid {
+        g["cursor"] = .propList(PropList())
     }
     if ce == "all" {
-        glob["cursor"] = [String: Any]()
+        g["cursor"] = .propList(PropList())
     } else {
-        if var cursor = glob["cursor"] as? [String: Any] {
-            cursor[ce] = 0
-            glob["cursor"] = cursor
+        if let cursor = g["cursor"].asPropList {
+            cursor[ce] = .int(0)
         }
     }
     setCursor(nil)
 }
 
 func setCursor(_ c: String?) {
-    if glob["cursor"] == nil {
-        glob["cursor"] = [String: Any]()
+    let g = Glob.shared
+    if g["cursor"].isVoid {
+        g["cursor"] = .propList(PropList())
     }
     if let sym = c {
-        glob["cursor"] = [sym: 1]
+        let newCursor = PropList()
+        newCursor[sym] = .int(1)
+        g["cursor"] = .propList(newCursor)
     }
-    guard let cursor = glob["cursor"] as? [String: Any] else { return }
+    guard let cursor = g["cursor"].asPropList else { return }
 
-    if (cursor["text"] as? Int) == 1 {
+    if cursor["text"].asInt == 1 {
         // cursor(0) — system default cursor
-    } else if (cursor["grab_up"] as? Int) == 1 {
+    } else if cursor["grab_up"].asInt == 1 {
         // cursor([member("grab_up cursor").memberNum, member("grab cursor mask").memberNum])
-    } else if (cursor["grab_down"] as? Int) == 1 {
+    } else if cursor["grab_down"].asInt == 1 {
         // cursor([member("grab_down cursor").memberNum, member("grab cursor mask").memberNum])
-    } else if (cursor["grab_both"] as? Int) == 1 {
+    } else if cursor["grab_both"].asInt == 1 {
         // cursor([member("grab_both cursor").memberNum, member("grab cursor mask").memberNum])
-    } else if (cursor["grabber"] as? Int) == 1 {
+    } else if cursor["grabber"].asInt == 1 {
         // cursor([member("grabber cursor").memberNum, member("grabber cursor mask").memberNum])
-    } else if (cursor["eraser"] as? Int) == 1 {
+    } else if cursor["eraser"].asInt == 1 {
         // cursor([member("eraser cursor").memberNum, member("eraser cursor mask").memberNum])
     } else {
         // cursor(0) — system default cursor
@@ -142,17 +136,17 @@ func setCursor(_ c: String?) {
 }
 
 func enterFrame() {
-    print("My name is Junkbot")
+    debugLog("My name is Junkbot")
 }
 
 func exitFrame() {
-    print("I love to eat trash")
+    debugLog("I love to eat trash")
 }
 
 func prepareFrame() {
-    print("Junk is food!")
+    debugLog("Junk is food!")
 }
 
 func showGlobals() {
-    print("version = \"8.0\"")
+    debugLog("version = \"8.0\"")
 }

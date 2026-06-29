@@ -3,14 +3,24 @@
 class BehaviorEditorChooseColor {
     var myColor: String = ""
 
-    func getPropertyDescriptionList() -> [String: Any] {
-        return ["myColor": ["comment": "Color:", "format": "string", "range": ["RED", "GREEN", "BLUE", "YELLOW", "BLACK", "WHITE", "GRAY"]]]
+    func getPropertyDescriptionList() -> PropList {
+        let L = PropList()
+        let desc = PropList()
+        desc["comment"] = .string("Color:")
+        desc["format"] = .string("string")
+        let range = LingoList()
+        for c in ["RED", "GREEN", "BLUE", "YELLOW", "BLACK", "WHITE", "GRAY"] {
+            range.add(.string(c))
+        }
+        desc["range"] = .list(range)
+        L["myColor"] = .propList(desc)
+        return L
     }
 
     func mouseUp() {
-        if glob.EDITOR["edit_manager"] != nil {
+        if !glob.EDITOR["edit_manager"].isVoid {
             glob.EDITOR.edit_manager.settoolcolor(myColor)
         }
-        sendAllSprites("editor_setcolor", myColor)
+        sendAllSprites("editor_setcolor", .string(myColor))
     }
 }

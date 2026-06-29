@@ -1,55 +1,53 @@
 // Translated from Lingo: parent_hazard float parent.ls
 
-class HazardFloatParent {
-    var part: [String: Any]
-    var play_manager: PlayManager? = nil
-    var playfield_manager: Any? = nil
-    var pLoc: Any? = nil
-    var pBaseLoc: Any? = nil
-    var pDir: [Int] = [1, 0]
-    var pSpeed: Int = 2
-    var pCounter: Int = 0
-    var pLocZ: Any? = nil
-    var pTarget: Int = 0
-    var pTimer: Int = 0
+public class HazardFloatParent {
+    public var part: PropList
+    public var play_manager: PlayManager? = nil
+    public var playfield_manager: LV = .void
+    public var pLoc: LV = .void
+    public var pBaseLoc: LV = .void
+    public var pDir: [Int] = [1, 0]
+    public var pSpeed: Int = 2
+    public var pCounter: Int = 0
+    public var pLocZ: LV = .void
+    public var pTarget: Int = 0
+    public var pTimer: Int = 0
 
-    init(_ p: [String: Any]) {
+    public init(_ p: PropList) {
         part = p
         pDir = [1, 0]
         pSpeed = 2
         pCounter = 0
         pTarget = 0
         play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = nil // play_manager.playfield_manager
+        playfield_manager = .void // play_manager.playfield_manager
     }
 
-    func stepFrame() {
+    public func stepFrame() {
         pCounter = (pCounter + 1) % pSpeed
         if pCounter == 0 {
             moveMe()
         }
-        let timer = Int(Date().timeIntervalSince1970 * 60) // stub: the timer
+        let timer = currentTicks
         if pTarget != 0 && (timer > (pTimer + 120)) {
             pTarget = 0
         }
     }
 
-    func stepAnim() {
-        if let frame = part["frame"] as? Int {
-            part["frame"] = (frame % 2) + 1
-        }
+    public func stepAnim() {
+        let frame = part["frame"].asInt ?? 1
+        part["frame"] = .int((frame % 2) + 1)
     }
 
-    func moveMe() {
-        Glob.shared["minifigHit"] = nil
+    public func moveMe() {
+        Glob.shared["minifigHit"] = .void
         if pTarget != 0 {
-            part["state"] = "#Active"
+            part["state"] = .string("#Active")
         } else {
-            part["state"] = "#inactive"
+            part["state"] = .string("#inactive")
         }
-        if let frame = part["frame"] as? Int {
-            part["frame"] = frame == 1 ? 2 : 1
-        }
+        let frame = part["frame"].asInt ?? 1
+        part["frame"] = .int(frame == 1 ? 2 : 1)
         // playfield_manager.erasePiece(part.pos) -- stub
         // pos = part.pos + pDir -- stub
         // fg = playfield_manager.checkFitMiniFigHit(pos, part.type) -- stub
@@ -62,20 +60,19 @@ class HazardFloatParent {
 
         let pos_x = 0 // stub
         let pos_y = 0 // stub
-        // stub: mW, mH from playfield_manager.pf_size
-        let mW = 0 // stub
-        let mH = 0 // stub
+        let mW = 0 // stub: playfield_manager.pf_size width
+        let mH = 0 // stub: playfield_manager.pf_size height
 
         // Scan row right for minifig
         for r in pos_x...max(pos_x, mW) {
             // myObj = playfield_manager.getPart(point(r, pos_y)) -- stub
-            let myObj: [String: Any]? = nil // stub
+            let myObj: PropList? = nil // stub
             guard let obj = myObj else { continue }
-            let myPartType = obj["type"] as? String ?? ""
+            let myPartType = obj["type"].asString ?? ""
             if myPartType != "#MINIFIG" { break }
             if myPartType == "#MINIFIG" {
                 pTarget = 1
-                pTimer = Int(Date().timeIntervalSince1970 * 60)
+                pTimer = currentTicks
                 pDir = [1, 0]
                 SndSFX("siren")
                 flag = nil
@@ -85,13 +82,13 @@ class HazardFloatParent {
 
         // Scan row left for minifig
         for r in stride(from: pos_x, through: 1, by: -1) {
-            let myObj: [String: Any]? = nil // stub
+            let myObj: PropList? = nil // stub
             guard let obj = myObj else { continue }
-            let myPartType = obj["type"] as? String ?? ""
+            let myPartType = obj["type"].asString ?? ""
             if myPartType != "#MINIFIG" { break }
             if myPartType == "#MINIFIG" {
                 pTarget = 1
-                pTimer = Int(Date().timeIntervalSince1970 * 60)
+                pTimer = currentTicks
                 pDir = [-1, 0]
                 SndSFX("siren")
                 flag = nil
@@ -101,13 +98,13 @@ class HazardFloatParent {
 
         // Scan column down for minifig
         for c in pos_y...max(pos_y, mH) {
-            let myObj: [String: Any]? = nil // stub
+            let myObj: PropList? = nil // stub
             guard let obj = myObj else { continue }
-            let myPartType = obj["type"] as? String ?? ""
+            let myPartType = obj["type"].asString ?? ""
             if myPartType != "#MINIFIG" { break }
             if myPartType == "#MINIFIG" {
                 pTarget = 1
-                pTimer = Int(Date().timeIntervalSince1970 * 60)
+                pTimer = currentTicks
                 pDir = [0, 1]
                 SndSFX("siren")
                 flag = nil
@@ -117,13 +114,13 @@ class HazardFloatParent {
 
         // Scan column up for minifig
         for c in stride(from: pos_y, through: 1, by: -1) {
-            let myObj: [String: Any]? = nil // stub
+            let myObj: PropList? = nil // stub
             guard let obj = myObj else { continue }
-            let myPartType = obj["type"] as? String ?? ""
+            let myPartType = obj["type"].asString ?? ""
             if myPartType != "#MINIFIG" { break }
             if myPartType == "#MINIFIG" {
                 pTarget = 1
-                pTimer = Int(Date().timeIntervalSince1970 * 60)
+                pTimer = currentTicks
                 pDir = [0, -1]
                 SndSFX("siren")
                 flag = nil
@@ -131,7 +128,7 @@ class HazardFloatParent {
             _ = c
         }
 
-        if Glob.shared["minifigHit"] != nil {
+        if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
             // Glob.shared.minifigHit.behavior.notify(["damage": "#floater"]) -- stub
         }

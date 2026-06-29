@@ -5,27 +5,30 @@ class PlayfieldManager {
     var pf_spacing: [Int] = [0, 0]
     var pf_scale: Int = 1
     var pf_grid: [Int] = [0, 0]
-    var config: [String: Any] = [String: Any]()
-    var info: [String: Any] = [String: Any]()
-    var background: [String: Any]? = nil
+    var config: PropList = PropList()
+    var info: PropList = PropList()
+    var background: PropList? = nil
     var decalz: Int = 10001
     var playfield: [[Int]] = []
-    var partslist: [[String: Any]?] = []
-    var bg_image: Any? = nil
+    var partslist: [PropList?] = []
+    var bg_image: LV = .void
     var current_level: String? = nil
-    var spriteBuffer: [Sprite] = []
+    var spriteBuffer: [LingoSprite] = []
 
-    init(_ conf: Any?) {
-        var conf = conf
-        if let confStr = conf as? String {
+    init(_ conf: LV) {
+        var resolvedConf: LV = conf
+        if let confStr = conf.asString {
             let p = glob["config_manager"].parseParams(confStr)
-            conf = p["playfield"]
+            resolvedConf = p["playfield"]
         }
-        setConfig(conf)
+        setConfig(resolvedConf)
         for i in 200...999 {
             spriteBuffer.append(sprite(i))
         }
-        background = ["backdrop": member("bkg1", "backgrounds") as Any, "decals": [Any]()]
+        let bg = PropList()
+        bg["backdrop"] = .object(member("bkg1", "backgrounds") as AnyObject)
+        bg["decals"] = .list(LingoList())
+        background = bg
         decalz = 10001
     }
 
@@ -37,26 +40,28 @@ class PlayfieldManager {
     func refresh() {
         eraseAll()
         if let cl = current_level {
-            setPlayfield(cl)
+            setPlayfield(.string(cl))
         }
     }
 
-    func setConfig(_ conf: Any?) {
-        info = [String: Any]()
-        guard let conf = conf as? [String: Any] else { return }
-        config = conf
-        pf_size = conf["size"] as? [Int] ?? [0, 0]
-        pf_spacing = conf["spacing"] as? [Int] ?? [0, 0]
-        pf_scale = conf["scale"] as? Int ?? 1
+    func setConfig(_ conf: LV) {
+        info = PropList()
+        guard let confPL = conf.asPropList else { return }
+        config = confPL
+        if let sizeList = confPL["size"].asList {
+            pf_size = [sizeList[1].asInt ?? 0, sizeList[2].asInt ?? 0]
+        }
+        if let spacingList = confPL["spacing"].asList {
+            pf_spacing = [spacingList[1].asInt ?? 0, spacingList[2].asInt ?? 0]
+        }
+        pf_scale = confPL["scale"].asInt ?? 1
         pf_grid = [pf_spacing[0] * pf_scale, pf_spacing[1] * pf_scale]
         if playfield.isEmpty {
             playfield = []
         }
-        // Extend playfield columns to pf_size[0]
         while playfield.count < pf_size[0] {
             playfield.append([])
         }
-        // Extend each column to pf_size[1]
         for i in 0..<pf_size[0] {
             while playfield[i].count < pf_size[1] {
                 playfield[i].append(0)
@@ -67,15 +72,15 @@ class PlayfieldManager {
         }
     }
 
-    func setInfo(_ i: [String: Any]) {
-        guard i["title"] != nil, i["par"] != nil else { return }
+    func setInfo(_ i: PropList) {
+        guard !i["title"].isVoid, !i["par"].isVoid else { return }
         info = i
-        if Int(String(describing: info["par"] ?? "")) == nil {
-            info["par"] = 0
+        if Int(info["par"].asString ?? "") == nil {
+            info["par"] = .int(0)
         }
     }
 
-    func getInfo() -> [String: Any]? {
+    func getInfo() -> PropList? {
         return info.isEmpty ? nil : info
     }
 
@@ -88,7 +93,7 @@ class PlayfieldManager {
 
         for part in partslist {
             guard let part = part else { continue }
-            let partType = part["type"] as? String ?? ""
+            let partType = part["type"].asString ?? ""
             let type_num: Int
             if let tn = type_map[partType] {
                 type_num = tn
@@ -98,7 +103,7 @@ class PlayfieldManager {
                 type_num = out_typelist.count
             }
             let color_num: Int
-            if let partColor = part["color"] as? String {
+            if let partColor = part["color"].asString {
                 if let cn = color_map[partColor] {
                     color_num = cn
                 } else {
@@ -110,99 +115,134 @@ class PlayfieldManager {
                 color_num = 0
             }
             let state_name: String
-            if let s = part["state"] as? String {
+            if let s = part["state"].asString {
                 state_name = s
             } else {
                 state_name = "0"
             }
-            let frame_num: Int = part["frame"] as? Int ?? 0
+            let frame_num: Int = part["frame"].asInt ?? 0
             let label_val: String
-            if let lv = part["label"] as? String {
+            if let lv = part["label"].asString {
                 label_val = lv
             } else {
                 label_val = "0"
             }
-            let pos = part["pos"] as? Point ?? Point(x: 0, y: 0)
+            let pos = part["pos"].asPoint ?? Point(x: 0, y: 0)
             let part_text = "\(pos.x);\(pos.y);\(type_num);\(color_num);\(state_name);\(frame_num);\(label_val)"
             out_partslist.append(part_text)
         }
 
-        var out_bglist: [String: Any]
+        let out_bglist = PropList()
         if background == nil {
-            out_bglist = ["backdrop": "bkg1", "decals": [Any]()]
+            out_bglist["backdrop"] = .string("bkg1")
+            out_bglist["decals"] = .list(LingoList())
         } else {
-            let backdropName = (background?["backdrop"] as? Member)?.name ?? "bkg1"
-            out_bglist = ["backdrop": backdropName, "decals": [String]()]
-            var decalStrings = [String]()
-            if let decals = background?["decals"] as? [[String: Any]] {
-                for d in decals {
-                    let loc = d["loc"] as? Point ?? Point(x: 0, y: 0)
-                    let mName = (d["member"] as? Member)?.name ?? ""
-                    decalStrings.append("\(loc.x);\(loc.y);\(mName)")
+            let backdropName = (background?["backdrop"].asObject() as? LingoMember)?.name ?? "bkg1"
+            out_bglist["backdrop"] = .string(backdropName)
+            let decalStrings = LingoList()
+            if let decalsList = background?["decals"].asList {
+                for i in 1...max(1, decalsList.count) {
+                    if let d = decalsList[i].asPropList {
+                        let loc = d["loc"].asPoint ?? Point(x: 0, y: 0)
+                        let mName = (d["member"].asObject() as? LingoMember)?.name ?? ""
+                        decalStrings.add(.string("\(loc.x);\(loc.y);\(mName)"))
+                    }
                 }
             }
-            out_bglist["decals"] = decalStrings
+            out_bglist["decals"] = .list(decalStrings)
         }
 
-        return glob.config_manager.toString([
-            "info": info,
-            "background": out_bglist,
-            "playfield": config,
-            "partslist": ["types": out_typelist, "colors": out_colorlist, "parts": out_partslist]
-        ])
+        let typesList = LingoList()
+        for t in out_typelist { typesList.add(.string(t)) }
+        let colorsList = LingoList()
+        for c in out_colorlist { colorsList.add(.string(c)) }
+        let partsList = LingoList()
+        for p in out_partslist { partsList.add(.string(p)) }
+        let partslistPL = PropList()
+        partslistPL["types"] = .list(typesList)
+        partslistPL["colors"] = .list(colorsList)
+        partslistPL["parts"] = .list(partsList)
+
+        let wrapper = PropList()
+        wrapper["info"] = .propList(info)
+        wrapper["background"] = .propList(out_bglist)
+        wrapper["playfield"] = .propList(config)
+        wrapper["partslist"] = .propList(partslistPL)
+        return glob.config_manager.toString(wrapper)
     }
 
-    func setPlayfield(_ pfinfo: Any, opt: Any? = nil) {
+    func setPlayfield(_ pfinfo: LV, opt: LV = .void) {
         playfield = []
         partslist = []
-        setConfig(config)
-        var pfinfo: [String: Any]
-        if let pfStr = pfinfo as? String {
-            pfinfo = glob.config_manager.parseParams(pfStr)
+        setConfig(.propList(config))
+        var pfinfoDict: PropList
+        if let pfStr = pfinfo.asString {
+            pfinfoDict = glob.config_manager.parseParams(pfStr)
+        } else if let pl = pfinfo.asPropList {
+            pfinfoDict = pl
         } else {
-            pfinfo = pfinfo as? [String: Any] ?? [String: Any]()
+            pfinfoDict = PropList()
         }
-        if let i = pfinfo["info"] {
-            info = i as? [String: Any] ?? [String: Any]()
+        if let i = pfinfoDict["info"].asPropList {
+            info = i
         }
-        if pfinfo["background"] == nil {
-            pfinfo["background"] = ["backdrop": "bkg1", "decals": [Any]()]
+        if pfinfoDict["background"].isVoid {
+            let defaultBg = PropList()
+            defaultBg["backdrop"] = .string("bkg1")
+            defaultBg["decals"] = .list(LingoList())
+            pfinfoDict["background"] = .propList(defaultBg)
         }
-        var bg: [String: Any] = ["decals": [Any]()]
-        let bgSection = pfinfo["background"] as? [String: Any] ?? [String: Any]()
-        bg["backdrop"] = member(bgSection["backdrop"] as? String ?? "", "backgrounds")
+        let bg = PropList()
+        bg["decals"] = .list(LingoList())
+        let bgSection = pfinfoDict["background"].asPropList ?? PropList()
+        bg["backdrop"] = .object(member(bgSection["backdrop"].asString ?? "", "backgrounds") as AnyObject)
         var decalEntries = bgSection["decals"]
-        if let decalStr = decalEntries as? String {
-            decalEntries = [decalStr]
+        if let decalStr = decalEntries.asString {
+            let dl = LingoList()
+            dl.add(.string(decalStr))
+            decalEntries = .list(dl)
         }
-        var bgDecals = [[String: Any]]()
-        if let decalList = decalEntries as? [String] {
-            for d in decalList {
-                let parts = d.split(separator: ";")
-                if parts.count >= 3, let x = Int(parts[0]), let y = Int(parts[1]) {
-                    let mName = String(parts[2])
-                    bgDecals.append([
-                        "member": member(mName, "backgrounds") as Any,
-                        "loc": Point(x: x, y: y) as Any
-                    ])
+        let bgDecalsList = LingoList()
+        if let decalList = decalEntries.asList {
+            for i in 1...max(1, decalList.count) {
+                if let dStr = decalList[i].asString {
+                    let parts = dStr.split(separator: ";")
+                    if parts.count >= 3, let x = Int(parts[0]), let y = Int(parts[1]) {
+                        let mName = String(parts[2])
+                        let decalPL = PropList()
+                        decalPL["member"] = .object(member(mName, "backgrounds") as AnyObject)
+                        decalPL["loc"] = .point(x: x, y: y)
+                        bgDecalsList.add(.propList(decalPL))
+                    }
                 }
             }
         }
-        bg["decals"] = bgDecals
+        bg["decals"] = .list(bgDecalsList)
         background = bg
         refreshBackground()
 
-        var pf = pfinfo["partslist"] as? [String: Any] ?? [String: Any]()
+        let pf = pfinfoDict["partslist"].asPropList ?? PropList()
         var partsData = pf["parts"]
-        if partsData == nil || (partsData as? String) == "" {
-            partsData = [String]()
-        } else if let partsStr = partsData as? String {
-            partsData = [partsStr]
+        if partsData.isVoid || partsData.asString == "" {
+            partsData = .list(LingoList())
+        } else if let partsStr = partsData.asString {
+            let pl = LingoList()
+            pl.add(.string(partsStr))
+            partsData = .list(pl)
         }
-        let typeList = pf["types"] as? [String] ?? []
-        let colorList = pf["colors"] as? [String] ?? []
-        if let partsList = partsData as? [String] {
-            for p in partsList {
+        let typeListLV = pf["types"].asList
+        let colorListLV = pf["colors"].asList
+        var typeList = [String]()
+        var colorList = [String]()
+        if let tl = typeListLV {
+            for i in 1...max(1, tl.count) { if let s = tl[i].asString { typeList.append(s) } }
+        }
+        if let cl = colorListLV {
+            for i in 1...max(1, cl.count) { if let s = cl[i].asString { colorList.append(s) } }
+        }
+        if let partsList = partsData.asList {
+            for i in 1...max(1, partsList.count) {
+                guard let p = partsList[i].asString else { continue }
                 let items = p.split(separator: ";")
                 guard items.count >= 7 else { continue }
                 let part_pos_x = Int(items[0]) ?? 0
@@ -214,25 +254,26 @@ class PlayfieldManager {
                 let part_labelval = String(items[6])
                 let part_type = part_typenum > 0 && part_typenum <= typeList.count ? typeList[part_typenum - 1] : ""
                 let part_color: String? = part_colornum == 0 ? nil : (part_colornum <= colorList.count ? colorList[part_colornum - 1] : nil)
-                var part: [String: Any] = [
-                    "pos": Point(x: part_pos_x, y: part_pos_y),
-                    "type": part_type,
-                    "color": part_color as Any
-                ]
+                let part = PropList()
+                part["pos"] = .point(x: part_pos_x, y: part_pos_y)
+                part["type"] = .string(part_type)
+                if let pc = part_color {
+                    part["color"] = .string(pc)
+                }
                 if part_labelval != "0" {
-                    part["label"] = part_labelval
+                    part["label"] = .string(part_labelval)
                 }
                 if !part_statename.isEmpty && part_statename != "0" {
-                    part["state"] = part_statename
+                    part["state"] = .string(part_statename)
                 }
                 if part_framenum != 0 {
-                    part["frame"] = part_framenum
+                    part["frame"] = .int(part_framenum)
                 }
                 switch part_type {
                 case "HAZ_SLICKFIRE", "HAZ_SLICKFAN":
-                    let st = part["state"] as? String
+                    let st = part["state"].asString
                     if st != "off" && st != "on" {
-                        part["state"] = "on"
+                        part["state"] = .string("on")
                     }
                 default:
                     break
@@ -244,15 +285,15 @@ class PlayfieldManager {
     }
 
     func makeGrid() {
-        bg_image = nil // image(pf_size[0] * pf_grid[0], pf_size[1] * pf_grid[1], 16)
+        bg_image = .void // image(pf_size[0] * pf_grid[0], pf_size[1] * pf_grid[1], 16)
         // fill bg_image with rgb(190, 225, 190)
         // draw grid dots at rgb(128, 128, 128)
         // member("editor-playfield grid").image = bg_image
         // member("editor-playfield grid").regPoint = Point(x: 0, y: 0)
     }
 
-    func getPos(_ L: Point) -> [[Any]]? {
-        guard glob.EDITOR["playfield_sprite"] != nil else { return nil }
+    func getPos(_ L: Point) -> [LV]? {
+        guard !glob.EDITOR["playfield_sprite"].isVoid else { return nil }
         let spriteLoc = glob.EDITOR.playfield_sprite.loc ?? Point(x: 0, y: 0)
         let px = (L.x - spriteLoc.x) / pf_grid[0]
         let py = (L.y - spriteLoc.y) / pf_grid[1]
@@ -263,19 +304,19 @@ class PlayfieldManager {
         if gridX < 1 || gridY < 1 || gridX > pf_size[0] || gridY > pf_size[1] {
             return nil
         }
-        return [[gridX, gridY], [Point(x: l2x, y: l2y)]]
+        return [.point(x: gridX, y: gridY), .point(x: l2x, y: l2y)]
     }
 
-    func getLoc(_ arg: Any?) -> Point {
+    func getLoc(_ arg: LV) -> Point {
         var o = Point(x: 0, y: 0)
         let p: Point
-        if let argDict = arg as? [String: Any] {
-            p = argDict["pos"] as? Point ?? Point(x: 0, y: 0)
-            if let po = argDict["pixelOffset"] as? Point {
+        if let argDict = arg.asPropList {
+            p = argDict["pos"].asPoint ?? Point(x: 0, y: 0)
+            if let po = argDict["pixelOffset"].asPoint {
                 o = po
             }
         } else {
-            p = arg as? Point ?? Point(x: 0, y: 0)
+            p = arg.asPoint ?? Point(x: 0, y: 0)
         }
         let spriteLoc = glob.EDITOR.playfield_sprite.loc ?? Point(x: 0, y: 0)
         return Point(
@@ -284,36 +325,39 @@ class PlayfieldManager {
         )
     }
 
-    func getPart(_ pos: Any?) -> [String: Any]? {
-        guard let pos = pos as? [Int], pos.count >= 2 else { return nil }
-        let x = pos[0] - 1, y = pos[1] - 1
+    func getPart(_ pos: LV) -> PropList? {
+        guard let pt = pos.asPoint else { return nil }
+        let x = pt.x - 1, y = pt.y - 1
         guard x >= 0, y >= 0, x < playfield.count, y < (playfield.first?.count ?? 0) else { return nil }
         let p = playfield[x][y]
         if p == 0 { return nil }
         return partslist[p - 1]
     }
 
-    func checkFit(_ pos: Any?, _ typ: String) -> Bool {
+    func checkFit(_ pos: LV, _ typ: String) -> Bool {
         let sh = glob.legoparts_manager.getPieceShape(typ)
-        guard let pos = pos as? [Int], pos.count >= 2 else { return false }
+        guard let pt = pos.asPoint else { return false }
         for d in sh {
-            let tx = pos[0] + (d as? [Int])?[0] ?? 0
-            let ty = pos[1] + (d as? [Int])?[1] ?? 0
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
+            let tx = pt.x + dx
+            let ty = pt.y + dy
             if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return false }
             if playfield[tx - 1][ty - 1] != 0 { return false }
         }
         return true
     }
 
-    func checkFitOrGoal(_ pos: Any?, _ typ: String) -> Any {
+    func checkFitOrGoal(_ pos: LV, _ typ: String) -> LV {
         let sh = glob.legoparts_manager.getPieceShape(typ)
-        guard let pos = pos as? [Int] else { return false }
-        var fit = true
-        var goal: [String: Any]? = nil
+        guard let pt = pos.asPoint else { return .int(0) }
+        var goal: PropList? = nil
         for d in sh {
-            let tx = pos[0] + (d as? [Int])?[0] ?? 0
-            let ty = pos[1] + (d as? [Int])?[1] ?? 0
-            if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return false }
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
+            let tx = pt.x + dx
+            let ty = pt.y + dy
+            if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return .int(0) }
             let pnum = playfield[tx - 1][ty - 1]
             if pnum != 0 {
                 let p = partslist[pnum - 1]
@@ -321,22 +365,23 @@ class PlayfieldManager {
                     goal = p
                     continue
                 }
-                return false
+                return .int(0)
             }
         }
-        if let goal = goal { return goal }
-        return fit
+        if let goal = goal { return .propList(goal) }
+        return .int(1)
     }
 
-    func checkFitOrNonbrick(_ pos: Any?, _ typ: String) -> Any {
+    func checkFitOrNonbrick(_ pos: LV, _ typ: String) -> LV {
         let sh = glob.legoparts_manager.getPieceShape(typ)
-        guard let pos = pos as? [Int] else { return false }
-        var fit = true
-        var nonbrick: [String: Any]? = nil
+        guard let pt = pos.asPoint else { return .int(0) }
+        var nonbrick: PropList? = nil
         for d in sh {
-            let tx = pos[0] + (d as? [Int])?[0] ?? 0
-            let ty = pos[1] + (d as? [Int])?[1] ?? 0
-            if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return false }
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
+            let tx = pt.x + dx
+            let ty = pt.y + dy
+            if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return .int(0) }
             let pnum = playfield[tx - 1][ty - 1]
             if pnum != 0 {
                 let p = partslist[pnum - 1]
@@ -344,22 +389,23 @@ class PlayfieldManager {
                     nonbrick = p
                     continue
                 }
-                return false
+                return .int(0)
             }
         }
-        if let nonbrick = nonbrick { return nonbrick }
-        return fit
+        if let nonbrick = nonbrick { return .propList(nonbrick) }
+        return .int(1)
     }
 
-    func checkFitOrMinifig(_ pos: Any?, _ typ: String) -> Any {
+    func checkFitOrMinifig(_ pos: LV, _ typ: String) -> LV {
         let sh = glob.legoparts_manager.getPieceShape(typ)
-        guard let pos = pos as? [Int] else { return false }
-        var fit = true
-        var goal: [String: Any]? = nil
+        guard let pt = pos.asPoint else { return .int(0) }
+        var goal: PropList? = nil
         for d in sh {
-            let tx = pos[0] + (d as? [Int])?[0] ?? 0
-            let ty = pos[1] + (d as? [Int])?[1] ?? 0
-            if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return false }
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
+            let tx = pt.x + dx
+            let ty = pt.y + dy
+            if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] { return .int(0) }
             let pnum = playfield[tx - 1][ty - 1]
             if pnum != 0 {
                 let p = partslist[pnum - 1]
@@ -367,21 +413,23 @@ class PlayfieldManager {
                     goal = p
                     continue
                 }
-                return false
+                return .int(0)
             }
         }
-        if let goal = goal { return goal }
-        return fit
+        if let goal = goal { return .propList(goal) }
+        return .int(1)
     }
 
-    func checkFitMiniFigHit(_ pos: Any?, _ typ: String) -> Bool {
+    func checkFitMiniFigHit(_ pos: LV, _ typ: String) -> Bool {
         let sh = glob.legoparts_manager.getPieceShape(typ)
-        guard let pos = pos as? [Int] else { return false }
+        guard let pt = pos.asPoint else { return false }
         var fit = true
-        var goal: [String: Any]? = nil
+        var goal: PropList? = nil
         for d in sh {
-            let tx = pos[0] + (d as? [Int])?[0] ?? 0
-            let ty = pos[1] + (d as? [Int])?[1] ?? 0
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
+            let tx = pt.x + dx
+            let ty = pt.y + dy
             if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] {
                 fit = false
                 goal = nil
@@ -400,20 +448,22 @@ class PlayfieldManager {
             }
         }
         if let goal = goal {
-            glob.PLAYER["minifigHit"] = goal
+            glob.PLAYER["minifigHit"] = .propList(goal)
         }
         return fit
     }
 
-    func checkPlaceable(_ pos: Any?, _ typ: String) -> String {
+    func checkPlaceable(_ pos: LV, _ typ: String) -> String {
         let sh = glob.legoparts_manager.getPieceShape(typ)
-        guard let pos = pos as? [Int] else { return "nofit" }
+        guard let pt = pos.asPoint else { return "nofit" }
         var fit = true
         var edgetop = "free"
         var edgebottom = "free"
         outerLoop: for d in sh {
-            let tx = pos[0] + (d as? [Int])?[0] ?? 0
-            let ty = pos[1] + (d as? [Int])?[1] ?? 0
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
+            let tx = pt.x + dx
+            let ty = pt.y + dy
             if tx < 1 || ty < 1 || tx > pf_size[0] || ty > pf_size[1] {
                 fit = false
                 break
@@ -428,7 +478,7 @@ class PlayfieldManager {
                         edgetop = "brick"
                     } else if let abovePart = partslist[above - 1], slickBrickP(abovePart) {
                         fit = false
-                        break
+                        break outerLoop
                     }
                 }
             }
@@ -444,7 +494,7 @@ class PlayfieldManager {
                 }
                 if let belowPart = partslist[below - 1], slickBrickP(belowPart) {
                     fit = false
-                    break
+                    break outerLoop
                 }
             }
         }
@@ -473,50 +523,49 @@ class PlayfieldManager {
         return n
     }
 
-    func placePiece(_ pos: Any?, _ typ: String? = nil, _ mem: Member? = nil, _ col: String? = nil, _ spr: Sprite? = nil) {
-        var part: [String: Any]
-        if let posDict = pos as? [String: Any] {
-            part = posDict
-        } else {
-            part = ["pos": pos as Any, "type": typ as Any, "color": col as Any, "member": mem as Any, "sprite": spr as Any]
-        }
+    func placePiece(_ part: PropList) {
         let partmembers = glob.legoparts_manager.getPieceMemberName(part)
-        if part["sprite"] == nil {
-            var sprites = [Sprite]()
-            for _ in 0..<(partmembers as? [Any])?.count ?? 0 {
-                if let s = getASprite() { sprites.append(s) }
+        if part["sprite"].isVoid {
+            let sprites = LingoList()
+            let memberCount = partmembers.asList?.count ?? 0
+            for _ in 0..<memberCount {
+                if let s = getASprite() { sprites.add(.object(s)) }
             }
-            part["sprite"] = sprites
+            part["sprite"] = .list(sprites)
         }
         partslist.append(part)
         let partnum = partslist.count
-        let sh = glob.legoparts_manager.getPieceShape(part["type"] as? String ?? "")
-        let partPos = part["pos"] as? Point ?? Point(x: 0, y: 0)
+        let sh = glob.legoparts_manager.getPieceShape(part["type"].asString ?? "")
+        let partPos = part["pos"].asPoint ?? Point(x: 0, y: 0)
         for d in sh {
-            let dx = (d as? [Int])?[0] ?? 0
-            let dy = (d as? [Int])?[1] ?? 0
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
             let tx = partPos.x + dx
             let ty = partPos.y + dy
             if tx >= 1 && ty >= 1 && tx <= pf_size[0] && ty <= pf_size[1] {
                 playfield[tx - 1][ty - 1] = partnum
             }
         }
-        let sprites = part["sprite"] as? [Sprite] ?? []
-        let memberNames = partmembers as? [String] ?? []
-        for (si, s) in sprites.enumerated() {
-            s.puppet = 1
-            if si < memberNames.count { s.member = member(memberNames[si]) }
-            s.width = (s.member?.width ?? 0) * pf_scale
-            s.height = (s.member?.height ?? 0) * pf_scale
-            s.loc = getLoc(part)
-            s.visible = true
-            s.ink = brickP(part) ? 8 : 36
-            let shiftedPos = Point(x: partPos.x, y: partPos.y - si)
-            s.locZ = posToLocZ(shiftedPos)
-            s.blend = 100
-            s.scriptInstanceList.append(PartClickBehavior(part))
+        if let spriteList = part["sprite"].asList,
+           let memberList = partmembers.asList {
+            for si in 1...max(1, spriteList.count) {
+                guard let s = spriteList[si].asObject() as? LingoSprite else { continue }
+                s.puppet = 1
+                if si <= memberList.count, let mName = memberList[si].asString {
+                    s.member = member(mName)
+                }
+                s.width = (s.member?.width ?? 0) * pf_scale
+                s.height = (s.member?.height ?? 0) * pf_scale
+                s.loc = getLoc(.propList(part))
+                s.visible = true
+                s.ink = brickP(part) ? 8 : 36
+                let shiftedPos = Point(x: partPos.x, y: partPos.y - (si - 1))
+                s.locZ = posToLocZ(shiftedPos)
+                s.blend = 100
+                s.scriptInstanceList.append(PartClickBehavior(part))
+            }
         }
-        if let behavior = part["behavior"] as? AnyObject {
+        if let behavior = part["behavior"].asObject() {
             behavior.notify(["Start": 1])
         }
     }
@@ -525,26 +574,26 @@ class PlayfieldManager {
         return 100000 - (1000 * pos.y) + pos.x
     }
 
-    func placePieceGroup(_ partgroup: [[String: Any]]) {
+    func placePieceGroup(_ partgroup: [PropList]) {
         for part in partgroup {
             placePiece(part)
         }
     }
 
-    func erasePiece(_ pos: Any?, keepSprite: Bool = false) -> [String: Any]? {
-        guard let pos = pos as? [Int], pos.count >= 2 else { return nil }
-        let x = pos[0] - 1, y = pos[1] - 1
+    func erasePiece(_ pos: LV, keepSprite: Bool = false) -> PropList? {
+        guard let pt = pos.asPoint else { return nil }
+        let x = pt.x - 1, y = pt.y - 1
         guard x >= 0, y >= 0, x < playfield.count, y < (playfield.first?.count ?? 0) else { return nil }
         let partnum = playfield[x][y]
         if partnum == 0 { return nil }
         let part = partslist[partnum - 1]
         partslist[partnum - 1] = nil
         if let part = part {
-            let basepos = part["pos"] as? Point ?? Point(x: 0, y: 0)
-            let sh = glob.legoparts_manager.getPieceShape(part["type"] as? String ?? "")
+            let basepos = part["pos"].asPoint ?? Point(x: 0, y: 0)
+            let sh = glob.legoparts_manager.getPieceShape(part["type"].asString ?? "")
             for d in sh {
-                let dx = (d as? [Int])?[0] ?? 0
-                let dy = (d as? [Int])?[1] ?? 0
+                let dx = d.asPoint?.x ?? 0
+                let dy = d.asPoint?.y ?? 0
                 let tx = basepos.x + dx
                 let ty = basepos.y + dy
                 if tx >= 1 && ty >= 1 && tx <= pf_size[0] && ty <= pf_size[1] {
@@ -553,102 +602,102 @@ class PlayfieldManager {
             }
         }
         if !keepSprite {
-            if let sprites = part?["sprite"] as? [Sprite] {
-                for s in sprites {
-                    s.loc = Point(x: -100, y: -100)
-                    s.visible = false
-                    s.scriptInstanceList = []
-                    returnASprite(s)
+            if let spriteList = part?["sprite"].asList {
+                for i in 1...max(1, spriteList.count) {
+                    if let s = spriteList[i].asObject() as? LingoSprite {
+                        s.loc = Point(x: -100, y: -100)
+                        s.visible = false
+                        s.scriptInstanceList = []
+                        returnASprite(s)
+                    }
                 }
-                var mutablePart = part
-                mutablePart?["sprite"] = nil
+                part?["sprite"] = .void
             }
-            if let auxSprites = part?["auxSprites"] as? [Sprite] {
-                for s in auxSprites {
-                    s.loc = Point(x: -100, y: -100)
-                    s.visible = false
-                    s.scriptInstanceList = []
-                    returnASprite(s)
+            if let auxSpriteList = part?["auxSprites"].asList {
+                for i in 1...max(1, auxSpriteList.count) {
+                    if let s = auxSpriteList[i].asObject() as? LingoSprite {
+                        s.loc = Point(x: -100, y: -100)
+                        s.visible = false
+                        s.scriptInstanceList = []
+                        returnASprite(s)
+                    }
                 }
-                var mutablePart = part
-                mutablePart?["auxSprites"] = [String: Any]()
+                part?["auxSprites"] = .void
             }
         }
-        if let behavior = part?["behavior"] as? AnyObject {
+        if let behavior = part?["behavior"].asObject() {
             behavior.notify(["stop": 1])
         }
         return part
     }
 
-    func erasePieceGroup(_ partgroup: [[String: Any]], keepSprites: Bool = false) -> [[String: Any]?] {
-        var erasedPieces = [[String: Any]?]()
+    func erasePieceGroup(_ partgroup: [PropList], keepSprites: Bool = false) -> [PropList?] {
+        var erasedPieces = [PropList?]()
         for part in partgroup {
-            if let pos = part["pos"] as? [Int] {
-                erasedPieces.append(erasePiece(pos, keepSprite: keepSprites))
-            }
+            erasedPieces.append(erasePiece(part["pos"], keepSprite: keepSprites))
         }
         return erasedPieces
     }
 
-    func releasePieceSprite(_ p: inout [String: Any]) {
-        if let s = p["sprite"] as? Sprite {
+    func releasePieceSprite(_ p: PropList) {
+        if let s = p["sprite"].asObject() as? LingoSprite {
             s.loc = Point(x: -100, y: -100)
             s.visible = false
             returnASprite(s)
         }
-        p["sprite"] = nil
+        p["sprite"] = .void
     }
 
-    func releasePieceGroupSprites(_ partgroup: inout [[String: Any]]) {
-        for i in 0..<partgroup.count {
-            releasePieceSprite(&partgroup[i])
+    func releasePieceGroupSprites(_ partgroup: [PropList]) {
+        for p in partgroup {
+            releasePieceSprite(p)
         }
     }
 
     func eraseAll() {
         for part in partslist {
-            if let part = part, let pos = part["pos"] as? [Int] {
-                _ = erasePiece(pos)
+            if let part = part {
+                _ = erasePiece(part["pos"])
             }
         }
         hideDecals()
     }
 
-    func brickP(_ p: [String: Any]) -> Bool {
-        return (p["type"] as? String ?? "").contains("BRICK")
+    func brickP(_ p: PropList) -> Bool {
+        return (p["type"].asString ?? "").contains("BRICK")
     }
 
-    func slickBrickP(_ p: [String: Any]) -> Bool {
-        return (p["type"] as? String ?? "").contains("_SLICK")
+    func slickBrickP(_ p: PropList) -> Bool {
+        return (p["type"].asString ?? "").contains("_SLICK")
     }
 
-    func supportP(_ p: [String: Any]) -> Bool {
-        return brickP(p) && (p["color"] as? String ?? "").contains("GRAY")
+    func supportP(_ p: PropList) -> Bool {
+        return brickP(p) && (p["color"].asString ?? "").contains("GRAY")
     }
 
-    func goalP(_ p: [String: Any]) -> Bool {
-        return (p["type"] as? String ?? "").contains("FLAG")
+    func goalP(_ p: PropList) -> Bool {
+        return (p["type"].asString ?? "").contains("FLAG")
     }
 
-    func minifigP(_ p: [String: Any]) -> Bool {
-        return (p["type"] as? String ?? "").contains("MINIFIG")
+    func minifigP(_ p: PropList) -> Bool {
+        return (p["type"].asString ?? "").contains("MINIFIG")
     }
 
-    func partNeighbors(_ p: [String: Any], dir: String? = nil, exclude: [String]? = nil) -> [[String: Any]] {
+    func partNeighbors(_ p: PropList, dir: String? = nil, exclude: [String]? = nil) -> [PropList] {
         let exclude = exclude ?? []
-        var nei = [[String: Any]]()
-        let sh = glob.legoparts_manager.getPieceShape(p["type"] as? String ?? "")
-        let pPos = p["pos"] as? Point ?? Point(x: 0, y: 0)
+        var nei = [PropList]()
+        let sh = glob.legoparts_manager.getPieceShape(p["type"].asString ?? "")
+        let pPos = p["pos"].asPoint ?? Point(x: 0, y: 0)
         for d in sh {
-            let dx = (d as? [Int])?[0] ?? 0
-            let dy = (d as? [Int])?[1] ?? 0
+            let dx = d.asPoint?.x ?? 0
+            let dy = d.asPoint?.y ?? 0
             let pos = Point(x: pPos.x + dx, y: pPos.y + dy)
             // check above
             if dir != "down" && pos.y > 1 {
                 let n = playfield[pos.x - 1][pos.y - 2]
                 if n != 0, let nPart = partslist[n - 1] {
-                    let nType = nPart["type"] as? String ?? ""
-                    if !nPart.elementsEqual(p) && !nei.contains(where: { $0.elementsEqual(nPart) }) && !exclude.contains(nType) {
+                    let nType = nPart["type"].asString ?? ""
+                    if !propListIdentical(nPart, p) && !nei.contains(where: { propListIdentical($0, nPart) }) && !exclude.contains(nType) {
                         nei.append(nPart)
                     }
                 }
@@ -657,7 +706,7 @@ class PlayfieldManager {
             if dir != "UP" && pos.y < pf_size[1] {
                 let n = playfield[pos.x - 1][pos.y]
                 if n != 0, let nPart = partslist[n - 1] {
-                    if !nPart.elementsEqual(p) && brickP(nPart) && !nei.contains(where: { $0.elementsEqual(nPart) }) {
+                    if !propListIdentical(nPart, p) && brickP(nPart) && !nei.contains(where: { propListIdentical($0, nPart) }) {
                         nei.append(nPart)
                     }
                 }
@@ -666,10 +715,10 @@ class PlayfieldManager {
         return nei
     }
 
-    func partConnectedGroup(_ p: [String: Any], group: [[String: Any]]? = nil) -> [[String: Any]] {
+    func partConnectedGroup(_ p: PropList, group: [PropList]? = nil) -> [PropList] {
         var group = group ?? [p]
         for n in partNeighbors(p) {
-            if group.contains(where: { $0.elementsEqual(n) }) { continue }
+            if group.contains(where: { propListIdentical($0, n) }) { continue }
             group.append(n)
             if brickP(n) {
                 group = partConnectedGroup(n, group: group)
@@ -678,28 +727,31 @@ class PlayfieldManager {
         return group
     }
 
-    func partSupported(_ p: [String: Any], group: [[String: Any]]? = nil, ignoregroup: [[String: Any]] = [], recurse: Int = 1) -> Any {
-        if supportP(p) { return "supported" }
-        if !brickP(p) { return "illegal" }
+    func partSupported(_ p: PropList, group: [PropList]? = nil, ignoregroup: [PropList] = [], recurse: Int = 1) -> LV {
+        if supportP(p) { return .string("supported") }
+        if !brickP(p) { return .string("illegal") }
         var group = group ?? [p]
         for n in partNeighbors(p, dir: nil, exclude: ["HAZ_FLOAT"]) {
-            if ignoregroup.contains(where: { $0.elementsEqual(n) }) { continue }
-            if group.contains(where: { $0.elementsEqual(n) }) { continue }
+            if ignoregroup.contains(where: { propListIdentical($0, n) }) { continue }
+            if group.contains(where: { propListIdentical($0, n) }) { continue }
             group.append(n)
             if brickP(n) {
                 let result = partSupported(n, group: group, ignoregroup: ignoregroup, recurse: recurse + 1)
-                if let s = result as? String, s == "supported" || s == "illegal" {
+                if let s = result.asString, s == "supported" || s == "illegal" {
                     return result
                 }
-                if let g = result as? [[String: Any]] { group = g }
+                // result is a list — not representable as [PropList] directly; use group
             }
         }
-        return group
+        // Return group as a list of propLists
+        let gl = LingoList()
+        for gp in group { gl.add(.propList(gp)) }
+        return .list(gl)
     }
 
-    func findPieceGroup(_ pos: [Int], dir: String) -> [[String: Any]] {
-        var pieceGroup = [[String: Any]]()
-        var newGroup = [[String: Any]]()
+    func findPieceGroup(_ pos: [Int], dir: String) -> [PropList] {
+        var pieceGroup = [PropList]()
+        var newGroup = [PropList]()
         let x = pos[0] - 1, y = pos[1] - 1
         guard x >= 0, y >= 0, x < playfield.count, y < (playfield.first?.count ?? 0) else { return [] }
         let firstpartnum = playfield[x][y]
@@ -710,12 +762,12 @@ class PlayfieldManager {
         var moreNeighbors = true
         while moreNeighbors {
             moreNeighbors = false
-            var neighbors = [[String: Any]]()
+            var neighbors = [PropList]()
             for p in newGroup {
                 let newneighbors = partNeighbors(p, dir: dir, exclude: ["HAZ_FLOAT"])
                 if newneighbors.isEmpty { continue }
                 for n in newneighbors {
-                    if !neighbors.contains(where: { $0.elementsEqual(n) }) {
+                    if !neighbors.contains(where: { propListIdentical($0, n) }) {
                         neighbors.append(n)
                     }
                 }
@@ -725,57 +777,62 @@ class PlayfieldManager {
                 if !brickP(n) || supportP(n) { return [] }
             }
             for p in newGroup {
-                if !pieceGroup.contains(where: { $0.elementsEqual(p) }) {
+                if !pieceGroup.contains(where: { propListIdentical($0, p) }) {
                     pieceGroup.append(p)
                 }
             }
             newGroup = []
             for n in neighbors {
-                if !newGroup.contains(where: { $0.elementsEqual(n) }) {
+                if !newGroup.contains(where: { propListIdentical($0, n) }) {
                     newGroup.append(n)
                 }
             }
         }
         for p in newGroup {
-            if !pieceGroup.contains(where: { $0.elementsEqual(p) }) {
+            if !pieceGroup.contains(where: { propListIdentical($0, p) }) {
                 pieceGroup.append(p)
             }
         }
         let oDir = dir == "UP" ? "down" : "UP"
-        var newpiecegroup = [[String: Any]]()
+        var newpiecegroup = [PropList]()
         for p in pieceGroup {
             for n in partNeighbors(p, dir: oDir) {
-                if pieceGroup.contains(where: { $0.elementsEqual(n) }) { continue }
+                if pieceGroup.contains(where: { propListIdentical($0, n) }) { continue }
                 let result = partSupported(n, ignoregroup: pieceGroup)
-                if let s = result as? String {
+                if let s = result.asString {
                     if s == "supported" { continue }
                     if s == "illegal" { return [] }
                 }
-                if let unsupportedGroup = result as? [[String: Any]] {
-                    for u in unsupportedGroup {
-                        if !brickP(u) { return [] }
-                        if !newpiecegroup.contains(where: { $0.elementsEqual(u) }) {
-                            newpiecegroup.append(u)
+                if let unsupportedList = result.asList {
+                    for i in 1...max(1, unsupportedList.count) {
+                        if let u = unsupportedList[i].asPropList {
+                            if !brickP(u) { return [] }
+                            if !newpiecegroup.contains(where: { propListIdentical($0, u) }) {
+                                newpiecegroup.append(u)
+                            }
                         }
                     }
                 }
             }
         }
         for np in newpiecegroup {
-            if !pieceGroup.contains(where: { $0.elementsEqual(np) }) {
+            if !pieceGroup.contains(where: { propListIdentical($0, np) }) {
                 pieceGroup.append(np)
             }
         }
         return pieceGroup
     }
 
-    func getPartsByType(_ typelist: Any) -> [[String: Any]] {
-        var tlist = typelist as? [String] ?? []
-        if let single = typelist as? String { tlist = [single] }
-        var plist = [[String: Any]]()
+    func getPartsByType(_ typelist: LV) -> [PropList] {
+        var tlist = [String]()
+        if let single = typelist.asString { tlist = [single] }
+        else if let tl = typelist.asList {
+            for i in 1...max(1, tl.count) { if let s = tl[i].asString { tlist.append(s) } }
+        }
+        var plist = [PropList]()
         for p in partslist {
             guard let p = p else { continue }
-            let pType = p["type"] as? String ?? ""
+            let pType = p["type"].asString ?? ""
             for t in tlist {
                 if pType == t { plist.append(p) }
             }
@@ -783,12 +840,15 @@ class PlayfieldManager {
         return plist
     }
 
-    func getPartsByLabel(_ labelList: Any) -> [[String: Any]] {
-        var llist = labelList as? [String] ?? []
-        if let single = labelList as? String { llist = [single] }
-        var plist = [[String: Any]]()
+    func getPartsByLabel(_ labelList: LV) -> [PropList] {
+        var llist = [String]()
+        if let single = labelList.asString { llist = [single] }
+        else if let ll = labelList.asList {
+            for i in 1...max(1, ll.count) { if let s = ll[i].asString { llist.append(s) } }
+        }
+        var plist = [PropList]()
         for p in partslist {
-            guard let p = p, let plabel = p["label"] as? String else { continue }
+            guard let p = p, let plabel = p["label"].asString else { continue }
             for l in llist {
                 if plabel == l { plist.append(p) }
             }
@@ -796,36 +856,36 @@ class PlayfieldManager {
         return plist
     }
 
-    func setBackdrop(_ mem: Any) {
+    func setBackdrop(_ mem: LV) {
         background?["backdrop"] = mem
         refreshBackground()
     }
 
-    func placeDecal(_ d: [String: Any]) {
-        var decal = d
+    func placeDecal(_ d: PropList) {
         guard let s = getASprite() else { return }
-        decal["sprite"] = s
-        s.member = decal["member"] as? Member
-        if let m = decal["member"] as? Member {
+        d["sprite"] = .object(s)
+        s.member = d["member"].asObject() as? LingoMember
+        if let m = d["member"].asObject() as? LingoMember {
             s.rect = m.rect
         }
-        s.loc = decal["loc"] as? Point ?? Point(x: 0, y: 0)
+        s.loc = d["loc"].asPoint ?? Point(x: 0, y: 0)
         s.locZ = decalz
         decalz += 1
         s.blend = 100
         s.visible = true
         s.ink = 36
-        var decals = background?["decals"] as? [[String: Any]] ?? []
-        decals.append(decal)
-        background?["decals"] = decals
+        if background?["decals"].asList == nil {
+            background?["decals"] = .list(LingoList())
+        }
+        background?["decals"].asList?.add(.propList(d))
     }
 
-    func eraseDecal(_ L: Point) -> [String: Any]? {
-        guard background != nil, var decals = background?["decals"] as? [[String: Any]] else { return nil }
-        for i in stride(from: decals.count - 1, through: 0, by: -1) {
-            let decal = decals[i]
-            guard let m = decal["member"] as? Member,
-                  let loc = decal["loc"] as? Point else { continue }
+    func eraseDecal(_ L: Point) -> PropList? {
+        guard background != nil, let decals = background?["decals"].asList else { return nil }
+        for i in stride(from: decals.count, through: 1, by: -1) {
+            guard let decal = decals[i].asPropList else { continue }
+            guard let m = decal["member"].asObject() as? LingoMember,
+                  let loc = decal["loc"].asPoint else { continue }
             let r = Rect(
                 x: loc.x - (m.regPoint?.x ?? 0),
                 y: loc.y - (m.regPoint?.y ?? 0),
@@ -833,80 +893,73 @@ class PlayfieldManager {
                 height: m.height
             )
             if r.contains(L) {
-                if let s = decal["sprite"] as? Sprite {
+                if let s = decal["sprite"].asObject() as? LingoSprite {
                     s.loc = Point(x: -100, y: -100)
                     s.member = nil
                     returnASprite(s)
                 }
-                let removed = decals.remove(at: i)
-                background?["decals"] = decals
-                return removed
+                decals.deleteOne(i)
+                return decal
             }
         }
         return nil
     }
 
     func hideDecals() {
-        guard background != nil, var decals = background?["decals"] as? [[String: Any]] else { return }
-        for i in 0..<decals.count {
-            if let s = decals[i]["sprite"] as? Sprite {
-                s.loc = Point(x: -100, y: -100)
-                s.member = nil
-                returnASprite(s)
-                decals[i]["sprite"] = nil
+        guard background != nil, let decals = background?["decals"].asList else { return }
+        for i in 1...max(1, decals.count) {
+            if let decal = decals[i].asPropList {
+                if let s = decal["sprite"].asObject() as? LingoSprite {
+                    s.loc = Point(x: -100, y: -100)
+                    s.member = nil
+                    returnASprite(s)
+                    decal["sprite"] = .void
+                }
             }
         }
-        background?["decals"] = decals
     }
 
     func refreshBackground() {
-        glob.EDITOR.playfield_sprite.member = background?["backdrop"] as? Member
+        glob.EDITOR.playfield_sprite.member = background?["backdrop"].asObject() as? LingoMember
         var z = 10001
-        guard var decals = background?["decals"] as? [[String: Any]] else { return }
-        for i in 0..<decals.count {
+        guard let decals = background?["decals"].asList else { return }
+        for i in 1...max(1, decals.count) {
             z += 1
-            if decals[i]["sprite"] == nil {
-                decals[i]["sprite"] = getASprite()
+            guard let decal = decals[i].asPropList else { continue }
+            if decal["sprite"].isVoid {
+                if let s = getASprite() {
+                    decal["sprite"] = .object(s)
+                }
             }
-            if let s = decals[i]["sprite"] as? Sprite {
-                s.member = decals[i]["member"] as? Member
-                if let m = decals[i]["member"] as? Member {
+            if let s = decal["sprite"].asObject() as? LingoSprite {
+                s.member = decal["member"].asObject() as? LingoMember
+                if let m = decal["member"].asObject() as? LingoMember {
                     s.rect = m.rect
                 }
-                s.loc = decals[i]["loc"] as? Point ?? Point(x: 0, y: 0)
+                s.loc = decal["loc"].asPoint ?? Point(x: 0, y: 0)
                 s.locZ = z
                 s.blend = 100
                 s.visible = true
                 s.ink = 36
             }
         }
-        background?["decals"] = decals
         decalz = z + 1
     }
 
-    func getASprite() -> Sprite? {
+    func getASprite() -> LingoSprite? {
         if spriteBuffer.isEmpty { return nil }
         let s = spriteBuffer.removeFirst()
         s.puppet = 1
         return s
     }
 
-    func returnASprite(_ s: Sprite) {
+    func returnASprite(_ s: LingoSprite) {
         s.scriptInstanceList = []
         spriteBuffer.append(s)
     }
 }
 
-// Helper: compare two [String: Any] dicts by identity (object identity not available for value types;
-// this stub is used where Lingo would compare propList references)
-private func == (lhs: [String: Any], rhs: [String: Any]) -> Bool {
-    // Stub — real implementation would compare by reference or key identity
-    return false
-}
-
-extension Dictionary where Key == String {
-    func elementsEqual(_ other: [String: Any]) -> Bool {
-        // Stub identity comparison
-        return false
-    }
+/// Identity comparison for PropList by object reference.
+private func propListIdentical(_ a: PropList, _ b: PropList) -> Bool {
+    return a === b
 }

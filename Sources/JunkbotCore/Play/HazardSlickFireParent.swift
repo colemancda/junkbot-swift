@@ -1,70 +1,68 @@
 // Translated from Lingo: parent_hazard slick fire parent.ls
 
-class HazardSlickFireParent {
-    var playfield_manager: Any? = nil
-    var play_manager: PlayManager? = nil
-    var part: [String: Any]
-    var myWidth: Int = 2
-    var last_step: Int = 0
-    var dir: Any? = nil
+public class HazardSlickFireParent {
+    public var playfield_manager: LV = .void
+    public var play_manager: PlayManager? = nil
+    public var part: PropList
+    public var myWidth: Int = 2
+    public var last_step: Int = 0
+    public var dir: LV = .void
 
-    init(_ p: [String: Any]) {
+    public init(_ p: PropList) {
         part = p
         // part["behavior"] = self -- set by caller
         play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = nil // play_manager.playfield_manager
+        playfield_manager = .void // play_manager.playfield_manager
         myWidth = 2
-        last_step = Int(Date().timeIntervalSince1970 * 60)
+        last_step = currentTicks
     }
 
-    func done() {
-        play_manager?.actorDone(self)
+    public func done() {
+        if let pm = play_manager { pm.actorDone(self) }
     }
 
-    func notify(_ notes: [String: Any]) {
-        if let destroyed = notes["destroyed"] as? Int, destroyed == 1 {
+    public func notify(_ notes: PropList) {
+        if let destroyed = notes["destroyed"].asInt, destroyed == 1 {
             done()
-        } else if notes["pos"] != nil {
-            part["pos"] = notes["pos"]!
-        } else if let sw = notes["switch"] {
-            part["state"] = sw
+        } else if !notes["pos"].isVoid {
+            part["pos"] = notes["pos"]
+        } else if !notes["switch"].isVoid {
+            part["state"] = notes["switch"]
             stepAnim()
             updatePart()
         }
     }
 
-    func stepFrame() {
+    public func stepFrame() {
         stepAnim()
         updatePart()
-        let state = part["state"] as? String ?? ""
+        let state = part["state"].asString ?? ""
         if state == "#on" {
             checkMiniFig()
         }
     }
 
-    func updatePart() {
+    public func updatePart() {
         // playfield_manager.erasePiece(part.pos) -- stub
         // playfield_manager.placePiece(part) -- stub
     }
 
-    func stepAnim() {
-        let state = part["state"] as? String ?? ""
+    public func stepAnim() {
+        let state = part["state"].asString ?? ""
         if state == "#on" {
-            if let frame = part["frame"] as? Int {
-                part["frame"] = (frame % 7) + 1
-            }
+            let frame = part["frame"].asInt ?? 1
+            part["frame"] = .int((frame % 7) + 1)
         } else {
-            part["frame"] = 1
+            part["frame"] = .int(1)
         }
     }
 
-    func checkMiniFig() {
+    public func checkMiniFig() {
         // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_02") -- stub
-        let fig: Any? = nil // stub
-        if let figDict = fig as? [String: Any] {
+        let fig: LV = .void // stub
+        if fig.isPropList {
             SndSFX("fire")
-            // figDict.behavior.notify(["damage": "#fire"]) -- stub
-            _ = figDict
+            // fig.asPropList!.behavior.notify(["damage": "#fire"]) -- stub
         }
     }
 }

@@ -5,7 +5,7 @@ class BehaviorHOFDisplay {
     var page: Int = 1
 
     func beginSprite() {
-        (glob["database_manager"] as AnyObject).loadHallOfFame()
+        (Glob.shared["database_manager"] as AnyObject).loadHallOfFame()
         ready = 0
         member("HOF_rank").text = ""
         member("HOF_names").text = "\nLOADING\n"
@@ -20,7 +20,7 @@ class BehaviorHOFDisplay {
     }
 
     func pageP(_ a: String) -> Int {
-        if (glob["database_manager"] as AnyObject).hofReady() == 0 {
+        if (Glob.shared["database_manager"] as AnyObject).hofReady() == 0 {
             return 0
         }
         switch a {
@@ -50,8 +50,8 @@ class BehaviorHOFDisplay {
 
     @discardableResult
     func displayhof() -> Int {
-        if (glob["database_manager"] as AnyObject).hofReady() != 0 {
-            let hof = (glob["database_manager"] as AnyObject).getHallOfFame() as! [String: Any]
+        if (Glob.shared["database_manager"] as AnyObject).hofReady() != 0 {
+            let hof = (Glob.shared["database_manager"] as AnyObject).getHallOfFame().asPropList!
             var ranks = ""
             var names = ""
             var moves = ""
@@ -64,8 +64,8 @@ class BehaviorHOFDisplay {
                 ranks = ranks + "\(i).\n"
                 let namekey = "u\(i)"
                 let movekey = "t\(i)"
-                names = names + ((hof[namekey] as? String) ?? "") + "\n"
-                moves = moves + ((hof[movekey] as? String) ?? "") + "\n"
+                names = names + (hof[namekey].asString ?? "") + "\n"
+                moves = moves + (hof[movekey].asString ?? "") + "\n"
             }
             member("HOF_rank").text = ranks
             member("HOF_moves").text = moves

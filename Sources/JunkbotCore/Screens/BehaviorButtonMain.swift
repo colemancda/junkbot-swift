@@ -2,8 +2,8 @@
 
 class BehaviorButtonMain {
     func mouseUp() {
-        (glob["PLAYER"] as AnyObject).game_manager.exitGame()
-        (glob["download_manager"] as AnyObject).mainmenu()
+        (Glob.shared["PLAYER"] as AnyObject).game_manager.exitGame()
+        (Glob.shared["download_manager"] as AnyObject).mainmenu()
     }
 
     func mouseDown() {

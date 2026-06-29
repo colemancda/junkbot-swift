@@ -1,7 +1,7 @@
 // Translated from Lingo: parent_edit manager.ls
 
 class EditManager {
-    var config: [String: Any] = [String: Any]()
+    var config: PropList = PropList()
     var playfield_manager: PlayfieldManager? = nil
     var toolmode: String = "none"
     var toolparam: String? = nil
@@ -9,15 +9,15 @@ class EditManager {
     var currenttool_toolcolor: String? = nil
     var toolstate: String? = nil
     var toolframe: Int? = nil
-    var dragpart: [String: Any]? = nil
-    var movepart: [String: Any]? = nil
+    var dragpart: PropList? = nil
+    var movepart: PropList? = nil
     var moveoffset: Point = Point(x: 0, y: 0)
     var mousestate: String = "UP"
 
     init() {
         self.setConfig()
-        if let pfConf = config["playfield"] {
-            playfield_manager = PlayfieldManager(pfConf)
+        if !config["playfield"].isVoid {
+            playfield_manager = PlayfieldManager(config["playfield"])
         }
         actorList.append(self)
         toolmode = "none"
@@ -31,11 +31,11 @@ class EditManager {
     }
 
     func leave() {
-        playfield_manager?.setInfo([
-            "title": field("catalog title"),
-            "par": field("editor par field"),
-            "hint": field("editor hint field")
-        ])
+        let infoList = PropList()
+        infoList["title"] = .string(field("catalog title"))
+        infoList["par"] = .string(field("editor par field"))
+        infoList["hint"] = .string(field("editor hint field"))
+        playfield_manager?.setInfo(infoList)
         let currentLevel = playfield_manager?.toString() ?? ""
         glob.PLAYER.game_manager.setGame([currentLevel])
         setCursor("none")
@@ -44,11 +44,10 @@ class EditManager {
 
     func refresh() {
         playfield_manager?.refresh()
-        let info = playfield_manager?.getInfo()
-        if info != nil {
-            member("catalog title").text = String(describing: info?["title"] ?? "")
-            member("catalog par").text = String(describing: info?["par"] ?? "")
-            member("catalog hint").text = String(describing: info?["hint"] ?? "")
+        if let info = playfield_manager?.getInfo() {
+            member("catalog title").text = info["title"].asString ?? ""
+            member("catalog par").text = info["par"].asString ?? ""
+            member("catalog hint").text = info["hint"].asString ?? ""
         } else {
             member("catalog title").text = ""
             member("catalog par").text = ""
@@ -73,13 +72,18 @@ class EditManager {
         switch toolmode {
         case "move":
             setCursor("grab")
-            setdragsprite("reset")
+            setdragsprite(.string("reset"))
         case "erase":
             setCursor("eraser")
-            setdragsprite("reset")
+            setdragsprite(.string("reset"))
         case "place":
             setCursor("none")
-            setdragsprite(["type": toolparam as Any, "color": toolcolor, "state": toolstate as Any, "frame": f])
+            let optDict = PropList()
+            optDict["type"] = toolparam.map { .string($0) } ?? .void
+            optDict["color"] = .string(toolcolor)
+            optDict["state"] = toolstate.map { .string($0) } ?? .void
+            optDict["frame"] = .int(f)
+            setdragsprite(.propList(optDict))
         default:
             setCursor("none")
         }
@@ -87,12 +91,14 @@ class EditManager {
 
     func settoolcolor(_ c: String) {
         toolcolor = c
-        if glob.EDITOR["drag_sprite"] != nil, toolparam != nil {
-            setdragsprite(["color": toolcolor])
+        if !glob.EDITOR["drag_sprite"].isVoid, toolparam != nil {
+            let optDict = PropList()
+            optDict["color"] = .string(toolcolor)
+            setdragsprite(.propList(optDict))
         }
     }
 
-    func bg_edit_item(_ kind: String, _ mem: Member?) {
+    func bg_edit_item(_ kind: String, _ mem: LingoMember?) {
         switch kind {
         case "backdrop":
             playfield_manager?.setBackdrop(mem?.name ?? "")
@@ -109,17 +115,17 @@ class EditManager {
         }
     }
 
-    func setdragsprite(_ opt: Any) {
-        guard glob.EDITOR["drag_sprite"] != nil else { return }
+    func setdragsprite(_ opt: LV) {
+        guard !glob.EDITOR["drag_sprite"].isVoid else { return }
         glob.EDITOR.drag_sprite.puppet = 1
         glob.EDITOR.drag_sprite.ink = 36
-        if let optStr = opt as? String, optStr == "reset" {
+        if let optStr = opt.asString, optStr == "reset" {
             glob.EDITOR.drag_sprite.loc = Point(x: -100, y: -100)
             glob.EDITOR.drag_sprite.blend = 100
             dragpart = nil
             return
-        } else if let optDict = opt as? [String: Any] {
-            if optDict["type"] != nil {
+        } else if let optDict = opt.asPropList {
+            if !optDict["type"].isVoid {
                 dragpart = optDict
             } else {
                 if dragpart != nil {
@@ -129,8 +135,8 @@ class EditManager {
         } else {
             return
         }
-        if dragpart != nil {
-            let dragmembername = glob.legoparts_manager.getPieceMemberName(dragpart!, "single")
+        if let dp = dragpart {
+            let dragmembername = glob.legoparts_manager.getPieceMemberName(dp, "single")
             let dragmember = member(dragmembername)
             glob.EDITOR.drag_sprite.member = dragmember
             glob.EDITOR.drag_sprite.width = (glob.EDITOR.drag_sprite.member?.width ?? 0) * (playfield_manager?.pf_scale ?? 1)
@@ -158,28 +164,29 @@ class EditManager {
             ml = ml + moveoffset
         }
         let fieldpos = playfield_manager?.getPos(ml)
-        if glob.EDITOR["drag_sprite"] != nil {
+        if !glob.EDITOR["drag_sprite"].isVoid {
             switch toolmode {
             case "place":
                 if fieldpos == nil {
                     glob.EDITOR.drag_sprite.loc = Point(x: -100, y: -100)
                 } else {
-                    glob.EDITOR.drag_sprite.loc = fieldpos![1] as? Point
-                    let row = (fieldpos![0] as? [Int])?[1] ?? 0
-                    let col = (fieldpos![0] as? [Int])?[0] ?? 0
+                    if let pt = fieldpos![1].asPoint {
+                        glob.EDITOR.drag_sprite.loc = pt
+                    }
+                    let row = fieldpos![0].asPoint?.y ?? 0
+                    let col = fieldpos![0].asPoint?.x ?? 0
                     glob.EDITOR.drag_sprite.locZ = 100000 - (1000 * row) + 999
                     if playfield_manager?.checkFit(fieldpos![0], toolparam ?? "") == true {
                         glob.EDITOR.drag_sprite.blend = 100
                         if mousestate == "press" {
                             dragpart?["pos"] = fieldpos![0]
-                            var tpart = dragpart
-                            let partType = tpart?["type"] as? String ?? ""
-                            if (partType == "HAZ_SLICKSWITCH" || partType == "HAZ_SLICKFIRE" || partType == "HAZ_SLICKFAN"),
-                               tpart?["label"] == nil {
-                                tpart?["label"] = "switch1"
-                            }
-                            if let tpart = tpart {
-                                playfield_manager?.placePiece(tpart)
+                            if let dp = dragpart {
+                                let partType = dp["type"].asString ?? ""
+                                if (partType == "HAZ_SLICKSWITCH" || partType == "HAZ_SLICKFIRE" || partType == "HAZ_SLICKFAN"),
+                                   dp["label"].isVoid {
+                                    dragpart?["label"] = .string("switch1")
+                                }
+                                playfield_manager?.placePiece(dragpart!)
                             }
                         }
                     } else {
@@ -188,26 +195,35 @@ class EditManager {
                 }
             case "config":
                 if mousestate == "press" {
-                    if fieldpos != nil {
-                        var tpart = playfield_manager?.getPart(fieldpos![0])
+                    if let fp = fieldpos {
+                        var tpart = playfield_manager?.getPart(fp[0])
                         if tpart == nil {
                             field("part inspector field").text = ""
                         } else {
                             tpart = tpart?.duplicate()
-                            tpart?.removeValue(forKey: "sprite")
+                            tpart?.deleteOne("sprite")
                             let tpos = tpart?["pos"]
-                            tpart?.removeValue(forKey: "pos")
-                            tpart?["tpos"] = [tpos?[0], tpos?[1]]
-                            let partType = tpart?["type"] as? String ?? ""
-                            switch partType {
-                            case "HAZ_SLICKSWITCH", "HAZ_SLICKFIRE", "HAZ_SLICKFAN":
-                                if tpart?["label"] == nil {
-                                    tpart?["label"] = "switch1"
-                                }
-                            default:
-                                break
+                            tpart?.deleteOne("pos")
+                            if let pt = tpos?.asPoint {
+                                let tposArr = LingoList()
+                                tposArr.add(.int(pt.x))
+                                tposArr.add(.int(pt.y))
+                                tpart?["tpos"] = .list(tposArr)
                             }
-                            field("part inspector field").text = glob.config_manager.toString(["part": tpart as Any])
+                            if let tp = tpart {
+                                let partType = tp["type"].asString ?? ""
+                                switch partType {
+                                case "HAZ_SLICKSWITCH", "HAZ_SLICKFIRE", "HAZ_SLICKFAN":
+                                    if tp["label"].isVoid {
+                                        tpart?["label"] = .string("switch1")
+                                    }
+                                default:
+                                    break
+                                }
+                                let wrapper = PropList()
+                                wrapper["part"] = .propList(tp)
+                                field("part inspector field").text = glob.config_manager.toString(wrapper)
+                            }
                         }
                     }
                 }
@@ -215,22 +231,23 @@ class EditManager {
                 if fieldpos == nil {
                     glob.EDITOR.drag_sprite.loc = Point(x: -100, y: -100)
                 } else {
-                    glob.EDITOR.drag_sprite.loc = fieldpos![1] as? Point
-                    let row = (fieldpos![0] as? [Int])?[1] ?? 0
+                    if let pt = fieldpos![1].asPoint {
+                        glob.EDITOR.drag_sprite.loc = pt
+                    }
+                    let row = fieldpos![0].asPoint?.y ?? 0
                     glob.EDITOR.drag_sprite.locZ = 100000 - (1000 * row) + 999
-                    let mpType = movepart?["type"] as? String ?? ""
+                    let mpType = movepart?["type"].asString ?? ""
                     if playfield_manager?.checkFit(fieldpos![0], mpType) == true {
                         glob.EDITOR.drag_sprite.blend = 100
                         if mousestate == "press" || (toolmode == "moving" && mousestate == "release") {
                             dragpart?["pos"] = fieldpos![0]
-                            let tpart = dragpart
-                            if let tpart = tpart {
-                                playfield_manager?.placePiece(tpart)
+                            if let dp = dragpart {
+                                playfield_manager?.placePiece(dp)
                             }
                             if toolmode == "moving" {
                                 toolmode = "move"
                             }
-                            setdragsprite("reset")
+                            setdragsprite(.string("reset"))
                         }
                     } else {
                         glob.EDITOR.drag_sprite.blend = 30
@@ -244,24 +261,29 @@ class EditManager {
                     }
                 }
             case "move":
-                if mousestate == "press", fieldpos != nil {
-                    movepart = playfield_manager?.erasePiece(fieldpos![0])
+                if mousestate == "press", let fp = fieldpos {
+                    movepart = playfield_manager?.erasePiece(fp[0])
                     if movepart == nil {
                         let decal = playfield_manager?.eraseDecal(mouseLoc)
                         if decal == nil {
-                            setdragsprite("reset")
+                            setdragsprite(.string("reset"))
                         } else {
-                            bg_edit_item("decal", decal?["member"] as? Member)
+                            bg_edit_item("decal", decal?["member"].asObject() as? LingoMember)
                             toolmode = "place_decal"
                             glob.EDITOR.drag_sprite.locZ = 200
                         }
                     } else {
-                        let mpPos = movepart?["pos"]
-                        let abovePos = offsetPoint(mpPos, dy: -1)
+                        let mpPos = movepart?["pos"] ?? .void
+                        let abovePos: LV
+                        if let pt = mpPos.asPoint {
+                            abovePos = .point(x: pt.x, y: pt.y - 1)
+                        } else {
+                            abovePos = .void
+                        }
                         moveoffset = (playfield_manager?.getLoc(abovePos) ?? Point(x: 0, y: 0)) - ml
-                        setdragsprite(movepart!)
-                        glob.EDITOR.drag_sprite.loc = playfield_manager?.getLoc(movepart?["pos"])
-                        let row = (fieldpos![0] as? [Int])?[1] ?? 0
+                        setdragsprite(.propList(movepart!))
+                        glob.EDITOR.drag_sprite.loc = playfield_manager?.getLoc(movepart?["pos"] ?? .void)
+                        let row = fp[0].asPoint?.y ?? 0
                         glob.EDITOR.drag_sprite.locZ = 100000 - (1000 * row) + 999
                         toolmode = "moving"
                     }
@@ -271,9 +293,12 @@ class EditManager {
                 glob.EDITOR.drag_sprite.blend = 100
                 glob.EDITOR.drag_sprite.locZ = 200
                 if mousestate == "release", fieldpos != nil {
-                    playfield_manager?.placeDecal(["loc": glob.EDITOR.drag_sprite.loc as Any, "member": glob.EDITOR.drag_sprite.member as Any])
+                    let decalPL = PropList()
+                    decalPL["loc"] = .point(x: glob.EDITOR.drag_sprite.loc?.x ?? 0, y: glob.EDITOR.drag_sprite.loc?.y ?? 0)
+                    decalPL["member"] = glob.EDITOR.drag_sprite.member.map { .object($0) } ?? .void
+                    playfield_manager?.placeDecal(decalPL)
                     toolmode = "move"
-                    setdragsprite("reset")
+                    setdragsprite(.string("reset"))
                 }
             default:
                 break
@@ -282,13 +307,17 @@ class EditManager {
     }
 
     func doConfigPart(_ part_text: String) {
-        var newpart = glob.config_manager.parseParams(part_text)["part"] as? [String: Any] ?? [String: Any]()
-        let tpos = newpart["tpos"] as? [Int] ?? [0, 0]
-        newpart["pos"] = Point(x: tpos[0], y: tpos[1])
-        newpart.removeValue(forKey: "tpos")
-        if let pos = newpart["pos"] {
-            playfield_manager?.erasePiece(pos)
+        let parsed = glob.config_manager.parseParams(part_text)
+        guard let newpart = parsed["part"].asPropList else { return }
+        var tposX = 0
+        var tposY = 0
+        if let tposList = newpart["tpos"].asList {
+            tposX = tposList[1].asInt ?? 0
+            tposY = tposList[2].asInt ?? 0
         }
+        newpart["pos"] = .point(x: tposX, y: tposY)
+        newpart.deleteOne("tpos")
+        playfield_manager?.erasePiece(newpart["pos"])
         playfield_manager?.placePiece(newpart)
     }
 }

@@ -1,20 +1,18 @@
 // Translated from Lingo: behavior_config manager.ls
 
-import Foundation
+class BehaviorConfigManager: BehaviorBase {
 
-class BehaviorConfigManager {
-
-    /// Parse a config-file text block into a nested dictionary.
+    /// Parse a config-file text block into a nested prop list.
     /// - Parameters:
     ///   - t: raw text of the config file
     ///   - defaultList: optional default values (prop list)
-    /// - Returns: parsed dictionary
-    func parseParams(_ t: String, defaultList: [String: Any]? = nil) -> [String: Any] {
-        var ret: [String: Any] = [:]
-        var section: [String: Any] = ret
+    /// - Returns: parsed prop list
+    func parseParams(_ t: String, defaultList: PropList? = nil) -> PropList {
+        let ret = PropList()
+        var section = ret
 
         let fixed = fixReturns(t)
-        let lines = fixed.components(separatedBy: "\n")
+        let lines = splitLines(fixed)
 
         for rawLine in lines {
             let L = trim(rawLine)
@@ -26,27 +24,28 @@ class BehaviorConfigManager {
                 if sectionName == "Master" {
                     section = ret
                 } else {
-                    let words = sectionName.components(separatedBy: " ").filter { !$0.isEmpty }
+                    let words = splitWords(sectionName)
                     if words.count > 1 {
                         let sectionSym = words[0]
                         let sectionNum = Int(words[1]) ?? 1
-                        if ret[sectionSym] == nil {
-                            ret[sectionSym] = [[String: Any]]()
+                        // Section with index: store as LingoList of PropLists
+                        if ret[sectionSym].isVoid {
+                            ret[sectionSym] = .list(LingoList())
                         }
-                        if var arr = ret[sectionSym] as? [[String: Any]] {
+                        if let arr = ret[sectionSym].asList {
                             while arr.count < sectionNum {
-                                arr.append([:])
+                                arr.add(.propList(PropList()))
                             }
-                            arr[sectionNum - 1] = [:]
-                            ret[sectionSym] = arr
-                            section = arr[sectionNum - 1]
+                            let newSec = PropList()
+                            arr[sectionNum] = .propList(newSec)  // 1-based
+                            section = newSec
                         }
                     } else {
                         let sectionSym = sectionName
-                        if ret[sectionSym] == nil {
-                            ret[sectionSym] = [String: Any]()
+                        if ret[sectionSym].isVoid {
+                            ret[sectionSym] = .propList(PropList())
                         }
-                        section = (ret[sectionSym] as? [String: Any]) ?? [:]
+                        section = ret[sectionSym].asPropList ?? PropList()
                     }
                 }
                 continue
@@ -56,50 +55,50 @@ class BehaviorConfigManager {
             if L.hasPrefix("--") { continue }
 
             // Key=value pairs (comma-separated items on line)
-            let items = L.components(separatedBy: ",")
-            var pkey: String? = nil
+            let items = splitCommas(L)
+            var pkey: String = ""
 
             for item in items {
-                let eqRange = item.range(of: "=")
                 let pval: String
-                if let eq = eqRange {
-                    pkey = String(item[item.startIndex..<eq.lowerBound])
-                    pval = String(item[eq.upperBound...])
+                if let eqIdx = item.firstIndex(of: "=") {
+                    pkey = String(item[item.startIndex..<eqIdx])
+                    pval = String(item[item.index(after: eqIdx)...])
                 } else {
-                    guard pkey != nil else { continue }
+                    if pkey.isEmpty { continue }
                     pval = item
                 }
 
-                let pvalTrimmed = pval.trimmingCharacters(in: .whitespaces)
-                let pvalVal: Any
-                if let f = Double(pvalTrimmed) {
-                    if f == Double(Int(f)) {
-                        pvalVal = Int(f)
-                    } else {
-                        pvalVal = f
-                    }
+                let pvalTrimmed = trimWhitespace(pval)
+                let pvalVal: LV
+                if let i = Int(pvalTrimmed) {
+                    pvalVal = .int(i)
+                } else if let f = Float(pvalTrimmed) {
+                    pvalVal = .float(f)
                 } else {
-                    pvalVal = pvalTrimmed
+                    pvalVal = .string(pvalTrimmed)
                 }
 
-                guard let key = pkey else { continue }
-                if let existing = section[key] {
-                    if var arr = existing as? [Any] {
-                        arr.append(pvalVal)
-                        section[key] = arr
-                    } else {
-                        section[key] = [existing, pvalVal]
-                    }
+                if pkey.isEmpty { continue }
+                let existing = section[pkey]
+                if existing.isVoid {
+                    section[pkey] = pvalVal
+                } else if existing.isList {
+                    existing.asList?.add(pvalVal)
                 } else {
-                    section[key] = pvalVal
+                    let newList = LingoList()
+                    newList.add(existing)
+                    newList.add(pvalVal)
+                    section[pkey] = .list(newList)
                 }
             }
         }
 
         // Apply defaults
         if let defaults = defaultList {
-            for (k, v) in defaults {
-                if ret[k] == nil {
+            for i in 1...max(1, defaults.count) {
+                guard i <= defaults.count else { break }
+                let (k, v) = defaults.getPropAt(i)
+                if ret[k].isVoid {
                     ret[k] = v
                 }
             }
@@ -108,62 +107,160 @@ class BehaviorConfigManager {
         return ret
     }
 
-    /// Serialize a nested dictionary back to config-file text.
-    func toString(_ propLists: [[String: [String: Any]]]) -> String {
+    /// Serialize a nested prop list back to config-file text.
+    func toString(_ propLists: [(String, PropList)]) -> String {
         var result = ""
-        for pl in propLists {
-            for (bracketName, bracket) in pl {
-                result += "[\(bracketName)]\n"
-                for (keyName, keyVal) in bracket {
-                    if let arr = keyVal as? [Any] {
-                        var t = "\(keyName)="
-                        for (idx, v) in arr.enumerated() {
-                            t += "\(v)"
-                            if idx < arr.count - 1 {
-                                if t.count > 60 {
-                                    result += t + "\n"
-                                    t = "\(keyName)="
-                                } else {
-                                    t += ","
-                                }
+        for (bracketName, bracket) in propLists {
+            result += "[\(bracketName)]\n"
+            for i in 1...max(1, bracket.count) {
+                guard i <= bracket.count else { break }
+                let (keyName, keyVal) = bracket.getPropAt(i)
+                if let arr = keyVal.asList {
+                    var t = "\(keyName)="
+                    for j in 1...max(1, arr.count) {
+                        guard j <= arr.count else { break }
+                        let v = arr[j]
+                        t += lvToString(v)
+                        if j < arr.count {
+                            if t.count > 60 {
+                                result += t + "\n"
+                                t = "\(keyName)="
+                            } else {
+                                t += ","
                             }
                         }
-                        result += t + "\n"
-                    } else {
-                        result += "\(keyName)=\(keyVal)\n"
                     }
+                    result += t + "\n"
+                } else {
+                    result += "\(keyName)=\(lvToString(keyVal))\n"
                 }
-                result += "\n\n"
+            }
+            result += "\n\n"
+        }
+        return result
+    }
+
+    /// Join a list value back into a comma-separated string.
+    func restoreCommas(_ val: LV) -> String {
+        if let arr = val.asList {
+            var parts: [String] = []
+            for i in 1...max(1, arr.count) {
+                guard i <= arr.count else { break }
+                parts.append(lvToString(arr[i]))
+            }
+            return parts.joined(separator: ",")
+        }
+        return lvToString(val)
+    }
+
+    // MARK: - String helpers (no Foundation)
+
+    func lvToString(_ v: LV) -> String {
+        switch v {
+        case .int(let n): return "\(n)"
+        case .float(let f): return "\(f)"
+        case .string(let s): return s
+        default: return ""
+        }
+    }
+
+    /// Remove CR/LF characters from a string.
+    func cleanWhitespace(_ t: String) -> String {
+        var result = ""
+        for c in t.unicodeScalars {
+            if c.value != 0x0A && c.value != 0x0D {
+                result.unicodeScalars.append(c)
             }
         }
         return result
     }
 
-    /// Join a list back into a comma-separated string.
-    func restoreCommas(_ t: Any) -> String {
-        if let arr = t as? [Any] {
-            return arr.map { "\($0)" }.joined(separator: ",")
-        }
-        return "\(t)"
-    }
-
-    /// Remove CR/LF characters from a string.
-    func cleanWhitespace(_ t: String) -> String {
-        return t
-            .replacingOccurrences(of: "\u{0A}", with: "")
-            .replacingOccurrences(of: "\u{0D}", with: "")
-    }
-
     /// Normalize all line endings to \n.
     func fixReturns(_ t: String) -> String {
-        return t
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
+        var result = ""
+        var prev: Unicode.Scalar? = nil
+        for c in t.unicodeScalars {
+            if c.value == 0x0A {
+                if prev?.value == 0x0D {
+                    // already wrote \n for the \r
+                } else {
+                    result.append("\n")
+                }
+            } else if c.value == 0x0D {
+                result.append("\n")
+            } else {
+                result.unicodeScalars.append(c)
+            }
+            prev = c
+        }
+        return result
     }
 
-    /// Trim leading and trailing whitespace (space, \n, \t) from a string.
+    /// Split a string on \n.
+    func splitLines(_ t: String) -> [String] {
+        var lines: [String] = []
+        var current = ""
+        for c in t {
+            if c == "\n" {
+                lines.append(current)
+                current = ""
+            } else {
+                current.append(c)
+            }
+        }
+        if !current.isEmpty { lines.append(current) }
+        return lines
+    }
+
+    /// Split on commas.
+    func splitCommas(_ t: String) -> [String] {
+        var parts: [String] = []
+        var current = ""
+        for c in t {
+            if c == "," {
+                parts.append(current)
+                current = ""
+            } else {
+                current.append(c)
+            }
+        }
+        parts.append(current)
+        return parts
+    }
+
+    /// Split on spaces, filtering empties.
+    func splitWords(_ t: String) -> [String] {
+        var words: [String] = []
+        var current = ""
+        for c in t {
+            if c == " " || c == "\t" {
+                if !current.isEmpty {
+                    words.append(current)
+                    current = ""
+                }
+            } else {
+                current.append(c)
+            }
+        }
+        if !current.isEmpty { words.append(current) }
+        return words
+    }
+
+    /// Trim leading and trailing whitespace (space, \n, \t, \r).
     func trim(_ t: String) -> String {
-        let whitespace = CharacterSet(charactersIn: " \n\t\r")
-        return t.trimmingCharacters(in: whitespace)
+        return trimWhitespace(t)
+    }
+
+    func trimWhitespace(_ t: String) -> String {
+        var scalars = Array(t.unicodeScalars)
+        while let first = scalars.first, isWS(first) { scalars.removeFirst() }
+        while let last = scalars.last, isWS(last) { scalars.removeLast() }
+        var s = ""
+        for sc in scalars { s.unicodeScalars.append(sc) }
+        return s
+    }
+
+    func isWS(_ s: Unicode.Scalar) -> Bool {
+        return s.value == 32 || s.value == 9 || s.value == 10 || s.value == 13
     }
 }

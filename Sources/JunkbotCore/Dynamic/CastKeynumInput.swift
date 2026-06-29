@@ -10,6 +10,6 @@ class CastKeynumInput {
                 member("keynum_input").text = "0"
             }
         }
-        glob["keyrequired"] = Int(member("keynum_input").text) ?? 0
+        Glob.shared["keyrequired"] = .int(Int(member("keynum_input").text) ?? 0)
     }
 }

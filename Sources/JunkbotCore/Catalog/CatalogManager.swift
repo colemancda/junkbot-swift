@@ -2,15 +2,15 @@
 
 class CatalogManager {
     var cgi: String = "http://www.urth.net/lego_db/levels.cgi"
-    var netids: [[Any]] = []
-    var cattext: Member? = nil
+    var netids: [[LV]] = []
+    var cattext: LingoMember? = nil
     var localmode: Bool = false
     var localprefix: String = "lego"
-    var localcatalog: [String: Any] = [String: Any]()
+    var localcatalog: PropList = PropList()
     var database: String = "alpha"
-    var levelCache: [Any?] = []
+    var levelCache: [LV] = []
     var idToBeCached: [Int] = []
-    var levelTitles: [Any?] = []
+    var levelTitles: [LV] = []
 
     init() {
         // localmode = (the environment).internetConnected = #offline
@@ -31,7 +31,7 @@ class CatalogManager {
         let rid = Int(rowid) ?? 0
         for i in stride(from: rid, through: 1, by: -1) {
             let idx = i - 1
-            if idx < levelCache.count, let lc = levelCache[idx] as? String {
+            if idx < levelCache.count, let lc = levelCache[idx].asString {
                 levelList.append(lc)
             }
         }
@@ -45,8 +45,12 @@ class CatalogManager {
             alert("Level loaded")
         } else {
             if !netids.isEmpty { return }
-            let nid = postNetText(cgi, ["mode": "load", "rowid": rowid, "database": database])
-            netids.append([nid, "load", rowid])
+            let params = PropList()
+            params["mode"] = .string("load")
+            params["rowid"] = .int(rowid)
+            params["database"] = .string(database)
+            let nid = postNetText(cgi, params)
+            netids.append([nid, .string("load"), .int(rowid)])
         }
     }
 
@@ -60,8 +64,12 @@ class CatalogManager {
             do_catalog_2(t ?? "")
         } else {
             if !netids.isEmpty { return }
-            let nid = postNetText(cgi, ["mode": "load", "rowid": "all", "database": database])
-            netids.append([nid, "catalog"])
+            let params = PropList()
+            params["mode"] = .string("load")
+            params["rowid"] = .string("all")
+            params["database"] = .string(database)
+            let nid = postNetText(cgi, params)
+            netids.append([nid, .string("catalog")])
             cattext?.text = ""
         }
     }
@@ -69,39 +77,46 @@ class CatalogManager {
     func save() {
         if localmode {
             catalog()
-            var entry = localcatalog["Entry"] as? [[String: String]] ?? []
-            entry.append([
-                "name": member("catalog name")?.text ?? "",
-                "title": member("catalog title")?.text ?? "",
-                "comment": member("catalog comment")?.text ?? ""
-            ])
-            localcatalog["Entry"] = entry
+            var entries: LingoList
+            if let el = localcatalog["Entry"].asList {
+                entries = el
+            } else {
+                entries = LingoList()
+            }
+            let newEntry = PropList()
+            newEntry["name"] = .string(member("catalog name")?.text ?? "")
+            newEntry["title"] = .string(member("catalog title")?.text ?? "")
+            newEntry["comment"] = .string(member("catalog comment")?.text ?? "")
+            entries.add(.propList(newEntry))
+            localcatalog["Entry"] = .list(entries)
             var t = ""
-            for (i, e) in entry.enumerated() {
-                t += "[Entry \(i + 1)]\n"
-                t += "Name=\(e["name"] ?? "")\n"
-                t += "Title=\(e["title"] ?? "")\n"
-                t += "Comment=\(e["comment"] ?? "")\n"
-                t += "\n"
+            for i in 1...max(1, entries.count) {
+                if let e = entries[i].asPropList {
+                    t += "[Entry \(i)]\n"
+                    t += "Name=\(e["name"].asString ?? "")\n"
+                    t += "Title=\(e["title"].asString ?? "")\n"
+                    t += "Comment=\(e["comment"].asString ?? "")\n"
+                    t += "\n"
+                }
             }
             setPref(localprefix + "cat", t)
-            setPref(localprefix + String(entry.count), glob.EDITOR.edit_manager.playfield_manager?.current_level ?? "")
+            setPref(localprefix + String(entries.count), glob.EDITOR.edit_manager.playfield_manager?.current_level ?? "")
             do_catalog_2(t)
         } else {
             if !netids.isEmpty { return }
-            let nid = postNetText(cgi, [
-                "mode": "save",
-                "name": member("catalog name")?.text ?? "",
-                "title": member("catalog title")?.text ?? "",
-                "comment": member("catalog comment")?.text ?? "",
-                "level": glob.EDITOR.edit_manager.playfield_manager?.current_level ?? "",
-                "database": database
-            ])
-            netids.append([nid, "save"])
+            let params = PropList()
+            params["mode"] = .string("save")
+            params["name"] = .string(member("catalog name")?.text ?? "")
+            params["title"] = .string(member("catalog title")?.text ?? "")
+            params["comment"] = .string(member("catalog comment")?.text ?? "")
+            params["level"] = .string(glob.EDITOR.edit_manager.playfield_manager?.current_level ?? "")
+            params["database"] = .string(database)
+            let nid = postNetText(cgi, params)
+            netids.append([nid, .string("save")])
         }
     }
 
-    func do_catalog(_ nid: Any) {
+    func do_catalog(_ nid: LV) {
         let t = netTextResult(nid)
         do_catalog_2(t)
     }
@@ -138,15 +153,12 @@ class CatalogManager {
             let line2 = rlLines.count > 1 ? rlLines[1] : ""
             let line3 = rlLines.count > 2 ? rlLines[2] : ""
             menutext += "\(line2) by \(line1) (\(line3) )\n"
-            // levelTitles[entrynum] = line2
-            while levelTitles.count < entrynum { levelTitles.append(nil) }
-            levelTitles[entrynum - 1] = line2
-            // Delete first 4 lines, store remainder in levelCache
+            while levelTitles.count < entrynum { levelTitles.append(.void) }
+            levelTitles[entrynum - 1] = .string(line2)
             let remaining = rlLines.dropFirst(4).joined(separator: "\n")
-            while levelCache.count < entrynum { levelCache.append(nil) }
-            levelCache[entrynum - 1] = remaining
+            while levelCache.count < entrynum { levelCache.append(.void) }
+            levelCache[entrynum - 1] = .string(remaining)
         }
-        // delete trailing char
         if menutext.hasSuffix("\n") { menutext.removeLast() }
         cattext?.text = menutext
         let menuLines = menutext.components(separatedBy: "\n")
@@ -162,28 +174,28 @@ class CatalogManager {
                 idToBeCached.append(id)
                 continue
             }
-            if !(levelCache[id - 1] is String) {
+            if levelCache[id - 1].isString == false {
                 idToBeCached.append(id)
             }
         }
     }
 
-    func do_save(_ nid: Any) {
+    func do_save(_ nid: LV) {
         catalog()
     }
 
-    func do_load(_ nid: Any, rowid: Int) {
+    func do_load(_ nid: LV, rowid: Int) {
         let t = netTextResult(nid)
-        while levelCache.count < rowid { levelCache.append(nil) }
-        levelCache[rowid - 1] = t
+        while levelCache.count < rowid { levelCache.append(.void) }
+        levelCache[rowid - 1] = .string(t)
     }
 
     func stepFrame() {
         if netids.isEmpty {
-            sendAllSprites("netReady", 1)
+            sendAllSprites("netReady", .int(1))
             return
         }
-        sendAllSprites("netReady", 0)
+        sendAllSprites("netReady", .int(0))
         var streamsofar = 0
         var streamtotal = 0
         var toRemove = [Int]()
@@ -191,7 +203,7 @@ class CatalogManager {
             let ss = getStreamStatus(nid[0])
             streamsofar += ss.bytesSoFar
             streamtotal += ss.bytesTotal
-            let nidType = nid[1] as? String ?? ""
+            let nidType = nid[1].asString ?? ""
             if nidType == "catalog" {
                 cattext?.text = "Loading \(streamsofar) of about 200,000"
             }
@@ -199,7 +211,7 @@ class CatalogManager {
                 toRemove.append(idx)
                 switch nidType {
                 case "load":
-                    do_load(nid[0], rowid: nid[2] as? Int ?? 0)
+                    do_load(nid[0], rowid: nid[2].asInt ?? 0)
                 case "catalog":
                     do_catalog(nid[0])
                 case "save":
@@ -213,7 +225,7 @@ class CatalogManager {
         if netids.isEmpty && !idToBeCached.isEmpty {
             let id = idToBeCached.removeFirst()
             load(id)
-            print("caching \(id)")
+            debugLog("caching \(id)")
         }
     }
 }

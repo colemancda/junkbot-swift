@@ -1,111 +1,123 @@
 // Translated from Lingo: behavior_msgBox_Success.ls
 
 class BehaviorMsgBoxSuccess {
-    var prop: [String: Any] = [:]
+    var prop: PropList = PropList()
     var myNum: Int = 0
     var keys: Int = 0
 
     func beginSprite() {
-        glob["BIG_MSG_OBJ"] = self
-        prop = [:]
-        prop["state"] = "hide"
-        prop["loc"] = ["Start": Point(x: 60, y: -280), "show": Point(x: 60, y: 80), "end": Point(x: -340, y: 80)]
-        prop["speed"] = ["move1": [0, 40], "move2": [-40, 0]]
-        prop["sprites"] = [
-            "MSG1": myNum + 9, "MSG2": myNum + 10, "MSG3": myNum + 11,
-            "newrecord": myNum + 2, "gold": myNum + 3, "bicon": myNum + 4, "keys": myNum + 8
-        ]
-        prop["todo"] = [String]()
+        Glob.shared["BIG_MSG_OBJ"] = .void  // set externally as object reference
+        prop = PropList()
+        prop["state"] = .string("hide")
+        let loc = PropList()
+        loc["Start"] = .point(x: 60, y: -280)
+        loc["show"] = .point(x: 60, y: 80)
+        loc["end"] = .point(x: -340, y: 80)
+        prop["loc"] = .propList(loc)
+        let speed = PropList()
+        speed["move1"] = .list(LingoList([.int(0), .int(40)]))
+        speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
+        prop["speed"] = .propList(speed)
+        let sprites = PropList()
+        sprites["MSG1"] = .int(myNum + 9)
+        sprites["MSG2"] = .int(myNum + 10)
+        sprites["MSG3"] = .int(myNum + 11)
+        sprites["newrecord"] = .int(myNum + 2)
+        sprites["gold"] = .int(myNum + 3)
+        sprites["bicon"] = .int(myNum + 4)
+        sprites["keys"] = .int(myNum + 8)
+        prop["sprites"] = .propList(sprites)
+        prop["todo"] = .list(LingoList())
     }
 
     func reportState() -> String {
-        return prop["state"] as! String
+        return prop["state"].asString!
     }
 
     func dropBox() {
         setCursor("none")
         sendAllSprites("getOut")
-        prop["state"] = "move1"
+        prop["state"] = .string("move1")
         fixLocZ()
         updateData1()
     }
 
     func updateData1() {
-        prop["todo"] = [String]()
-        let building = (glob["current"] as! [String: Any])["building"] as! Int
-        let level = (glob["current"] as! [String: Any])["level"] as! Int
-        let moves = (glob["current"] as! [String: Any])["moves"] as! Int
-        let gold = ((glob["building"] as! [[String: Any]])[building - 1]["LEVELS"] as! [[String: Any]])[level - 1]["gold"] as! Int
+        prop["todo"] = .list(LingoList())
+        let current = Glob.shared["current"].asPropList!
+        let building = current["building"].asInt!
+        let level = current["level"].asInt!
+        let moves = current["moves"].asInt!
+        let buildingList = Glob.shared["building"].asList!
+        let buildingEntry = buildingList[building].asPropList!
+        let levelsLV = buildingEntry["LEVELS"]
+        let levelsList = levelsLV.asList!
+        let gold = levelsList[level].asPropList!["gold"].asInt!
         if level > 15 {
             return
         }
-        let sprites = prop["sprites"] as! [String: Int]
+        let sprites = prop["sprites"].asPropList!
         for x in 1...4 {
-            let buildingState = (glob["building"] as! [[String: Any]])[x - 1]["state"] as! String
+            let bEntry = buildingList[x].asPropList!
+            let buildingState = bEntry["state"].asString!
             if buildingState == "open" {
-                sprite(x + (sprites["bicon"]! - 1)).member = member("building_icon_\(x)")
+                sprite(x + (sprites["bicon"].asInt! - 1)).member = member("building_icon_\(x)")
                 updateStage()
             }
         }
         member("num.moves").text = String(moves)
-        var flag = 0
-        sprite(sprites["newrecord"]!).blend = 0
-        var data = (glob["building"] as! [[String: Any]])[building - 1]["LEVELS"] as! [[String: Any]]
+        sprite(sprites["newrecord"].asInt!).blend = 0
+        let data = levelsList
         keys = 0
         for i in 1...15 {
+            let dataEntry = data[i].asPropList!
             if i == level {
-                if (data[i - 1]["moves"] as! Int) > 0 {
+                if (dataEntry["moves"].asInt ?? 0) > 0 {
                     member("msgbox_1").text = "KEYCARD ALREADY ACQUIRED"
                     sprite(myNum + 15).blend = 0
                 } else {
                     member("msgbox_1").text = "YOU GOT A BUILDING \(building) KEYCARD"
                     sprite(myNum + 15).blend = 100
-                    data[i - 1]["moves"] = moves
+                    dataEntry["moves"] = .int(moves)
                 }
-                if moves < (data[i - 1]["moves"] as! Int) {
-                    var todo = prop["todo"] as! [String]
-                    todo.append("newrecord")
-                    prop["todo"] = todo
-                    sprite(sprites["newrecord"]!).blend = 100
-                    data[i - 1]["moves"] = moves
+                if moves < (dataEntry["moves"].asInt ?? 0) {
+                    let todo = prop["todo"].asList!
+                    todo.add(.string("newrecord"))
+                    sprite(sprites["newrecord"].asInt!).blend = 100
+                    dataEntry["moves"] = .int(moves)
                 }
                 if gold == 1 {
-                    sprite(sprites["gold"]!).blend = 100
+                    sprite(sprites["gold"].asInt!).blend = 100
                     member("msgbox_3").text = ""
                 } else {
-                    if (data[i - 1]["moves"] as! Int) <= (data[i - 1]["goal"] as! Int) {
-                        var buildingLevels = (glob["building"] as! [[String: Any]])[building - 1]["LEVELS"] as! [[String: Any]]
-                        buildingLevels[level - 1]["gold"] = 1
-                        var todo = prop["todo"] as! [String]
-                        todo.append("goldaward")
-                        prop["todo"] = todo
-                        sprite(sprites["gold"]!).blend = 100
+                    if (dataEntry["moves"].asInt ?? 0) <= (dataEntry["goal"].asInt ?? 0) {
+                        buildingEntry["LEVELS"].asList![level]["gold"] = .int(1)
+                        let todo = prop["todo"].asList!
+                        todo.add(.string("goldaward"))
+                        sprite(sprites["gold"].asInt!).blend = 100
                         member("msgbox_3").text = ""
                     } else {
-                        member("msgbox_3").text = "beat this level in \(data[i - 1]["goal"]!) moves or fewer\nto get the gold award"
-                        sprite(sprites["gold"]!).blend = 0
+                        member("msgbox_3").text = "beat this level in \(dataEntry["goal"].asInt!) moves or fewer\nto get the gold award"
+                        sprite(sprites["gold"].asInt!).blend = 0
                     }
                 }
             }
-            if (data[i - 1]["moves"] as! Int) > 0 {
+            if (dataEntry["moves"].asInt ?? 0) > 0 {
                 keys += 1
             }
         }
-        let keyrequired = glob["keyrequired"] as! Int
-        if (keys >= keyrequired) && !(building == 4) && !((glob["building"] as! [[String: Any]])[building]["state"] as! String == "open") {
+        let keyrequired = Glob.shared["keyrequired"].asInt!
+        if (keys >= keyrequired) && !(building == 4) && !(buildingList[building + 1].asPropList!["state"].asString == "open") {
             member("msgbox_2").text = "YOU UNLOCKED BUILDING \(building + 1)"
-            var todo = prop["todo"] as! [String]
-            todo.append("unlock")
-            prop["todo"] = todo
-            var buildingArr = glob["building"] as! [[String: Any]]
-            buildingArr[building]["state"] = "open"
-            glob["building"] = buildingArr
+            let todo = prop["todo"].asList!
+            todo.add(.string("unlock"))
+            buildingList[building + 1].asPropList!["state"] = .string("open")
             SndSFX("unlock2")
         } else {
             if keys >= keyrequired {
-                (glob["PLAYER"] as AnyObject).game_manager.TotalKeys()
-                let rankdata = glob["rankdata"] as! [String: Any]
-                if (rankdata["keys"] as! Int) == 60 {
+                (Glob.shared["PLAYER"] as AnyObject).game_manager.TotalKeys()
+                let rankdata = Glob.shared["rankdata"].asPropList!
+                if (rankdata["keys"].asInt ?? 0) == 60 {
                     member("msgbox_2").text = ""
                 } else {
                     member("msgbox_2").text = "GET ALL THE KEYCARDS!"
@@ -118,13 +130,13 @@ class BehaviorMsgBoxSuccess {
                 }
             }
         }
-        if (level == 15) && (keys >= keyrequired) && !((glob["current"] as! [String: Any])["building"] as! Int == 4) {
+        if (level == 15) && (keys >= keyrequired) && !(current["building"].asInt == 4) {
             sprite(myNum + 13).blend = 100
             sprite(myNum + 13).member = member("but_next_bd")
             updateStage()
             sprite(myNum + 13).updateProp()
         } else {
-            if (level == 15) && (keys >= keyrequired) && ((glob["current"] as! [String: Any])["building"] as! Int == 4) {
+            if (level == 15) && (keys >= keyrequired) && (current["building"].asInt == 4) {
                 sprite(myNum + 13).blend = 0
             } else {
                 sprite(myNum + 13).blend = 100
@@ -134,61 +146,60 @@ class BehaviorMsgBoxSuccess {
     }
 
     func exitFrame() {
-        let building = (glob["current"] as! [String: Any])["building"] as! Int
-        let sprites = prop["sprites"] as! [String: Int]
-        switch prop["state"] as! String {
+        let current = Glob.shared["current"].asPropList!
+        let building = current["building"].asInt!
+        let sprites = prop["sprites"].asPropList!
+        switch prop["state"].asString! {
         case "hide":
             break
         case "move1":
-            let locShow = (prop["loc"] as! [String: Any])["show"] as! Point
-            let speedMove1 = (prop["speed"] as! [String: Any])["move1"] as! [Int]
-            let temp = doMove(toWhere: locShow, speed: speedMove1)
+            let locShow = prop["loc"].asPropList!["show"].asPoint!
+            let speedList = prop["speed"].asPropList!["move1"].asList!
+            let spd = [speedList[1].asInt!, speedList[2].asInt!]
+            let temp = doMove(toWhere: locShow, speed: spd)
             if temp != 0 {
-                prop["state"] = "show"
+                prop["state"] = .string("show")
             }
         case "show":
             setCursor("none")
-            let todo = prop["todo"] as! [String]
-            if todo.firstIndex(of: "unlock") != nil {
+            let todo = prop["todo"].asList!
+            if todo.getOne(.string("unlock")) {
                 if building < 4 {
-                    let bsp = sprite(sprites["bicon"]! + building)
+                    let bsp = sprite(sprites["bicon"].asInt! + building)
                     for _ in 1...10 {
-                        bsp.rect = bsp.rect + Rect(left: -1, top: -1, right: 1, bottom: 1)
                         bsp.blend -= 5
                         updateStage()
                     }
                     for _ in 1...10 {
-                        bsp.rect = bsp.rect + Rect(left: 1, top: 1, right: -1, bottom: -1)
                         bsp.blend += 5
                         updateStage()
                     }
-                    bsp.stretch = 0
-                    updateStage()
                     bsp.member = member("building_icon_\(building + 1)")
                 }
             }
-            if todo.firstIndex(of: "goldaward") != nil {
-                let bsp = sprite(sprites["gold"]!)
+            if todo.getOne(.string("goldaward")) {
+                let bsp = sprite(sprites["gold"].asInt!)
                 bsp.blend = 100
                 updateStage()
             }
-            if todo.firstIndex(of: "newrecord") != nil {
-                let bsp = sprite(sprites["newrecord"]!)
+            if todo.getOne(.string("newrecord")) {
+                let bsp = sprite(sprites["newrecord"].asInt!)
                 bsp.blend = 100
                 updateStage()
             }
-            prop["state"] = "showdone"
+            prop["state"] = .string("showdone")
         case "move2":
-            let locEnd = (prop["loc"] as! [String: Any])["end"] as! Point
-            let speedMove2 = (prop["speed"] as! [String: Any])["move2"] as! [Int]
-            let temp = doMove(toWhere: locEnd, speed: speedMove2)
+            let locEnd = prop["loc"].asPropList!["end"].asPoint!
+            let speedList = prop["speed"].asPropList!["move2"].asList!
+            let spd = [speedList[1].asInt!, speedList[2].asInt!]
+            let temp = doMove(toWhere: locEnd, speed: spd)
             if temp != 0 {
-                prop["state"] = "hide"
-                updateLoc(newloc: (prop["loc"] as! [String: Any])["Start"] as! Point)
-                if prop["callback"] != nil {
-                    let cb = prop["callback"] as! [String: Any]
-                    (cb["object"] as AnyObject).callback(cb["parameter"])
-                    prop["callback"] = nil
+                prop["state"] = .string("hide")
+                updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
+                if !prop["callback"].isVoid {
+                    let cb = prop["callback"].asPropList!
+                    (cb["object"] as AnyObject).callback(cb["parameter"].asString)
+                    prop["callback"] = .void
                 }
             }
         default:
@@ -198,9 +209,9 @@ class BehaviorMsgBoxSuccess {
 
     @discardableResult
     func doMove(toWhere: Point, speed: [Int]) -> Int {
-        switch prop["state"] as! String {
+        switch prop["state"].asString! {
         case "move1":
-            if sprite(myNum).locV < toWhere.y {
+            if sprite(myNum).loc.y < toWhere.y {
                 let newloc = sprite(myNum).loc + Point(x: speed[0], y: speed[1])
                 updateLoc(newloc: newloc)
                 return 0
@@ -208,7 +219,7 @@ class BehaviorMsgBoxSuccess {
                 return 1
             }
         case "move2":
-            if sprite(myNum).locH > toWhere.x {
+            if sprite(myNum).loc.x > toWhere.x {
                 let newloc = sprite(myNum).loc + Point(x: speed[0], y: speed[1])
                 updateLoc(newloc: newloc)
                 return 0
@@ -221,15 +232,15 @@ class BehaviorMsgBoxSuccess {
     }
 
     func getOut() {
-        let state = prop["state"] as! String
+        let state = prop["state"].asString!
         if state != "hide" && state != "move2" {
-            prop["state"] = "move2"
+            prop["state"] = .string("move2")
         }
     }
 
-    func updateState(_ state: String, _ callback: Any? = nil) {
+    func updateState(_ state: String, _ callback: LV = .void) {
         prop["callback"] = callback
-        prop["state"] = state
+        prop["state"] = .string(state)
     }
 
     func updateLoc(newloc: Point) {
@@ -256,7 +267,7 @@ class BehaviorMsgBoxSuccess {
         for sn in 1...17 {
             sprite(myNum + sn).locZ = 1000000001 + sn
             sprite(myNum + sn).blend = 100
-            sprite(myNum + sn).visible = 1
+            sprite(myNum + sn).visible = true
         }
     }
 

@@ -5,13 +5,13 @@ class BehaviorPlaqueSelfControl {
     var myPlaque: String = ""
 
     func beginSprite() {
-        myPlaque = glob["plaque"] as! String
-        (glob["PLAYER"] as AnyObject).game_manager.updatePlaque()
-        sprite(snum).member = member("plaque_\(glob["plaque"] as! String)")
+        myPlaque = Glob.shared["plaque"].asString!
+        (Glob.shared["PLAYER"] as AnyObject).game_manager.updatePlaque()
+        sprite(snum).member = member("plaque_\(Glob.shared["plaque"].asString!)")
     }
 
     func exitFrame() {
-        let currentPlaque = glob["plaque"] as! String
+        let currentPlaque = Glob.shared["plaque"].asString!
         if myPlaque != currentPlaque {
             myPlaque = currentPlaque
             sprite(snum).member = member("plaque_\(currentPlaque)")

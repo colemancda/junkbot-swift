@@ -2,8 +2,8 @@
 
 class BehaviorEditorBgEditItem {
     var kind: String = ""
-    var s: Sprite?
-    var m: Member?
+    var s: LingoSprite?
+    var m: LingoMember?
 
     func beginSprite(_ spriteNum: Int) {
         s = sprite(spriteNum)
@@ -14,9 +14,17 @@ class BehaviorEditorBgEditItem {
         glob.EDITOR.edit_manager.bg_edit_item(kind, m)
     }
 
-    func getPropertyDescriptionList() -> [String: Any] {
-        var L = [String: Any]()
-        L["kind"] = ["comment": "Kind", "format": "symbol", "range": ["backdrop", "decal"], "default": "decal"]
+    func getPropertyDescriptionList() -> PropList {
+        let L = PropList()
+        let kindDesc = PropList()
+        kindDesc["comment"] = .string("Kind")
+        kindDesc["format"] = .string("symbol")
+        let kindRange = LingoList()
+        kindRange.add(.string("backdrop"))
+        kindRange.add(.string("decal"))
+        kindDesc["range"] = .list(kindRange)
+        kindDesc["default"] = .string("decal")
+        L["kind"] = .propList(kindDesc)
         return L
     }
 }

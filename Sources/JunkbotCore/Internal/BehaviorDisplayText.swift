@@ -1,13 +1,11 @@
 // Translated from Lingo: behavior_Display Text.ls
 
-import Foundation
-
-class BehaviorDisplayText {
+class BehaviorDisplayText: BehaviorBase {
     var spriteNum: Int = 0
-    var getPDLError: Any? = nil
+    var getPDLError: LV = .void
     var myDisplayType: String = "status bar (fixed size and position)"
-    var mySprite: Any? = nil
-    var myMember: Any? = nil
+    var mySprite: LV = .void
+    var myMember: LV = .void
     var myWidthAdjust: Int = 0
     var myHeightAdjust: Int = 0
     var myOffStageLoc: Point = Point(x: 999, y: 999)
@@ -109,19 +107,18 @@ class BehaviorDisplayText {
         }
     }
 
-    func displayText_Enroll(_ enrollList: inout [Any]) -> [Any] {
-        if enrollList.isEmpty {
-            enrollList.append(self)
+    func displayText_Enroll(_ enrollList: LingoList) -> LingoList {
+        if enrollList.count == 0 {
+            enrollList.add(.void)  // placeholder — would store self reference via protocol
         }
         return enrollList
     }
 
     func displayText_SetText(_ theString: String?, theLoc: Point? = nil, theAlignment: String? = nil) {
         var str = theString ?? ""
-        var loc = theLoc
 
         if theString == nil {
-            errorAlert(theError: "invalidString", data: nil)
+            errorAlert(theError: "invalidString")
             str = ""
         }
 
@@ -142,10 +139,11 @@ class BehaviorDisplayText {
         // memberRect += [0, 0, myWidthAdjust, myHeightAdjust]
 
         if myDisplayType == "tooltip" {
-            var resolvedLoc = loc ?? Point(x: 0, y: 0)
-            resolvedLoc = getTopLeft(theLoc: resolvedLoc, theAlignment: theAlignment ?? "", memberRect: memberRect)
+            let loc = theLoc ?? Point(x: 0, y: 0)
+            let resolvedLoc = getTopLeft(theLoc: loc, theAlignment: theAlignment ?? "", memberRect: memberRect)
             // stageWidth / stageHeight clamping would happen here
             // mySprite.loc = resolvedLoc
+            _ = resolvedLoc
         } else {
             // Check if scroll needed based on text height vs sprite height
             // myMember.boxType = textHeight > mySprite.height ? "scroll" : "fixed"
@@ -156,21 +154,23 @@ class BehaviorDisplayText {
         return self
     }
 
-    func errorAlert(theError: String, data: Any?) {
+    func errorAlert(theError: String) {
         switch theError {
         case "invalidString":
-            print("BEHAVIOR ERROR: DisplayText_SetText handler could not treat value as a string: \(String(describing: data))")
+            debugLog("BEHAVIOR ERROR: DisplayText_SetText handler could not treat value as a string")
         case "invalidPoint":
-            print("BEHAVIOR ERROR: DisplayText_SetText handler could not treat value as a point: \(String(describing: data))")
+            debugLog("BEHAVIOR ERROR: DisplayText_SetText handler could not treat value as a point")
         default:
             break
         }
     }
 
-    func substituteStrings(_ parentString: String, childStringList: [String: Any]) -> String {
+    func substituteStrings(_ parentString: String, childStringList: PropList) -> String {
         var result = parentString
-        for (key, value) in childStringList {
-            result = result.replacingOccurrences(of: key, with: "\(value)")
+        for i in 1...max(1, childStringList.count) {
+            guard i <= childStringList.count else { break }
+            let (key, value) = childStringList.getPropAt(i)
+            result = result.replacingOccurrences(of: key, with: value.asString ?? "")
         }
         return result
     }

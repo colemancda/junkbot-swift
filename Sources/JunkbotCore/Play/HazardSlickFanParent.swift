@@ -1,75 +1,73 @@
 // Translated from Lingo: parent_hazard slick fan parent.ls
 
-class HazardSlickFanParent {
-    var playfield_manager: Any? = nil
-    var play_manager: PlayManager? = nil
-    var part: [String: Any]
-    var myWidth: Int = 2
-    var last_step: Int = 0
-    var switch_: Int = 0  // 'switch' is a Swift keyword, renamed to switch_
-    var airjet_cycle: Int = 1
-    var partloc: Point = Point(x: 0, y: 0)
-    var top_locz: Any? = nil
-    var dir: Any? = nil
+public class HazardSlickFanParent {
+    public var playfield_manager: LV = .void
+    public var play_manager: PlayManager? = nil
+    public var part: PropList
+    public var myWidth: Int = 2
+    public var last_step: Int = 0
+    public var switch_: Int = 0  // 'switch' is a Swift keyword, renamed to switch_
+    public var airjet_cycle: Int = 1
+    public var partloc: Point = Point()
+    public var top_locz: LV = .void
+    public var dir: LV = .void
 
-    init(_ p: [String: Any]) {
+    public init(_ p: PropList) {
         part = p
         // part["behavior"] = self -- set by caller
         play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = nil // play_manager.playfield_manager
+        playfield_manager = .void // play_manager.playfield_manager
         // partloc = part.sprite[1].loc -- stub
         myWidth = 2
-        last_step = Int(Date().timeIntervalSince1970 * 60)
+        last_step = currentTicks
         switch_ = 0
-        airjet_cycle = Int.random(in: 1...7)
+        airjet_cycle = lingoRandom(7)
         // top_locz = playfield_manager.posToLocZ(point(50, 1)) -- stub
     }
 
-    func done() {
-        play_manager?.actorDone(self)
+    public func done() {
+        if let pm = play_manager { pm.actorDone(self) }
     }
 
-    func notify(_ notes: [String: Any]) {
-        if let destroyed = notes["destroyed"] as? Int, destroyed == 1 {
+    public func notify(_ notes: PropList) {
+        if let destroyed = notes["destroyed"].asInt, destroyed == 1 {
             done()
-        } else if notes["pos"] != nil {
-            part["pos"] = notes["pos"]!
-        } else if let sw = notes["switch"] {
-            part["state"] = sw
+        } else if !notes["pos"].isVoid {
+            part["pos"] = notes["pos"]
+        } else if !notes["switch"].isVoid {
+            part["state"] = notes["switch"]
             stepAnim()
             updatePart()
         }
     }
 
-    func stepFrame() {
+    public func stepFrame() {
         stepAnim()
         updatePart()
         checkMiniFig()
     }
 
-    func stepAnim() {
-        let state = part["state"] as? String ?? ""
+    public func stepAnim() {
+        let state = part["state"].asString ?? ""
         if state == "#on" {
-            if let frame = part["frame"] as? Int {
-                part["frame"] = (frame % 4) + 1
-            }
+            let frame = part["frame"].asInt ?? 1
+            part["frame"] = .int((frame % 4) + 1)
         } else {
-            part["frame"] = 1
+            part["frame"] = .int(1)
         }
     }
 
-    func checkMiniFig() {
-        let state = part["state"] as? String ?? ""
-        var gotMinifig: Any? = nil
+    public func checkMiniFig() {
+        let state = part["state"].asString ?? ""
+        var gotMinifig: LV = .void
         var airjet_height = [0, 0]
         if state == "#on" {
             var y = -1
             while true {
                 // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, y), "#BRICK_01") -- stub
-                let fig: Any = 1 // stub
-                let figInt = fig as? Int
-                if figInt == 0 { break }
-                if figInt == nil {
+                let fig: LV = .int(1) // stub
+                if let figInt = fig.asInt, figInt == 0 { break }
+                if fig.isPropList {
                     gotMinifig = fig
                     break
                 }
@@ -79,22 +77,21 @@ class HazardSlickFanParent {
             y = -1
             while true {
                 // fig = playfield_manager.checkFitOrMinifig(part.pos + point(2, y), "#BRICK_01") -- stub
-                let fig: Any = 1 // stub
-                let figInt = fig as? Int
-                if figInt == 0 { break }
-                if figInt == nil {
+                let fig: LV = .int(1) // stub
+                if let figInt = fig.asInt, figInt == 0 { break }
+                if fig.isPropList {
                     gotMinifig = fig
                     break
                 }
                 y -= 1
                 airjet_height[1] += 1
             }
-            if let gm = gotMinifig, !(gm is Int) || (gm as? Int) != 0 {
+            if gotMinifig.isPropList {
                 if switch_ == 0 {
                     SndSFX("fan")
                     switch_ = 1
                 }
-                // gotMinifig.behavior.notify(["FAN": part]) -- stub
+                // gotMinifig.asPropList!.behavior.notify(["FAN": part]) -- stub
             } else {
                 switch_ = 0
             }
@@ -110,11 +107,12 @@ class HazardSlickFanParent {
                 } else {
                     // s.visible = 0 -- stub
                 }
+                _ = i
             }
         }
     }
 
-    func updatePart() {
+    public func updatePart() {
         // playfield_manager.erasePiece(part.pos) -- stub
         // playfield_manager.placePiece(part) -- stub
     }

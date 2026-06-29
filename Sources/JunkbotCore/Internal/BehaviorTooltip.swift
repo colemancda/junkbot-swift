@@ -1,16 +1,14 @@
 // Translated from Lingo: behavior_Tooltip.ls
 
-import Foundation
-
-class BehaviorTooltip {
-    var mySprite: Any? = nil
-    var getPDLError: Any? = nil
+class BehaviorTooltip: BehaviorBase {
+    var mySprite: LV = .void
+    var getPDLError: LV = .void
     var myString: String = "Insert your single-line tool tip here"
     var myDelay: Int = 30
     var myPosition: String = "centered"
     var myDisplaySprite: Int = 0
     var myHideFlag: Bool = true
-    var myDisplayList: [Any] = []
+    var myDisplayList: LingoList = LingoList()
     var myStartTicks: Int = Int.max
     var myDisplayFlag: Bool = false
 
@@ -38,7 +36,7 @@ class BehaviorTooltip {
     }
 
     func mouseEnter() {
-        myStartTicks = Int(Date().timeIntervalSince1970 * 60) + myDelay
+        myStartTicks = currentTicks + myDelay
     }
 
     func mouseLeave() {
@@ -47,12 +45,12 @@ class BehaviorTooltip {
 
     func initialize() {
         // mySprite = sprite(spriteNum)
-        myDisplayList = []
+        myDisplayList = LingoList()
         myStartTicks = Int.max
     }
 
     func checkStatus() {
-        let ticks = Int(Date().timeIntervalSince1970 * 60)
+        let ticks = currentTicks
         if myStartTicks < ticks {
             if myHideFlag {
                 // if the mouseDown
@@ -110,7 +108,10 @@ class BehaviorTooltip {
             break
         }
 
-        if myDisplayList.isEmpty {
+        _ = displayLoc
+        _ = theAlignment
+
+        if myDisplayList.count == 0 {
             enrollDisplaySprite()
         }
         // call(#DisplayText_SetText, myDisplayList, myString, displayLoc, theAlignment)
@@ -119,7 +120,7 @@ class BehaviorTooltip {
 
     func hideTip() {
         myDisplayFlag = false
-        if myDisplayList.isEmpty {
+        if myDisplayList.count == 0 {
             enrollDisplaySprite()
         }
         // call(#DisplayText_SetText, myDisplayList, "")
@@ -128,7 +129,7 @@ class BehaviorTooltip {
 
     func enrollDisplaySprite() {
         // sendSprite(myDisplaySprite, #DisplayText_Enroll, myDisplayList)
-        // if myDisplayList.isEmpty: sendAllSprites(#DisplayText_Enroll, myDisplayList)
+        // if myDisplayList.count == 0: sendAllSprites(#DisplayText_Enroll, myDisplayList)
         // if still empty: errorAlert(#noValidSprites)
         // else: errorAlert(#invalidSpriteNumber)
     }
@@ -139,30 +140,31 @@ class BehaviorTooltip {
         return spriteNum + 1
     }
 
-    func tooltip_SetMessage(_ theString: String) -> String? {
+    func tooltip_SetMessage(_ theString: String) {
         myString = theString
-        return nil
     }
 
     func tooltip_GetReference() -> BehaviorTooltip {
         return self
     }
 
-    func errorAlert(theError: String, data: Any?) {
+    func errorAlert(theError: String) {
         switch theError {
         case "invalidSpriteNumber":
-            print("Sprite \(String(describing: data)) did not respond to a DisplayText call. Another sprite will be used.")
+            debugLog("Sprite did not respond to a DisplayText call. Another sprite will be used.")
         case "noValidSprites":
-            print("BEHAVIOR ERROR: No sprites responded to a DisplayText call. Please ensure that the 'Display Text' behavior is attached to a Field or Text Sprite.")
+            debugLog("BEHAVIOR ERROR: No sprites responded to a DisplayText call. Please ensure that the 'Display Text' behavior is attached to a Field or Text Sprite.")
         default:
             break
         }
     }
 
-    func substituteStrings(_ parentString: String, childStringList: [String: Any]) -> String {
+    func substituteStrings(_ parentString: String, childStringList: PropList) -> String {
         var result = parentString
-        for (key, value) in childStringList {
-            result = result.replacingOccurrences(of: key, with: "\(value)")
+        for i in 1...max(1, childStringList.count) {
+            guard i <= childStringList.count else { break }
+            let (key, value) = childStringList.getPropAt(i)
+            result = result.replacingOccurrences(of: key, with: value.asString ?? "")
         }
         return result
     }

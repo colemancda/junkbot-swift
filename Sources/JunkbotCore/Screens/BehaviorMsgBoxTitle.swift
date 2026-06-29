@@ -1,66 +1,79 @@
 // Translated from Lingo: behavior_msgBox_Title.ls
 
 class BehaviorMsgBoxTitle {
-    var prop: [String: Any] = [:]
+    var prop: PropList = PropList()
     var myNum: Int = 0
 
     func beginSprite() {
-        glob["title_obj"] = self
-        prop = [:]
-        prop["state"] = "hide"
-        prop["loc"] = ["Start": Point(x: 100, y: -190), "show": Point(x: 100, y: 130), "end": Point(x: -300, y: 130)]
-        prop["speed"] = ["move1": [0, 40], "move2": [-40, 0]]
-        prop["sprites"] = ["icon": myNum + 1, "num": myNum + 2, "title": myNum + 3]
+        Glob.shared["title_obj"] = .void  // set externally as object reference
+        prop = PropList()
+        prop["state"] = .string("hide")
+        let loc = PropList()
+        loc["Start"] = .point(x: 100, y: -190)
+        loc["show"] = .point(x: 100, y: 130)
+        loc["end"] = .point(x: -300, y: 130)
+        prop["loc"] = .propList(loc)
+        let speed = PropList()
+        speed["move1"] = .list(LingoList([.int(0), .int(40)]))
+        speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
+        prop["speed"] = .propList(speed)
+        let sprites = PropList()
+        sprites["icon"] = .int(myNum + 1)
+        sprites["num"] = .int(myNum + 2)
+        sprites["title"] = .int(myNum + 3)
+        prop["sprites"] = .propList(sprites)
     }
 
-    func updateData(_ data: [Any], callback: Any?) {
-        let sprites = prop["sprites"] as! [String: Int]
-        let buildingNum = data[0] as! Int
-        sprite(sprites["icon"]!).member = member("building_icon_\(buildingNum)")
-        sprite(sprites["num"]!).member = member("building_title_\(buildingNum)")
-        member("level_title").text = "LEVEL \(data[1]): \(data[2])"
-        prop["state"] = "move1"
+    func updateData(_ data: LingoList, callback: LV = .void) {
+        let sprites = prop["sprites"].asPropList!
+        let buildingNum = data[1].asInt!
+        sprite(sprites["icon"].asInt!).member = member("building_icon_\(buildingNum)")
+        sprite(sprites["num"].asInt!).member = member("building_title_\(buildingNum)")
+        member("level_title").text = "LEVEL \(data[2].asString ?? ""): \(data[3].asString ?? "")"
+        prop["state"] = .string("move1")
         fixLocZ()
         prop["callback"] = callback
     }
 
     func updateState(_ state: String) {
-        prop["state"] = state
+        prop["state"] = .string(state)
     }
 
     func reportState() -> String {
-        return prop["state"] as! String
+        return prop["state"].asString!
     }
 
     func exitFrame() {
-        switch prop["state"] as! String {
+        switch prop["state"].asString! {
         case "hide":
             break
         case "move1":
-            let locShow = (prop["loc"] as! [String: Any])["show"] as! Point
-            let speedMove1 = (prop["speed"] as! [String: Any])["move1"] as! [Int]
-            let temp = doMove(toWhere: locShow, speed: speedMove1)
+            let locShow = prop["loc"].asPropList!["show"].asPoint!
+            let speedList = prop["speed"].asPropList!["move1"].asList!
+            let spd = [speedList[1].asInt!, speedList[2].asInt!]
+            let temp = doMove(toWhere: locShow, speed: spd)
             if temp != 0 {
-                prop["state"] = "show"
-                prop["time"] = Int(Date().timeIntervalSince1970 * 60)
-                (glob["movenum"] as AnyObject).updateMovesNum()
+                prop["state"] = .string("show")
+                prop["time"] = .int(currentTicks)
+                (Glob.shared["movenum"] as AnyObject).updateMovesNum()
             }
         case "show":
-            let t = prop["time"] as! Int
-            if Int(Date().timeIntervalSince1970 * 60) > (t + 120) {
-                prop["state"] = "move2"
+            let t = prop["time"].asInt!
+            if currentTicks > (t + 120) {
+                prop["state"] = .string("move2")
             }
         case "move2":
-            let locEnd = (prop["loc"] as! [String: Any])["end"] as! Point
-            let speedMove2 = (prop["speed"] as! [String: Any])["move2"] as! [Int]
-            let temp = doMove(toWhere: locEnd, speed: speedMove2)
+            let locEnd = prop["loc"].asPropList!["end"].asPoint!
+            let speedList = prop["speed"].asPropList!["move2"].asList!
+            let spd = [speedList[1].asInt!, speedList[2].asInt!]
+            let temp = doMove(toWhere: locEnd, speed: spd)
             if temp != 0 {
-                prop["state"] = "done"
-                updateLoc(newloc: (prop["loc"] as! [String: Any])["Start"] as! Point)
-                if prop["callback"] != nil {
-                    let cb = prop["callback"] as! [String: Any]
-                    (cb["object"] as AnyObject).callback(cb["parameter"])
-                    prop["callback"] = nil
+                prop["state"] = .string("done")
+                updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
+                if !prop["callback"].isVoid {
+                    let cb = prop["callback"].asPropList!
+                    (cb["object"] as AnyObject).callback(cb["parameter"].asString)
+                    prop["callback"] = .void
                 }
             }
         default:
@@ -69,19 +82,19 @@ class BehaviorMsgBoxTitle {
     }
 
     func getOut() {
-        let state = prop["state"] as! String
+        let state = prop["state"].asString!
         if state != "hide" && state != "move2" {
-            prop["state"] = "move2"
+            prop["state"] = .string("move2")
         }
     }
 
     @discardableResult
     func doMove(toWhere: Point, speed: [Int]) -> Int {
-        switch prop["state"] as! String {
+        switch prop["state"].asString! {
         case "move1":
-            let locShow = (prop["loc"] as! [String: Any])["show"] as! Point
-            sprite(myNum).locH = locShow.x
-            if sprite(myNum).locV < toWhere.y {
+            let locShow = prop["loc"].asPropList!["show"].asPoint!
+            sprite(myNum).loc = Point(x: locShow.x, y: sprite(myNum).loc.y)
+            if sprite(myNum).loc.y < toWhere.y {
                 let newloc = sprite(myNum).loc + Point(x: speed[0], y: speed[1])
                 updateLoc(newloc: newloc)
                 return 0
@@ -89,7 +102,7 @@ class BehaviorMsgBoxTitle {
                 return 1
             }
         case "move2":
-            if sprite(myNum).locH > toWhere.x {
+            if sprite(myNum).loc.x > toWhere.x {
                 let newloc = sprite(myNum).loc + Point(x: speed[0], y: speed[1])
                 updateLoc(newloc: newloc)
                 return 0
@@ -102,22 +115,22 @@ class BehaviorMsgBoxTitle {
     }
 
     func updateLoc(newloc: Point) {
-        let sprites = prop["sprites"] as! [String: Int]
+        let sprites = prop["sprites"].asPropList!
         sprite(myNum).loc = newloc
-        sprite(sprites["icon"]!).loc = sprite(myNum).loc + Point(x: 48, y: 74) + Point(x: 30, y: -20)
-        sprite(sprites["num"]!).loc = sprite(myNum).loc + Point(x: 117, y: 51)
-        sprite(sprites["title"]!).loc = sprite(myNum).loc + Point(x: 49, y: 79)
+        sprite(sprites["icon"].asInt!).loc = sprite(myNum).loc + Point(x: 48, y: 74) + Point(x: 30, y: -20)
+        sprite(sprites["num"].asInt!).loc = sprite(myNum).loc + Point(x: 117, y: 51)
+        sprite(sprites["title"].asInt!).loc = sprite(myNum).loc + Point(x: 49, y: 79)
     }
 
     func fixLocZ() {
-        let sprites = prop["sprites"] as! [String: Int]
+        let sprites = prop["sprites"].asPropList!
         sprite(myNum).locZ = 1000000000
-        sprite(sprites["icon"]!).locZ = 1000000001
-        sprite(sprites["num"]!).locZ = 1000000001
-        sprite(sprites["title"]!).locZ = 1000000001
+        sprite(sprites["icon"].asInt!).locZ = 1000000001
+        sprite(sprites["num"].asInt!).locZ = 1000000001
+        sprite(sprites["title"].asInt!).locZ = 1000000001
     }
 
     func mouseUp() {
-        prop["state"] = "move2"
+        prop["state"] = .string("move2")
     }
 }

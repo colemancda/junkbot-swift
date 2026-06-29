@@ -2,7 +2,7 @@
 
 class BehaviorGoMenu {
     func mouseUp() {
-        (glob["download_manager"] as AnyObject).mainmenu()
+        (Glob.shared["download_manager"] as AnyObject).mainmenu()
     }
 
     func mouseDown() {

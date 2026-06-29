@@ -1,11 +1,8 @@
 // Translated from Lingo: behavior_game_interface_buttons.ls
 
-class BehaviorGameInterfaceButtons {
-    var my: Any? = nil       // the sprite
+class BehaviorGameInterfaceButtons: BehaviorBase {
+    var my: LV = .void       // the sprite
     var myName: String = ""
-
-    // Reference to global state (injected externally)
-    var glob: [String: Any] = [:]
 
     var spriteNum: Int = 0
 
@@ -19,8 +16,8 @@ class BehaviorGameInterfaceButtons {
         case "restart_level":
             gbutton("main_play")
         case "mainmenu":
-            // glob.PLAYER.game_manager.exitGame()
-            go(label: "levels")
+            // Glob.shared["PLAYER"].asPropList?.game_manager.exitGame()
+            go("levels")
         case "fail_tryAgain":
             gbutton("main_play")
         default:
@@ -40,9 +37,4 @@ class BehaviorGameInterfaceButtons {
     func mouseLeave() {
         // my.member = member(myName)
     }
-
-    // Stubs
-    func gbutton(_ msg: String) { /* stub — implemented in MovieMain */ }
-    func SndSFX(_ sound: String) { /* stub — implemented in MovieSoundCode */ }
-    func go(label: String) { /* stub */ }
 }

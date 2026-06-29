@@ -1,7 +1,7 @@
 // Translated from Lingo: behavior_entry field beh.ls
 
 class BehaviorEntryField {
-    var fld: Member? = nil
+    var fld: LingoMember? = nil
     var maxchars: Int = 30
 
     init(_ spriteNum: Int) {
@@ -17,7 +17,13 @@ class BehaviorEntryField {
         pass()
     }
 
-    func getPropertyDescriptionList() -> [String: Any] {
-        return ["maxchars": ["comment": "Max chars:", "format": "integer", "default": 30]]
+    func getPropertyDescriptionList() -> PropList {
+        let result = PropList()
+        let maxcharsDesc = PropList()
+        maxcharsDesc["comment"] = .string("Max chars:")
+        maxcharsDesc["format"] = .string("integer")
+        maxcharsDesc["default"] = .int(30)
+        result["maxchars"] = .propList(maxcharsDesc)
+        return result
     }
 }
