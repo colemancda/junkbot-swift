@@ -730,8 +730,8 @@ extension GameEngine {
 
     func simulate() {
         frameCounter += 1
-        rebuildAccelerationStructures()
         entities.sort { $0.y > $1.y }
+        rebuildAccelerationStructures()
         simulateGravity()
         teleportEffects.removeAll(keepingCapacity: true)
 

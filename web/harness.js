@@ -100,7 +100,7 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 // Viewport state (updated by js_set_viewport called from Swift)
-let vp = { cx: 0, cy: 0, scale: 1 };
+let vp = { cx: 0, cy: 0, scale: devicePixelRatio };
 
 // Current level backdrop + decals (parsed from level text, drawn in JS)
 let currentBackdrop = "bkg1";
@@ -363,6 +363,8 @@ function loadLevelIntoWasm(wasm, levelText) {
     }
 
     wasm.finish_load_level();
+    vp.cx = boundsW / 2;
+    vp.cy = boundsH / 2;
 }
 
 window.JunkbotRenderer = {
