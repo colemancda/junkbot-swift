@@ -1,84 +1,86 @@
 import JavaScriptKit
-import JunkbotCoreBridge
+import JunkbotCore
 
-struct Renderer {
-    nonisolated(unsafe) static var jsRenderer: JSObject!
-    
-    static func setup() {
-        jsRenderer = JSObject.global.JunkbotRenderer.object!
-        
-        var callbacks = JunkbotRenderCallbacks()
-        
-        // We only need to fetch functions if they're used.
-        // Actually, we can just call them directly via jsRenderer dynamically.
-        callbacks.drawEntity = { state in
-            guard let s = state?.pointee else { return }
-            let type = s.type
-            // switch on EntityType rawValue (type)
-            switch type {
-            case 17: // levelBounds
-                break
-            case 0: // brick
-                _ = Renderer.jsRenderer.js_draw_brick?(s.x, s.y, s.colorIndex, s.widthInStuds, s.fixed ? 1 : 0)
-            case 1: // junkbot
-                var flags: Int32 = 0
-                if s.armored { flags |= 1 }
-                if s.dead { flags |= 2 }
-                if s.splashing { flags |= 4 } // dyingFromWater
-                if s.collectingBin { flags |= 8 }
-                if s.losingShield { flags |= 32 }
-                if s.gettingShield { flags |= 64 }
-                _ = Renderer.jsRenderer.js_draw_junkbot?(s.x, s.y, s.facing, s.animationFrame, flags)
-            case 2: // gearbot
-                _ = Renderer.jsRenderer.js_draw_gearbot?(s.x, s.y, s.facing, s.animationFrame)
-            case 3: // climbbot
-                _ = Renderer.jsRenderer.js_draw_climbbot?(s.x, s.y, s.facing, s.facingY, s.animationFrame)
-            case 4: // flybot
-                _ = Renderer.jsRenderer.js_draw_flybot?(s.x, s.y, s.facing, s.animationFrame)
-            case 5: // eyebot
-                _ = Renderer.jsRenderer.js_draw_eyebot?(s.x, s.y, s.facing, s.facingY, s.animationFrame, 0)
-            case 6: // bin
-                _ = Renderer.jsRenderer.js_draw_bin?(s.x, s.y, s.facing, s.scaredy ? 1 : 0, s.animationFrame)
-            case 7: // crate
-                _ = Renderer.jsRenderer.js_draw_crate?(s.x, s.y)
-            case 8: // fire
-                _ = Renderer.jsRenderer.js_draw_fire?(s.x, s.y, s.on ? 1 : 0, s.animationFrame)
-            case 9: // fan
-                _ = Renderer.jsRenderer.js_draw_fan?(s.x, s.y, s.on ? 1 : 0, s.animationFrame)
-            case 10: // switch
-                _ = Renderer.jsRenderer.js_draw_switch?(s.x, s.y, s.on ? 1 : 0, s.animationFrame)
-            case 11: // pipe
-                _ = Renderer.jsRenderer.js_draw_pipe?(s.x, s.y, s.animationFrame)
-            case 12: // shield
-                _ = Renderer.jsRenderer.js_draw_shield?(s.x, s.y, s.used ? 1 : 0, s.fixed ? 1 : 0)
-            case 15: // jump
-                _ = Renderer.jsRenderer.js_draw_jump?(s.x, s.y, s.active ? 1 : 0, s.animationFrame, s.fixed ? 1 : 0)
-            case 13: // teleport
-                _ = Renderer.jsRenderer.js_draw_teleport?(s.x, s.y, s.animationFrame, s.blocked ? 1 : 0)
-            case 14: // laser
-                _ = Renderer.jsRenderer.js_draw_laser?(s.x, s.y, s.facing, s.on ? 1 : 0)
-            case 16: // droplet
-                _ = Renderer.jsRenderer.js_draw_droplet?(s.x, s.y, s.splashing ? 1 : 0, s.animationFrame)
-            default: break
+public struct Renderer {
+    nonisolated(unsafe) static var js: JSObject!
+
+    public static func setup() {
+        js = JSObject.global.JunkbotRenderer.object!
+    }
+
+    public static func renderFrame() {
+        // Wind effects
+        for w in wind {
+            let fan = entities[w.fanEntityIndex]
+            for i in 0..<w.numExtents {
+                _ = js.js_draw_wind_column?(fan.x + Int32(i) * CELL_W, fan.y, w.extent(at: i), 0)
             }
         }
-        
-        callbacks.drawWindEffect = { x, y, extent in
-            _ = Renderer.jsRenderer.js_draw_wind_column?(x, y, extent, 0)
+
+        // Entities
+        for e in entities {
+            if e.removeBeforeRender { continue }
+            if e.type == .levelBounds { continue }
+            drawEntity(e)
         }
-        
-        callbacks.drawLaserBeam = { x, y, extent, facing in
-            _ = Renderer.jsRenderer.js_draw_laser_beam?(x, y, facing, extent, 0, 0) // need animFrame?
+
+        // Laser beams
+        for l in laserBeams {
+            let e = entities[l.laserEntityIndex]
+            _ = js.js_draw_laser_beam?(e.x, e.y, e.facing, l.extent, 0, 0)
         }
-        
-        callbacks.drawTeleportEffect = { x, y, frame in
-            _ = Renderer.jsRenderer.js_draw_teleport_effect?(x, y, frame)
+
+        // Teleport effects
+        for t in teleportEffects {
+            _ = js.js_draw_teleport_effect?(t.x, t.y, t.frameIndex)
         }
-        
-        callbacks.playSound = { soundID in
-            _ = Renderer.jsRenderer.js_play_sound?(soundID)
+    }
+
+    static func drawEntity(_ e: Entity) {
+        switch e.type {
+        case .brick:
+            _ = js.js_draw_brick?(e.x, e.y, e.colorIndex, e.widthInStuds, e.fixed ? 1 : 0)
+        case .junkbot:
+            var flags: Int32 = 0
+            if e.armored      { flags |= 1 }
+            if e.dead         { flags |= 2 }
+            if e.dyingFromWater { flags |= 4 }
+            if e.collectingBin { flags |= 8 }
+            if e.losingShield  { flags |= 32 }
+            if e.gettingShield { flags |= 64 }
+            _ = js.js_draw_junkbot?(e.x, e.y, e.facing, e.animationFrame, flags)
+        case .gearbot:
+            _ = js.js_draw_gearbot?(e.x, e.y, e.facing, e.animationFrame)
+        case .climbbot:
+            _ = js.js_draw_climbbot?(e.x, e.y, e.facing, e.facingY, e.animationFrame)
+        case .flybot:
+            _ = js.js_draw_flybot?(e.x, e.y, e.facing, e.animationFrame)
+        case .eyebot:
+            _ = js.js_draw_eyebot?(e.x, e.y, e.facing, e.facingY, e.animationFrame, 0)
+        case .bin:
+            _ = js.js_draw_bin?(e.x, e.y, e.facing, e.scaredy ? 1 : 0, e.animationFrame)
+        case .crate:
+            _ = js.js_draw_crate?(e.x, e.y)
+        case .fire:
+            _ = js.js_draw_fire?(e.x, e.y, e.on ? 1 : 0, e.animationFrame)
+        case .fan:
+            _ = js.js_draw_fan?(e.x, e.y, e.on ? 1 : 0, e.animationFrame)
+        case .switch:
+            _ = js.js_draw_switch?(e.x, e.y, e.on ? 1 : 0, e.animationFrame)
+        case .pipe:
+            _ = js.js_draw_pipe?(e.x, e.y, e.animationFrame)
+        case .shield:
+            _ = js.js_draw_shield?(e.x, e.y, e.used ? 1 : 0, e.fixed ? 1 : 0)
+        case .jump:
+            _ = js.js_draw_jump?(e.x, e.y, e.active ? 1 : 0, e.animationFrame, e.fixed ? 1 : 0)
+        case .teleport:
+            _ = js.js_draw_teleport?(e.x, e.y, e.animationFrame, e.blocked ? 1 : 0)
+        case .laser:
+            _ = js.js_draw_laser?(e.x, e.y, e.facing, e.on ? 1 : 0)
+        case .droplet:
+            _ = js.js_draw_droplet?(e.x, e.y, e.splashing ? 1 : 0, e.animationFrame)
+        default:
+            break
         }
-        
-        core_set_render_callbacks(callbacks)
     }
 }

@@ -8,24 +8,16 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "JunkbotCoreBridge"
-        ),
-        .target(
-            name: "JunkbotCore",
-            dependencies: ["JunkbotCoreBridge"]
+            name: "JunkbotCore"
         ),
         .executableTarget(
             name: "JunkbotApp",
             dependencies: [
-                "JunkbotCoreBridge",
                 "JunkbotCore",
                 .product(name: "JavaScriptKit", package: "JavaScriptKit")
             ],
             swiftSettings: [
-                .unsafeFlags([
-                    "-wmo",
-                    "-Osize"
-                ])
+                .unsafeFlags(["-wmo", "-Osize"])
             ]
         )
     ]

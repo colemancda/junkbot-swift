@@ -1,18 +1,18 @@
-// Global game state mirroring the JS globals
+// Global game state
 
-nonisolated(unsafe) var entities: [Entity] = []
-nonisolated(unsafe) var wind: [WindEffect] = []
-nonisolated(unsafe) var laserBeams: [LaserBeam] = []
-nonisolated(unsafe) var teleportEffects: [TeleportEffect] = []
+public nonisolated(unsafe) var entities: [Entity] = []
+public nonisolated(unsafe) var wind: [WindEffect] = []
+public nonisolated(unsafe) var laserBeams: [LaserBeam] = []
+public nonisolated(unsafe) var teleportEffects: [TeleportEffect] = []
 
-nonisolated(unsafe) var levelBounds: LevelBounds? = nil
+public nonisolated(unsafe) var levelBounds: LevelBounds? = nil
 nonisolated(unsafe) var idCounter: Int32 = 0
 
-nonisolated(unsafe) var frameCounter: Int32 = 0
-nonisolated(unsafe) var moves: Int32 = 0
+public nonisolated(unsafe) var frameCounter: Int32 = 0
+public nonisolated(unsafe) var moves: Int32 = 0
 
 // 0=playing, 1=won, 2=lost
-nonisolated(unsafe) var winLoseState: Int32 = 0
+public nonisolated(unsafe) var winLoseState: Int32 = 0
 
 // Acceleration structures: y-coordinate → array of entity indices
 nonisolated(unsafe) var entitiesByTopY: [Int32: [Int]] = [:]
@@ -24,19 +24,18 @@ nonisolated(unsafe) var mouseWorldY: Int32 = 0
 
 // Indices of entities currently being dragged
 nonisolated(unsafe) var draggingIndices: [Int] = []
-// Indices of possible grabs (hovered) – used for cursor display
+// Indices of possible grabs (hovered)
 nonisolated(unsafe) var hoveredIndices: [Int] = []
 
-// Keys held (subset needed for simulation; rest handled by JS)
 nonisolated(unsafe) var keyShiftHeld: Bool = false
 
 // Viewport
-nonisolated(unsafe) var viewportCenterX: Int32 = 0
-nonisolated(unsafe) var viewportCenterY: Int32 = 0
-nonisolated(unsafe) var viewportScale: Float = 1.0
+public nonisolated(unsafe) var viewportCenterX: Int32 = 0
+public nonisolated(unsafe) var viewportCenterY: Int32 = 0
+public nonisolated(unsafe) var viewportScale: Float = 1.0
 
 // Flags
-nonisolated(unsafe) var paused: Bool = false
+public nonisolated(unsafe) var paused: Bool = false
 nonisolated(unsafe) var editing: Bool = false
 nonisolated(unsafe) var muted: Bool = false
 
@@ -60,7 +59,7 @@ func getID() -> Int32 {
     return idCounter
 }
 
-func resetLevel() {
+public func resetLevel() {
     entities.removeAll(keepingCapacity: true)
     wind.removeAll(keepingCapacity: true)
     laserBeams.removeAll(keepingCapacity: true)

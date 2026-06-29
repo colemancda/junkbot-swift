@@ -1,13 +1,13 @@
 // Grid constants (matches JS: snapX=15, snapY=18)
-let CELL_W: Int32 = 15
-let CELL_H: Int32 = 18
+public let CELL_W: Int32 = 15
+public let CELL_H: Int32 = 18
 
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
 let MAX_DRIP_PERIOD: Int32 = 50
 let MIN_DRIP_PERIOD: Int32 = 20
 
-enum EntityType: UInt8 {
+public enum EntityType: UInt8 {
     case brick = 0
     case junkbot = 1
     case gearbot = 2
@@ -61,17 +61,16 @@ enum SoundID: Int32 {
     case undo = 27
 }
 
-struct LevelBounds {
-    var x: Int32
-    var y: Int32
-    var width: Int32
-    var height: Int32
+public struct LevelBounds {
+    public var x: Int32
+    public var y: Int32
+    public var width: Int32
+    public var height: Int32
 }
 
-struct WindEffect {
-    var fanEntityIndex: Int
-    // up to 8 columns for a 8-stud-wide fan
-    var numExtents: Int
+public struct WindEffect {
+    public var fanEntityIndex: Int
+    public var numExtents: Int
     var extents: (Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32)
 
     init(fanEntityIndex: Int) {
@@ -95,7 +94,7 @@ struct WindEffect {
         numExtents += 1
     }
 
-    func extent(at i: Int) -> Int32 {
+    public func extent(at i: Int) -> Int32 {
         switch i {
         case 0: return extents.0
         case 1: return extents.1
@@ -109,83 +108,70 @@ struct WindEffect {
     }
 }
 
-struct LaserBeam {
-    var laserEntityIndex: Int
-    var extent: Int32
-    var hitEntityIndex: Int  // -1 = hit nothing / level bounds
+public struct LaserBeam {
+    public var laserEntityIndex: Int
+    public var extent: Int32
+    public var hitEntityIndex: Int
 }
 
-struct TeleportEffect {
-    var x: Int32
-    var y: Int32
-    var frameIndex: Int32
+public struct TeleportEffect {
+    public var x: Int32
+    public var y: Int32
+    public var frameIndex: Int32
 }
 
 // Large unified entity struct. All fields; most unused for any given type.
-struct Entity {
-    var id: Int32
-    var type: EntityType
-    var x: Int32
-    var y: Int32
-    var width: Int32
-    var height: Int32
+public struct Entity {
+    public var id: Int32
+    public var type: EntityType
+    public var x: Int32
+    public var y: Int32
+    public var width: Int32
+    public var height: Int32
 
-    var grabbed: Bool
-    var fixed: Bool
-    var floating: Bool
-    var wasFloating: Bool
-    var removeBeforeRender: Bool
+    public var grabbed: Bool
+    public var fixed: Bool
+    public var floating: Bool
+    public var wasFloating: Bool
+    public var removeBeforeRender: Bool
 
-    // Directional state
-    var facing: Int32     // 1=right, -1=left
-    var facingY: Int32    // 0=none, 1=down, -1=up
-    var animationFrame: Int32
+    public var facing: Int32
+    public var facingY: Int32
+    public var animationFrame: Int32
 
-    // Brick fields
-    var widthInStuds: Int32
-    var colorIndex: Int32   // 0=white,1=red,2=green,3=blue,4=yellow,5=gray
+    public var widthInStuds: Int32
+    public var colorIndex: Int32
 
-    // Junkbot fields
-    var armored: Bool
-    var losingShield: Bool
-    var losingShieldTime: Int32
-    var gettingShield: Bool
-    var dying: Bool
-    var dyingFromWater: Bool
-    var dead: Bool
-    var collectingBin: Bool
-    var headLoaded: Bool
-    var momentumX: Int32
-    var momentumY: Int32
+    public var armored: Bool
+    public var losingShield: Bool
+    public var losingShieldTime: Int32
+    public var gettingShield: Bool
+    public var dying: Bool
+    public var dyingFromWater: Bool
+    public var dead: Bool
+    public var collectingBin: Bool
+    public var headLoaded: Bool
+    public var momentumX: Int32
+    public var momentumY: Int32
 
-    // Bin
-    var scaredy: Bool
+    public var scaredy: Bool
 
-    // Switch / fan / fire / laser / teleport
-    var on: Bool
-    var used: Bool
-    var switchID: Int32   // -1 = none
-    var teleportID: Int32 // -1 = none
-    var timer: Int32
-    var blocked: Bool
+    public var on: Bool
+    public var used: Bool
+    public var switchID: Int32
+    public var teleportID: Int32
+    public var timer: Int32
+    public var blocked: Bool
 
-    // Climbbot
-    var energy: Int32
+    public var energy: Int32
+    public var active: Bool
+    public var activeTimer: Int32
+    public var splashing: Bool
 
-    // Jump
-    var active: Bool
+    public var grabOffsetX: Int32
+    public var grabOffsetY: Int32
 
-    // Eyebot
-    var activeTimer: Int32
-
-    // Droplet
-    var splashing: Bool
-
-    // Grab offset (when entity is being dragged)
-    var grabOffsetX: Int32
-    var grabOffsetY: Int32
-
-    init(id: Int32, type: EntityType, x: Int32, y: Int32, width: Int32, height: Int32) {
+    public init(id: Int32, type: EntityType, x: Int32, y: Int32, width: Int32, height: Int32) {
         self.id = id
         self.type = type
         self.x = x
