@@ -3,7 +3,11 @@
 
 // MARK: - Point
 
-public struct Point: Equatable {
+public struct Rect: Equatable, @unchecked Sendable {
+    public var x, y, width, height: Int
+    public init(x: Int, y: Int, width: Int, height: Int) { self.x = x; self.y = y; self.width = width; self.height = height }
+}
+public struct Point: Equatable, @unchecked Sendable {
     public var x: Int
     public var y: Int
     public init(x: Int = 0, y: Int = 0) { self.x = x; self.y = y }
