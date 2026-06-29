@@ -211,30 +211,78 @@ extension LV {
     public static var emptyPropList: LV { .propList(PropList()) }
 }
 
-// MARK: - Lingo Protocols
-public protocol LingoBehavior: AnyObject {
+// MARK: - Lingo Event Protocols
+
+public protocol FrameEvents {
+    func prepareFrame()
+    func enterFrame()
+    func exitFrame()
+    func stepFrame()
+}
+public extension FrameEvents {
+    func prepareFrame() {}
+    func enterFrame() {}
+    func exitFrame() {}
+    func stepFrame() {}
+}
+
+public protocol SpriteLifecycleEvents {
     func beginSprite()
     func endSprite()
-    func stepFrame()
-    func prepareFrame()
-    func mouseUp()
+}
+public extension SpriteLifecycleEvents {
+    func beginSprite() {}
+    func endSprite() {}
+}
+
+public protocol MovieLifecycleEvents {
+    func prepareMovie()
+    func startMovie()
+    func stopMovie()
+}
+public extension MovieLifecycleEvents {
+    func prepareMovie() {}
+    func startMovie() {}
+    func stopMovie() {}
+}
+
+public protocol MouseEvents {
     func mouseDown()
+    func mouseUp()
     func mouseEnter()
     func mouseLeave()
     func mouseWithin()
+    func mouseUpOutside()
 }
-
-// Default empty implementations so behaviors don't have to implement them all
-public extension LingoBehavior {
-    func beginSprite() {}
-    func endSprite() {}
-    func stepFrame() {}
-    func prepareFrame() {}
-    func mouseUp() {}
+public extension MouseEvents {
     func mouseDown() {}
+    func mouseUp() {}
     func mouseEnter() {}
     func mouseLeave() {}
     func mouseWithin() {}
+    func mouseUpOutside() {}
+}
+
+public protocol KeyboardEvents {
+    func keyDown()
+    func keyUp()
+}
+public extension KeyboardEvents {
+    func keyDown() {}
+    func keyUp() {}
+}
+
+public protocol MiscEvents {
+    func idle()
+    func timeOut()
+}
+public extension MiscEvents {
+    func idle() {}
+    func timeOut() {}
+}
+
+// MARK: - LingoBehavior
+public protocol LingoBehavior: AnyObject, FrameEvents, SpriteLifecycleEvents, MovieLifecycleEvents, MouseEvents, KeyboardEvents, MiscEvents {
 }
 
 // MARK: - LingoObject — base class for any object stored in an LV value
