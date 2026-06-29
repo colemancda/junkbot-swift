@@ -13,7 +13,6 @@ let package = Package(
         .executableTarget(
             name: "JunkbotApp",
             dependencies: [
-                "JunkbotCore",
                 .product(name: "JavaScriptKit", package: "JavaScriptKit")
             ],
             swiftSettings: [
