@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Junkbot — Swift Embedded WASM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Junkbot</title>
 <script type="importmap">
 {
     "imports": {
@@ -13,126 +13,337 @@
 </script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-    background: #222;
-    color: #eee;
-    font-family: system-ui, sans-serif;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
+html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #000;
+    font-family: Arial, sans-serif;
+    user-select: none;
 }
-#sidebar {
-    width: 200px;
-    min-width: 200px;
-    background: #333;
-    display: flex;
-    flex-direction: column;
-    border-right: 2px solid #555;
-    overflow-y: auto;
-}
-#sidebar h2 {
-    padding: 12px;
-    font-size: 14px;
-    background: #444;
-    border-bottom: 1px solid #555;
-}
-#level-list {
-    list-style: none;
-    flex: 1;
-    overflow-y: auto;
-}
-#level-list li button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 8px 12px;
-    background: none;
-    border: none;
-    color: #ddd;
-    cursor: pointer;
-    font-size: 12px;
-    border-bottom: 1px solid #3a3a3a;
-}
-#level-list li button:hover { background: #555; }
 
-#game-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+/* ── Shared layout ────────────────────────────────────────────── */
+.screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Level Select ─────────────────────────────────────────────── */
+#level-select-screen {
+    background: #000;
+}
+#level-select-inner {
     position: relative;
+    width: 650px; height: 420px;
+    background-image: url("../images/menus/level_screen.png");
+    background-size: 100% 100%;
+    image-rendering: pixelated;
 }
-#game-canvas {
-    flex: 1;
-    display: block;
-    width: 100%;
-    cursor: default;
-    touch-action: none;
-}
-#status-bar {
-    height: 24px;
-    background: #1a1a1a;
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-    font-size: 12px;
-    color: #aaa;
-}
-#overlay {
-    display: none;
+
+#building-tabs {
     position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 2px;
 }
-#overlay-message {
-    font-size: 36px;
-    font-weight: bold;
+.building-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer; padding: 3px 5px;
+    background: none; border: 2px solid transparent;
+    image-rendering: pixelated;
 }
-#overlay button {
-    padding: 8px 24px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 4px;
-    border: none;
-    background: #4a90d9;
-    color: white;
+.building-tab.selected { border-color: #f8c020; background: rgba(248,192,32,0.15); }
+.building-tab:hover:not(.selected) { opacity: 0.8; }
+.building-tab img { display: block; image-rendering: pixelated; }
+
+#level-list-container {
+    position: absolute;
+    top: 68px; left: 24px; right: 24px; bottom: 24px;
+    overflow-y: auto;
 }
-#overlay button:hover { background: #357abd; }
+#level-list-container::-webkit-scrollbar { width: 5px; }
+#level-list-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.3); }
+
+#level-list { list-style: none; }
+.level-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+    font-size: 12px; font-weight: bold; color: #1a1a1a;
+}
+.level-item:first-child { border-top: 1px solid rgba(0,0,0,0.12); }
+.level-item:hover { background: rgba(248,192,32,0.35); }
+.level-ordinal { width: 20px; text-align: right; color: #666; font-size: 11px; flex-shrink: 0; }
+.level-check { width: 8px; height: 8px; flex-shrink: 0; }
+.level-title { flex: 1; }
+.level-score { font-size: 11px; color: #555; flex-shrink: 0; }
+
+/* ── Game Screen ──────────────────────────────────────────────── */
+#game-screen { display: none; flex-direction: column; background: #000; }
+#game-canvas {
+    display: block; width: 650px; height: 400px;
+    cursor: default; touch-action: none; background: #aaa;
+}
+#game-controls {
+    width: 650px; height: 20px;
+    background: #a0a0a4; border-top: 2px solid #666;
+    display: flex; align-items: center; gap: 4px; padding: 0 4px;
+}
+.ctrl-img-btn {
+    background: none; border: none; cursor: pointer; padding: 1px;
+    image-rendering: pixelated;
+}
+.ctrl-img-btn img { display: block; }
+.ctrl-img-btn:hover { opacity: 0.8; }
+#level-name-display { font-size: 10px; color: #333; padding: 0 4px; flex: 1; }
+#moves-display { font-size: 10px; color: #333; padding: 0 4px; }
+
+/* ── Overlays ─────────────────────────────────────────────────── */
+.game-overlay {
+    display: none; position: absolute; inset: 0;
+    background: rgba(0,0,0,0.55);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; z-index: 10;
+}
+.game-overlay.visible { display: flex; }
+
+.overlay-img-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    image-rendering: pixelated;
+}
+.overlay-img-btn:hover { opacity: 0.8; }
+.overlay-img-btn img { display: block; }
+
+#win-overlay .win-heading {
+    font-size: 22px; font-weight: bold; color: #fff;
+    text-shadow: 2px 2px 4px #000;
+}
+#lose-overlay .lose-msg {
+    font-size: 13px; font-style: italic; color: #fff;
+    text-shadow: 1px 1px 3px #000;
+}
+.overlay-buttons { display: flex; gap: 8px; }
 </style>
 </head>
 <body>
 
-<nav id="sidebar">
-    <h2>Levels</h2>
-    <ul id="level-list"></ul>
-</nav>
-
-<div id="game-area">
-    <canvas id="game-canvas"></canvas>
-    <div id="status-bar"><span id="status">Initializing…</span></div>
-    <div id="overlay">
-        <div id="overlay-message"></div>
-        <button onclick="document.getElementById('overlay').style.display='none'">
-            Play Again
+<!-- ── Level Select ────────────────────────────────── -->
+<div class="screen" id="level-select-screen">
+<div id="level-select-inner">
+    <div id="building-tabs">
+        <button class="building-tab selected" data-building="1">
+            <img src="../images/menus/building_icon_1.png" width="61" height="38" alt="Building 1">
+            <img src="../images/menus/buidling_tab_1.png"  width="83" height="13" alt="">
         </button>
+        <button class="building-tab" data-building="2">
+            <img src="../images/menus/building_icon_2.png" width="61" height="38" alt="Building 2">
+            <img src="../images/menus/buidling_tab_2.png"  width="83" height="13" alt="">
+        </button>
+        <button class="building-tab" data-building="3">
+            <img src="../images/menus/building_icon_3.png" width="61" height="38" alt="Building 3">
+            <img src="../images/menus/buidling_tab_3.png"  width="83" height="13" alt="">
+        </button>
+        <button class="building-tab" data-building="4">
+            <img src="../images/menus/building_icon_4.png" width="61" height="38" alt="Building 4">
+            <img src="../images/menus/buidling_tab_4.png"  width="83" height="13" alt="">
+        </button>
+    </div>
+    <div id="level-list-container">
+        <ul id="level-list"></ul>
+    </div>
+</div>
+</div>
+
+<!-- ── Game Screen ──────────────────────────────────── -->
+<div class="screen" id="game-screen">
+    <div style="position:relative">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Win overlay -->
+        <div class="game-overlay" id="win-overlay">
+            <div class="win-heading">Level Complete!</div>
+            <img src="../images/menus/level_end_main.png" width="383" height="207" alt="" style="image-rendering:pixelated">
+            <div class="overlay-buttons">
+                <button class="overlay-img-btn" id="btn-win-select">
+                    <img src="../images/menus/mainmenu.png" width="96" height="26" alt="Select Level">
+                </button>
+                <button class="overlay-img-btn" id="btn-win-next">
+                    <img src="../images/menus/but_next_level.png" width="96" height="26" alt="Next Level">
+                </button>
+            </div>
+        </div>
+
+        <!-- Lose overlay -->
+        <div class="game-overlay" id="lose-overlay">
+            <img src="../images/menus/level_lose.png" width="149" height="56" alt="" style="image-rendering:pixelated">
+            <div class="lose-msg" id="lose-message"></div>
+            <div class="overlay-buttons">
+                <button class="overlay-img-btn" id="btn-lose-select">
+                    <img src="../images/menus/fail_selectLevel.png" width="114" height="135" alt="Select Level">
+                </button>
+                <button class="overlay-img-btn" id="btn-lose-retry">
+                    <img src="../images/menus/restart_level.png" width="96" height="26" alt="Try Again">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-controls">
+        <button class="ctrl-img-btn" id="btn-select-level">
+            <img src="../images/menus/mainmenu.png" width="96" height="26" alt="Select Level">
+        </button>
+        <button class="ctrl-img-btn" id="btn-restart">
+            <img src="../images/menus/restart_level.png" width="96" height="26" alt="Restart Level">
+        </button>
+        <span id="level-name-display"></span>
+        <span id="moves-display">Moves: 0</span>
     </div>
 </div>
 
 <script>
-window.LEVEL_FILES = [
-    { name: "Bridge Builder",        path: "../levels/Bridge Builder.txt" },
-    { name: "A New Kind of Gearbot", path: "../levels/A New Kind of Gearbot.txt" },
-    { name: "Aerodynamics",          path: "../levels/Aerodynamics.txt" },
-    { name: "Air Conditioning",      path: "../levels/Air Conditioning.txt" },
-    { name: "All Kinds of Trouble",  path: "../levels/All Kinds of Trouble.txt" },
-    { name: "Caution Fire",          path: "../levels/Caution Fire.txt" },
-    { name: "Disgruntled Climbbot",  path: "../levels/Disgruntled Climbbot.txt" },
-    { name: "Elevator Action",       path: "../levels/Elevator Action.txt" },
-    { name: "Eyebot on Patrol",      path: "../levels/Eyebot on Patrol.txt" },
+// ── Level data ────────────────────────────────────────────────────────────────
+const ALL_LEVELS = [
+    // Building 1 (1–15)
+    "New Employee Training","Art in the Lobby","Bridge Builder","Move the Stairs",
+    "Caution Fire","Gearbots in Cubicles","Terrarium","Caution Leaky Roof",
+    "Fill the Gaps","Don't Touch the Gearbots","Fire and Ice","Movin' On Up",
+    "Bridge over Angry Gearbots","The Long Umbrella","Clear the Corners",
+    // Building 2 (16–30)
+    "Jump Around","A New Kind of Gearbot","Number One Fan","Air Conditioning",
+    "The Engine Room","Ride the Wind","Internal Combustion","Pardon Me",
+    "Trapped in the Freezer","The Think Tank","The Drafty Floor","The Garage",
+    "Up, Up, and Away","Disgruntled Climbbot","Ups and Downs",
+    // Building 3 (31–45)
+    "Portable Boost","Hot Air","It's Raining Climbbots!","Gearbots That Float",
+    "Thermostat","Windy Bridge","Perpetual Motion Machine","Working in the Rain",
+    "Aerodynamics","Happy Holidays!","Junkbot's Lucky Number","Look Before You Leap",
+    "Gotcha","Traffic","The Secret Laboratory",
+    // Building 4 (46–60)
+    "Scary, Scary Eyebot","Eyebot on Patrol","Junkbot's Secret Weapon","Raincoat",
+    "Running the Gauntlet","Off and On","Don't Let the Dogs Out","What is Project X",
+    "Which Switch","Junkbot is Brave","Elevator Action","The Quest",
+    "Wind Tunnel","All Kinds of Trouble","Art Factory",
 ];
+const LEVELS_PER_BUILDING = 15;
+
+function levelPath(name) { return `../levels/${name}.txt`; }
+
+// Expose for harness.js
+window.LEVEL_FILES = ALL_LEVELS.map(name => ({ name, path: levelPath(name) }));
+
+// ── Scores ───────────────────────────────────────────────────────────────────
+function getScore(name) { try { return localStorage.getItem(`jb_score_${name}`); } catch { return null; } }
+function saveScore(name, moves) {
+    try {
+        const prev = getScore(name);
+        if (prev === null || parseInt(prev) > moves) localStorage.setItem(`jb_score_${name}`, moves);
+    } catch {}
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentBuilding = 1;
+let currentLevelName = null;
+let currentLevelIndex = -1;
+
+// ── Level select ─────────────────────────────────────────────────────────────
+function showLevelSelect() {
+    document.getElementById('level-select-screen').style.display = '';
+    document.getElementById('game-screen').style.display = 'none';
+}
+
+function renderLevelList(building) {
+    currentBuilding = building;
+    document.querySelectorAll('.building-tab').forEach(t =>
+        t.classList.toggle('selected', +t.dataset.building === building));
+    const start = (building - 1) * LEVELS_PER_BUILDING;
+    const ol = document.getElementById('level-list');
+    ol.innerHTML = '';
+    ALL_LEVELS.slice(start, start + LEVELS_PER_BUILDING).forEach((name, i) => {
+        const li = document.createElement('li');
+        li.className = 'level-item';
+        const score = getScore(name);
+        li.innerHTML = `
+            <span class="level-ordinal">${i + 1}</span>
+            ${score !== null
+                ? `<img class="level-check" src="../images/menus/check_light.png" alt="✓">`
+                : `<span class="level-check"></span>`}
+            <span class="level-title">${name}</span>
+            ${score !== null ? `<span class="level-score">${score}</span>` : ''}`;
+        li.addEventListener('click', () => loadLevel(name, start + i));
+        ol.appendChild(li);
+    });
+}
+document.querySelectorAll('.building-tab').forEach(tab =>
+    tab.addEventListener('click', () => renderLevelList(+tab.dataset.building)));
+renderLevelList(1);
+
+// ── Level loading ─────────────────────────────────────────────────────────────
+function loadLevel(name, index) {
+    currentLevelName = name;
+    currentLevelIndex = index;
+    document.getElementById('level-select-screen').style.display = 'none';
+    const gs = document.getElementById('game-screen');
+    gs.style.display = '';
+    document.getElementById('win-overlay').classList.remove('visible');
+    document.getElementById('lose-overlay').classList.remove('visible');
+    document.getElementById('level-name-display').textContent = name;
+    document.getElementById('moves-display').textContent = 'Moves: 0';
+    // Canvas was 0x0 while hidden — resize now that it's visible
+    window._resizeCanvas?.();
+    if (window._loadLevelByName) {
+        window._loadLevelByName(name);
+    } else {
+        window._pendingLevel = name;
+    }
+}
+
+function restartLevel() {
+    if (currentLevelName) loadLevel(currentLevelName, currentLevelIndex);
+}
+function goToNextLevel() {
+    const next = currentLevelIndex + 1;
+    if (next < ALL_LEVELS.length) loadLevel(ALL_LEVELS[next], next);
+    else showLevelSelect();
+}
+
+// ── Win / Lose callbacks (called by harness.js) ───────────────────────────────
+const LOSE_MESSAGES = [
+    "I knew that was going to happen.",
+    "I hate Mondays.",
+    "Why me?",
+];
+window.onWinLoseChange = (state, moves) => {
+    if (state === 1) {
+        if (currentLevelName) saveScore(currentLevelName, moves);
+        renderLevelList(currentBuilding); // refresh check marks
+        document.getElementById('win-overlay').classList.add('visible');
+    } else if (state === 2) {
+        document.getElementById('lose-message').textContent =
+            LOSE_MESSAGES[Math.floor(Math.random() * LOSE_MESSAGES.length)];
+        document.getElementById('lose-overlay').classList.add('visible');
+    }
+};
+window.onMovesUpdate = moves =>
+    (document.getElementById('moves-display').textContent = `Moves: ${moves}`);
+
+// ── Button wiring ─────────────────────────────────────────────────────────────
+document.getElementById('btn-select-level').addEventListener('click', showLevelSelect);
+document.getElementById('btn-restart').addEventListener('click', restartLevel);
+
+document.getElementById('btn-win-select').addEventListener('click', () => {
+    document.getElementById('win-overlay').classList.remove('visible');
+    showLevelSelect();
+});
+document.getElementById('btn-win-next').addEventListener('click', () => {
+    document.getElementById('win-overlay').classList.remove('visible');
+    goToNextLevel();
+});
+document.getElementById('btn-lose-select').addEventListener('click', () => {
+    document.getElementById('lose-overlay').classList.remove('visible');
+    showLevelSelect();
+});
+document.getElementById('btn-lose-retry').addEventListener('click', () => {
+    document.getElementById('lose-overlay').classList.remove('visible');
+    restartLevel();
+});
 </script>
 <script type="module" src="harness.js"></script>
 </body>

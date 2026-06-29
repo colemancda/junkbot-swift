@@ -221,24 +221,11 @@ function playSound(index) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Level parsing (mirrors JS loadLevelFromText)
+// ─────────────────────────────────────────────────────────────────────────────
+// Level loading — text parsed in JS, entity data fed to Swift via wasm.add_*
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BRICK_COLOR_INDEX = { white: 0, red: 1, green: 2, blue: 3, yellow: 4, gray: 5 };
-let teleportIDCounter = 1;
-const teleportIDMap = {}; // string key → numeric ID
-
-function parseTeleportID(str) {
-    if (!str) return -1;
-    if (!teleportIDMap[str]) teleportIDMap[str] = teleportIDCounter++;
-    return teleportIDMap[str];
-}
-
-function parseSwitchID(str) {
-    if (!str) return -1;
-    if (!teleportIDMap[str]) teleportIDMap[str] = teleportIDCounter++;
-    return teleportIDMap[str];
-}
 
 function loadLevelIntoWasm(wasm, levelText) {
     const sections = {};
@@ -252,112 +239,91 @@ function loadLevelIntoWasm(wasm, levelText) {
         sections[section].push([line.slice(0, eqIdx), line.slice(eqIdx + 1)]);
     }
 
-    // Parse [background]: backdrop name + decals (drawn entirely in JS)
-    currentBackdrop = "bkg1";
-    currentDecals = [];
-    if (sections.background) {
-        for (const [k, v] of sections.background) {
-            if (/^backdrop$/i.test(k)) {
-                currentBackdrop = v.trim();
-            } else if (/^decals$/i.test(k)) {
-                for (const d of v.split(",")) {
-                    const p = d.split(";");
-                    if (p.length >= 3) {
-                        currentDecals.push({ x: parseInt(p[0]), y: parseInt(p[1]), name: p[2].trim() });
-                    }
-                }
+    // [info] → Swift for score/display
+    let title = "", hint = "", par = Infinity;
+    for (const [k, v] of sections.info || []) {
+        if (/^title$/i.test(k)) title = v;
+        else if (/^hint$/i.test(k)) hint = v;
+        else if (/^par$/i.test(k)) par = Number(v);
+    }
+    wasm.set_level_info(title, hint, isFinite(par) ? par : -1);
+
+    // [background]
+    window.JunkbotRenderer.js_clear_decals();
+    window.JunkbotRenderer.js_set_backdrop("bkg1");
+    for (const [k, v] of sections.background || []) {
+        if (/^backdrop$/i.test(k)) {
+            window.JunkbotRenderer.js_set_backdrop(v.trim());
+        } else if (/^decals$/i.test(k)) {
+            for (const d of v.split(",")) {
+                const p = d.split(";");
+                if (p.length >= 3)
+                    window.JunkbotRenderer.js_add_decal(parseInt(p[0]), parseInt(p[1]), p[2].trim());
             }
         }
     }
 
-    let spacing = [15, 18];
-    let boundsW = 0, boundsH = 0;
-    if (sections.playfield) {
-        for (const [k, v] of sections.playfield) {
-            if (/^spacing$/i.test(k)) spacing = v.split(",").map(Number);
-        }
-        for (const [k, v] of sections.playfield) {
-            if (/^size$/i.test(k)) {
-                const [cols, rows] = v.split(",").map(Number);
-                boundsW = cols * spacing[0];
-                boundsH = rows * spacing[1];
-            }
+    // [playfield]
+    let spacing = [15, 18], boundsW = 0, boundsH = 0;
+    for (const [k, v] of sections.playfield || []) {
+        if (/^spacing$/i.test(k)) spacing = v.split(",").map(Number);
+    }
+    for (const [k, v] of sections.playfield || []) {
+        if (/^size$/i.test(k)) {
+            const [cols, rows] = v.split(",").map(Number);
+            boundsW = cols * spacing[0]; boundsH = rows * spacing[1];
         }
     }
-
     wasm.begin_load_level(0, 0, boundsW, boundsH);
 
-    if (!sections.partslist) return;
+    // [partslist]
+    if (!sections.partslist) { wasm.finish_load_level(); return; }
     let types = [], colors = [];
     for (const [k, v] of sections.partslist) {
-        if (k === "types") types = types.concat(v.toLowerCase().split(","));
+        if (k === "types")  types  = types.concat(v.toLowerCase().split(","));
         else if (k === "colors") colors = colors.concat(v.toLowerCase().split(","));
     }
+
+    const idMap = {};
+    let idCounter = 1;
+    const resolveID = s => { if (!s) return -1; if (!idMap[s]) idMap[s] = idCounter++; return idMap[s]; };
 
     for (const [k, v] of sections.partslist) {
         if (k !== "parts") continue;
         for (const def of v.split(",")) {
             const e = def.split(";");
-            const gx = parseInt(e[0]) - 1;
-            const gy = parseInt(e[1]) - 1;
-            const x = gx * spacing[0];
-            const y = gy * spacing[1];
-            const typeName = (types[parseInt(e[2]) - 1] || "").toLowerCase();
+            const x = (parseInt(e[0]) - 1) * spacing[0];
+            const y = (parseInt(e[1]) - 1) * spacing[1];
+            const typeName  = (types[parseInt(e[2]) - 1]  || "").toLowerCase();
             const colorName = (colors[parseInt(e[3]) - 1] || "red").toLowerCase();
-            const animName = (e[4] || "").toLowerCase();
-            const colorIdx = BRICK_COLOR_INDEX[colorName] ?? 1;
-            const facing = /(_l$|^l$)/.test(animName) ? -1 : 1;
-            let facingY = 0;
-            if (/_u/.test(animName)) facingY = -1;
-            else if (/_d/.test(animName)) facingY = 1;
-            const on = animName === "on" || animName === "none" || animName === "";
-            const relID = e[6] || "";
-
+            const animName  = (e[4] || "").toLowerCase();
+            const colorIdx  = BRICK_COLOR_INDEX[colorName] ?? 1;
+            const facing    = /(_l$|^l$)/.test(animName) ? -1 : 1;
+            const facingY   = /_u/.test(animName) ? -1 : /_d/.test(animName) ? 1 : 0;
+            const on        = animName === "on" || animName === "none" || animName === "";
+            const relID     = e[6] || "";
             const brickMatch = typeName.match(/^brick_(\d+)$/);
             if (brickMatch) {
-                const w = parseInt(brickMatch[1]);
-                const isFixed = colorName === "gray";
-                wasm.add_brick(x, y, w, colorIdx, isFixed ? 1 : 0);
-            } else if (typeName === "minifig") {
-                wasm.add_junkbot(x, y - CELL_H * 3, facing, 0);
-            } else if (typeName === "haz_walker") {
-                wasm.add_gearbot(x, y - CELL_H, facing);
-            } else if (typeName === "haz_climber") {
-                wasm.add_climbbot(x, y - CELL_H, facing, facingY);
-            } else if (typeName === "haz_dumbfloat") {
-                wasm.add_flybot(x, y - CELL_H, facing);
-            } else if (typeName === "haz_float") {
-                wasm.add_eyebot(x, y - CELL_H, facing, facingY);
-            } else if (typeName === "flag") {
-                wasm.add_bin(x, y - CELL_H * 2, 0, 0);
-            } else if (typeName === "scaredy") {
-                wasm.add_bin(x, y - CELL_H * 2, facing, 1);
-            } else if (typeName === "haz_slickcrate") {
-                wasm.add_crate(x, y - CELL_H);
-            } else if (typeName === "haz_slickfire") {
-                wasm.add_fire(x, y, on ? 1 : 0, parseSwitchID(relID));
-            } else if (typeName === "haz_slickfan") {
-                wasm.add_fan(x, y, on ? 1 : 0, parseSwitchID(relID));
-            } else if (typeName === "haz_slicklaser_l") {
-                // haz_slicklaser_l points RIGHT
-                wasm.add_laser(x, y, 1, on ? 1 : 0, parseSwitchID(relID));
-            } else if (typeName === "haz_slicklaser_r") {
-                // haz_slicklaser_r points LEFT
-                wasm.add_laser(x, y, -1, on ? 1 : 0, parseSwitchID(relID));
-            } else if (typeName === "haz_slickswitch") {
-                wasm.add_switch(x, y, on ? 1 : 0, parseSwitchID(relID));
-            } else if (typeName === "haz_slickteleport") {
-                wasm.add_teleport(x, y, parseTeleportID(relID));
-            } else if (typeName === "haz_slickjump") {
-                wasm.add_jump(x, y, 1);
-            } else if (typeName === "brick_slickjump") {
-                wasm.add_jump(x, y, 0);
-            } else if (typeName === "haz_slickshield") {
-                wasm.add_shield(x, y, animName === "off" ? 1 : 0, 1);
-            } else if (typeName === "brick_slickshield") {
-                wasm.add_shield(x, y, animName === "off" ? 1 : 0, 0);
-            } else if (typeName === "haz_slickpipe") {
-                wasm.add_pipe(x, y);
+                wasm.add_brick(x, y, parseInt(brickMatch[1]), colorIdx, colorName === "gray" ? 1 : 0);
+            } else if (typeName === "minifig")        { wasm.add_junkbot(x, y - CELL_H * 3, facing, 0);
+            } else if (typeName === "haz_walker")     { wasm.add_gearbot(x, y - CELL_H, facing);
+            } else if (typeName === "haz_climber")    { wasm.add_climbbot(x, y - CELL_H, facing, facingY);
+            } else if (typeName === "haz_dumbfloat")  { wasm.add_flybot(x, y - CELL_H, facing);
+            } else if (typeName === "haz_float")      { wasm.add_eyebot(x, y - CELL_H, facing, facingY);
+            } else if (typeName === "flag")           { wasm.add_bin(x, y - CELL_H * 2, 0, 0);
+            } else if (typeName === "scaredy")        { wasm.add_bin(x, y - CELL_H * 2, facing, 1);
+            } else if (typeName === "haz_slickcrate") { wasm.add_crate(x, y - CELL_H);
+            } else if (typeName === "haz_slickfire")  { wasm.add_fire(x, y, on ? 1 : 0, resolveID(relID));
+            } else if (typeName === "haz_slickfan")   { wasm.add_fan(x, y, on ? 1 : 0, resolveID(relID));
+            } else if (typeName === "haz_slicklaser_l") { wasm.add_laser(x, y, 1, on ? 1 : 0, resolveID(relID));
+            } else if (typeName === "haz_slicklaser_r") { wasm.add_laser(x, y, -1, on ? 1 : 0, resolveID(relID));
+            } else if (typeName === "haz_slickswitch")  { wasm.add_switch(x, y, on ? 1 : 0, resolveID(relID));
+            } else if (typeName === "haz_slickteleport"){ wasm.add_teleport(x, y, resolveID(relID));
+            } else if (typeName === "haz_slickjump")    { wasm.add_jump(x, y, 1);
+            } else if (typeName === "brick_slickjump")  { wasm.add_jump(x, y, 0);
+            } else if (typeName === "haz_slickshield")  { wasm.add_shield(x, y, animName === "off" ? 1 : 0, 1);
+            } else if (typeName === "brick_slickshield"){ wasm.add_shield(x, y, animName === "off" ? 1 : 0, 0);
+            } else if (typeName === "haz_slickpipe")    { wasm.add_pipe(x, y);
             }
         }
     }
@@ -367,7 +333,23 @@ function loadLevelIntoWasm(wasm, levelText) {
     vp.cy = boundsH / 2;
 }
 
+async function loadLevelText(wasm, path) {
+    const text = await loadText(path);
+    loadLevelIntoWasm(wasm, text);
+}
+
 window.JunkbotRenderer = {
+    // Backdrop + decals (set by Swift level loader)
+    js_set_backdrop(name) {
+        currentBackdrop = name;
+    },
+    js_clear_decals() {
+        currentDecals = [];
+    },
+    js_add_decal(x, y, name) {
+        currentDecals.push({ x, y, name });
+    },
+
     // Rendering
     js_begin_frame() {
         ctx.save();
@@ -683,48 +665,34 @@ function setupInput(wasmExports) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function main() {
-    document.getElementById("status").textContent = "Loading assets…";
     await loadResources();
     await initAudio();
 
-    document.getElementById("status").textContent = "Loading WASM…";
-
-    // Setup Swift runtime
-    // Initialization is handled by init()
-    
-    // We register a callback for when Swift has exposed the API to `window.JunkbotWasm`
     window.onWasmReady = () => {
-        console.log("onWasmReady called!");
         const wasm = window.JunkbotWasm;
-        
         setupInput(wasm);
 
-        // Populate level list
-        const levelListEl = document.getElementById("level-list");
+        // Expose level loader to index.html's menu system
         const levelFiles = window.LEVEL_FILES || [];
-        for (const file of levelFiles) {
-            const li = document.createElement("li");
-            const btn = document.createElement("button");
-            btn.textContent = file.name;
-            btn.onclick = async () => {
-                document.getElementById("overlay").style.display = "none";
-                document.getElementById("status").textContent = "Loading level…";
-                const text = await loadText(file.path);
-                loadLevelIntoWasm(wasm, text);
-                document.getElementById("status").textContent = "";
-            };
-            li.append(btn);
-            levelListEl.append(li);
-        }
+        const levelByName = Object.fromEntries(levelFiles.map(f => [f.name, f.path]));
 
-        // Start with the first level if available
-        if (levelFiles.length > 0) {
-            loadText(levelFiles[0].path).then(text => {
-                loadLevelIntoWasm(wasm, text);
-            });
-        }
+        let prevWinLose = 0;
+        window._currentMoves = 0;
 
-        document.getElementById("status").textContent = "";
+        window._loadLevelByName = async (name) => {
+            const path = levelByName[name];
+            if (!path) { console.warn("Level not found:", name); return; }
+            prevWinLose = 0;
+            window._currentMoves = 0;
+            await loadLevelText(wasm, path);
+        };
+
+        // Load any level the user clicked before WASM was ready
+        if (window._pendingLevel) {
+            const pending = window._pendingLevel;
+            window._pendingLevel = null;
+            window._loadLevelByName(pending);
+        }
 
         // Game loop
         const minInterval = 1000 / TARGET_FPS;
@@ -736,6 +704,17 @@ async function main() {
                 window.JunkbotRenderer.js_clear_background();
                 wasm.game_tick();
                 window.JunkbotRenderer.js_end_frame();
+
+                const moves = wasm.get_moves?.() ?? 0;
+                if (moves !== window._currentMoves) {
+                    window._currentMoves = moves;
+                    window.onMovesUpdate?.(moves);
+                }
+                const winLose = wasm.get_win_lose_state();
+                if (winLose !== prevWinLose && winLose !== 0) {
+                    prevWinLose = winLose;
+                    window.onWinLoseChange?.(winLose, moves);
+                }
             }
             requestAnimationFrame(loop);
         }
@@ -743,14 +722,9 @@ async function main() {
     };
 
     try {
-        console.log("Calling init()...");
         await init();
-        console.log("init() finished successfully!");
-        // init() instantiates the wasm module and calls swift.main() automatically.
-        // swift.main() then triggers JunkbotApp.main() in Swift, which calls window.onWasmReady.
     } catch (err) {
-        document.getElementById("status").textContent = "Failed to load WASM: " + err;
-        console.error("Failed to load WASM", err);
+        console.error("Failed to load WASM:", err);
     }
 }
 

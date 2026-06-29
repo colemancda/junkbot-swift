@@ -28,6 +28,11 @@ public final class GameEngine: @unchecked Sendable {
     public var viewportCenterY: Int32 = 0
     public var viewportScale: Float = 1.0
 
+    // MARK: - Level metadata
+    public var levelTitle: String = ""
+    public var levelHint: String = ""
+    public var levelPar: Int = Int.max
+
     // MARK: - Flags
     public var paused: Bool = false
 
@@ -80,6 +85,9 @@ public final class GameEngine: @unchecked Sendable {
         winLoseState = 0
         levelBounds = nil
         paused = false
+        levelTitle = ""
+        levelHint = ""
+        levelPar = Int.max
     }
 
     // MARK: - Public API

@@ -145,6 +145,30 @@ exports.get_win_lose_state = JSClosure { _ in
     return .number(Double(engine.winLose()))
 }.jsValue
 
+exports.get_moves = JSClosure { _ in
+    return .number(Double(engine.moves))
+}.jsValue
+
+exports.get_level_title = JSClosure { _ in
+    return .string(engine.levelTitle)
+}.jsValue
+
+exports.get_level_hint = JSClosure { _ in
+    return .string(engine.levelHint)
+}.jsValue
+
+exports.get_level_par = JSClosure { _ in
+    let par = engine.levelPar
+    return par == Int.max ? .null : .number(Double(par))
+}.jsValue
+
+exports.set_level_info = JSClosure { args in
+    engine.levelTitle = args[0].string ?? ""
+    engine.levelHint  = args[1].string ?? ""
+    engine.levelPar   = args[2].number.map(Int.init) ?? Int.max
+    return .undefined
+}.jsValue
+
 window.JunkbotWasm = exports.jsValue
 
 if let ready = window.onWasmReady.function {
