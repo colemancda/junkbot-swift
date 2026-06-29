@@ -8,7 +8,7 @@
  *  - Run the game loop at 18fps (matching original Junkbot)
  */
 
-const TARGET_FPS = 18;
+const TARGET_FPS = 15; // original game ran at ~15fps in practice on 60Hz displays
 const CELL_W = 15;
 const CELL_H = 18;
 
@@ -45,6 +45,7 @@ async function loadResources() {
         resources.spritesUndercoverAtlas,
         resources.backgrounds,
         resources.backgroundsAtlas,
+        resources.junkbotAnimations,
     ] = await Promise.all([
         loadImage("../images/spritesheets/sprites.png"),
         loadJSON("../images/spritesheets/sprites.json"),
@@ -52,12 +53,10 @@ async function loadResources() {
         loadJSON("../images/spritesheets/Undercover Exclusive/sprites.json"),
         loadImage("../images/spritesheets/backgrounds.png"),
         loadJSON("../images/spritesheets/backgrounds.json"),
+        loadJSON("../junkbot-animations.json"),
     ]);
 
-    // Build name→bounds lookup from atlas JSON
-    // The JSON format is: { frames: [[x,y,w,h], ...], frames_by_name: {"name": index, ...} }
-    // or the gamefroot format: { images: [...], frames: [[x,y,w,h],...], ...}
-    // We'll handle both formats.
+    // Build name→frame lookup. Gamefroot format: { frames: [[x,y,w,h],...], animations: { name: [idx] } }
     resources.spritesAtlas._lookup = buildAtlasLookup(resources.spritesAtlas);
     resources.spritesUndercoverAtlas._lookup = buildAtlasLookup(resources.spritesUndercoverAtlas);
     resources.backgroundsAtlas._lookup = buildAtlasLookup(resources.backgroundsAtlas);
@@ -65,16 +64,13 @@ async function loadResources() {
 
 function buildAtlasLookup(atlas) {
     const lookup = {};
-    if (atlas.frames_by_name) {
-        for (const [name, idx] of Object.entries(atlas.frames_by_name)) {
-            lookup[name] = atlas.frames[idx];
-        }
-    } else if (Array.isArray(atlas.frames)) {
-        // Gamefroot format: frames is array of [x,y,w,h], names come from elsewhere
-        // In this project the atlas JSON from gamefroot has a separate names array
-        const names = atlas.names || [];
-        for (let i = 0; i < names.length; i++) {
-            lookup[names[i].toLowerCase()] = atlas.frames[i];
+    // Gamefroot format: { frames: [[x,y,w,h],...], animations: { name: [frameIdx,...] } }
+    if (atlas.animations && Array.isArray(atlas.frames)) {
+        for (const [name, indices] of Object.entries(atlas.animations)) {
+            const frameIdx = indices[0];
+            if (frameIdx != null && atlas.frames[frameIdx]) {
+                lookup[name.toLowerCase()] = atlas.frames[frameIdx];
+            }
         }
     }
     return lookup;
@@ -103,6 +99,26 @@ resizeCanvas();
 
 // Viewport state (updated by js_set_viewport called from Swift)
 let vp = { cx: 0, cy: 0, scale: 1 };
+
+// Current level backdrop + decals (parsed from level text, drawn in JS)
+let currentBackdrop = "bkg1";
+let currentDecals = [];
+
+// Draw a decal/backdrop from the backgrounds atlas at world (x, y), top-left aligned
+function drawDecal(x, y, name) {
+    const frame = getFrame("backgrounds", name);
+    if (!frame) return;
+    const [sx, sy, sw, sh] = frame;
+    ctx.drawImage(resources.backgrounds, sx, sy, sw, sh, x, y, sw, sh);
+}
+
+// Draw the level backdrop and decals (world space; viewport transform already active)
+function drawBackdrop() {
+    drawDecal(-6, -25, currentBackdrop);
+    for (const d of currentDecals) {
+        drawDecal(d.x - 30, d.y - 64, d.name);
+    }
+}
 
 function worldToScreen(wx, wy) {
     return [
@@ -232,6 +248,24 @@ function loadLevelIntoWasm(wasm, levelText) {
         sections[section] = sections[section] || [];
         const eqIdx = line.indexOf("=");
         sections[section].push([line.slice(0, eqIdx), line.slice(eqIdx + 1)]);
+    }
+
+    // Parse [background]: backdrop name + decals (drawn entirely in JS)
+    currentBackdrop = "bkg1";
+    currentDecals = [];
+    if (sections.background) {
+        for (const [k, v] of sections.background) {
+            if (/^backdrop$/i.test(k)) {
+                currentBackdrop = v.trim();
+            } else if (/^decals$/i.test(k)) {
+                for (const d of v.split(",")) {
+                    const p = d.split(";");
+                    if (p.length >= 3) {
+                        currentDecals.push({ x: parseInt(p[0]), y: parseInt(p[1]), name: p[2].trim() });
+                    }
+                }
+            }
+        }
     }
 
     let spacing = [15, 18];
@@ -372,179 +406,204 @@ function makeImports() {
                 ctx.restore();
             },
             js_clear_background() {
+                // Fill gray in screen space, then restore world transform
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.fillStyle = "#bbb";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
+                // Draw level backdrop + decals in world space
+                drawBackdrop();
             },
             js_set_viewport(cx, cy, scale) {
-                vp.cx = cx; vp.cy = cy; vp.scale = scale;
+                // Canvas backing store is devicePixelRatio-scaled, so fold dpr into the
+                // world scale to render sprites at full, crisp size on retina displays.
+                vp.cx = cx; vp.cy = cy; vp.scale = scale * devicePixelRatio;
             },
 
+            // All entity sprites are bottom-aligned: the sprite's bottom edge sits at
+            // (wy + entityHeight - 1) and the 3D stud overhang extends upward, exactly
+            // like the original game's drawImage(... entity.y + entity.height - h - 1 ...).
             js_draw_brick(wx, wy, colorIdx, widthInStuds, fixed) {
-                const colorName = fixed ? "immobile" : (BRICK_COLOR_NAMES[colorIdx] || "gray");
-                if (colorName === "gray") {
-                    // fixed gray bricks use "immobile" sprite name
-                }
                 const key = `brick_${fixed ? "immobile" : (BRICK_COLOR_NAMES[colorIdx] || "red")}_${widthInStuds}`;
-                drawSpriteWorld("sprites", key, wx, wy);
+                const h = spriteH("sprites", key);
+                blit("sprites", key, wx, wy + 18 - h - 1);
             },
 
             js_draw_junkbot(wx, wy, facing, animFrame, flags) {
+                const ENTITY_H = 4 * 18; // junkbot logical height
                 const armored      = !!(flags & 1);
                 const dying        = !!(flags & 2);
                 const dyingFromWater = !!(flags & 4);
                 const collectingBin = !!(flags & 8);
-                const floating     = !!(flags & 16);
                 const losingShield = !!(flags & 32);
                 const gettingShield = !!(flags & 64);
 
-                let animName;
-                if (dying) {
-                    const t = Math.floor(animFrame % 10);
-                    animName = dyingFromWater ? `minifig_dead_water_${1 + t}` : `minifig_dead_${1 + t}`;
-                } else if (collectingBin) {
-                    const t = Math.floor(animFrame % 17);
-                    animName = `minifig_bin_${1 + t}`;
-                } else if (floating) {
-                    animName = `minifig_float_${1 + (animFrame % 4)}`;
-                } else if (gettingShield) {
-                    animName = `minifig_shield_${1 + (animFrame % 11)}`;
+                // Determine animName exactly like the original drawJunkbot
+                let animName, animLength = 10;
+                if (dyingFromWater) { animName = "water_die"; }
+                else if (dying)      { animName = "die"; }
+                else if (collectingBin) { animName = "eat_start"; animLength = 17; }
+                else if (gettingShield) { animName = `shield_on_${facing > 0 ? "r" : "l"}`; animLength = 11; }
+                else { animName = `walk_${facing > 0 ? "r" : "l"}`; }
+
+                if (armored && (!losingShield || (animFrame % 4 < 2))) {
+                    if (animName === "eat_start") animName = "shield_eat";
+                    else if (!animName.includes("shield")) animName = `shield_${animName}`;
+                }
+
+                // Look up keyframe (with offset) from junkbot-animations.json when available
+                const animation = resources.junkbotAnimations[animName];
+                let frameName, ox = 0, oy = 0;
+                if (animation) {
+                    animLength = animation.length;
+                    const kf = animation[animFrame % animLength];
+                    frameName = kf.sprite;
+                    ox = kf.offset.x; oy = kf.offset.y;
                 } else {
-                    const t = (Math.floor(animFrame / 5)) % 4;
-                    animName = facing > 0
-                        ? `minifig_walk_r_${1 + t}`
-                        : `minifig_walk_l_${1 + t}`;
+                    const t = animFrame % animLength;
+                    frameName = `minifig_${animName}_${1 + t}`;
                 }
-                drawSpriteWorld("sprites", animName, wx, wy);
-                if (armored || losingShield) {
-                    // Draw shield overlay — flash when losing
-                    const alpha = losingShield ? (Math.floor(animFrame / 2) % 2 === 0 ? 0.5 : 0) : 1;
-                    const shieldFrame = `minifig_shield_overlay`;
-                    drawSpriteWorldAlpha("sprites", shieldFrame, wx, wy, alpha);
-                }
+
+                const h = spriteH("sprites", frameName);
+                blit("sprites", frameName, wx - ox, wy + ENTITY_H - 1 - h - oy);
             },
 
             js_draw_gearbot(wx, wy, facing, animFrame) {
-                const t = Math.floor(animFrame % 3);
-                const dir = facing > 0 ? "r" : "l";
-                drawSpriteWorld("sprites", `haz_walker_walk_${dir}_${1 + t}`, wx, wy);
+                const name = `gearbot_walk_${facing > 0 ? "r" : "l"}_${1 + (animFrame % 2)}`;
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx, wy + 2 * 18 - h - 1);
             },
 
             js_draw_climbbot(wx, wy, facing, facingY, animFrame) {
-                const t = Math.floor(animFrame % 7);
-                const dir = facing > 0 ? "r" : "l";
-                drawSpriteWorld("sprites", `haz_climber_walk_${dir}_${1 + t}`, wx, wy);
+                let dir = facing > 0 ? "r" : "l";
+                if (facingY === -1) dir = "u";
+                else if (facingY === 1) dir = "d";
+                const name = `climbbot_walk_${dir}_${1 + (animFrame % 6)}`;
+                blit("sprites", name, wx, wy - 6); // original: entity.y - 6
             },
 
             js_draw_flybot(wx, wy, facing, animFrame) {
-                const t = Math.floor(animFrame % 4);
-                const dir = facing > 0 ? "r" : "l";
-                drawSpriteWorld("spritesUndercover", `haz_dumbfloat_${dir}_${1 + t}`, wx, wy);
+                const name = `flybot_${1 + (animFrame % 2)}`;
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx, wy + 2 * 18 - h - 1);
             },
 
             js_draw_eyebot(wx, wy, facing, facingY, animFrame, laserOn) {
-                const t = Math.floor(animFrame % 4);
-                const active = Math.abs(facing) > 0 || facingY !== 0;
-                const prefix = active ? "eyebot_active" : "eyebot_inactive";
-                drawSpriteWorld("sprites", `${prefix}_${1 + t}`, wx, wy);
+                const active = facing !== 0 || facingY !== 0;
+                const name = `eyebot_${active ? "active_" : ""}${1 + (animFrame % 2)}`;
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx, wy + 2 * 18 - h - 1);
             },
 
             js_draw_bin(wx, wy, facing, scaredy, animFrame) {
+                const ENTITY_H = 3 * 18;
                 if (scaredy && facing !== 0) {
-                    const t = Math.floor(animFrame % 2);
-                    const dir = facing > 0 ? "r" : "l";
-                    drawSpriteWorld("spritesUndercover",
-                        `scaredy_walk_${dir}_${1 + t}`, wx, wy);
+                    const name = `scaredy_walk_${facing > 0 ? "r" : "l"}_${1 + (animFrame % 2)}_s3`;
+                    const h = spriteH("spritesUndercover", name);
+                    blit("spritesUndercover", name, wx + 4, wy + ENTITY_H - h - 5);
                 } else {
-                    drawSpriteWorld("sprites", "bin", wx, wy);
+                    const h = spriteH("sprites", "bin");
+                    blit("sprites", "bin", wx + 4, wy + ENTITY_H - h - 5);
                 }
             },
 
             js_draw_crate(wx, wy) {
-                drawSpriteWorld("spritesUndercover", "haz_slickcrate_norm", wx, wy);
+                const h = spriteH("spritesUndercover", "haz_slickcrate");
+                blit("spritesUndercover", "haz_slickcrate", wx, wy + 2 * 18 - h - 1);
             },
 
             js_draw_fire(wx, wy, on, animFrame) {
-                const state = on ? "on" : "off";
-                const t = on ? (Math.floor(animFrame % 8 < 4 ? animFrame % 4 : 4 - animFrame % 4)) : 0;
-                drawSpriteWorld("sprites", `haz_slickfire_${state}_${1 + t}`, wx, wy);
+                const fi = on ? ((animFrame % 8 < 4) ? animFrame % 4 : 4 - (animFrame % 4)) : 0;
+                const name = `haz_slickfire_${on ? "on" : "off"}_${1 + fi}`;
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx + 1, wy + 18 - h - 4);
             },
 
             js_draw_fan(wx, wy, on, animFrame) {
-                const state = on ? "on" : "off";
-                const t = on ? Math.floor(animFrame % 4) : 0;
-                drawSpriteWorld("sprites", `haz_slickfan_${state}_${1 + t}`, wx, wy);
+                const name = `haz_slickfan_${on ? "on" : "off"}_${1 + (on ? animFrame % 4 : 0)}`;
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx + 1, wy + 18 - h - 4);
             },
 
-            js_draw_switch(wx, wy, on, animFrame) {
-                const state = on ? "on" : "off";
-                drawSpriteWorld("sprites", `haz_slickswitch_${state}_1`, wx, wy);
+            js_draw_switch(wx, wy, on, _animFrame) {
+                const name = on ? "haz_slickswitch_on_1" : "haz_slickswitch_off_1";
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx, wy + 18 - h - 1);
             },
 
-            js_draw_pipe(wx, wy, animFrame) {
-                drawSpriteWorld("sprites", "haz_slickpipe_dry_1", wx, wy);
+            js_draw_pipe(wx, wy, _animFrame) {
+                // original: entity.x + 11, entity.y - 12
+                blit("sprites", "haz_slickpipe_dry_1", wx + 11, wy - 12);
             },
 
             js_draw_shield(wx, wy, used, fixed) {
-                const prefix = fixed ? "haz" : "brick";
                 const state = used ? "off" : "on";
-                drawSpriteWorld("sprites", `${prefix}_slickshield_${state}_1`, wx, wy);
+                const sheet = fixed ? "sprites" : "spritesUndercover";
+                const name = fixed ? `haz_slickshield_${state}` : `brick_slickshield_${state}`;
+                const h = spriteH(sheet, name);
+                blit(sheet, name, wx, wy + 18 - h - 1);
             },
 
             js_draw_jump(wx, wy, active, animFrame, fixed) {
-                const prefix = fixed ? "haz" : "brick";
-                const animName = active
-                    ? `${prefix}_slickjump_active_${1 + Math.floor(animFrame % 5)}`
-                    : `${prefix}_slickjump_dormant_1`;
-                drawSpriteWorld("sprites", animName, wx, wy);
+                const prefix = fixed ? "haz_slickjump" : "brick_slickjump";
+                const name = active ? `${prefix}_active_${1 + (animFrame % 5)}` : `${prefix}_dormant_1`;
+                const h = spriteH("sprites", name);
+                blit("sprites", name, wx, wy + 18 - h - 1);
             },
 
             js_draw_teleport(wx, wy, animFrame, blocked) {
-                const t = Math.floor(animFrame % 4);
-                drawSpriteWorld("spritesUndercover", `haz_slickteleport_on_${1 + t}`, wx, wy);
-                if (blocked) {
-                    ctx.save();
-                    const [sx, sy] = worldPos(wx, wy);
-                    ctx.fillStyle = "rgba(255,0,0,0.3)";
-                    ctx.fillRect(sx, sy, CELL_W * 4 * vp.scale, CELL_H * 2 * vp.scale);
-                    ctx.restore();
-                }
+                const on = !blocked;
+                let name = `haz_slickteleport_${on ? "on" : "off"}_1`;
+                // active animation while warping
+                if (animFrame % 60 > 30) name = `haz_slickteleport_active_${1 + (animFrame % 2)}`;
+                const h = spriteH("spritesUndercover", name);
+                blit("spritesUndercover", name, wx, wy + 18 - h - 1);
             },
 
             js_draw_laser(wx, wy, facing, on) {
-                const dir = facing > 0 ? "l" : "r"; // sprite naming is reversed vs direction
-                const state = on ? "on" : "off";
-                drawSpriteWorld("spritesUndercover", `haz_slicklaser_${dir}_${state}_1`, wx, wy);
+                // entity name vs sprite direction is swapped: facing 1 -> "L" sprite
+                const name = `haz_slicklaser_${facing > 0 ? "l" : "r"}_on_1`;
+                const w = spriteW("spritesUndercover", name);
+                const h = spriteH("spritesUndercover", name);
+                const ENTITY_W = 2 * 15, ENTITY_H = 18;
+                const alpha = on ? 1 : 0.5;
+                if (facing < 0) {
+                    blit("spritesUndercover", name, wx + ENTITY_W - w + 11, wy + ENTITY_H - 1 - h, alpha);
+                } else {
+                    blit("spritesUndercover", name, wx, wy + ENTITY_H - 1 - h, alpha);
+                }
             },
 
             js_draw_droplet(wx, wy, splashing, animFrame) {
-                if (splashing) {
-                    const t = Math.floor(animFrame % 5);
-                    drawSpriteWorld("sprites", `droplet_splash_${1 + t}`, wx, wy);
-                } else {
-                    drawSpriteWorld("sprites", "droplet_1", wx, wy);
-                }
+                const name = `drip_${splashing ? "splashing" : "falling"}_${1 + (splashing ? animFrame % 5 : 0)}`;
+                const ox = splashing ? (-3 - animFrame) : 0;
+                const oy = splashing ? -15 : 0;
+                blit("sprites", name, wx + 15 + ox, wy + oy);
             },
 
             js_draw_wind_column(wx, wy, extent, fanAnimFrame) {
+                const fi = fanAnimFrame % 7;
+                const name = `fanair_1_${1 + fi}`;
+                // original: x + 4, y - frameIndex*2 + 8, marching upward by 18 per row
                 for (let row = 0; row < extent; row++) {
-                    const t = Math.floor(fanAnimFrame % 7);
-                    drawSpriteWorld("sprites", `fanair_1_${1 + t}`, wx, wy - row * CELL_H);
+                    blit("sprites", name, wx + 4, (wy - row * 18) - fi * 2 + 8);
                 }
             },
 
-            js_draw_laser_beam(wx, wy, facing, extent, hitWall, animFrame) {
+            js_draw_laser_beam(wx, wy, facing, extent, _hitWall, animFrame) {
+                const ENTITY_W = 2 * 15;
+                const name = `laserbeam_1_${1 + (animFrame % 3)}`;
                 for (let i = 0; i < extent; i++) {
-                    const bx = wx + (facing > 0 ? CELL_W * 2 : -CELL_W) + CELL_W * i * facing;
-                    const t = Math.floor(animFrame % 3);
-                    drawSpriteWorld("spritesUndercover", `laserbeam_1_${1 + t}`, bx, wy);
+                    const x = wx + (facing === 1 ? ENTITY_W : -15) + 15 * i * facing;
+                    blit("spritesUndercover", name, x + 4, wy);
                 }
             },
 
             js_draw_teleport_effect(wx, wy, frameIndex) {
-                drawSpriteWorldAlpha("spritesUndercover", `transefx_${1 + frameIndex}`, wx, wy, 0.5);
+                const name = `transefx_${1 + (frameIndex % 3)}`;
+                const h = spriteH("spritesUndercover", name);
+                blit("spritesUndercover", name, wx + 5, wy - h + 2, 0.5);
             },
 
             js_draw_debug_rect(wx, wy, ww, wh) {
@@ -581,29 +640,33 @@ function worldPos(wx, wy) {
     return [wx, wy];
 }
 
-function drawSpriteWorld(sheetKey, frameName, wx, wy) {
-    drawSpriteWorldAlpha(sheetKey, frameName, wx, wy, 1);
-}
+// Sprite frame dimensions (0 if missing)
+function spriteW(sheetKey, name) { const f = getFrame(sheetKey, name); return f ? f[2] : 0; }
+function spriteH(sheetKey, name) { const f = getFrame(sheetKey, name); return f ? f[3] : 0; }
 
-function drawSpriteWorldAlpha(sheetKey, frameName, wx, wy, alpha) {
-    const atlas = sheetKey + "Atlas";
-    const frame = getFrame(sheetKey, frameName);
+// Low-level blit: draw a named sprite at exact destination (dx, dy) in world space.
+// (The viewport transform is already applied to ctx during a frame.)
+function blit(sheetKey, name, dx, dy, alpha = 1) {
+    const frame = getFrame(sheetKey, name);
     if (!frame) {
-        // Draw placeholder rectangle
         ctx.save();
-        ctx.globalAlpha = alpha * 0.5;
+        ctx.globalAlpha = 0.4;
         ctx.fillStyle = "magenta";
-        ctx.fillRect(wx, wy, CELL_W * 2, CELL_H * 2);
+        ctx.fillRect(dx, dy, CELL_W * 2, CELL_H);
         ctx.restore();
         return;
     }
     const [sx, sy, sw, sh] = frame;
     const sheet = resources[sheetKey];
     if (!sheet) return;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(sheet, sx, sy, sw, sh, wx, wy, sw, sh);
-    ctx.restore();
+    if (alpha !== 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(sheet, sx, sy, sw, sh, dx, dy, sw, sh);
+        ctx.restore();
+    } else {
+        ctx.drawImage(sheet, sx, sy, sw, sh, dx, dy, sw, sh);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -695,12 +758,14 @@ async function main() {
 
     document.getElementById("status").textContent = "";
 
-    // Game loop at TARGET_FPS
-    const frameDuration = 1000 / TARGET_FPS;
+    // Game loop matching original Junkbot's rAF throttle:
+    // `lastTime = now` (not accumulated) naturally gives ~15fps on 60Hz displays,
+    // matching the original game's actual simulation rate despite targetFPS=18.
+    const minInterval = 1000 / TARGET_FPS;
     let lastTime = 0;
-    function loop(timestamp) {
-        if (timestamp - lastTime >= frameDuration) {
-            lastTime = timestamp;
+    function loop(now) {
+        if (now - lastTime >= minInterval) {
+            lastTime = now;
             wasm.game_tick();
         }
         requestAnimationFrame(loop);
