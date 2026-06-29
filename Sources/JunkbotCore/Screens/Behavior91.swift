@@ -1,0 +1,7 @@
+// Translated from Lingo: behavior_91.ls
+
+class Behavior91 {
+    func mouseUp() {
+        (glob["award_obj"] as AnyObject).updateState("move2")
+    }
+}
