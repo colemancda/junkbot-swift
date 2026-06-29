@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_part click behavior.ls
 
-class BehaviorPartClick: LingoObject {
+class BehaviorPartClick: LingoObject, @unchecked Sendable {
     var part: LV = .void
 
     init(p: LV) {

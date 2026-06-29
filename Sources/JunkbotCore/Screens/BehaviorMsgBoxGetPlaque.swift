@@ -32,7 +32,7 @@ class BehaviorMsgBoxGetPlaque {
         let goalMoves = levelEntry["goal"].asInt!
         let gotgold = levelEntry["gold"].asInt!
         (Glob.shared["PLAYER"]).game_manager.TotalKeys()
-        let goldNum: Int = (Glob.shared["PLAYER"]).game_manager.goldTotal()
+        let goldNum: Int = (Glob.shared["PLAYER"]).game_manager.goldTotal().asInt ?? 0
         if (moves <= goalMoves) && (gotgold == 0) {
             var flag = 1
             switch goldNum + 1 {

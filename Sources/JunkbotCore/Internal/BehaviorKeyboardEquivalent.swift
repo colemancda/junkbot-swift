@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_keyboard equivalent.ls
 
-class BehaviorKeyboardEquivalent: LingoObject {
+class BehaviorKeyboardEquivalent: LingoObject, @unchecked Sendable {
     var mykeys: String = ""
     var myMessage: String = "mouseUp"
 

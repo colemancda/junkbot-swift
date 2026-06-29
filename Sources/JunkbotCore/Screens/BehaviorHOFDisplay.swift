@@ -50,7 +50,7 @@ class BehaviorHOFDisplay {
 
     @discardableResult
     func displayhof() -> Int {
-        if (Glob.shared["database_manager"]).hofReady() != 0 {
+        if (Glob.shared["database_manager"]).hofReady().asInt ?? 0 != 0 {
             let hof = (Glob.shared["database_manager"]).getHallOfFame().asPropList!
             var ranks = ""
             var names = ""

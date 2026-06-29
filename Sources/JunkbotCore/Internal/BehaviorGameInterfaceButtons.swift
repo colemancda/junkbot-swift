@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_game_interface_buttons.ls
 
-class BehaviorGameInterfaceButtons: LingoObject {
+class BehaviorGameInterfaceButtons: LingoObject, @unchecked Sendable {
     var my: LV = .void       // the sprite
     var myName: String = ""
 

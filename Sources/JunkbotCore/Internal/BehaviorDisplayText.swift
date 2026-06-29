@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_Display Text.ls
 
-class BehaviorDisplayText: LingoObject {
+class BehaviorDisplayText: LingoObject, @unchecked Sendable {
     var spriteNum: Int = 0
     var getPDLError: LV = .void
     var myDisplayType: String = "status bar (fixed size and position)"
@@ -169,7 +169,8 @@ class BehaviorDisplayText: LingoObject {
         var result = parentString
         for i in 1...max(1, childStringList.count) {
             guard i <= childStringList.count else { break }
-            let (key, value) = childStringList.getPropAt(i)
+            let key = childStringList.getPropAt(i)
+            let value = childStringList[key]
             result = result.replacingOccurrences(of: key, with: value.asString ?? "")
         }
         return result

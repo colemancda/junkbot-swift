@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_Tooltip.ls
 
-class BehaviorTooltip: LingoObject {
+class BehaviorTooltip: LingoObject, @unchecked Sendable {
     var mySprite: LV = .void
     var getPDLError: LV = .void
     var myString: String = "Insert your single-line tool tip here"
@@ -163,7 +163,8 @@ class BehaviorTooltip: LingoObject {
         var result = parentString
         for i in 1...max(1, childStringList.count) {
             guard i <= childStringList.count else { break }
-            let (key, value) = childStringList.getPropAt(i)
+            let key = childStringList.getPropAt(i)
+            let value = childStringList[key]
             result = result.replacingOccurrences(of: key, with: value.asString ?? "")
         }
         return result

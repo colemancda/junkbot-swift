@@ -1,6 +1,6 @@
 // Translated from Lingo: parent_database manager.ls
 
-class DatabaseManager: LingoObject {
+class DatabaseManager: LingoObject, @unchecked Sendable {
     var state: PropList = PropList()
     var rank: PropList? = nil
     var hallOfFame: PropList? = nil

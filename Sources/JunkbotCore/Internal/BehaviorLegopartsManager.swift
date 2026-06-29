@@ -10,14 +10,14 @@ struct PieceRecord {
     var split: Bool
 }
 
-class BehaviorLegopartsManager: LingoObject {
+class BehaviorLegopartsManager: LingoObject, @unchecked Sendable {
     var piecedata: PropList = PropList()
 
     override init() {
         super.init()
         setPieceData()
         for i in 1...piecedata.count {
-            let (key, _) = piecedata.getPropAt(i)
+            let key = piecedata.getPropAt(i)
             if key == "end" { break }
             _ = getPieceSize(key)
         }

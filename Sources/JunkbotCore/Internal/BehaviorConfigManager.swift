@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_config manager.ls
 
-class BehaviorConfigManager: LingoObject {
+class BehaviorConfigManager: LingoObject, @unchecked Sendable {
 
     /// Parse a config-file text block into a nested prop list.
     /// - Parameters:
@@ -114,7 +114,8 @@ class BehaviorConfigManager: LingoObject {
             result += "[\(bracketName)]\n"
             for i in 1...max(1, bracket.count) {
                 guard i <= bracket.count else { break }
-                let (keyName, keyVal) = bracket.getPropAt(i)
+                let keyName = bracket.getPropAt(i)
+                let keyVal = bracket[keyName]
                 if let arr = keyVal.asList {
                     var t = "\(keyName)="
                     for j in 1...max(1, arr.count) {

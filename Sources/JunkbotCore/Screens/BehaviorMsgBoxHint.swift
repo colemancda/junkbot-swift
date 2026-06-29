@@ -23,7 +23,7 @@ class BehaviorMsgBoxHint {
         let current = Glob.shared["current"].asPropList!
         let building = current["building"].asInt!
         let level = current["level"].asInt!
-        let hint: String = (Glob.shared["building"]).building(building).LEVELS(level).info.hint
+        let hint: String = (Glob.shared["building"]).building(.int(building)).LEVELS(.int(level)).info.hint.asString ?? ""
         member("hint_text").text = "level \(level) hint:\n\(hint)"
         prop["state"] = .string("move1")
         prop["gameState"] = (Glob.shared["PLAYER"]).play_manager.activeState

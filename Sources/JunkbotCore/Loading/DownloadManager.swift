@@ -1,6 +1,6 @@
 // Translated from Lingo: parent_download manager.ls
 
-class DownloadManager {
+class DownloadManager: LingoObject, @unchecked Sendable {
     var files: [String] = []
     var state: String = "preload"
     var displaysprites: [String: [LingoSprite]] = [:]
@@ -13,7 +13,7 @@ class DownloadManager {
     var bumpertimer: Int = 0
     var loadp: Bool = false
 
-    init() {
+    override init() {
         files = [moviePath + movieName]
         state = "preload"
         displaysprites = [
@@ -26,7 +26,7 @@ class DownloadManager {
         ]
         displaysaveloc = [:]
         loadp = false
-        member("download_msg")?.text = "DOWNLOAD IN PROGRESS"
+        member("download_msg").text = "DOWNLOAD IN PROGRESS"
         db("new")
     }
 
@@ -130,8 +130,8 @@ class DownloadManager {
         state = "sample_level"
         show(["intro_anim"], v: false)
         show(["intro_level"], v: true)
-        let currentLevel = member("loading_level")?.text ?? ""
-        glob.PLAYER.play_manager.setLevel(currentLevel)
+        let currentLevel = member("loading_level").text
+        glob.PLAYER.play_manager.setLevel(.string(currentLevel))
         glob.PLAYER.play_manager.startLevel()
     }
 
@@ -158,9 +158,9 @@ class DownloadManager {
             displaysprites["intro_anim"]?[0].play()
         case "cleanup":
             if state == "sample_level" {
-                let currentLevel = member("loading_level")?.text ?? ""
+                let currentLevel = member("loading_level").text
                 glob.PLAYER.play_manager.leave()
-                glob.PLAYER.play_manager.setLevel(currentLevel)
+                glob.PLAYER.play_manager.setLevel(.string(currentLevel))
                 glob.PLAYER.play_manager.startLevel()
             }
         case "skip_movie":
@@ -188,9 +188,9 @@ class DownloadManager {
         } else {
             if loadp {
                 // nothing
-            } else if nextbrick > loadingbricksprites.count && glob.database_manager.READY() {
+            } else if nextbrick > loadingbricksprites.count && glob.database_manager.READY().asInt ?? 0 != 0 {
                 show(["go_btn"], v: true)
-                displaysprites["loading_msg"]?[0].member?.text = "READY TO PLAY"
+                displaysprites["loading_msg"]?[0].member.text = "READY TO PLAY"
                 blinktimer = currentTicks
                 loadp = true
                 movieloaded()

@@ -19,7 +19,7 @@ class BehaviorHOFPageButtons {
     }
 
     func mouseWithin() {
-        if (hofSprite).pageP(dir) != 0 {
+        if hofSprite?.pageP(dir) != 0 {
             sp?.member = member(mem + "_x")
             mwi = 1
         }
@@ -46,14 +46,14 @@ class BehaviorHOFPageButtons {
     }
 
     func mouseDown() {
-        if (hofSprite).pageP(dir) != 0 {
+        if hofSprite?.pageP(dir) != 0 {
             SndSFX("h_button1")
         }
     }
 
     func mouseUp() {
-        if (hofSprite).pageP(dir) != 0 {
-            (hofSprite).page(dir)
+        if hofSprite?.pageP(dir) != 0 {
+            hofSprite?.page(dir)
         }
     }
 }

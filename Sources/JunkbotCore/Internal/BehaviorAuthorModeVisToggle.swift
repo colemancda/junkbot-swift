@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_authorMode_vis_toggle.ls
 
-class BehaviorAuthorModeVisToggle: LingoObject {
+class BehaviorAuthorModeVisToggle: LingoObject, @unchecked Sendable {
     var spriteNum: Int = 0
 
     func beginSprite() {

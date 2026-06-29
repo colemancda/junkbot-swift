@@ -550,7 +550,7 @@ class PlayfieldManager {
            let memberList = partmembers.asList {
             for si in 1...max(1, spriteList.count) {
                 guard let s = spriteList[si].asObject() ?.asSprite else { continue }
-                s.puppet = 1
+                s.puppet = true
                 if si <= memberList.count, let mName = memberList[si].asString {
                     s.member = member(mName)
                 }
@@ -590,8 +590,8 @@ class PlayfieldManager {
         partslist[partnum - 1] = nil
         if let part = part {
             let basepos = part["pos"].asPoint ?? Point(x: 0, y: 0)
-            let sh = glob.legoparts_manager.getPieceShape(part["type"].asString ?? "")
-            for d in sh {
+            let sh = glob.legoparts_manager.getPieceShape(.string(part["type"].asString ?? ""))
+            for d in sh.asList?.items ?? [] {
                 let dx = d.asPoint?.x ?? 0
                 let dy = d.asPoint?.y ?? 0
                 let tx = basepos.x + dx
@@ -626,7 +626,7 @@ class PlayfieldManager {
             }
         }
         if let behavior = part?["behavior"].asObject() {
-            behavior.notify(["stop": 1])
+            behavior.notify(PropList([("stop", .int(1))]))
         }
         return part
     }
@@ -686,9 +686,9 @@ class PlayfieldManager {
     func partNeighbors(_ p: PropList, dir: String? = nil, exclude: [String]? = nil) -> [PropList] {
         let exclude = exclude ?? []
         var nei = [PropList]()
-        let sh = glob.legoparts_manager.getPieceShape(p["type"].asString ?? "")
+        let sh = glob.legoparts_manager.getPieceShape(.string(p["type"].asString ?? ""))
         let pPos = p["pos"].asPoint ?? Point(x: 0, y: 0)
-        for d in sh {
+        for d in sh.asList?.items ?? [] {
             let dx = d.asPoint?.x ?? 0
             let dy = d.asPoint?.y ?? 0
             let pos = Point(x: pPos.x + dx, y: pPos.y + dy)
@@ -898,7 +898,7 @@ class PlayfieldManager {
                     s.member = nil
                     returnASprite(s)
                 }
-                decals.deleteOne(i)
+                decals.deleteAt(i)
                 return decal
             }
         }
@@ -949,7 +949,7 @@ class PlayfieldManager {
     func getASprite() -> LingoSprite? {
         if spriteBuffer.isEmpty { return nil }
         let s = spriteBuffer.removeFirst()
-        s.puppet = 1
+        s.puppet = true
         return s
     }
 

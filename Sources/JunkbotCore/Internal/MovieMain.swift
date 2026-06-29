@@ -1,6 +1,6 @@
 // Translated from Lingo: movie_main.ls
 
-var version: String = ""
+let version: String = ""
 
 func prepareMovie() {
     // the actorList = []
