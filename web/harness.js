@@ -340,6 +340,26 @@ function makeImports() {
     return {
         env: {
             memory: wasmMemory,
+            __stack_chk_fail() { throw new Error("Swift: stack overflow"); },
+
+            // Simple bump allocator for Swift runtime alloc needs
+            posix_memalign(ptrOut, alignment, size) {
+                const mem = new Uint8Array(wasmMemory.buffer);
+                // Keep a heap pointer after the 64 KB stack region
+                if (!wasmMemory._heapPtr) wasmMemory._heapPtr = 65536;
+                const align = Math.max(alignment, 8);
+                wasmMemory._heapPtr = (wasmMemory._heapPtr + align - 1) & ~(align - 1);
+                const ptr = wasmMemory._heapPtr;
+                wasmMemory._heapPtr += size;
+                // Write the pointer into *ptrOut (little-endian i32)
+                new DataView(wasmMemory.buffer).setUint32(ptrOut, ptr, true);
+                return 0; // success
+            },
+            free(_ptr) { /* bump allocator — no-op free */ },
+            arc4random_buf(ptr, len) {
+                const buf = new Uint8Array(wasmMemory.buffer, ptr, len);
+                crypto.getRandomValues(buf);
+            },
             // Rendering
             js_begin_frame() {
                 ctx.save();
