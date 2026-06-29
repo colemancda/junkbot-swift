@@ -31,8 +31,11 @@ public struct Renderer {
             n = newN
         } while n > 1
 
+        let grabbedAlpha: Float = engine.canRelease() ? 0.8 : 0.3
         for e in list {
+            if e.grabbed { _ = js.js_set_alpha?(grabbedAlpha) }
             drawEntity(e)
+            if e.grabbed { _ = js.js_set_alpha?(1.0) }
         }
 
         // Wind, laser beams, teleport effects always drawn on top of entities

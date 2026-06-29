@@ -87,6 +87,42 @@ extension GameEngine {
         draggingIndices.removeAll(keepingCapacity: true)
     }
 
+    // Matches original game: placeable when dragged bricks connect to fixed on
+    // exactly one vertical side (ceiling XOR floor), with no collision.
+    public func canRelease() -> Bool {
+        guard !draggingIndices.isEmpty else { return false }
+
+        // Fail if any dragged entity collides with a non-grabbed entity
+        for idx in draggingIndices {
+            let e = entities[idx]
+            if entityCollisionTest(entityX: e.x, entityY: e.y, entityIndex: idx, filter: {
+                !$0.grabbed && $0.type != .droplet
+            }) != nil { return false }
+        }
+
+        var connectsCeiling = false
+        var connectsFloor = false
+
+        for idx in draggingIndices {
+            let e = entities[idx]
+            for i in 0..<entities.count {
+                let other = entities[i]
+                guard !other.grabbed && other.type == .brick else { continue }
+                guard other.x + other.width > e.x && other.x < e.x + e.width else { continue }
+                // ceiling: other sits directly above e
+                if other.y + other.height == e.y { connectsCeiling = true }
+                // floor: other sits directly below e
+                if e.y + e.height == other.y { connectsFloor = true }
+            }
+            // level floor counts as floor connection
+            if let bounds = levelBounds, e.y + e.height >= bounds.y + bounds.height {
+                connectsFloor = true
+            }
+        }
+
+        return connectsCeiling != connectsFloor
+    }
+
     func snapToGrid(_ value: Int32, _ grid: Int32) -> Int32 {
         let r = value % grid
         if r == 0 { return value }

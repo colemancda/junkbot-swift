@@ -578,6 +578,10 @@ window.JunkbotRenderer = {
         blit("spritesUndercover", name, wx + 5, wy - h + 2, 0.5);
     },
 
+    js_set_alpha(alpha) {
+        ctx.globalAlpha = alpha;
+    },
+
     js_draw_debug_rect(wx, wy, ww, wh) {
         const [sx, sy] = worldPos(wx, wy);
         ctx.strokeStyle = "rgba(255,0,0,0.7)";
