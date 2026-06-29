@@ -7,7 +7,10 @@ nonisolated(unsafe) public var currentTicks: Int = 0         // updated by game 
 nonisolated(unsafe) public var currentMilliseconds: Int = 0  // updated by game loop
 
 public let glob = Glob.shared
-public var actorList = LingoList()
+public var actorList: [LingoObject] = []
+public var runMode: String = "Author"
+public var moviePath: String = ""
+public var movieName: String = ""
 
 // MARK: - Input stubs
 nonisolated(unsafe) public var mouseIsDown: Bool = false
@@ -25,6 +28,8 @@ public func lingoRandom(_ n: Int) -> Int {
 
 // MARK: - Navigation
 public func go(_ scene: String) {}
+public func go(_ frame: Int) {}
+public var theFrameLabel: String = ""
 
 // MARK: - Cursor
 public func setCursor(_ cursor: String) {}
@@ -37,18 +42,20 @@ public func updateStage() {}
 public func externalParamValue(_ name: String) -> LV { .void }
 public func getPref(_ pref: String) -> String { "" }
 public func setPref(_ pref: String, _ val: String) {}
+public func frameReady(_ frame: Int = 1, marker: String = "") -> Bool { true }
 public func frameReady() -> Bool { true }
 
 // MARK: - Network stubs
 public func postNetText(_ url: String, _ params: PropList) -> LV { .void }
-public func getNetText(_ url: String) -> LV { .void }
+public func getStreamStatus(_ url: String) -> PropList { PropList() }
+public func tellStreamStatus(_ status: Int) {}
 public func netDone(_ id: LV) -> Bool { false }
 public func netTextResult(_ id: LV) -> String { "" }
 public func preloadNetThing(_ url: String) {}
 public func netError(_ id: LV) -> LV { .void }
 
 // MARK: - Member / Sprite stubs (Director rendering API)
-public class LingoMember: LingoObject {
+public class LingoMember: LingoObject, @unchecked Sendable {
     public var text: String = ""
     public var name: String = ""
     public var width: Int = 0
@@ -63,9 +70,11 @@ public class LingoMember: LingoObject {
     public override var asMember: LingoMember? { self }
 }
 
-public class LingoSprite: LingoObject {
+public class LingoSprite: LingoObject, @unchecked Sendable {
     public var member: LingoMember = LingoMember()
     public var loc: Point = Point()
+    public var locH: Int { get { loc.x } set { loc.x = newValue } }
+    public var locV: Int { get { loc.y } set { loc.y = newValue } }
     public var locZ: Int = 0
     public var visible: Bool = true
     public var puppet: Bool = false
@@ -77,6 +86,11 @@ public class LingoSprite: LingoObject {
     public var color: LV = .void
     public var bgColor: LV = .void
     public var scriptInstanceList: [LingoObject] = []
+    public func updateProp() {}
+    public func play() {}
+    public func gotoFrame(_ frame: Int) {}
+    public func pageP(_ dir: String) -> Int { 0 }
+    public func page(_ dir: String) {}
     public override init() { super.init() }
     public override var asSprite: LingoSprite? { self }
 }
