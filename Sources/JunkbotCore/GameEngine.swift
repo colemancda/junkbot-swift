@@ -31,13 +31,21 @@ public final class GameEngine: @unchecked Sendable {
     // MARK: - Flags
     public var paused: Bool = false
 
-    // MARK: - RNG
+    // MARK: - RNG (injectable; defaults to xorshift32)
     var rngState: UInt32 = 12345
+    public var rng: () -> Float = { 0 } // replaced in init
 
     // MARK: - Sound callback
     public var onPlaySound: ((Int32) -> Void)? = nil
 
-    public init() {}
+    public init() {
+        rng = { [unowned(unsafe) self] in
+            self.rngState ^= self.rngState << 13
+            self.rngState ^= self.rngState >> 17
+            self.rngState ^= self.rngState << 5
+            return Float(self.rngState & 0x7FFFFFFF) / Float(0x7FFFFFFF)
+        }
+    }
 
     // MARK: - Helpers
 
@@ -45,16 +53,11 @@ public final class GameEngine: @unchecked Sendable {
         onPlaySound?(id.rawValue)
     }
 
-    func randomFloat() -> Float {
-        rngState ^= rngState << 13
-        rngState ^= rngState >> 17
-        rngState ^= rngState << 5
-        return Float(rngState & 0x7FFFFFFF) / Float(0x7FFFFFFF)
-    }
+    func randomFloat() -> Float { rng() }
 
     func randomInt(_ n: Int32) -> Int32 {
         guard n > 0 else { return 0 }
-        return Int32(randomFloat() * Float(n))
+        return Int32(rng() * Float(n))
     }
 
     func getID() -> Int32 {
@@ -81,78 +84,78 @@ public final class GameEngine: @unchecked Sendable {
 
     // MARK: - Public API
 
-    public func coreInit() {
+    public func initialize() {
         rngState = 42
         resetLevel()
     }
 
-    public func coreTick() {
+    public func tick() {
         guard !paused else { return }
         simulate()
     }
 
-    public func coreBeginLoadLevel(_ boundsX: Int32, _ boundsY: Int32, _ boundsW: Int32, _ boundsH: Int32) {
+    public func beginLoadLevel(_ boundsX: Int32, _ boundsY: Int32, _ boundsW: Int32, _ boundsH: Int32) {
         resetLevel()
         if boundsW > 0 && boundsH > 0 {
             initLevelBounds(x: boundsX, y: boundsY, width: boundsW, height: boundsH)
         }
     }
 
-    public func coreFinishLoadLevel() {
+    public func finishLoadLevel() {
         rebuildAccelerationStructures()
         winLoseState = winOrLose()
     }
 
-    public func coreAddBrick(_ x: Int32, _ y: Int32, _ widthInStuds: Int32, _ colorIndex: Int32, _ fixed: Bool) {
+    public func addBrick(_ x: Int32, _ y: Int32, _ widthInStuds: Int32, _ colorIndex: Int32, _ fixed: Bool) {
         entities.append(makeBrick(x: x, y: y, widthInStuds: widthInStuds, colorIndex: colorIndex, fixed: fixed))
     }
-    public func coreAddJunkbot(_ x: Int32, _ y: Int32, _ facing: Int32, _ armored: Bool) {
+    public func addJunkbot(_ x: Int32, _ y: Int32, _ facing: Int32, _ armored: Bool) {
         entities.append(makeJunkbot(x: x, y: y, facing: facing, armored: armored))
     }
-    public func coreAddGearbot(_ x: Int32, _ y: Int32, _ facing: Int32) {
+    public func addGearbot(_ x: Int32, _ y: Int32, _ facing: Int32) {
         entities.append(makeGearbot(x: x, y: y, facing: facing))
     }
-    public func coreAddClimbbot(_ x: Int32, _ y: Int32, _ facing: Int32, _ facingY: Int32) {
+    public func addClimbbot(_ x: Int32, _ y: Int32, _ facing: Int32, _ facingY: Int32) {
         entities.append(makeClimbbot(x: x, y: y, facing: facing, facingY: facingY))
     }
-    public func coreAddFlybot(_ x: Int32, _ y: Int32, _ facing: Int32) {
+    public func addFlybot(_ x: Int32, _ y: Int32, _ facing: Int32) {
         entities.append(makeFlybot(x: x, y: y, facing: facing))
     }
-    public func coreAddEyebot(_ x: Int32, _ y: Int32, _ facing: Int32, _ facingY: Int32) {
+    public func addEyebot(_ x: Int32, _ y: Int32, _ facing: Int32, _ facingY: Int32) {
         entities.append(makeEyebot(x: x, y: y, facing: facing, facingY: facingY))
     }
-    public func coreAddBin(_ x: Int32, _ y: Int32, _ facing: Int32, _ scaredy: Bool) {
+    public func addBin(_ x: Int32, _ y: Int32, _ facing: Int32, _ scaredy: Bool) {
         entities.append(makeBin(x: x, y: y, facing: facing, scaredy: scaredy))
     }
-    public func coreAddCrate(_ x: Int32, _ y: Int32) {
+    public func addCrate(_ x: Int32, _ y: Int32) {
         entities.append(makeCrate(x: x, y: y))
     }
-    public func coreAddFire(_ x: Int32, _ y: Int32, _ on: Bool, _ switchID: Int32) {
+    public func addFire(_ x: Int32, _ y: Int32, _ on: Bool, _ switchID: Int32) {
         entities.append(makeFire(x: x, y: y, on: on, switchID: switchID))
     }
-    public func coreAddFan(_ x: Int32, _ y: Int32, _ on: Bool, _ switchID: Int32) {
+    public func addFan(_ x: Int32, _ y: Int32, _ on: Bool, _ switchID: Int32) {
         entities.append(makeFan(x: x, y: y, on: on, switchID: switchID))
     }
-    public func coreAddSwitch(_ x: Int32, _ y: Int32, _ on: Bool, _ switchID: Int32) {
+    public func addSwitch(_ x: Int32, _ y: Int32, _ on: Bool, _ switchID: Int32) {
         entities.append(makeSwitch(x: x, y: y, on: on, switchID: switchID))
     }
-    public func coreAddPipe(_ x: Int32, _ y: Int32) {
+    public func addPipe(_ x: Int32, _ y: Int32) {
         entities.append(makePipe(x: x, y: y))
     }
-    public func coreAddShield(_ x: Int32, _ y: Int32, _ used: Bool, _ fixed: Bool) {
+    public func addShield(_ x: Int32, _ y: Int32, _ used: Bool, _ fixed: Bool) {
         entities.append(makeShield(x: x, y: y, used: used, fixed: fixed))
     }
-    public func coreAddJump(_ x: Int32, _ y: Int32, _ fixed: Bool) {
+    public func addJump(_ x: Int32, _ y: Int32, _ fixed: Bool) {
         entities.append(makeJump(x: x, y: y, fixed: fixed))
     }
-    public func coreAddTeleport(_ x: Int32, _ y: Int32, _ teleportID: Int32) {
+    public func addTeleport(_ x: Int32, _ y: Int32, _ teleportID: Int32) {
         entities.append(makeTeleport(x: x, y: y, teleportID: teleportID))
     }
-    public func coreAddLaser(_ x: Int32, _ y: Int32, _ facing: Int32, _ on: Bool, _ switchID: Int32) {
+    public func addLaser(_ x: Int32, _ y: Int32, _ facing: Int32, _ on: Bool, _ switchID: Int32) {
         entities.append(makeLaser(x: x, y: y, facing: facing, on: on, switchID: switchID))
     }
 
-    public func coreMouseDown(_ worldX: Int32, _ worldY: Int32) {
+    public func mouseDown(_ worldX: Int32, _ worldY: Int32) {
         mouseWorldX = worldX
         mouseWorldY = worldY
         guard draggingIndices.isEmpty else { return }
@@ -161,7 +164,7 @@ public final class GameEngine: @unchecked Sendable {
             startDrag(entityIndex: first, worldX: worldX, worldY: worldY)
         }
     }
-    public func coreMouseMove(_ worldX: Int32, _ worldY: Int32) {
+    public func mouseMove(_ worldX: Int32, _ worldY: Int32) {
         mouseWorldX = worldX
         mouseWorldY = worldY
         if !draggingIndices.isEmpty {
@@ -170,7 +173,7 @@ public final class GameEngine: @unchecked Sendable {
             hoveredIndices = possibleGrabsAt(worldX: worldX, worldY: worldY)
         }
     }
-    public func coreMouseUp(_ worldX: Int32, _ worldY: Int32) {
+    public func mouseUp(_ worldX: Int32, _ worldY: Int32) {
         mouseWorldX = worldX
         mouseWorldY = worldY
         if !draggingIndices.isEmpty {
@@ -178,10 +181,9 @@ public final class GameEngine: @unchecked Sendable {
             finishDrag()
         }
     }
-    public func coreSetPaused(_ isPaused: Bool) { paused = isPaused }
-    public func coreSetViewport(_ cx: Int32, _ cy: Int32, _ scale: Float) {
+    public func setPaused(_ isPaused: Bool) { paused = isPaused }
+    public func setViewport(_ cx: Int32, _ cy: Int32, _ scale: Float) {
         viewportCenterX = cx; viewportCenterY = cy; viewportScale = scale
     }
-    public func coreSetRngSeed(_ seed: UInt32) { rngState = seed != 0 ? seed : 1 }
-    public func coreGetWinLoseState() -> Int32 { winLoseState }
+    public func winLose() -> Int32 { winLoseState }
 }
