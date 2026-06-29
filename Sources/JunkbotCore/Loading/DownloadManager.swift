@@ -88,7 +88,7 @@ class DownloadManager {
         animDone()
         show(["go_btn"], v: true)
         for lbs in loadingbricksprites {
-            (lbs["sprite"].asObject() as? LingoSprite)?.visible = true
+            lbs["sprite"].asObject()?.asSprite?.visible = true
         }
     }
 
@@ -196,7 +196,7 @@ class DownloadManager {
                 movieloaded()
             } else if readybrick >= nextbrick {
                 let nb = loadingbricksprites[nextbrick - 1]
-                let spr = nb["sprite"].asObject() as? LingoSprite
+                let spr = nb["sprite"].asObject()?.asSprite
                 let targetLocV = nb["locV"].asInt ?? 0
                 if spr?.locV == targetLocV {
                     nextbrick += 1

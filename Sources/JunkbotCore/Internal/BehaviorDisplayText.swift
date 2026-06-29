@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_Display Text.ls
 
-class BehaviorDisplayText: BehaviorBase {
+class BehaviorDisplayText: LingoObject {
     var spriteNum: Int = 0
     var getPDLError: LV = .void
     var myDisplayType: String = "status bar (fixed size and position)"

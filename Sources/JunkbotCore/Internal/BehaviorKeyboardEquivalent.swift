@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_keyboard equivalent.ls
 
-class BehaviorKeyboardEquivalent: BehaviorBase {
+class BehaviorKeyboardEquivalent: LingoObject {
     var mykeys: String = ""
     var myMessage: String = "mouseUp"
 

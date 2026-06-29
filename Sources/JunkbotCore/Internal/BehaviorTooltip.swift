@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_Tooltip.ls
 
-class BehaviorTooltip: BehaviorBase {
+class BehaviorTooltip: LingoObject {
     var mySprite: LV = .void
     var getPDLError: LV = .void
     var myString: String = "Insert your single-line tool tip here"

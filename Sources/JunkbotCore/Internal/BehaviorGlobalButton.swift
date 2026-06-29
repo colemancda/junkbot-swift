@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_global button.ls
 
-class BehaviorGlobalButton: BehaviorBase {
+class BehaviorGlobalButton: LingoObject {
     var myMessage: String = "none"
 
     func mouseUp() {

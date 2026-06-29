@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_config manager.ls
 
-class BehaviorConfigManager: BehaviorBase {
+class BehaviorConfigManager: LingoObject {
 
     /// Parse a config-file text block into a nested prop list.
     /// - Parameters:

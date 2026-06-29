@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_game_interface_buttons.ls
 
-class BehaviorGameInterfaceButtons: BehaviorBase {
+class BehaviorGameInterfaceButtons: LingoObject {
     var my: LV = .void       // the sprite
     var myName: String = ""
 

@@ -10,7 +10,7 @@ struct PieceRecord {
     var split: Bool
 }
 
-class BehaviorLegopartsManager: BehaviorBase {
+class BehaviorLegopartsManager: LingoObject {
     var piecedata: PropList = PropList()
 
     override init() {

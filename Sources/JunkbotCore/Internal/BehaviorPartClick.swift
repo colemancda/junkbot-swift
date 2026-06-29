@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_part click behavior.ls
 
-class BehaviorPartClick: BehaviorBase {
+class BehaviorPartClick: LingoObject {
     var part: LV = .void
 
     init(p: LV) {

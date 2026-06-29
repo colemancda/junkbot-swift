@@ -268,7 +268,7 @@ class EditManager {
                         if decal == nil {
                             setdragsprite(.string("reset"))
                         } else {
-                            bg_edit_item("decal", decal?["member"].asObject() as? LingoMember)
+                            bg_edit_item("decal", decal?["member"].asObject() ?.asMember)
                             toolmode = "place_decal"
                             glob.EDITOR.drag_sprite.locZ = 200
                         }

@@ -1,6 +1,6 @@
 // Translated from Lingo: parent_database manager.ls
 
-class DatabaseManager: BehaviorBase {
+class DatabaseManager: LingoObject {
     var state: PropList = PropList()
     var rank: PropList? = nil
     var hallOfFame: PropList? = nil

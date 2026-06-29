@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_set my locz.ls
 
-class BehaviorSetMyLocZ: BehaviorBase {
+class BehaviorSetMyLocZ: LingoObject {
     var mylocz: Int = 999999
 
     var spriteNum: Int = 0
