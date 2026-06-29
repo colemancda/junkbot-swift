@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Debug Junkbot",
+            "target": "Junkbot",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Junkbot"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Release Junkbot",
+            "target": "Junkbot",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Junkbot"
+        }
+    ]
+}

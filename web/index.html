@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Junkbot — Swift Embedded WASM</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: #222;
+    color: #eee;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+#sidebar {
+    width: 200px;
+    min-width: 200px;
+    background: #333;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid #555;
+    overflow-y: auto;
+}
+#sidebar h2 {
+    padding: 12px;
+    font-size: 14px;
+    background: #444;
+    border-bottom: 1px solid #555;
+}
+#level-list {
+    list-style: none;
+    flex: 1;
+    overflow-y: auto;
+}
+#level-list li button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: #ddd;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 1px solid #3a3a3a;
+}
+#level-list li button:hover { background: #555; }
+
+#game-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+#game-canvas {
+    flex: 1;
+    display: block;
+    width: 100%;
+    cursor: default;
+    touch-action: none;
+}
+#status-bar {
+    height: 24px;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 12px;
+    color: #aaa;
+}
+#overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+}
+#overlay-message {
+    font-size: 36px;
+    font-weight: bold;
+}
+#overlay button {
+    padding: 8px 24px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: none;
+    background: #4a90d9;
+    color: white;
+}
+#overlay button:hover { background: #357abd; }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+    <h2>Levels</h2>
+    <ul id="level-list"></ul>
+</nav>
+
+<div id="game-area">
+    <canvas id="game-canvas"></canvas>
+    <div id="status-bar"><span id="status">Initializing…</span></div>
+    <div id="overlay">
+        <div id="overlay-message"></div>
+        <button onclick="document.getElementById('overlay').style.display='none'">
+            Play Again
+        </button>
+    </div>
+</div>
+
+<!-- Level file listing. Populate this array with paths to .txt level files. -->
+<script>
+window.LEVEL_FILES = [
+    { name: "Bridge Builder",        path: "../levels/Bridge Builder.txt" },
+    { name: "A New Kind of Gearbot", path: "../levels/A New Kind of Gearbot.txt" },
+    { name: "Aerodynamics",          path: "../levels/Aerodynamics.txt" },
+    { name: "Air Conditioning",      path: "../levels/Air Conditioning.txt" },
+    { name: "All Kinds of Trouble",  path: "../levels/All Kinds of Trouble.txt" },
+    { name: "Caution Fire",          path: "../levels/Caution Fire.txt" },
+    { name: "Disgruntled Climbbot",  path: "../levels/Disgruntled Climbbot.txt" },
+    { name: "Elevator Action",       path: "../levels/Elevator Action.txt" },
+    { name: "Eyebot on Patrol",      path: "../levels/Eyebot on Patrol.txt" },
+];
+</script>
+<script src="harness.js" type="module"></script>
+</body>
+</html>
