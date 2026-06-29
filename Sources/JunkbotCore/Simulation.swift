@@ -257,6 +257,7 @@ extension GameEngine {
             junkbot.momentumX = max(-5, min(5, junkbot.momentumX))
             junkbot.momentumY += 1
             junkbot.momentumY = max(-5, min(5, junkbot.momentumY))
+            if junkbot.momentumY < 5 { junkbot.animationFrame = 9 }
             if junkbot.momentumY == 5 { playSound(.fall) }
 
             let jumpBrick = entityCollisionTest(
@@ -301,8 +302,10 @@ extension GameEngine {
                 }
             }
 
+            let savedAnimFrame = junkbot.animationFrame
             let turnedAround = walk(junkbotIndex: index)
             junkbot = entities[index]
+            junkbot.animationFrame = savedAnimFrame
 
             let groundY = junkbot.y + junkbot.height
             for i in 0..<entities.count {
@@ -356,16 +359,17 @@ extension GameEngine {
                 }
             }
 
-            let binAhead = entityCollisionTest(
-                entityX: junkbot.x + junkbot.facing * CELL_W, entityY: junkbot.y,
-                entityIndex: index, filter: { $0.type == .bin })
-            if let bin = binAhead, let binIdx = entities.firstIndex(where: { $0.id == bin.id }) {
-                junkbot.animationFrame = 0
-                junkbot.collectingBin = true
-                entities[binIdx].removeBeforeRender = true
-                playSound(.collectBin)
-                playSound(.collectBin2)
-            }
+        }
+
+        let binAhead = entityCollisionTest(
+            entityX: junkbot.x + junkbot.facing * CELL_W, entityY: junkbot.y,
+            entityIndex: index, filter: { $0.type == .bin })
+        if let bin = binAhead, let binIdx = entities.firstIndex(where: { $0.id == bin.id }) {
+            junkbot.animationFrame = 0
+            junkbot.collectingBin = true
+            entities[binIdx].removeBeforeRender = true
+            playSound(.collectBin)
+            playSound(.collectBin2)
         }
 
         entities[index] = junkbot
