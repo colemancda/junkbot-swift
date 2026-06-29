@@ -281,27 +281,22 @@ public extension MiscEvents {
     func timeOut() {}
 }
 
-// MARK: - LingoBehavior
-public protocol LingoBehavior: AnyObject, FrameEvents, SpriteLifecycleEvents, MovieLifecycleEvents, MouseEvents, KeyboardEvents, MiscEvents {
-}
-
 // MARK: - LingoObject — base class for any object stored in an LV value
 /// Embedded Swift has no AnyObject. Subclass LingoObject to store class
 /// references inside LV.object(_:).
-public class LingoObject: @unchecked Sendable {
+public class LingoObject: FrameEvents, SpriteLifecycleEvents, MovieLifecycleEvents, MouseEvents, KeyboardEvents, MiscEvents, @unchecked Sendable {
     public init() {}
     public func notify(_ notes: PropList) {}
+    
+    // Virtual accessors replacing dynamic casting
+    public var asSprite: LingoSprite? { nil }
+    public var asMember: LingoMember? { nil }
 }
 
 public extension String {
     func replacingOccurrences(of: String, with: String) -> String {
         return self
     }
-}
-
-// MARK: - BehaviorBase (base for behavior script objects stored on sprites)
-public class BehaviorBase: LingoObject, LingoBehavior {
-    public override init() { super.init() }
 }
 
 // MARK: - Global state

@@ -60,6 +60,7 @@ public class LingoMember: LingoObject {
     public var editable: Bool = false
     public var bgColor: LV = .void
     public override init() { super.init() }
+    public override var asMember: LingoMember? { self }
 }
 
 public class LingoSprite: LingoObject {
@@ -75,8 +76,9 @@ public class LingoSprite: LingoObject {
     public var rect: LV = .void
     public var color: LV = .void
     public var bgColor: LV = .void
-    public var scriptInstanceList: [BehaviorBase] = []
+    public var scriptInstanceList: [LingoObject] = []
     public override init() { super.init() }
+    public override var asSprite: LingoSprite? { self }
 }
 
 public typealias Sprite = LingoSprite
