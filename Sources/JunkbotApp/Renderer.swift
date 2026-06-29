@@ -8,30 +8,26 @@ public struct Renderer {
         js = JSObject.global.JunkbotRenderer.object!
     }
 
-    public static func renderFrame() {
-        // Wind effects
-        for w in wind {
-            let fan = entities[w.fanEntityIndex]
+    public static func renderFrame(engine: GameEngine) {
+        for w in engine.wind {
+            let fan = engine.entities[w.fanEntityIndex]
             for i in 0..<w.numExtents {
                 _ = js.js_draw_wind_column?(fan.x + Int32(i) * CELL_W, fan.y, w.extent(at: i), 0)
             }
         }
 
-        // Entities
-        for e in entities {
+        for e in engine.entities {
             if e.removeBeforeRender { continue }
             if e.type == .levelBounds { continue }
             drawEntity(e)
         }
 
-        // Laser beams
-        for l in laserBeams {
-            let e = entities[l.laserEntityIndex]
+        for l in engine.laserBeams {
+            let e = engine.entities[l.laserEntityIndex]
             _ = js.js_draw_laser_beam?(e.x, e.y, e.facing, l.extent, 0, 0)
         }
 
-        // Teleport effects
-        for t in teleportEffects {
+        for t in engine.teleportEffects {
             _ = js.js_draw_teleport_effect?(t.x, t.y, t.frameIndex)
         }
     }
@@ -42,8 +38,8 @@ public struct Renderer {
             _ = js.js_draw_brick?(e.x, e.y, e.colorIndex, e.widthInStuds, e.fixed ? 1 : 0)
         case .junkbot:
             var flags: Int32 = 0
-            if e.armored      { flags |= 1 }
-            if e.dead         { flags |= 2 }
+            if e.armored       { flags |= 1 }
+            if e.dead          { flags |= 2 }
             if e.dyingFromWater { flags |= 4 }
             if e.collectingBin { flags |= 8 }
             if e.losingShield  { flags |= 32 }

@@ -114,6 +114,12 @@ public struct LaserBeam {
     public var hitEntityIndex: Int
 }
 
+public struct RaycastHit {
+    public var steps: Int32
+    public var entity: Entity?
+    public var entityIndex: Int
+}
+
 public struct TeleportEffect {
     public var x: Int32
     public var y: Int32
