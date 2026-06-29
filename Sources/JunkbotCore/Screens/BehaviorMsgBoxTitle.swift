@@ -55,7 +55,7 @@ class BehaviorMsgBoxTitle {
             if temp != 0 {
                 prop["state"] = .string("show")
                 prop["time"] = .int(currentTicks)
-                (Glob.shared["movenum"] as AnyObject).updateMovesNum()
+                (Glob.shared["movenum"]).updateMovesNum()
             }
         case "show":
             let t = prop["time"].asInt!
@@ -72,7 +72,7 @@ class BehaviorMsgBoxTitle {
                 updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
                 if !prop["callback"].isVoid {
                     let cb = prop["callback"].asPropList!
-                    (cb["object"] as AnyObject).callback(cb["parameter"].asString)
+                    (cb["object"]).callback(cb["parameter"].asString)
                     prop["callback"] = .void
                 }
             }

@@ -115,7 +115,7 @@ class BehaviorMsgBoxSuccess {
             SndSFX("unlock2")
         } else {
             if keys >= keyrequired {
-                (Glob.shared["PLAYER"] as AnyObject).game_manager.TotalKeys()
+                (Glob.shared["PLAYER"]).game_manager.TotalKeys()
                 let rankdata = Glob.shared["rankdata"].asPropList!
                 if (rankdata["keys"].asInt ?? 0) == 60 {
                     member("msgbox_2").text = ""
@@ -198,7 +198,7 @@ class BehaviorMsgBoxSuccess {
                 updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
                 if !prop["callback"].isVoid {
                     let cb = prop["callback"].asPropList!
-                    (cb["object"] as AnyObject).callback(cb["parameter"].asString)
+                    (cb["object"]).callback(cb["parameter"].asString)
                     prop["callback"] = .void
                 }
             }

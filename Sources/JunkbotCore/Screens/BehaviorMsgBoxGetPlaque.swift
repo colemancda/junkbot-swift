@@ -31,8 +31,8 @@ class BehaviorMsgBoxGetPlaque {
         let levelEntry = levels[level].asPropList!
         let goalMoves = levelEntry["goal"].asInt!
         let gotgold = levelEntry["gold"].asInt!
-        (Glob.shared["PLAYER"] as AnyObject).game_manager.TotalKeys()
-        let goldNum: Int = (Glob.shared["PLAYER"] as AnyObject).game_manager.goldTotal()
+        (Glob.shared["PLAYER"]).game_manager.TotalKeys()
+        let goldNum: Int = (Glob.shared["PLAYER"]).game_manager.goldTotal()
         if (moves <= goalMoves) && (gotgold == 0) {
             var flag = 1
             switch goldNum + 1 {
@@ -74,7 +74,7 @@ class BehaviorMsgBoxGetPlaque {
     }
 
     func doNextBox() {
-        (Glob.shared["BIG_MSG_OBJ"] as AnyObject).dropBox()
+        (Glob.shared["BIG_MSG_OBJ"]).dropBox()
     }
 
     func exitFrame() {
@@ -99,7 +99,7 @@ class BehaviorMsgBoxGetPlaque {
             let temp = doMove(toWhere: locEnd, speed: spd)
             if temp != 0 {
                 prop["state"] = .string("hide")
-                (Glob.shared["BIG_MSG_OBJ"] as AnyObject).dropBox()
+                (Glob.shared["BIG_MSG_OBJ"]).dropBox()
                 updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
             }
         default:

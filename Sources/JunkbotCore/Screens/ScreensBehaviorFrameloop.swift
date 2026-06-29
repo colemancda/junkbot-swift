@@ -1,6 +1,6 @@
 // Translated from Lingo: behavior_frameloop.ls
 
-class BehaviorFrameloop {
+class ScreensBehaviorFrameloop {
     func exitFrame() {
         go(theFrame)
     }

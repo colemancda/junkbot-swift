@@ -26,7 +26,7 @@ class PlayfieldManager {
             spriteBuffer.append(sprite(i))
         }
         let bg = PropList()
-        bg["backdrop"] = .object(member("bkg1", "backgrounds") as AnyObject)
+        bg["backdrop"] = .object(member("bkg1", "backgrounds"))
         bg["decals"] = .list(LingoList())
         background = bg
         decalz = 10001
@@ -195,7 +195,7 @@ class PlayfieldManager {
         let bg = PropList()
         bg["decals"] = .list(LingoList())
         let bgSection = pfinfoDict["background"].asPropList ?? PropList()
-        bg["backdrop"] = .object(member(bgSection["backdrop"].asString ?? "", "backgrounds") as AnyObject)
+        bg["backdrop"] = .object(member(bgSection["backdrop"].asString ?? "", "backgrounds"))
         var decalEntries = bgSection["decals"]
         if let decalStr = decalEntries.asString {
             let dl = LingoList()
@@ -210,7 +210,7 @@ class PlayfieldManager {
                     if parts.count >= 3, let x = Int(parts[0]), let y = Int(parts[1]) {
                         let mName = String(parts[2])
                         let decalPL = PropList()
-                        decalPL["member"] = .object(member(mName, "backgrounds") as AnyObject)
+                        decalPL["member"] = .object(member(mName, "backgrounds"))
                         decalPL["loc"] = .point(x: x, y: y)
                         bgDecalsList.add(.propList(decalPL))
                     }

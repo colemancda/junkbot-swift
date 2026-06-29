@@ -67,7 +67,7 @@ class BehaviorMsgBoxFail {
                 updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
                 if !prop["callback"].isVoid {
                     let cb = prop["callback"].asPropList!
-                    (cb["object"] as AnyObject).callback(cb["parameter"].asString)
+                    (cb["object"]).callback(cb["parameter"].asString)
                     prop["callback"] = .void
                 }
             }

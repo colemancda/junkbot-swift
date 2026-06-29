@@ -4,14 +4,14 @@ class Behavior33 {
     var spriteNum: Int = 0
 
     func mouseWithin() {
-        (Glob.shared["level_scrn_obj"] as AnyObject).roTab(spriteNum, 100)
+        (Glob.shared["level_scrn_obj"]).roTab(spriteNum, 100)
     }
 
     func mouseLeave() {
-        (Glob.shared["level_scrn_obj"] as AnyObject).roTab(spriteNum, 0)
+        (Glob.shared["level_scrn_obj"]).roTab(spriteNum, 0)
     }
 
     func mouseUp() {
-        (Glob.shared["level_scrn_obj"] as AnyObject).tabClicked(spriteNum)
+        (Glob.shared["level_scrn_obj"]).tabClicked(spriteNum)
     }
 }

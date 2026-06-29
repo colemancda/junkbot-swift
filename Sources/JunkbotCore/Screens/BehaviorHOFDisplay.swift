@@ -5,7 +5,7 @@ class BehaviorHOFDisplay {
     var page: Int = 1
 
     func beginSprite() {
-        (Glob.shared["database_manager"] as AnyObject).loadHallOfFame()
+        (Glob.shared["database_manager"]).loadHallOfFame()
         ready = 0
         member("HOF_rank").text = ""
         member("HOF_names").text = "\nLOADING\n"
@@ -20,7 +20,7 @@ class BehaviorHOFDisplay {
     }
 
     func pageP(_ a: String) -> Int {
-        if (Glob.shared["database_manager"] as AnyObject).hofReady() == 0 {
+        if (Glob.shared["database_manager"]).hofReady() == 0 {
             return 0
         }
         switch a {
@@ -50,8 +50,8 @@ class BehaviorHOFDisplay {
 
     @discardableResult
     func displayhof() -> Int {
-        if (Glob.shared["database_manager"] as AnyObject).hofReady() != 0 {
-            let hof = (Glob.shared["database_manager"] as AnyObject).getHallOfFame().asPropList!
+        if (Glob.shared["database_manager"]).hofReady() != 0 {
+            let hof = (Glob.shared["database_manager"]).getHallOfFame().asPropList!
             var ranks = ""
             var names = ""
             var moves = ""

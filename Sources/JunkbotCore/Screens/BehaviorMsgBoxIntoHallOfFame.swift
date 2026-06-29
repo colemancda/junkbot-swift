@@ -18,7 +18,7 @@ class BehaviorMsgBoxIntoHallOfFame {
         speed["move1"] = .list(LingoList([.int(0), .int(40)]))
         speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
         prop["speed"] = .propList(speed)
-        (Glob.shared["PLAYER"] as AnyObject).game_manager.TotalKeys()
+        (Glob.shared["PLAYER"]).game_manager.TotalKeys()
     }
 
     func dropBox() {
@@ -29,18 +29,18 @@ class BehaviorMsgBoxIntoHallOfFame {
         let buildingEntry = buildingList[building].asPropList!
         let levels = buildingEntry["LEVELS"].asList!
         let data = levels[level].asPropList!
-        (Glob.shared["PLAYER"] as AnyObject).game_manager.TotalKeys()
+        (Glob.shared["PLAYER"]).game_manager.TotalKeys()
         let rankdata = Glob.shared["rankdata"].asPropList!
         let rankKeys = rankdata["keys"].asInt!
         let hof = Glob.shared["hof"].asInt!
         if (rankKeys + 1) < hof {
-            (Glob.shared["award_obj"] as AnyObject).dropBox()
+            (Glob.shared["award_obj"]).dropBox()
         } else {
             if rankdata["AlreadySawHOF"].asString == "YES" {
-                (Glob.shared["award_obj"] as AnyObject).dropBox()
+                (Glob.shared["award_obj"]).dropBox()
             } else {
                 if (data["moves"].asInt ?? 0) > 0 {
-                    (Glob.shared["award_obj"] as AnyObject).dropBox()
+                    (Glob.shared["award_obj"]).dropBox()
                 } else {
                     if !(rankdata["AlreadySawHOF"].asString == "YES") {
                         let rankdataMut = Glob.shared["rankdata"].asPropList!

@@ -2,7 +2,7 @@
 
 class BehaviorHideBossMessage {
     func mouseUp() {
-        (Glob.shared["boss"] as AnyObject).hide()
+        (Glob.shared["boss"]).hide()
     }
 
     func mouseDown() {

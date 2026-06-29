@@ -6,7 +6,7 @@ class BehaviorPlaqueSelfControl {
 
     func beginSprite() {
         myPlaque = Glob.shared["plaque"].asString!
-        (Glob.shared["PLAYER"] as AnyObject).game_manager.updatePlaque()
+        (Glob.shared["PLAYER"]).game_manager.updatePlaque()
         sprite(snum).member = member("plaque_\(Glob.shared["plaque"].asString!)")
     }
 

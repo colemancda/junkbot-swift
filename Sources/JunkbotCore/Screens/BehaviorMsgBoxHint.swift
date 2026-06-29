@@ -23,11 +23,11 @@ class BehaviorMsgBoxHint {
         let current = Glob.shared["current"].asPropList!
         let building = current["building"].asInt!
         let level = current["level"].asInt!
-        let hint: String = (Glob.shared["building"] as AnyObject).building(building).LEVELS(level).info.hint
+        let hint: String = (Glob.shared["building"]).building(building).LEVELS(level).info.hint
         member("hint_text").text = "level \(level) hint:\n\(hint)"
         prop["state"] = .string("move1")
-        prop["gameState"] = (Glob.shared["PLAYER"] as AnyObject).play_manager.activeState
-        (Glob.shared["PLAYER"] as AnyObject).play_manager.activeState = "pause"
+        prop["gameState"] = (Glob.shared["PLAYER"]).play_manager.activeState
+        (Glob.shared["PLAYER"]).play_manager.activeState = "pause"
     }
 
     func updateState(_ state: String) {
@@ -63,7 +63,7 @@ class BehaviorMsgBoxHint {
                 if prop["gameState"].asString == "pause" {
                     gbutton("main_play")
                 } else {
-                    (Glob.shared["PLAYER"] as AnyObject).play_manager.activeState = "Run"
+                    (Glob.shared["PLAYER"]).play_manager.activeState = "Run"
                 }
             }
         default:

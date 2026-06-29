@@ -20,7 +20,8 @@ public struct Point: Equatable {
 /// PropList: ordered key-value store mapping String keys to LV values.
 /// Mirrors Lingo's property list [:] type. Uses a class so it can be stored
 /// in LV without making LV recursive (no indirect enum needed).
-public final class PropList {
+@dynamicMemberLookup
+public final class PropList: @unchecked Sendable {
     public var props: [(key: String, value: LV)]
     public init(_ props: [(key: String, value: LV)] = []) { self.props = props }
 
@@ -33,6 +34,11 @@ public final class PropList {
                 props.append((key, newValue))
             }
         }
+    }
+
+    public subscript(dynamicMember member: String) -> LV {
+        get { self[member] }
+        set { self[member] = newValue }
     }
     public var count: Int { props.count }
     public func getPropAt(_ i: Int) -> String { props[i - 1].key }  // 1-based
@@ -48,7 +54,7 @@ public final class PropList {
 }
 
 /// LingoList: ordered dynamic list — mirrors Lingo's [] list type.
-public final class LingoList {
+public final class LingoList: @unchecked Sendable {
     public var items: [LV]
     public init(_ items: [LV] = []) { self.items = items }
     public var count: Int { items.count }
@@ -70,12 +76,16 @@ public final class LingoList {
         }
     }
     public func deleteAt(_ i: Int) { items.remove(at: i - 1) }  // 1-based
+    public func append(_ v: LV) { items.append(v) }
+    public func removeAll() { items.removeAll() }
     public func duplicate() -> LingoList { LingoList(items) }
     public var isEmpty: Bool { items.isEmpty }
 }
 
 /// LV: the universal Lingo value type. Replaces Any/AnyObject throughout.
-public enum LV {
+@dynamicMemberLookup
+@dynamicCallable
+public enum LV: @unchecked Sendable {
     case void
     case int(Int)
     case float(Float)
@@ -85,6 +95,44 @@ public enum LV {
     case propList(PropList)
     case object(LingoObject)  // typed object reference (no AnyObject in Embedded Swift)
 
+    public subscript(dynamicMember member: String) -> LV {
+        get {
+            if case .propList(let p) = self {
+                return p[member]
+            }
+            return .void
+        }
+        set {
+            if case .propList(let p) = self {
+                p[member] = newValue
+            }
+        }
+    }
+    
+    public subscript(key: String) -> LV {
+        get { self[dynamicMember: key] }
+        set { self[dynamicMember: key] = newValue }
+    }
+
+    public func dynamicallyCall(withArguments args: [LV]) -> LV {
+        return .void
+    }
+
+    public func dynamicallyCall(withKeywordArguments args: KeyValuePairs<String, LV>) -> LV {
+        return .void
+    }
+}
+
+extension LV: ExpressibleByStringLiteral, ExpressibleByIntegerLiteral, ExpressibleByFloatLiteral, ExpressibleByBooleanLiteral, ExpressibleByArrayLiteral, ExpressibleByDictionaryLiteral {
+    public init(stringLiteral value: String) { self = .string(value) }
+    public init(integerLiteral value: Int) { self = .int(value) }
+    public init(floatLiteral value: Float) { self = .float(value) }
+    public init(booleanLiteral value: Bool) { self = .int(value ? 1 : 0) } // Lingo uses 1/0 for true/false
+    public init(arrayLiteral elements: LV...) { self = .list(LingoList(elements)) }
+    public init(dictionaryLiteral elements: (String, LV)...) { self = .propList(PropList(elements)) }
+}
+
+extension LV {
     // MARK: Accessors
     public var asInt: Int? {
         switch self {
@@ -163,28 +211,64 @@ extension LV {
     public static var emptyPropList: LV { .propList(PropList()) }
 }
 
+// MARK: - Lingo Protocols
+public protocol LingoBehavior: AnyObject {
+    func beginSprite()
+    func endSprite()
+    func stepFrame()
+    func prepareFrame()
+    func mouseUp()
+    func mouseDown()
+    func mouseEnter()
+    func mouseLeave()
+    func mouseWithin()
+}
+
+// Default empty implementations so behaviors don't have to implement them all
+public extension LingoBehavior {
+    func beginSprite() {}
+    func endSprite() {}
+    func stepFrame() {}
+    func prepareFrame() {}
+    func mouseUp() {}
+    func mouseDown() {}
+    func mouseEnter() {}
+    func mouseLeave() {}
+    func mouseWithin() {}
+}
+
 // MARK: - LingoObject — base class for any object stored in an LV value
 /// Embedded Swift has no AnyObject. Subclass LingoObject to store class
 /// references inside LV.object(_:).
-public class LingoObject {
+public class LingoObject: @unchecked Sendable {
     public init() {}
+    public func notify(_ notes: PropList) {}
+}
+
+public extension String {
+    func replacingOccurrences(of: String, with: String) -> String {
+        return self
+    }
 }
 
 // MARK: - BehaviorBase (base for behavior script objects stored on sprites)
-public class BehaviorBase: LingoObject {
+public class BehaviorBase: LingoObject, LingoBehavior {
     public override init() { super.init() }
-    public func stepFrame() {}
-    public func notify(_ notes: PropList) {}
 }
 
 // MARK: - Global state
 /// Replaces Lingo's `global glob` — a dynamic property bag for cross-module state.
-public final class Glob {
+@dynamicMemberLookup
+public final class Glob: @unchecked Sendable {
     public static let shared = Glob()
     private var data: PropList = PropList()
     public subscript(key: String) -> LV {
         get { data[key] }
         set { data[key] = newValue }
+    }
+    public subscript(dynamicMember member: String) -> LV {
+        get { data[member] }
+        set { data[member] = newValue }
     }
     private init() {}
 }

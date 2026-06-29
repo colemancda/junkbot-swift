@@ -3,6 +3,6 @@
 class BehaviorShowHint {
     func mouseUp() {
         sendAllSprites("getOut")
-        (Glob.shared["hint_obj"] as AnyObject).dropBox()
+        (Glob.shared["hint_obj"]).dropBox()
     }
 }

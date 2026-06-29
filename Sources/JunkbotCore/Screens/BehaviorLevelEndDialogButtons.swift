@@ -21,15 +21,15 @@ class BehaviorLevelEndDialogButtons {
                     currentPL["building"] = .int(building + 1)
                 }
             }
-            (Glob.shared["BIG_MSG_OBJ"] as AnyObject).updateState("move2", ["object": (Glob.shared["PLAYER"] as AnyObject).game_manager, "parameter": "com_nextlevel"])
+            (Glob.shared["BIG_MSG_OBJ"]).updateState("move2", ["object": (Glob.shared["PLAYER"]).game_manager, "parameter": "com_nextlevel"])
         case "com_selectlevel":
-            (Glob.shared["BIG_MSG_OBJ"] as AnyObject).updateState("move2", ["object": (Glob.shared["PLAYER"] as AnyObject).game_manager, "parameter": "select_level"])
+            (Glob.shared["BIG_MSG_OBJ"]).updateState("move2", ["object": (Glob.shared["PLAYER"]).game_manager, "parameter": "select_level"])
         case "fail_tryagain":
-            (Glob.shared["fail_msg_obj"] as AnyObject).updateState("move2", ["object": (Glob.shared["PLAYER"] as AnyObject).game_manager, "parameter": "restart_level"])
+            (Glob.shared["fail_msg_obj"]).updateState("move2", ["object": (Glob.shared["PLAYER"]).game_manager, "parameter": "restart_level"])
         case "fail_gethint":
-            (Glob.shared["hint_obj"] as AnyObject).updateState("move2")
+            (Glob.shared["hint_obj"]).updateState("move2")
         case "fail_selectlevel":
-            (Glob.shared["fail_msg_obj"] as AnyObject).updateState("move2", ["object": (Glob.shared["PLAYER"] as AnyObject).game_manager, "parameter": "select_level"])
+            (Glob.shared["fail_msg_obj"]).updateState("move2", ["object": (Glob.shared["PLAYER"]).game_manager, "parameter": "select_level"])
         default:
             break
         }

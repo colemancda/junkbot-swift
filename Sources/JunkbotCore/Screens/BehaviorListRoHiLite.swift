@@ -25,6 +25,6 @@ class BehaviorListRoHiLite {
         }
         Glob.shared["current"].asPropList!["level"] = .int(roLineNum + 1)
         SndSFX("jump2")
-        (Glob.shared["PLAYER"] as AnyObject).game_manager.startGame()
+        (Glob.shared["PLAYER"]).game_manager.startGame()
     }
 }
