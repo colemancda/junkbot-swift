@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Junkbot — Swift Embedded WASM</title>
+<script type="importmap">
+{
+    "imports": {
+        "@bjorn3/browser_wasi_shim": "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.3.0/dist/index.js"
+    }
+}
+</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -114,7 +121,6 @@ body {
     </div>
 </div>
 
-<!-- Level file listing. Populate this array with paths to .txt level files. -->
 <script>
 window.LEVEL_FILES = [
     { name: "Bridge Builder",        path: "../levels/Bridge Builder.txt" },
@@ -128,6 +134,6 @@ window.LEVEL_FILES = [
     { name: "Eyebot on Patrol",      path: "../levels/Eyebot on Patrol.txt" },
 ];
 </script>
-<script src="harness.js" type="module"></script>
+<script type="module" src="harness.js"></script>
 </body>
 </html>

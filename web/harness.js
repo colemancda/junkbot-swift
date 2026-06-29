@@ -8,6 +8,8 @@
  *  - Run the game loop at 18fps (matching original Junkbot)
  */
 
+import { init } from './Package/index.js';
+
 const TARGET_FPS = 15; // original game ran at ~15fps in practice on 60Hz displays
 const CELL_W = 15;
 const CELL_H = 18;
@@ -363,272 +365,240 @@ function loadLevelIntoWasm(wasm, levelText) {
     wasm.finish_load_level();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WASM import object — Swift @_extern(c) calls map to these
-// ─────────────────────────────────────────────────────────────────────────────
+window.JunkbotRenderer = {
+    // Rendering
+    js_begin_frame() {
+        ctx.save();
+        ctx.translate(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
+        ctx.scale(vp.scale, vp.scale);
+        ctx.translate(-Math.floor(vp.cx), -Math.floor(vp.cy));
+        ctx.imageSmoothingEnabled = false;
+    },
+    js_end_frame() {
+        ctx.restore();
+    },
+    js_clear_background() {
+        // Fill gray in screen space, then restore world transform
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = "#bbb";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        // Draw level backdrop + decals in world space
+        drawBackdrop();
+    },
+    js_set_viewport(cx, cy, scale) {
+        // Canvas backing store is devicePixelRatio-scaled, so fold dpr into the
+        // world scale to render sprites at full, crisp size on retina displays.
+        vp.cx = cx; vp.cy = cy; vp.scale = scale * devicePixelRatio;
+    },
 
-// Shared linear memory — Swift Embedded WASM imports this from env.memory
-const wasmMemory = new WebAssembly.Memory({ initial: 256, maximum: 1024 });
+    // All entity sprites are bottom-aligned: the sprite's bottom edge sits at
+    // (wy + entityHeight - 1) and the 3D stud overhang extends upward, exactly
+    // like the original game's drawImage(... entity.y + entity.height - h - 1 ...).
+    js_draw_brick(wx, wy, colorIdx, widthInStuds, fixed) {
+        const key = `brick_${fixed ? "immobile" : (BRICK_COLOR_NAMES[colorIdx] || "red")}_${widthInStuds}`;
+        const h = spriteH("sprites", key);
+        blit("sprites", key, wx, wy + 18 - h - 1);
+    },
 
-function makeImports() {
-    return {
-        env: {
-            memory: wasmMemory,
-            __stack_chk_fail() { throw new Error("Swift: stack overflow"); },
+    js_draw_junkbot(wx, wy, facing, animFrame, flags) {
+        const ENTITY_H = 4 * 18; // junkbot logical height
+        const armored      = !!(flags & 1);
+        const dying        = !!(flags & 2);
+        const dyingFromWater = !!(flags & 4);
+        const collectingBin = !!(flags & 8);
+        const losingShield = !!(flags & 32);
+        const gettingShield = !!(flags & 64);
 
-            // Simple bump allocator for Swift runtime alloc needs
-            posix_memalign(ptrOut, alignment, size) {
-                const mem = new Uint8Array(wasmMemory.buffer);
-                // Keep a heap pointer after the 64 KB stack region
-                if (!wasmMemory._heapPtr) wasmMemory._heapPtr = 65536;
-                const align = Math.max(alignment, 8);
-                wasmMemory._heapPtr = (wasmMemory._heapPtr + align - 1) & ~(align - 1);
-                const ptr = wasmMemory._heapPtr;
-                wasmMemory._heapPtr += size;
-                // Write the pointer into *ptrOut (little-endian i32)
-                new DataView(wasmMemory.buffer).setUint32(ptrOut, ptr, true);
-                return 0; // success
-            },
-            free(_ptr) { /* bump allocator — no-op free */ },
-            arc4random_buf(ptr, len) {
-                const buf = new Uint8Array(wasmMemory.buffer, ptr, len);
-                crypto.getRandomValues(buf);
-            },
-            // Rendering
-            js_begin_frame() {
-                ctx.save();
-                ctx.translate(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
-                ctx.scale(vp.scale, vp.scale);
-                ctx.translate(-Math.floor(vp.cx), -Math.floor(vp.cy));
-                ctx.imageSmoothingEnabled = false;
-            },
-            js_end_frame() {
-                ctx.restore();
-            },
-            js_clear_background() {
-                // Fill gray in screen space, then restore world transform
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.fillStyle = "#bbb";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.restore();
-                // Draw level backdrop + decals in world space
-                drawBackdrop();
-            },
-            js_set_viewport(cx, cy, scale) {
-                // Canvas backing store is devicePixelRatio-scaled, so fold dpr into the
-                // world scale to render sprites at full, crisp size on retina displays.
-                vp.cx = cx; vp.cy = cy; vp.scale = scale * devicePixelRatio;
-            },
+        // Determine animName exactly like the original drawJunkbot
+        let animName, animLength = 10;
+        if (dyingFromWater) { animName = "water_die"; }
+        else if (dying)      { animName = "die"; }
+        else if (collectingBin) { animName = "eat_start"; animLength = 17; }
+        else if (gettingShield) { animName = `shield_on_${facing > 0 ? "r" : "l"}`; animLength = 11; }
+        else { animName = `walk_${facing > 0 ? "r" : "l"}`; }
 
-            // All entity sprites are bottom-aligned: the sprite's bottom edge sits at
-            // (wy + entityHeight - 1) and the 3D stud overhang extends upward, exactly
-            // like the original game's drawImage(... entity.y + entity.height - h - 1 ...).
-            js_draw_brick(wx, wy, colorIdx, widthInStuds, fixed) {
-                const key = `brick_${fixed ? "immobile" : (BRICK_COLOR_NAMES[colorIdx] || "red")}_${widthInStuds}`;
-                const h = spriteH("sprites", key);
-                blit("sprites", key, wx, wy + 18 - h - 1);
-            },
+        if (armored && (!losingShield || (animFrame % 4 < 2))) {
+            if (animName === "eat_start") animName = "shield_eat";
+            else if (!animName.includes("shield")) animName = `shield_${animName}`;
+        }
 
-            js_draw_junkbot(wx, wy, facing, animFrame, flags) {
-                const ENTITY_H = 4 * 18; // junkbot logical height
-                const armored      = !!(flags & 1);
-                const dying        = !!(flags & 2);
-                const dyingFromWater = !!(flags & 4);
-                const collectingBin = !!(flags & 8);
-                const losingShield = !!(flags & 32);
-                const gettingShield = !!(flags & 64);
+        // Look up keyframe (with offset) from junkbot-animations.json when available
+        const animation = resources.junkbotAnimations[animName];
+        let frameName, ox = 0, oy = 0;
+        if (animation) {
+            animLength = animation.length;
+            const kf = animation[animFrame % animLength];
+            frameName = kf.sprite;
+            ox = kf.offset.x; oy = kf.offset.y;
+        } else {
+            const t = animFrame % animLength;
+            frameName = `minifig_${animName}_${1 + t}`;
+        }
 
-                // Determine animName exactly like the original drawJunkbot
-                let animName, animLength = 10;
-                if (dyingFromWater) { animName = "water_die"; }
-                else if (dying)      { animName = "die"; }
-                else if (collectingBin) { animName = "eat_start"; animLength = 17; }
-                else if (gettingShield) { animName = `shield_on_${facing > 0 ? "r" : "l"}`; animLength = 11; }
-                else { animName = `walk_${facing > 0 ? "r" : "l"}`; }
+        const h = spriteH("sprites", frameName);
+        blit("sprites", frameName, wx - ox, wy + ENTITY_H - 1 - h - oy);
+    },
 
-                if (armored && (!losingShield || (animFrame % 4 < 2))) {
-                    if (animName === "eat_start") animName = "shield_eat";
-                    else if (!animName.includes("shield")) animName = `shield_${animName}`;
-                }
+    js_draw_gearbot(wx, wy, facing, animFrame) {
+        const name = `gearbot_walk_${facing > 0 ? "r" : "l"}_${1 + (animFrame % 2)}`;
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx, wy + 2 * 18 - h - 1);
+    },
 
-                // Look up keyframe (with offset) from junkbot-animations.json when available
-                const animation = resources.junkbotAnimations[animName];
-                let frameName, ox = 0, oy = 0;
-                if (animation) {
-                    animLength = animation.length;
-                    const kf = animation[animFrame % animLength];
-                    frameName = kf.sprite;
-                    ox = kf.offset.x; oy = kf.offset.y;
-                } else {
-                    const t = animFrame % animLength;
-                    frameName = `minifig_${animName}_${1 + t}`;
-                }
+    js_draw_climbbot(wx, wy, facing, facingY, animFrame) {
+        let dir = facing > 0 ? "r" : "l";
+        if (facingY === -1) dir = "u";
+        else if (facingY === 1) dir = "d";
+        const name = `climbbot_walk_${dir}_${1 + (animFrame % 6)}`;
+        blit("sprites", name, wx, wy - 6); // original: entity.y - 6
+    },
 
-                const h = spriteH("sprites", frameName);
-                blit("sprites", frameName, wx - ox, wy + ENTITY_H - 1 - h - oy);
-            },
+    js_draw_flybot(wx, wy, facing, animFrame) {
+        const name = `flybot_${1 + (animFrame % 2)}`;
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx, wy + 2 * 18 - h - 1);
+    },
 
-            js_draw_gearbot(wx, wy, facing, animFrame) {
-                const name = `gearbot_walk_${facing > 0 ? "r" : "l"}_${1 + (animFrame % 2)}`;
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx, wy + 2 * 18 - h - 1);
-            },
+    js_draw_eyebot(wx, wy, facing, facingY, animFrame, laserOn) {
+        const active = facing !== 0 || facingY !== 0;
+        const name = `eyebot_${active ? "active_" : ""}${1 + (animFrame % 2)}`;
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx, wy + 2 * 18 - h - 1);
+    },
 
-            js_draw_climbbot(wx, wy, facing, facingY, animFrame) {
-                let dir = facing > 0 ? "r" : "l";
-                if (facingY === -1) dir = "u";
-                else if (facingY === 1) dir = "d";
-                const name = `climbbot_walk_${dir}_${1 + (animFrame % 6)}`;
-                blit("sprites", name, wx, wy - 6); // original: entity.y - 6
-            },
+    js_draw_bin(wx, wy, facing, scaredy, animFrame) {
+        const ENTITY_H = 3 * 18;
+        if (scaredy && facing !== 0) {
+            const name = `scaredy_walk_${facing > 0 ? "r" : "l"}_${1 + (animFrame % 2)}_s3`;
+            const h = spriteH("spritesUndercover", name);
+            blit("spritesUndercover", name, wx + 4, wy + ENTITY_H - h - 5);
+        } else {
+            const h = spriteH("sprites", "bin");
+            blit("sprites", "bin", wx + 4, wy + ENTITY_H - h - 5);
+        }
+    },
 
-            js_draw_flybot(wx, wy, facing, animFrame) {
-                const name = `flybot_${1 + (animFrame % 2)}`;
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx, wy + 2 * 18 - h - 1);
-            },
+    js_draw_crate(wx, wy) {
+        const h = spriteH("spritesUndercover", "haz_slickcrate");
+        blit("spritesUndercover", "haz_slickcrate", wx, wy + 2 * 18 - h - 1);
+    },
 
-            js_draw_eyebot(wx, wy, facing, facingY, animFrame, laserOn) {
-                const active = facing !== 0 || facingY !== 0;
-                const name = `eyebot_${active ? "active_" : ""}${1 + (animFrame % 2)}`;
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx, wy + 2 * 18 - h - 1);
-            },
+    js_draw_fire(wx, wy, on, animFrame) {
+        const fi = on ? ((animFrame % 8 < 4) ? animFrame % 4 : 4 - (animFrame % 4)) : 0;
+        const name = `haz_slickfire_${on ? "on" : "off"}_${1 + fi}`;
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx + 1, wy + 18 - h - 4);
+    },
 
-            js_draw_bin(wx, wy, facing, scaredy, animFrame) {
-                const ENTITY_H = 3 * 18;
-                if (scaredy && facing !== 0) {
-                    const name = `scaredy_walk_${facing > 0 ? "r" : "l"}_${1 + (animFrame % 2)}_s3`;
-                    const h = spriteH("spritesUndercover", name);
-                    blit("spritesUndercover", name, wx + 4, wy + ENTITY_H - h - 5);
-                } else {
-                    const h = spriteH("sprites", "bin");
-                    blit("sprites", "bin", wx + 4, wy + ENTITY_H - h - 5);
-                }
-            },
+    js_draw_fan(wx, wy, on, animFrame) {
+        const name = `haz_slickfan_${on ? "on" : "off"}_${1 + (on ? animFrame % 4 : 0)}`;
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx + 1, wy + 18 - h - 4);
+    },
 
-            js_draw_crate(wx, wy) {
-                const h = spriteH("spritesUndercover", "haz_slickcrate");
-                blit("spritesUndercover", "haz_slickcrate", wx, wy + 2 * 18 - h - 1);
-            },
+    js_draw_switch(wx, wy, on, _animFrame) {
+        const name = on ? "haz_slickswitch_on_1" : "haz_slickswitch_off_1";
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx, wy + 18 - h - 1);
+    },
 
-            js_draw_fire(wx, wy, on, animFrame) {
-                const fi = on ? ((animFrame % 8 < 4) ? animFrame % 4 : 4 - (animFrame % 4)) : 0;
-                const name = `haz_slickfire_${on ? "on" : "off"}_${1 + fi}`;
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx + 1, wy + 18 - h - 4);
-            },
+    js_draw_pipe(wx, wy, _animFrame) {
+        // original: entity.x + 11, entity.y - 12
+        blit("sprites", "haz_slickpipe_dry_1", wx + 11, wy - 12);
+    },
 
-            js_draw_fan(wx, wy, on, animFrame) {
-                const name = `haz_slickfan_${on ? "on" : "off"}_${1 + (on ? animFrame % 4 : 0)}`;
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx + 1, wy + 18 - h - 4);
-            },
+    js_draw_shield(wx, wy, used, fixed) {
+        const state = used ? "off" : "on";
+        const sheet = fixed ? "sprites" : "spritesUndercover";
+        const name = fixed ? `haz_slickshield_${state}` : `brick_slickshield_${state}`;
+        const h = spriteH(sheet, name);
+        blit(sheet, name, wx, wy + 18 - h - 1);
+    },
 
-            js_draw_switch(wx, wy, on, _animFrame) {
-                const name = on ? "haz_slickswitch_on_1" : "haz_slickswitch_off_1";
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx, wy + 18 - h - 1);
-            },
+    js_draw_jump(wx, wy, active, animFrame, fixed) {
+        const prefix = fixed ? "haz_slickjump" : "brick_slickjump";
+        const name = active ? `${prefix}_active_${1 + (animFrame % 5)}` : `${prefix}_dormant_1`;
+        const h = spriteH("sprites", name);
+        blit("sprites", name, wx, wy + 18 - h - 1);
+    },
 
-            js_draw_pipe(wx, wy, _animFrame) {
-                // original: entity.x + 11, entity.y - 12
-                blit("sprites", "haz_slickpipe_dry_1", wx + 11, wy - 12);
-            },
+    js_draw_teleport(wx, wy, animFrame, blocked) {
+        const on = !blocked;
+        let name = `haz_slickteleport_${on ? "on" : "off"}_1`;
+        // active animation while warping
+        if (animFrame % 60 > 30) name = `haz_slickteleport_active_${1 + (animFrame % 2)}`;
+        const h = spriteH("spritesUndercover", name);
+        blit("spritesUndercover", name, wx, wy + 18 - h - 1);
+    },
 
-            js_draw_shield(wx, wy, used, fixed) {
-                const state = used ? "off" : "on";
-                const sheet = fixed ? "sprites" : "spritesUndercover";
-                const name = fixed ? `haz_slickshield_${state}` : `brick_slickshield_${state}`;
-                const h = spriteH(sheet, name);
-                blit(sheet, name, wx, wy + 18 - h - 1);
-            },
+    js_draw_laser(wx, wy, facing, on) {
+        // entity name vs sprite direction is swapped: facing 1 -> "L" sprite
+        const name = `haz_slicklaser_${facing > 0 ? "l" : "r"}_on_1`;
+        const w = spriteW("spritesUndercover", name);
+        const h = spriteH("spritesUndercover", name);
+        const ENTITY_W = 2 * 15, ENTITY_H = 18;
+        const alpha = on ? 1 : 0.5;
+        if (facing < 0) {
+            blit("spritesUndercover", name, wx + ENTITY_W - w + 11, wy + ENTITY_H - 1 - h, alpha);
+        } else {
+            blit("spritesUndercover", name, wx, wy + ENTITY_H - 1 - h, alpha);
+        }
+    },
 
-            js_draw_jump(wx, wy, active, animFrame, fixed) {
-                const prefix = fixed ? "haz_slickjump" : "brick_slickjump";
-                const name = active ? `${prefix}_active_${1 + (animFrame % 5)}` : `${prefix}_dormant_1`;
-                const h = spriteH("sprites", name);
-                blit("sprites", name, wx, wy + 18 - h - 1);
-            },
+    js_draw_droplet(wx, wy, splashing, animFrame) {
+        const name = `drip_${splashing ? "splashing" : "falling"}_${1 + (splashing ? animFrame % 5 : 0)}`;
+        const ox = splashing ? (-3 - animFrame) : 0;
+        const oy = splashing ? -15 : 0;
+        blit("sprites", name, wx + 15 + ox, wy + oy);
+    },
 
-            js_draw_teleport(wx, wy, animFrame, blocked) {
-                const on = !blocked;
-                let name = `haz_slickteleport_${on ? "on" : "off"}_1`;
-                // active animation while warping
-                if (animFrame % 60 > 30) name = `haz_slickteleport_active_${1 + (animFrame % 2)}`;
-                const h = spriteH("spritesUndercover", name);
-                blit("spritesUndercover", name, wx, wy + 18 - h - 1);
-            },
+    js_draw_wind_column(wx, wy, extent, fanAnimFrame) {
+        const fi = fanAnimFrame % 7;
+        const name = `fanair_1_${1 + fi}`;
+        // original: x + 4, y - frameIndex*2 + 8, marching upward by 18 per row
+        for (let row = 0; row < extent; row++) {
+            blit("sprites", name, wx + 4, (wy - row * 18) - fi * 2 + 8);
+        }
+    },
 
-            js_draw_laser(wx, wy, facing, on) {
-                // entity name vs sprite direction is swapped: facing 1 -> "L" sprite
-                const name = `haz_slicklaser_${facing > 0 ? "l" : "r"}_on_1`;
-                const w = spriteW("spritesUndercover", name);
-                const h = spriteH("spritesUndercover", name);
-                const ENTITY_W = 2 * 15, ENTITY_H = 18;
-                const alpha = on ? 1 : 0.5;
-                if (facing < 0) {
-                    blit("spritesUndercover", name, wx + ENTITY_W - w + 11, wy + ENTITY_H - 1 - h, alpha);
-                } else {
-                    blit("spritesUndercover", name, wx, wy + ENTITY_H - 1 - h, alpha);
-                }
-            },
+    js_draw_laser_beam(wx, wy, facing, extent, _hitWall, animFrame) {
+        const ENTITY_W = 2 * 15;
+        const name = `laserbeam_1_${1 + (animFrame % 3)}`;
+        for (let i = 0; i < extent; i++) {
+            const x = wx + (facing === 1 ? ENTITY_W : -15) + 15 * i * facing;
+            blit("spritesUndercover", name, x + 4, wy);
+        }
+    },
 
-            js_draw_droplet(wx, wy, splashing, animFrame) {
-                const name = `drip_${splashing ? "splashing" : "falling"}_${1 + (splashing ? animFrame % 5 : 0)}`;
-                const ox = splashing ? (-3 - animFrame) : 0;
-                const oy = splashing ? -15 : 0;
-                blit("sprites", name, wx + 15 + ox, wy + oy);
-            },
+    js_draw_teleport_effect(wx, wy, frameIndex) {
+        const name = `transefx_${1 + (frameIndex % 3)}`;
+        const h = spriteH("spritesUndercover", name);
+        blit("spritesUndercover", name, wx + 5, wy - h + 2, 0.5);
+    },
 
-            js_draw_wind_column(wx, wy, extent, fanAnimFrame) {
-                const fi = fanAnimFrame % 7;
-                const name = `fanair_1_${1 + fi}`;
-                // original: x + 4, y - frameIndex*2 + 8, marching upward by 18 per row
-                for (let row = 0; row < extent; row++) {
-                    blit("sprites", name, wx + 4, (wy - row * 18) - fi * 2 + 8);
-                }
-            },
+    js_draw_debug_rect(wx, wy, ww, wh) {
+        const [sx, sy] = worldPos(wx, wy);
+        ctx.strokeStyle = "rgba(255,0,0,0.7)";
+        ctx.strokeRect(sx, sy, ww * vp.scale, wh * vp.scale);
+    },
 
-            js_draw_laser_beam(wx, wy, facing, extent, _hitWall, animFrame) {
-                const ENTITY_W = 2 * 15;
-                const name = `laserbeam_1_${1 + (animFrame % 3)}`;
-                for (let i = 0; i < extent; i++) {
-                    const x = wx + (facing === 1 ? ENTITY_W : -15) + 15 * i * facing;
-                    blit("spritesUndercover", name, x + 4, wy);
-                }
-            },
+    // Audio
+    js_play_sound(index) {
+        playSound(index);
+    },
 
-            js_draw_teleport_effect(wx, wy, frameIndex) {
-                const name = `transefx_${1 + (frameIndex % 3)}`;
-                const h = spriteH("spritesUndercover", name);
-                blit("spritesUndercover", name, wx + 5, wy - h + 2, 0.5);
-            },
-
-            js_draw_debug_rect(wx, wy, ww, wh) {
-                const [sx, sy] = worldPos(wx, wy);
-                ctx.strokeStyle = "rgba(255,0,0,0.7)";
-                ctx.strokeRect(sx, sy, ww * vp.scale, wh * vp.scale);
-            },
-
-            // Audio
-            js_play_sound(index) {
-                playSound(index);
-            },
-
-            // Win / Lose
-            js_on_win() {
-                document.getElementById("overlay-message").textContent = "🎉 You Win!";
-                document.getElementById("overlay").style.display = "flex";
-            },
-            js_on_lose() {
-                document.getElementById("overlay-message").textContent = "💀 Junkbot Died";
-                document.getElementById("overlay").style.display = "flex";
-            },
-        },
-    };
-}
+    // Win / Lose
+    js_on_win() {
+        document.getElementById("overlay-message").textContent = "🎉 You Win!";
+        document.getElementById("overlay").style.display = "flex";
+    },
+    js_on_lose() {
+        document.getElementById("overlay-message").textContent = "💀 Junkbot Died";
+        document.getElementById("overlay").style.display = "flex";
+    },
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Low-level draw helpers that work in world space (inside the viewport transform)
@@ -712,65 +682,70 @@ async function main() {
     await initAudio();
 
     document.getElementById("status").textContent = "Loading WASM…";
-    let wasmInstance;
-    try {
-        const result = await WebAssembly.instantiateStreaming(
-            fetch("junkbot.wasm"),
-            makeImports()
-        );
-        wasmInstance = result.instance;
-    } catch (err) {
-        document.getElementById("status").textContent = "Failed to load WASM: " + err;
-        return;
-    }
 
-    const wasm = wasmInstance.exports;
-    wasm.game_init();
+    // Setup Swift runtime
+    // Initialization is handled by init()
+    
+    // We register a callback for when Swift has exposed the API to `window.JunkbotWasm`
+    window.onWasmReady = () => {
+        console.log("onWasmReady called!");
+        const wasm = window.JunkbotWasm;
+        
+        setupInput(wasm);
 
-    // Seed RNG with current time
-    wasm.set_rng_seed(Date.now() & 0xFFFFFFFF);
+        // Populate level list
+        const levelListEl = document.getElementById("level-list");
+        const levelFiles = window.LEVEL_FILES || [];
+        for (const file of levelFiles) {
+            const li = document.createElement("li");
+            const btn = document.createElement("button");
+            btn.textContent = file.name;
+            btn.onclick = async () => {
+                document.getElementById("overlay").style.display = "none";
+                document.getElementById("status").textContent = "Loading level…";
+                const text = await loadText(file.path);
+                loadLevelIntoWasm(wasm, text);
+                document.getElementById("status").textContent = "";
+            };
+            li.append(btn);
+            levelListEl.append(li);
+        }
 
-    setupInput(wasm);
+        // Start with the first level if available
+        if (levelFiles.length > 0) {
+            loadText(levelFiles[0].path).then(text => {
+                loadLevelIntoWasm(wasm, text);
+            });
+        }
 
-    // Populate level list
-    const levelListEl = document.getElementById("level-list");
-    const levelFiles = window.LEVEL_FILES || [];
-    for (const file of levelFiles) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.textContent = file.name;
-        btn.onclick = async () => {
-            document.getElementById("overlay").style.display = "none";
-            document.getElementById("status").textContent = "Loading level…";
-            const text = await loadText(file.path);
-            loadLevelIntoWasm(wasm, text);
-            document.getElementById("status").textContent = "";
-        };
-        li.append(btn);
-        levelListEl.append(li);
-    }
+        document.getElementById("status").textContent = "";
 
-    // Start with the first level if available
-    if (levelFiles.length > 0) {
-        const text = await loadText(levelFiles[0].path);
-        loadLevelIntoWasm(wasm, text);
-    }
-
-    document.getElementById("status").textContent = "";
-
-    // Game loop matching original Junkbot's rAF throttle:
-    // `lastTime = now` (not accumulated) naturally gives ~15fps on 60Hz displays,
-    // matching the original game's actual simulation rate despite targetFPS=18.
-    const minInterval = 1000 / TARGET_FPS;
-    let lastTime = 0;
-    function loop(now) {
-        if (now - lastTime >= minInterval) {
-            lastTime = now;
-            wasm.game_tick();
+        // Game loop
+        const minInterval = 1000 / TARGET_FPS;
+        let lastTime = 0;
+        function loop(now) {
+            if (now - lastTime >= minInterval) {
+                lastTime = now;
+                window.JunkbotRenderer.js_begin_frame();
+                window.JunkbotRenderer.js_clear_background();
+                wasm.game_tick();
+                window.JunkbotRenderer.js_end_frame();
+            }
+            requestAnimationFrame(loop);
         }
         requestAnimationFrame(loop);
+    };
+
+    try {
+        console.log("Calling init()...");
+        await init();
+        console.log("init() finished successfully!");
+        // init() instantiates the wasm module and calls swift.main() automatically.
+        // swift.main() then triggers JunkbotApp.main() in Swift, which calls window.onWasmReady.
+    } catch (err) {
+        document.getElementById("status").textContent = "Failed to load WASM: " + err;
+        console.error("Failed to load WASM", err);
     }
-    requestAnimationFrame(loop);
 }
 
 main().catch(console.error);

@@ -1,47 +1,47 @@
 // Global game state mirroring the JS globals
 
-var entities: [Entity] = []
-var wind: [WindEffect] = []
-var laserBeams: [LaserBeam] = []
-var teleportEffects: [TeleportEffect] = []
+nonisolated(unsafe) var entities: [Entity] = []
+nonisolated(unsafe) var wind: [WindEffect] = []
+nonisolated(unsafe) var laserBeams: [LaserBeam] = []
+nonisolated(unsafe) var teleportEffects: [TeleportEffect] = []
 
-var levelBounds: LevelBounds? = nil
-var idCounter: Int32 = 0
+nonisolated(unsafe) var levelBounds: LevelBounds? = nil
+nonisolated(unsafe) var idCounter: Int32 = 0
 
-var frameCounter: Int32 = 0
-var moves: Int32 = 0
+nonisolated(unsafe) var frameCounter: Int32 = 0
+nonisolated(unsafe) var moves: Int32 = 0
 
 // 0=playing, 1=won, 2=lost
-var winLoseState: Int32 = 0
+nonisolated(unsafe) var winLoseState: Int32 = 0
 
 // Acceleration structures: y-coordinate → array of entity indices
-var entitiesByTopY: [Int32: [Int]] = [:]
-var entitiesByBottomY: [Int32: [Int]] = [:]
+nonisolated(unsafe) var entitiesByTopY: [Int32: [Int]] = [:]
+nonisolated(unsafe) var entitiesByBottomY: [Int32: [Int]] = [:]
 
 // Input state
-var mouseWorldX: Int32 = 0
-var mouseWorldY: Int32 = 0
+nonisolated(unsafe) var mouseWorldX: Int32 = 0
+nonisolated(unsafe) var mouseWorldY: Int32 = 0
 
 // Indices of entities currently being dragged
-var draggingIndices: [Int] = []
+nonisolated(unsafe) var draggingIndices: [Int] = []
 // Indices of possible grabs (hovered) – used for cursor display
-var hoveredIndices: [Int] = []
+nonisolated(unsafe) var hoveredIndices: [Int] = []
 
 // Keys held (subset needed for simulation; rest handled by JS)
-var keyShiftHeld: Bool = false
+nonisolated(unsafe) var keyShiftHeld: Bool = false
 
 // Viewport
-var viewportCenterX: Int32 = 0
-var viewportCenterY: Int32 = 0
-var viewportScale: Float = 1.0
+nonisolated(unsafe) var viewportCenterX: Int32 = 0
+nonisolated(unsafe) var viewportCenterY: Int32 = 0
+nonisolated(unsafe) var viewportScale: Float = 1.0
 
 // Flags
-var paused: Bool = false
-var editing: Bool = false
-var muted: Bool = false
+nonisolated(unsafe) var paused: Bool = false
+nonisolated(unsafe) var editing: Bool = false
+nonisolated(unsafe) var muted: Bool = false
 
 // Random number state (xorshift32)
-var rngState: UInt32 = 12345
+nonisolated(unsafe) var rngState: UInt32 = 12345
 
 func randomFloat() -> Float {
     rngState ^= rngState << 13

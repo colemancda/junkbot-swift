@@ -1,19 +1,30 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
     name: "Junkbot",
+    dependencies: [
+        .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0")
+    ],
     targets: [
+        .target(
+            name: "JunkbotCoreBridge"
+        ),
+        .target(
+            name: "JunkbotCore",
+            dependencies: ["JunkbotCoreBridge"]
+        ),
         .executableTarget(
-            name: "Junkbot",
-            path: "Sources/Junkbot",
+            name: "JunkbotApp",
+            dependencies: [
+                "JunkbotCoreBridge",
+                "JunkbotCore",
+                .product(name: "JavaScriptKit", package: "JavaScriptKit")
+            ],
             swiftSettings: [
                 .unsafeFlags([
-                    "-enable-experimental-feature", "Embedded",
-                    "-enable-experimental-feature", "Extern",
                     "-wmo",
-                    "-Osize",
-                    "-disable-reflection-metadata",
+                    "-Osize"
                 ])
             ]
         )

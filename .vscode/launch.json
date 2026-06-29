@@ -19,6 +19,46 @@
             "target": "Junkbot",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release Junkbot"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Debug JunkbotCore",
+            "target": "JunkbotCore",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug JunkbotCore"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Release JunkbotCore",
+            "target": "JunkbotCore",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release JunkbotCore"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Debug JunkbotApp",
+            "target": "JunkbotApp",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug JunkbotApp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Release JunkbotApp",
+            "target": "JunkbotApp",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release JunkbotApp"
         }
     ]
 }

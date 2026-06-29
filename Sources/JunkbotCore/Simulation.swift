@@ -841,10 +841,8 @@ func simulate() {
         winLoseState = newState
         if newState == 1 {
             playSound(.ohYeah)
-            jsOnWin()
         } else if newState == 2 {
             playSound(.ouch)
-            jsOnLose()
         }
     }
 }
