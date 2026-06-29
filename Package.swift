@@ -1,8 +1,9 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.3
 import PackageDescription
 
 let package = Package(
     name: "Junkbot",
+    platforms: [.macOS(.v13)],
     dependencies: [
         .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0")
     ],
