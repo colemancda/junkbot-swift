@@ -22,10 +22,10 @@ public struct Point: Equatable, @unchecked Sendable {
 // MARK: - LV (LingoValue) — replaces Any in all dynamic Lingo contexts
 
 /// PropList: ordered key-value store mapping String keys to LV values.
-/// Mirrors Lingo's property list [:] type. Uses a class so it can be stored
-/// in LV without making LV recursive (no indirect enum needed).
+/// Mirrors Lingo's property list [:] type. Stored as `indirect` in LV to
+/// break the recursive value-type cycle.
 @dynamicMemberLookup
-public final class PropList: @unchecked Sendable {
+public struct PropList: @unchecked Sendable {
     public var props: [(key: String, value: LV)]
     public init(_ props: [(key: String, value: LV)] = []) { self.props = props }
 
@@ -46,14 +46,12 @@ public final class PropList: @unchecked Sendable {
     }
     public var count: Int { props.count }
     public func getPropAt(_ i: Int) -> String { props[i - 1].key }  // 1-based
-    public func addProp(_ key: String, _ value: LV) { props.append((key, value)) }
-    public func deleteOne(_ key: String) {
+    public mutating func addProp(_ key: String, _ value: LV) { props.append((key, value)) }
+    public mutating func deleteOne(_ key: String) {
         if let i = props.firstIndex(where: { $0.key == key }) { props.remove(at: i) }
     }
-    public func duplicate() -> PropList {
-        let p = PropList(props)
-        return p
-    }
+    /// Value-type structs copy by default; duplicate() kept for API compatibility.
+    public func duplicate() -> PropList { self }
     public var isEmpty: Bool { props.isEmpty }
 }
 
@@ -96,19 +94,18 @@ public enum LV: @unchecked Sendable {
     case string(String)
     case point(x: Int, y: Int)
     case list(LingoList)
-    case propList(PropList)
+    indirect case propList(PropList)
     case object(LingoObject)  // typed object reference (no AnyObject in Embedded Swift)
 
     public subscript(dynamicMember member: String) -> LV {
         get {
-            if case .propList(let p) = self {
-                return p[member]
-            }
+            if case .propList(let p) = self { return p[member] }
             return .void
         }
         set {
-            if case .propList(let p) = self {
+            if case .propList(var p) = self {
                 p[member] = newValue
+                self = .propList(p)
             }
         }
     }
@@ -117,6 +114,16 @@ public enum LV: @unchecked Sendable {
         get { self[dynamicMember: key] }
         set { self[dynamicMember: key] = newValue }
     }
+
+    /// Mutates a PropList entry in-place through the LV.
+    /// Use instead of `["key"] = value` (which discards the write).
+    public mutating func setProp(_ key: String, _ value: LV) {
+        if case .propList(var p) = self {
+            p[key] = value
+            self = .propList(p)
+        }
+    }
+
 
     public func dynamicallyCall(withArguments args: [LV]) -> LV {
         return .void
@@ -200,7 +207,7 @@ extension LV {
         case (.string(let a), .string(let b)): return a == b
         case (.point(let ax, let ay), .point(let bx, let by)): return ax == bx && ay == by
         case (.list(let a), .list(let b)): return a === b
-        case (.propList(let a), .propList(let b)): return a === b
+        case (.propList(let a), .propList(let b)): return a.props.count == b.props.count && zip(a.props, b.props).allSatisfy { $0.key == $1.key && $0.value == $1.value }
         case (.object(let a), .object(let b)): return a === b
         default: return false
         }
