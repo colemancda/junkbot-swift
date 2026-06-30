@@ -114,8 +114,7 @@ class BehaviorConfigManager: LingoObject, @unchecked Sendable {
             result += "[\(bracketName)]\n"
             for i in 1...max(1, bracket.count) {
                 guard i <= bracket.count else { break }
-                let keyName = bracket.getPropAt(i)
-                let keyVal = bracket[keyName]
+                let (keyName, keyVal) = bracket.getPropAt(i)
                 if let arr = keyVal.asList {
                     var t = "\(keyName)="
                     for j in 1...max(1, arr.count) {
@@ -139,6 +138,11 @@ class BehaviorConfigManager: LingoObject, @unchecked Sendable {
             result += "\n\n"
         }
         return result
+    }
+
+    /// Serialize a single prop list back to config-file text (convenience overload).
+    func toString(_ wrapper: PropList) -> String {
+        return toString([("Master", wrapper)])
     }
 
     /// Join a list value back into a comma-separated string.

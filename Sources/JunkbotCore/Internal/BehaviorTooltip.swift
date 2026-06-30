@@ -163,8 +163,7 @@ class BehaviorTooltip: LingoObject, @unchecked Sendable {
         var result = parentString
         for i in 1...max(1, childStringList.count) {
             guard i <= childStringList.count else { break }
-            let key = childStringList.getPropAt(i)
-            let value = childStringList[key]
+            let (key, value) = childStringList.getPropAt(i)
             result = result.replacingOccurrences(of: key, with: value.asString ?? "")
         }
         return result

@@ -2,6 +2,6 @@
 
 class BehaviorClearFieldOnBegin {
     func beginSprite(_ spriteNum: Int) {
-        sprite(spriteNum).member.text = ""
+        sprite(spriteNum).member?.text = ""
     }
 }

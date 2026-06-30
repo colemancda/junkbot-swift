@@ -8,6 +8,6 @@ class BehaviorUpdateTotalMoves {
         if (rankdata["keys"].asInt ?? 0) < (Glob.shared["hof"].asInt ?? 0) {
             return
         }
-        sprite(spriteNum).member.text = String(Glob.shared["rankdata"]["moves"].asInt!)
+        sprite(spriteNum).member?.text = String(Glob.shared["rankdata"]["moves"].asInt!)
     }
 }

@@ -17,14 +17,14 @@ class BehaviorLegopartsManager: LingoObject, @unchecked Sendable {
         super.init()
         setPieceData()
         for i in 1...piecedata.count {
-            let key = piecedata.getPropAt(i)
+            let (key, _) = piecedata.getPropAt(i)
             if key == "end" { break }
             _ = getPieceSize(key)
         }
     }
 
     func makePiece(color: Int, state: Int, frame: Int, shape: [[Int]]) -> PropList {
-        var p = PropList()
+        let p = PropList()
         p["color"] = .int(color)
         p["state"] = .int(state)
         p["frame"] = .int(frame)

@@ -7,7 +7,7 @@ class ScreensBehaviorGameInterfaceButtons {
 
     func beginSprite() {
         my = sprite(spriteNum)
-        myName = my?.member.name ?? ""
+        myName = my?.member?.name ?? ""
     }
 
     func mouseUp() {

@@ -9,7 +9,7 @@ class BehaviorButtonsRo {
 
     func beginSprite() {
         sp = sprite(spriteNum)
-        mem = sp?.member.name ?? ""
+        mem = sp?.member?.name ?? ""
         highlight = 0
     }
 
@@ -26,7 +26,7 @@ class BehaviorButtonsRo {
     }
 
     func updateProp() {
-        mem = sp?.member.name ?? ""
+        mem = sp?.member?.name ?? ""
     }
 
     func highlight(_ flag: Int) {
