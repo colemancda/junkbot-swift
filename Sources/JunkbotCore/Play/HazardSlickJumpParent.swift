@@ -150,10 +150,8 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func checkMiniFig() {
-    // fig = playfield_manager.checkFitOrMinifig(part.pos + point(0, -1), "#BRICK_01") -- stub
     let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: -1)
     var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_01") ?? .void
-    // fig2 = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_01") -- stub
     let _pos2 = (part["pos"].asPoint ?? Point()) + Point(x: 1, y: -1)
     var fig2 = playfield_manager?.checkFitOrMinifig(LV.pt(_pos2.x, _pos2.y), "#BRICK_01") ?? .void
     let ticks = currentTicks
@@ -162,7 +160,6 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
     if fig.isPropList && fig2.isPropList && (ticks - last_jump) > 60 {
       // check fig === fig2 (same object) — only possible to verify at runtime with identity
       SndSFX("jump3")
-      // fig.asPropList!.behavior.notify(["jump": part]) -- stub
       fig.asPropList?["behavior"].asObject()?.notify(PropList([("jump", .propList(part))]))
       part["state"] = .string("#Active")
       part["frame"] = .int(1)

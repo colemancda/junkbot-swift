@@ -344,29 +344,44 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func step() {
-    let pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
+    var pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
     var ok = false
-    var fg =
-      playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
-    // let fg: LV = .void
-    // _ = fg
-    // if fg != 0 { if playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos } }
+    var fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+    
+    if (fg.asInt != nil && fg.asInt != 0) || fg.isPropList {
+      if playfield_manager?.checkFloor([pos.x, pos.y], 2) != 0 {
+        ok = true
+        doWalkState()
+        part["pos"] = LV.pt(pos.x, pos.y)
+      }
+    }
+    
     if !ok {
       for s in 1...step_down {
-        _ = s
-        var fg =
-          playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "")
-          ?? .void
-        // if fg != 0 && playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos; break }
+        pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0) + Point(x: 0, y: s)
+        fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+        if (fg.asInt != nil && fg.asInt != 0) || fg.isPropList {
+          if playfield_manager?.checkFloor([pos.x, pos.y], 2) != 0 {
+            ok = true
+            doWalkState()
+            part["pos"] = LV.pt(pos.x, pos.y)
+            break
+          }
+        }
       }
     }
     if !ok {
       for s in 1...step_up {
-        _ = s
-        var fg =
-          playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "")
-          ?? .void
-        // if fg != 0 && playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos; break }
+        pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0) + Point(x: 0, y: -s)
+        fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+        if (fg.asInt != nil && fg.asInt != 0) || fg.isPropList {
+          if playfield_manager?.checkFloor([pos.x, pos.y], 2) != 0 {
+            ok = true
+            doWalkState()
+            part["pos"] = LV.pt(pos.x, pos.y)
+            break
+          }
+        }
       }
     }
     if !ok {
@@ -374,7 +389,20 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
       doWalkState()
       SndSFX("turn1")
     }
-    // if fg.isPropList { eat animation, erase piece } -- stub
+    
+    if fg.isPropList {
+      SndSFX("garbage1")
+      SndSFX("eat1")
+      SndSFX("h_misc_1")
+      mode = "#EAT"
+      part["frame"] = .int(1)
+      if dir < 0 {
+        part["state"] = .string(SHIELD == 1 ? "#SHIELDEAT_L" : "#EAT_L")
+      } else {
+        part["state"] = .string(SHIELD == 1 ? "#SHIELDEAT_R" : "#EAT_R")
+      }
+      playfield_manager?.erasePiece(fg.asPropList?["pos"] ?? .void)
+    }
   }
 
   // Original Lingo body: dowalkstate
@@ -502,11 +530,13 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func fallAnim() -> Bool {
-    // if not playfield_manager.checkFloor(part.pos, 2) -- stub
-    let onFloor = true  // stub
+    let posArr = [part["pos"].asPoint?.x ?? 0, part["pos"].asPoint?.y ?? 0]
+    let onFloor = (playfield_manager?.checkFloor(posArr, 2) ?? 0) != 0
     if !onFloor {
       let pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: 1)
-      // if playfield_manager.checkFit(pos, part.type) { part.pos = pos }
+      if playfield_manager?.checkFit(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? false {
+        part["pos"] = LV.pt(pos.x, pos.y)
+      }
       if mode != "#FALL" && mode != "#DEAD" {
         SndSFX("fall")
         mode = "#FALL"
@@ -570,16 +600,40 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         dir = (lingoRandom(2) * 2) - 3
         debugLog("jumping without a known direction!")
       }
-      if let vList = traj["v"].asList, vList.count >= 2,
-        let vx = vList[1].asInt
+      if let vList = traj["v"].asList, vList.items.count >= 2,
+        let vx = vList.items[1].asInt
       {
-        vList[1] = .int(vx * dir)
+        vList.items[1] = .int(vx * dir)
       }
       if let o = traj["o"].asPoint {
         traj["o"] = .point(x: o.x * dir, y: o.y)
       }
-      // pos = part.pos + traj["v"] -- stub
-      // if playfield_manager.checkFit(pos, part.type) { ... } -- stub
+      
+      let vPoint: Point
+      if let vList = traj["v"].asList, vList.items.count >= 2,
+         let vx = vList.items[0].asInt, let vy = vList.items[1].asInt {
+         vPoint = Point(x: vx, y: vy)
+      } else {
+         vPoint = Point(x: 0, y: 0)
+      }
+      
+      let pos = (part["pos"].asPoint ?? Point()) + vPoint
+      if playfield_manager?.checkFit(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? false {
+        part["pos"] = LV.pt(pos.x, pos.y)
+        part["pixelOffset"] = traj["o"]
+        let posArr = [pos.x, pos.y]
+        if playfield_manager?.checkFloor(posArr, 2) != 0 {
+          mode = "#WALK"
+          part["pixelOffset"] = .void
+        }
+      } else {
+        if mode != "#FALL" {
+          SndSFX("fall")
+          SndSFX("headbonk1")
+        }
+        mode = "#FALL"
+        part["pixelOffset"] = .void
+      }
       jump_index += 1
     }
   }

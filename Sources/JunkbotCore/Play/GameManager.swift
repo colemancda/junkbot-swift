@@ -69,30 +69,51 @@ public class GameManager: LingoObject, @unchecked Sendable {
 
     var building = 1
     var level = 1
-    // NOTE: Lingo iterates castMembers of castLib "levels"; stub out here
-    let castMemberCount = 0  // stub: number of castMembers of castLib "levels"
-    for _ in 1...max(1, castMemberCount) {
-      // levelmem = member(n, "levels") -- stub
-      // leveldata = Glob.shared.config_manager.parseParams(levelmem.text) -- stub
-      // leveldata.info.title = Glob.shared.config_manager.restoreCommas(leveldata.info.title)
-      // leveldata.info.hint = Glob.shared.config_manager.restoreCommas(leveldata.info.hint)
-      // Glob.shared.building[building].LEVELS[level] = [...]
+    let stubLevelText = "[info:[title:\"Stub Level\", hint:\"Walk to the exit!\", par:10], bricks:[[#BRICK_01, point(0,0)]]]"
+    for n in 1...60 {
+      let leveldata = (Glob.shared["config_manager"].asObject() as? BehaviorConfigManager)?.parseParams(stubLevelText) ?? PropList()
+      let info = leveldata["info"].asPropList ?? PropList()
+      
+      var levelEntry = PropList()
+      levelEntry["index"] = .int(n)
+      levelEntry["title"] = info["title"]
+      levelEntry["goal"] = info["par"]
+      levelEntry["moves"] = .int(0)
+      levelEntry["data"] = .string(stubLevelText)
+      levelEntry["info"] = .propList(info)
+      
+      if let buildingLV = Glob.shared["building"].asList {
+        while buildingLV.items.count < building {
+          var b = PropList()
+          b["state"] = .string("#locked")
+          b["LEVELS"] = .list(LingoList())
+          buildingLV.items.append(.propList(b))
+        }
+        if let b = buildingLV.items[building - 1].asPropList, let lvls = b["LEVELS"].asList {
+           while lvls.items.count < level {
+             lvls.items.append(.void)
+           }
+           lvls.items[level - 1] = .propList(levelEntry)
+        }
+      }
+      
       Glob.shared["keyrequired"] = .int(10)
       var current = PropList()
       current["building"] = .int(1)
       current["level"] = .int(1)
       current["moves"] = .int(0)
       Glob.shared["current"] = .propList(current)
+      
       level += 1
       if level > 15 {
         level = 1
         building += 1
         if let buildingLV = Glob.shared["building"].asList {
-          while buildingLV.count < building {
+          while buildingLV.items.count < building {
             var b = PropList()
             b["state"] = .string("#locked")
             b["LEVELS"] = .list(LingoList())
-            buildingLV.add(.propList(b))
+            buildingLV.items.append(.propList(b))
           }
         }
       }
@@ -102,8 +123,9 @@ public class GameManager: LingoObject, @unchecked Sendable {
     if let rankdata = Glob.shared["rankdata"].asPropList {
       rankdata["serverState"] = .string("#network")
     }
-    // let record = Glob.shared.database_manager.getRecord() -- stub
-    let record: PropList? = nil  // stub
+    
+    // Call DatabaseManager getRecord directly since there's no dynamic call
+    let record = (Glob.shared["database_manager"].asObject() as? DatabaseManager)?.getRecord()
     if let record = record {
       decodeRecord(record)
     }

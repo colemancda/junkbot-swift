@@ -180,12 +180,10 @@ public class HazardSlickPipeParent: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func checkMiniFig() {
-    // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_02") -- stub
     let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 1, y: -1)
     var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_02") ?? .void
     if fig.isPropList {
       SndSFX("fire")
-      // fig.asPropList!.behavior.notify(["damage": "#drip"]) -- stub
       fig.asPropList?["behavior"].asObject()?.notify(PropList([("damage", .string("#drip"))]))
     }
   }

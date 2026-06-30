@@ -91,10 +91,8 @@ public class HazardSlickSwitchParent: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func checkMiniFig() {
-    // fig = playfield_manager.checkFitOrMinifig(part.pos + point(0, -1), "#BRICK_01") -- stub
     let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: -1)
     var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_01") ?? .void
-    // fig2 = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_01") -- stub
     let _pos2 = (part["pos"].asPoint ?? Point()) + Point(x: 1, y: -1)
     var fig2 = playfield_manager?.checkFitOrMinifig(LV.pt(_pos2.x, _pos2.y), "#BRICK_01") ?? .void
 

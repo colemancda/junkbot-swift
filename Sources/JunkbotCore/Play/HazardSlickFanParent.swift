@@ -37,12 +37,10 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
       Glob.shared["PLAYER"].asObject()?.asPlayManager
       ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
     playfield_manager = play_manager?.playfield_manager
-    // partloc = part.sprite[1].loc -- stub
     myWidth = 2
     last_step = currentTicks
     switch_ = 0
     airjet_cycle = lingoRandom(7)
-    // top_locz = playfield_manager.posToLocZ(point(50, 1)) -- stub
   }
 
   // Original Lingo body: done
@@ -193,7 +191,6 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
     if state == "#on" {
       var y = -1
       while true {
-        // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, y), "#BRICK_01") -- stub
         let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 1, y: y)
         var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_01") ?? .void
         if let figInt = fig.asInt, figInt == 0 { break }
@@ -206,7 +203,6 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
       }
       y = -1
       while true {
-        // fig = playfield_manager.checkFitOrMinifig(part.pos + point(2, y), "#BRICK_01") -- stub
         let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 2, y: y)
         var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_01") ?? .void
         if let figInt = fig.asInt, figInt == 0 { break }
@@ -222,7 +218,6 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
           SndSFX("fan")
           switch_ = 1
         }
-        // gotMinifig.asPropList!.behavior.notify(["FAN": part]) -- stub
         gotMinifig.asPropList?["behavior"].asObject()?.notify(PropList([("FAN", .propList(part))]))
       } else {
         switch_ = 0
@@ -231,13 +226,9 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
       if airjet_cycle > 7 {
         airjet_cycle = 1
       }
-      // Render airjet sprites -- stub
       for i in 0..<2 {
         if airjet_height[i] > 0 {
-          // s.visible = 1; s.member = member("fanAir_\(airjet_height[i])_\(airjet_cycle)") -- stub
-          // s.loc = partloc + point((i+1)*15 + 2, -19); s.locZ = top_locz -- stub
         } else {
-          // s.visible = 0 -- stub
         }
         _ = i
       }

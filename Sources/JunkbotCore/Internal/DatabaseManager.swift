@@ -65,7 +65,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
   // ```
   func getState() {
     // netID = getNetText(site + prefix + "getState" + suffix)
-    // Stub: initiate network request
+    debugLog("Mock: initiate network request")
   }
 
   // Original Lingo body: setstate
@@ -76,7 +76,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
   // ```
   func setState() {
     // netID = postNetText(site + prefix + "setState" + suffix, state)
-    // Stub: post state to server
+    debugLog("Mock: post state to server")
   }
 
   // Original Lingo body: setrecord
@@ -162,7 +162,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
   func loadHallOfFame() {
     guard hofReady() else { return }
     // hofnetID = getNetText(site + prefix + "getTopTen" + suffix)
-    // Stub: initiate network request
+    debugLog("Mock: initiate network request")
   }
 
   // Original Lingo body: gethalloffame
@@ -232,7 +232,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
       //   handle rank / state / notloggedin answers
       // else if netError(netID) != "":
       //   netID = .void
-      // Stub: async network completion handled externally
+      debugLog("Mock: async network completion")
     }
 
     // Process hall-of-fame netID
@@ -241,7 +241,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
       //   t = netTextResult(hofnetID)
       //   hofnetID = .void
       //   hallOfFame = decodeMulti(t)
-      // Stub: async network completion handled externally
+      debugLog("Mock: async network completion")
     }
   }
 
