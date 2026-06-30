@@ -137,14 +137,14 @@ class PlayfieldManager {
             out_bglist["backdrop"] = .string("bkg1")
             out_bglist["decals"] = .list(LingoList())
         } else {
-            let backdropName = (background?["backdrop"].asObject() ?.asMember)?.name ?? "bkg1"
+            let backdropName = (background?["backdrop"].asObject()?.asMember)?.name ?? "bkg1"
             out_bglist["backdrop"] = .string(backdropName)
             let decalStrings = LingoList()
             if let decalsList = background?["decals"].asList {
                 for i in 1...max(1, decalsList.count) {
                     if let d = decalsList[i].asPropList {
                         let loc = d["loc"].asPoint ?? Point(x: 0, y: 0)
-                        let mName = (d["member"].asObject() ?.asMember)?.name ?? ""
+                        let mName = (d["member"].asObject()?.asMember)?.name ?? ""
                         decalStrings.add(.string("\(loc.x);\(loc.y);\(mName)"))
                     }
                 }
@@ -549,7 +549,7 @@ class PlayfieldManager {
         if let spriteList = part["sprite"].asList,
            let memberList = partmembers.asList {
             for si in 1...max(1, spriteList.count) {
-                guard let s = spriteList[si].asObject() ?.asSprite else { continue }
+                guard let s = spriteList[si].asObject()?.asSprite else { continue }
                 s.puppet = true
                 if si <= memberList.count, let mName = memberList[si].asString {
                     s.member = member(mName)
@@ -604,7 +604,7 @@ class PlayfieldManager {
         if !keepSprite {
             if let spriteList = part?["sprite"].asList {
                 for i in 1...max(1, spriteList.count) {
-                    if let s = spriteList[i].asObject() ?.asSprite {
+                    if let s = spriteList[i].asObject()?.asSprite {
                         s.loc = Point(x: -100, y: -100)
                         s.visible = false
                         s.scriptInstanceList = []
@@ -615,7 +615,7 @@ class PlayfieldManager {
             }
             if let auxSpriteList = part?["auxSprites"].asList {
                 for i in 1...max(1, auxSpriteList.count) {
-                    if let s = auxSpriteList[i].asObject() ?.asSprite {
+                    if let s = auxSpriteList[i].asObject()?.asSprite {
                         s.loc = Point(x: -100, y: -100)
                         s.visible = false
                         s.scriptInstanceList = []
@@ -640,7 +640,7 @@ class PlayfieldManager {
     }
 
     func releasePieceSprite(_ p: PropList) {
-        if let s = p["sprite"].asObject() ?.asSprite {
+        if let s = p["sprite"].asObject()?.asSprite {
             s.loc = Point(x: -100, y: -100)
             s.visible = false
             returnASprite(s)
@@ -864,8 +864,8 @@ class PlayfieldManager {
     func placeDecal(_ d: PropList) {
         guard let s = getASprite() else { return }
         d["sprite"] = .object(s)
-        s.member = d["member"].asObject() ?.asMember
-        if let m = d["member"].asObject() ?.asMember {
+        s.member = d["member"].asObject()?.asMember
+        if let m = d["member"].asObject()?.asMember {
             s.rect = m.rect
         }
         s.loc = d["loc"].asPoint ?? Point(x: 0, y: 0)
@@ -884,7 +884,7 @@ class PlayfieldManager {
         guard background != nil, let decals = background?["decals"].asList else { return nil }
         for i in stride(from: decals.count, through: 1, by: -1) {
             guard let decal = decals[i].asPropList else { continue }
-            guard let m = decal["member"].asObject() ?.asMember,
+            guard let m = decal["member"].asObject()?.asMember,
                   let loc = decal["loc"].asPoint else { continue }
             let r = Rect(
                 x: loc.x - (m.regPoint?.x ?? 0),
@@ -893,7 +893,7 @@ class PlayfieldManager {
                 height: m.height
             )
             if r.contains(L) {
-                if let s = decal["sprite"].asObject() ?.asSprite {
+                if let s = decal["sprite"].asObject()?.asSprite {
                     s.loc = Point(x: -100, y: -100)
                     s.member = nil
                     returnASprite(s)
@@ -909,7 +909,7 @@ class PlayfieldManager {
         guard background != nil, let decals = background?["decals"].asList else { return }
         for i in 1...max(1, decals.count) {
             if let decal = decals[i].asPropList {
-                if let s = decal["sprite"].asObject() ?.asSprite {
+                if let s = decal["sprite"].asObject()?.asSprite {
                     s.loc = Point(x: -100, y: -100)
                     s.member = nil
                     returnASprite(s)
@@ -920,7 +920,7 @@ class PlayfieldManager {
     }
 
     func refreshBackground() {
-        glob.EDITOR.playfield_sprite.member = background?["backdrop"].asObject() ?.asMember
+        glob.EDITOR.playfield_sprite.member = background?["backdrop"].asObject()?.asMember
         var z = 10001
         guard let decals = background?["decals"].asList else { return }
         for i in 1...max(1, decals.count) {
@@ -931,9 +931,9 @@ class PlayfieldManager {
                     decal["sprite"] = .object(s)
                 }
             }
-            if let s = decal["sprite"].asObject() ?.asSprite {
-                s.member = decal["member"].asObject() ?.asMember
-                if let m = decal["member"].asObject() ?.asMember {
+            if let s = decal["sprite"].asObject()?.asSprite {
+                s.member = decal["member"].asObject()?.asMember
+                if let m = decal["member"].asObject()?.asMember {
                     s.rect = m.rect
                 }
                 s.loc = decal["loc"].asPoint ?? Point(x: 0, y: 0)

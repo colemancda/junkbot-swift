@@ -21,7 +21,7 @@ class Behavior21 {
         for n in whichLevel...howmany {
             levelList.append(member(n, "levels")?.text ?? "")
         }
-        glob.PLAYER.game_manager.setGame(levelList)
+        glob.PLAYER.game_manager.setGame(.list(LingoList(levelList.map { .string($0) })))
         glob.PLAYER.game_manager.startGame()
     }
 }

@@ -18,8 +18,8 @@ class BehaviorEntryField {
     }
 
     func getPropertyDescriptionList() -> PropList {
-        let result = PropList()
-        let maxcharsDesc = PropList()
+        var result = PropList()
+        var maxcharsDesc = PropList()
         maxcharsDesc["comment"] = .string("Max chars:")
         maxcharsDesc["format"] = .string("integer")
         maxcharsDesc["default"] = .int(30)

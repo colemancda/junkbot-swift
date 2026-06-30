@@ -31,15 +31,15 @@ class BehaviorScreenLoop {
     func checkKeys() {
         for i in 1...4 {
             var keys = 0
-            let building = data[i].asPropList!["LEVELS"].asList!
+            let building = data[i]["LEVELS"].asList!
             for j in 1...building.count {
-                if (building[j].asPropList!["moves"].asInt ?? 0) > 0 {
+                if (building[j]["moves"].asInt ?? 0) > 0 {
                     keys += 1
                 }
             }
             let keyrequired = Glob.shared["keyrequired"].asInt!
             if (i < 4) && (keys >= keyrequired) {
-                data[i + 1].asPropList!["state"] = .string("open")
+                data[i + 1]["state"] = .string("open")
             }
         }
     }
@@ -93,7 +93,7 @@ class BehaviorScreenLoop {
     }
 
     func roTab(_ snum: Int, _ bnum: Int) -> Int {
-        if (data[snum - 24].asPropList!["state"].asString == "open") {
+        if (data[snum - 24]["state"].asString == "open") {
             return 0
         }
         sprite(snum - 4).blend = bnum
@@ -102,7 +102,7 @@ class BehaviorScreenLoop {
 
     func tabClicked(_ snum: Int) {
         let clicked = snum - 23
-        if data[clicked].asPropList!["state"].asString == "locked" {
+        if data[clicked]["state"].asString == "locked" {
             SndSFX("spring_1")
             return
         }

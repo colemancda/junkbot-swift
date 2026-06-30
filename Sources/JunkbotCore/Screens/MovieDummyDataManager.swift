@@ -48,6 +48,6 @@ struct MovieDummyDataManager {
     static func updateBuilding(_ data: LingoList) {
         let buildings = Glob.shared["building"].asList!
         let idx = data[1].asInt!
-        buildings[idx].asPropList!["state"] = data[2]
+        buildings[idx]["state"] = data[2]
     }
 }

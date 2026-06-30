@@ -15,7 +15,7 @@ class BehaviorLevelEndDialogButtons {
             let building = current["building"].asInt!
             if (level == 15) && !(building == 4) {
                 let buildingList = Glob.shared["building"].asList!
-                let lock = buildingList[building + 1].asPropList!["state"].asString!
+                let lock = buildingList[building + 1]["state"].asString!
                 if lock == "open" {
                     let currentPL = Glob.shared["current"].asPropList!
                     currentPL["building"] = .int(building + 1)

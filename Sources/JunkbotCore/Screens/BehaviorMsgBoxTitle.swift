@@ -48,8 +48,8 @@ class BehaviorMsgBoxTitle {
         case "hide":
             break
         case "move1":
-            let locShow = prop["loc"].asPropList!["show"].asPoint!
-            let speedList = prop["speed"].asPropList!["move1"].asList!
+            let locShow = prop["loc"]["show"].asPoint!
+            let speedList = prop["speed"]["move1"].asList!
             let spd = [speedList[1].asInt!, speedList[2].asInt!]
             let temp = doMove(toWhere: locShow, speed: spd)
             if temp != 0 {
@@ -63,13 +63,13 @@ class BehaviorMsgBoxTitle {
                 prop["state"] = .string("move2")
             }
         case "move2":
-            let locEnd = prop["loc"].asPropList!["end"].asPoint!
-            let speedList = prop["speed"].asPropList!["move2"].asList!
+            let locEnd = prop["loc"]["end"].asPoint!
+            let speedList = prop["speed"]["move2"].asList!
             let spd = [speedList[1].asInt!, speedList[2].asInt!]
             let temp = doMove(toWhere: locEnd, speed: spd)
             if temp != 0 {
                 prop["state"] = .string("done")
-                updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
+                updateLoc(newloc: prop["loc"]["Start"].asPoint!)
                 if !prop["callback"].isVoid {
                     let cb = prop["callback"].asPropList!
                     (cb["object"]).callback(cb["parameter"])
@@ -92,7 +92,7 @@ class BehaviorMsgBoxTitle {
     func doMove(toWhere: Point, speed: [Int]) -> Int {
         switch prop["state"].asString! {
         case "move1":
-            let locShow = prop["loc"].asPropList!["show"].asPoint!
+            let locShow = prop["loc"]["show"].asPoint!
             sprite(myNum).loc = Point(x: locShow.x, y: sprite(myNum).loc.y)
             if sprite(myNum).loc.y < toWhere.y {
                 let newloc = sprite(myNum).loc + Point(x: speed[0], y: speed[1])

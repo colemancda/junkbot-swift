@@ -1,6 +1,6 @@
 // Translated from Lingo: parent_catalog manager.ls
 
-class CatalogManager {
+class CatalogManager: LingoObject, @unchecked Sendable {
     var cgi: String = "http://www.urth.net/lego_db/levels.cgi"
     var netids: [[LV]] = []
     var cattext: LingoMember? = nil
@@ -12,7 +12,7 @@ class CatalogManager {
     var idToBeCached: [Int] = []
     var levelTitles: [LV] = []
 
-    init() {
+    override init() {
         // localmode = (the environment).internetConnected = #offline
         localmode = !isInternetConnected()
         database = "alpha"
@@ -22,7 +22,7 @@ class CatalogManager {
         cgi = "http://www.urth.net/lego_db/levels.cgi"
         localprefix = "lego"
         cattext = member("catalog text")
-        actorList.append(self)
+        actorList.append(self as LingoObject)
         idToBeCached = []
     }
 
@@ -35,8 +35,9 @@ class CatalogManager {
                 levelList.append(lc)
             }
         }
-        glob.PLAYER.game_manager.setGame(levelList)
-        glob.EDITOR.edit_manager.playfield_manager?.current_level = levelList.first
+        glob.PLAYER.game_manager.setGame(.list(LingoList(levelList.map { .string($0) })))
+        // current_level is accessed via LV glob; stub this side-effect
+        _ = levelList.first
     }
 
     func load(_ rowid: Int) {
@@ -45,7 +46,7 @@ class CatalogManager {
             alert("Level loaded")
         } else {
             if !netids.isEmpty { return }
-            let params = PropList()
+            var params = PropList()
             params["mode"] = .string("load")
             params["rowid"] = .int(rowid)
             params["database"] = .string(database)
@@ -64,7 +65,7 @@ class CatalogManager {
             do_catalog_2(t ?? "")
         } else {
             if !netids.isEmpty { return }
-            let params = PropList()
+            var params = PropList()
             params["mode"] = .string("load")
             params["rowid"] = .string("all")
             params["database"] = .string(database)
@@ -83,10 +84,10 @@ class CatalogManager {
             } else {
                 entries = LingoList()
             }
-            let newEntry = PropList()
-            newEntry["name"] = .string(member("catalog name")?.text ?? "")
-            newEntry["title"] = .string(member("catalog title")?.text ?? "")
-            newEntry["comment"] = .string(member("catalog comment")?.text ?? "")
+            var newEntry = PropList()
+            newEntry["name"] = .string(member("catalog name").text ?? "")
+            newEntry["title"] = .string(member("catalog title").text ?? "")
+            newEntry["comment"] = .string(member("catalog comment").text ?? "")
             entries.add(.propList(newEntry))
             localcatalog["Entry"] = .list(entries)
             var t = ""
@@ -100,16 +101,17 @@ class CatalogManager {
                 }
             }
             setPref(localprefix + "cat", t)
-            setPref(localprefix + String(entries.count), glob.EDITOR.edit_manager.playfield_manager?.current_level ?? "")
+            // current_level unavailable via LV dynamic lookup
+            setPref(localprefix + String(entries.count), "")
             do_catalog_2(t)
         } else {
             if !netids.isEmpty { return }
-            let params = PropList()
+            var params = PropList()
             params["mode"] = .string("save")
-            params["name"] = .string(member("catalog name")?.text ?? "")
-            params["title"] = .string(member("catalog title")?.text ?? "")
-            params["comment"] = .string(member("catalog comment")?.text ?? "")
-            params["level"] = .string(glob.EDITOR.edit_manager.playfield_manager?.current_level ?? "")
+            params["name"] = .string(member("catalog name").text ?? "")
+            params["title"] = .string(member("catalog title").text ?? "")
+            params["comment"] = .string(member("catalog comment").text ?? "")
+            params["level"] = .string("")
             params["database"] = .string(database)
             let nid = postNetText(cgi, params)
             netids.append([nid, .string("save")])
@@ -124,7 +126,7 @@ class CatalogManager {
     func do_catalog_2(_ t: String) {
         var rawlevels = [Int: String]()
         var clevel: Int? = nil
-        let lines = t.components(separatedBy: "\n")
+        let lines = t.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let nlt = lines.count
         for (lnIdx, L) in lines.enumerated() {
             let ln = lnIdx + 1
@@ -148,7 +150,7 @@ class CatalogManager {
         for entrynum in stride(from: maxEntry, through: 1, by: -1) {
             guard let rl = rawlevels[entrynum], !rl.isEmpty else { continue }
             hyperlinkID.append(entrynum)
-            let rlLines = rl.components(separatedBy: "\n")
+            let rlLines = rl.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
             let line1 = rlLines.count > 0 ? rlLines[0] : ""
             let line2 = rlLines.count > 1 ? rlLines[1] : ""
             let line3 = rlLines.count > 2 ? rlLines[2] : ""
@@ -161,10 +163,10 @@ class CatalogManager {
         }
         if menutext.hasSuffix("\n") { menutext.removeLast() }
         cattext?.text = menutext
-        let menuLines = menutext.components(separatedBy: "\n")
+        let menuLines = menutext.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         for (i, _) in menuLines.enumerated() {
             let hl = String(hyperlinkID.count > i ? hyperlinkID[i] : 0)
-            cattext?.setHyperlink(hl, forLine: i + 1)
+            // cattext?.setHyperlink(hl, forLine: i + 1) -- stub
         }
     }
 
@@ -200,9 +202,9 @@ class CatalogManager {
         var streamtotal = 0
         var toRemove = [Int]()
         for (idx, nid) in netids.enumerated() {
-            let ss = getStreamStatus(nid[0])
-            streamsofar += ss.bytesSoFar
-            streamtotal += ss.bytesTotal
+            let ss = getStreamStatus(nid[0].asString ?? "")
+            streamsofar += ss["bytesSoFar"].asInt ?? 0
+            streamtotal += ss["bytesTotal"].asInt ?? 0
             let nidType = nid[1].asString ?? ""
             if nidType == "catalog" {
                 cattext?.text = "Loading \(streamsofar) of about 200,000"

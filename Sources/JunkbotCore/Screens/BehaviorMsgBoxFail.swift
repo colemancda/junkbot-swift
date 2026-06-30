@@ -43,8 +43,8 @@ class BehaviorMsgBoxFail {
         case "hide":
             break
         case "move1":
-            let locShow = prop["loc"].asPropList!["show"].asPoint!
-            let speedList = prop["speed"].asPropList!["move1"].asList!
+            let locShow = prop["loc"]["show"].asPoint!
+            let speedList = prop["speed"]["move1"].asList!
             let spd = [speedList[1].asInt!, speedList[2].asInt!]
             let temp = doMove(toWhere: locShow, speed: spd)
             if temp != 0 {
@@ -58,13 +58,13 @@ class BehaviorMsgBoxFail {
         case "show":
             setCursor("none")
         case "move2":
-            let locEnd = prop["loc"].asPropList!["end"].asPoint!
-            let speedList = prop["speed"].asPropList!["move2"].asList!
+            let locEnd = prop["loc"]["end"].asPoint!
+            let speedList = prop["speed"]["move2"].asList!
             let spd = [speedList[1].asInt!, speedList[2].asInt!]
             let temp = doMove(toWhere: locEnd, speed: spd)
             if temp != 0 {
                 prop["state"] = .string("hide")
-                updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
+                updateLoc(newloc: prop["loc"]["Start"].asPoint!)
                 if !prop["callback"].isVoid {
                     let cb = prop["callback"].asPropList!
                     (cb["object"]).callback(cb["parameter"])

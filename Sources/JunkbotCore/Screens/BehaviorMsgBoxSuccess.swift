@@ -52,7 +52,7 @@ class BehaviorMsgBoxSuccess {
         let buildingEntry = buildingList[building].asPropList!
         let levelsLV = buildingEntry["LEVELS"]
         let levelsList = levelsLV.asList!
-        let gold = levelsList[level].asPropList!["gold"].asInt!
+        let gold = levelsList[level]["gold"].asInt!
         if level > 15 {
             return
         }
@@ -107,11 +107,11 @@ class BehaviorMsgBoxSuccess {
             }
         }
         let keyrequired = Glob.shared["keyrequired"].asInt!
-        if (keys >= keyrequired) && !(building == 4) && !(buildingList[building + 1].asPropList!["state"].asString == "open") {
+        if (keys >= keyrequired) && !(building == 4) && !(buildingList[building + 1]["state"].asString == "open") {
             member("msgbox_2").text = "YOU UNLOCKED BUILDING \(building + 1)"
             let todo = prop["todo"].asList!
             todo.add(.string("unlock"))
-            buildingList[building + 1].asPropList!["state"] = .string("open")
+            buildingList[building + 1]["state"] = .string("open")
             SndSFX("unlock2")
         } else {
             if keys >= keyrequired {
@@ -153,8 +153,8 @@ class BehaviorMsgBoxSuccess {
         case "hide":
             break
         case "move1":
-            let locShow = prop["loc"].asPropList!["show"].asPoint!
-            let speedList = prop["speed"].asPropList!["move1"].asList!
+            let locShow = prop["loc"]["show"].asPoint!
+            let speedList = prop["speed"]["move1"].asList!
             let spd = [speedList[1].asInt!, speedList[2].asInt!]
             let temp = doMove(toWhere: locShow, speed: spd)
             if temp != 0 {
@@ -189,13 +189,13 @@ class BehaviorMsgBoxSuccess {
             }
             prop["state"] = .string("showdone")
         case "move2":
-            let locEnd = prop["loc"].asPropList!["end"].asPoint!
-            let speedList = prop["speed"].asPropList!["move2"].asList!
+            let locEnd = prop["loc"]["end"].asPoint!
+            let speedList = prop["speed"]["move2"].asList!
             let spd = [speedList[1].asInt!, speedList[2].asInt!]
             let temp = doMove(toWhere: locEnd, speed: spd)
             if temp != 0 {
                 prop["state"] = .string("hide")
-                updateLoc(newloc: prop["loc"].asPropList!["Start"].asPoint!)
+                updateLoc(newloc: prop["loc"]["Start"].asPoint!)
                 if !prop["callback"].isVoid {
                     let cb = prop["callback"].asPropList!
                     (cb["object"]).callback(cb["parameter"])

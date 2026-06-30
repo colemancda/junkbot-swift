@@ -23,7 +23,7 @@ class BehaviorListRoHiLite {
         if (roLineNum > 14) || (roLineNum < 0) {
             return
         }
-        Glob.shared["current"].asPropList!["level"] = .int(roLineNum + 1)
+        Glob.shared["current"]["level"] = .int(roLineNum + 1)
         SndSFX("jump2")
         (Glob.shared["PLAYER"]).game_manager.startGame()
     }

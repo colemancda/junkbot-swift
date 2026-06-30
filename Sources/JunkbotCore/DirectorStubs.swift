@@ -7,8 +7,8 @@ nonisolated(unsafe) public var currentTicks: Int = 0         // updated by game 
 nonisolated(unsafe) public var currentMilliseconds: Int = 0  // updated by game loop
 
 public let glob = Glob.shared
-public var actorList: [LingoObject] = []
-public var runMode: String = "Author"
+nonisolated(unsafe) public var actorList: [LingoObject] = []
+nonisolated(unsafe) public var runMode: String = "Author"
 public var moviePath: String = ""
 public var movieName: String = ""
 
@@ -49,6 +49,17 @@ public func frameReady() -> Bool { true }
 public func postNetText(_ url: String, _ params: PropList) -> LV { .void }
 public func getStreamStatus(_ url: String) -> PropList { PropList() }
 public func tellStreamStatus(_ status: Int) {}
+
+
+public func isInternetConnected() -> Bool { false }
+public func alert(_ msg: String) {}
+public func goToNetPage(_ url: LV) {}
+nonisolated(unsafe) public var selection: String = ""
+public func pass() {}
+// MARK: - Cast/member stubs
+public func numberOfCastMembers(inCastLib: String) -> Int { 0 }
+public func member(_ n: Int, _ castLib: String) -> LingoMember? { nil }
+nonisolated(unsafe) public var mouseLine: Int = 0
 public func netDone(_ id: LV) -> Bool { false }
 public func netTextResult(_ id: LV) -> String { "" }
 public func preloadNetThing(_ url: String) {}
