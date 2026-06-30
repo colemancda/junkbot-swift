@@ -8,7 +8,7 @@ Generated from translated Swift headers and original Lingo files
 - Swift files changed: 95
 - Original files missing: 0
 - Original handlers without a matching Swift function/init name: 8
-- Stub/TODO/commented pending lines: 61
+- Stub/TODO/commented pending lines: 7
 
 ## Handler Coverage
 
@@ -125,64 +125,10 @@ Generated from translated Swift headers and original Lingo files
 
 ## Stub / TODO / Skipped Translation Lines
 
-- `Sources/JunkbotCore/DirectorStubs.swift`:24: return (n > 1) ? (1 + (currentTicks % n)) : 1  // deterministic stub
-- `Sources/JunkbotCore/DirectorStubs.swift`:61: // Stubbed sound effect playback
-- `Sources/JunkbotCore/Loading/DownloadManager.swift`:53: // debug stub — no-op
-- `Sources/JunkbotCore/Catalog/CatalogManager.swift`:70: // current_level is accessed via LV glob; stub this side-effect
-- `Sources/JunkbotCore/Catalog/CatalogManager.swift`:313: // cattext?.setHyperlink(hl, forLine: i + 1) -- stub
-- `Sources/JunkbotCore/Catalog/BehaviorCatalogLocalCheckbox.swift`:33: // catalog_manager.localmode is accessed via LV dynamic lookup — stub
-- `Sources/JunkbotCore/Internal/BehaviorLegopartsManager.swift`:351: // Stub: image splitting would be performed using platform image APIs
-- `Sources/JunkbotCore/Internal/BehaviorDisplayText.swift`:82: // mySprite.visible = 1  (stub: set sprite visible)
-- `Sources/JunkbotCore/Internal/BehaviorDisplayText.swift`:175: // Stub: would measure text dimensions via member API
-- `Sources/JunkbotCore/Internal/BehaviorDisplayText.swift`:423: return false  // stub
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:45: // Stub: platform sound API integration needed
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:72: // Stub: platform sound API integration needed.
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:110: // Stub: platform sound API integration needed.
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:148: // Stub: platform sound API integration needed.
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:167: // Stub: return 0 until member text is accessible.
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:191: // Stub: platform sound API integration needed.
-- `Sources/JunkbotCore/Internal/MovieSoundCode.swift`:228: // Stub: platform sound API (e.g. AVAudioPlayer) integration needed.
-- `Sources/JunkbotCore/Internal/BehaviorTooltip.swift`:214: // displayLoc = the mouseLoc (stub)
-- `Sources/JunkbotCore/Internal/BehaviorTooltip.swift`:228: // stub: send DisplayText_SetText to enrolled display behaviors
-- `Sources/JunkbotCore/Internal/BehaviorTooltip.swift`:247: // stub: clear display text
-- `Sources/JunkbotCore/Screens/BehaviorMsgBoxSuccess.swift`:539: // Image compositing stub — sets up key icon strip
-- `Sources/JunkbotCore/Play/PlayManager.swift`:93: // setLevel(Glob.shared.EDITOR.edit_manager.playfield_manager.current_level) -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:144: // config = Glob.shared["config_manager"].asObject()?.parseParams(confStr) -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:151: // if config["info"] != nil { member("level title")?.text = ... } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:172: Glob.shared["partclick_recipient"] = .void  // stub: store self reference
-- `Sources/JunkbotCore/Play/PlayManager.swift`:193: Glob.shared["partclick_recipient"] = .void  // stub: store self reference
-- `Sources/JunkbotCore/Play/PlayManager.swift`:309: // member("play status field")?.text = t -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:310: // member("play move counter field")?.text = String(gamestatus["#moves"].asInt ?? 0) -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:323: // repeat with part in playfield_manager.getPartsByLabel(args["label"]) { part.behavior.notify(["switch": args["state"]]) } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:339: // movePieceGroup sprite manipulation -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:510: // if Glob.shared.EDITOR["drag_sprite"] == nil { return } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:511: // if playfield_manager == nil { return } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:515: // a.stepFrame() -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:553: let everythingPlaceable = 1 // Simplified stub for dragging
-- `Sources/JunkbotCore/Play/PlayManager.swift`:682: // playfield_manager.erasePieceGroup(movePieceGroup, 1) -- stub
-- `Sources/JunkbotCore/Play/BehaviorMasterBoxOut.swift`:12: // Glob.shared["master_obj"].getOut() -- stub
-- `Sources/JunkbotCore/Play/BehaviorMasterBoxOut.swift`:13: // Glob.shared["award_obj"].dropBox() -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:332: // movePieceGroup sprite manipulation -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:546: let everythingPlaceable = 1  // Simplified stub for dragging
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:214: // stub: boundary check using pf_size
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:218: let pos_x = 0  // stub
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:219: let pos_y = 0  // stub
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:220: let mW = 0  // stub: playfield_manager.pf_size width
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:221: let mH = 0  // stub: playfield_manager.pf_size height
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:225: // myObj = playfield_manager.getPart(point(r, pos_y)) -- stub
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:226: let myObj: PropList? = nil  // stub
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:242: let myObj: PropList? = nil  // stub
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:258: let myObj: PropList? = nil  // stub
-- `Sources/JunkbotCore/Play/HazardFloatParent.swift`:274: let myObj: PropList? = nil  // stub
-- `Sources/JunkbotCore/Play/GameManager.swift`:72: let stubLevelText = "[info:[title:\"Stub Level\", hint:\"Walk to the exit!\", par:10], bricks:[[#BRICK_01, point(0,0)]]]"
-- `Sources/JunkbotCore/Play/GameManager.swift`:74: let leveldata = (Glob.shared["config_manager"].asObject() as? BehaviorConfigManager)?.parseParams(stubLevelText) ?? PropList()
-- `Sources/JunkbotCore/Play/GameManager.swift`:82: levelEntry["data"] = .string(stubLevelText)
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:98: // s = playfield_manager.getASprite() -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:99: // part.auxSprites["myDrip"] = s -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:100: // s.ink = 8 -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:101: // s.visible = 1 -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:125: // s.member = member("drip_falling_1") -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:126: // s.rect = s.member.rect -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:128: // s.member = member("drip_splashing_\(ds)") -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:129: // s.rect = s.member.rect -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:137: // s.loc = driploc -- stub
-- `Sources/JunkbotCore/Play/HazardDripParent.swift`:138: // s.locZ = top_locz -- stub
-- `Sources/JunkbotCore/Editor/BehaviorEditorBgEditItem.swift`:29: // Since we can't dynamic-call bg_edit_item on LV, stub this call out.
+- `Sources/JunkbotCore/Play/GameManager.swift`:72: let stubLevelText =
+- `Sources/JunkbotCore/Play/GameManager.swift`:73: "[info:[title:\"Stub Level\", hint:\"Walk to the exit!\", par:10], bricks:[[#BRICK_01, point(0,0)]]]"
+- `Sources/JunkbotCore/Play/GameManager.swift`:77: stubLevelText) ?? PropList()
+- `Sources/JunkbotCore/Play/GameManager.swift`:85: levelEntry["data"] = .string(stubLevelText)
