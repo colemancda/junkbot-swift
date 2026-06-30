@@ -5,7 +5,11 @@ typealias DefaultExecutorFactory = JavaScriptEventLoop
 
 extension JSValue {
   static func array(_ values: [JSValue]) -> JSValue {
-    JSObject.global["Array"].function!.new(arguments: values).jsValue
+    let array = JSObject.global["Array"].function!.new()
+    for value in values {
+      _ = array.push!(value)
+    }
+    return array.jsValue
   }
 
   var isTruthy: Bool {
@@ -3209,12 +3213,12 @@ let keydownClosure = JSClosure { args -> JSValue in
   if ctrlKey && key == "p" {
     _ = event.preventDefault()
     // playback saved solution recording
-    let json = JSObject.global.localStorage[
-      storageKeys.solutionRecording(currentLevel.title.string ?? "")]
+    let solutionRecordingKey = storageKeys["solutionRecording"]!.function!.callAsFunction(this: JSObject.global, currentLevel.title.string ?? "").string ?? ""
+    let json = JSObject.global.localStorage.object![solutionRecordingKey]
     if !json.isUndefined && !json.isNull {
-      _ = toggleEditing.callAsFunction(this: JSValue.null, .undefined)
+      _ = toggleEditing.callAsFunction(this: JSObject.global)
       if editing {
-        _ = toggleEditing.callAsFunction(this: JSValue.null, .undefined)
+        _ = toggleEditing.callAsFunction(this: JSObject.global)
       }
       playbackEvents = JSObject.global.JSON.parse!(json)
     }
@@ -3230,7 +3234,7 @@ let keydownClosure = JSClosure { args -> JSValue in
     }
   case "E":
     if !repeatKey {
-      _ = toggleEditing.callAsFunction(this: JSValue.null, .undefined)
+      _ = toggleEditing.callAsFunction(this: JSObject.global)
     }
   case "M":
     if !repeatKey {
@@ -3402,7 +3406,7 @@ var updateMouse = { (event: JSValue) -> JSValue in
   eventObj.x = .number(mouse["worldX"] as? Double ?? 0.0)
   eventObj.y = .number(mouse["worldY"] as? Double ?? 0.0)
   eventObj.t = .number(Double(frameCounter))
-  _ = playthroughEvents.push(eventObj)
+  playthroughEvents.append(eventObj.jsValue)
   return .undefined
 }
 var brickAt = { (worldPos: JSValue, options: JSValue) -> JSValue in
@@ -3465,15 +3469,15 @@ var allConnectedToFixed = { (options: JSValue) -> [JSValue] in
 
     let ignoreEntitiesJS =
       options.isUndefined
-      ? JSObject.global["Array"].function!.new()
+      ? JSObject.global["Array"].function!.new().jsValue
       : (options.ignoreEntities.isUndefined
-        ? JSObject.global["Array"].function!.new() : options.ignoreEntities)
+        ? JSObject.global["Array"].function!.new().jsValue : options.ignoreEntities)
 
     for otherEntity in entitiesToCheck {
       let oX = otherEntity.x.number ?? 0.0
       let oWidth = otherEntity.width.number ?? 0.0
       if eX + eWidth > oX && eX < oX + oWidth {
-        let isIgnored = ignoreEntitiesJS.includes!(otherEntity).boolean == true
+        let isIgnored = ignoreEntitiesJS.includes(otherEntity).boolean == true
         if !isIgnored && !JSValueArrayContains(connectedToFixed, otherEntity) {
           connectedToFixed.append(otherEntity)
           addAnyAttached(otherEntity)
@@ -3484,10 +3488,10 @@ var allConnectedToFixed = { (options: JSValue) -> [JSValue] in
   for entity in entities {
     let ignoreEntitiesJS =
       options.isUndefined
-      ? JSObject.global["Array"].function!.new()
+      ? JSObject.global["Array"].function!.new().jsValue
       : (options.ignoreEntities.isUndefined
-        ? JSObject.global["Array"].function!.new() : options.ignoreEntities)
-    let isIgnored = ignoreEntitiesJS.includes!(entity).boolean == true
+        ? JSObject.global["Array"].function!.new().jsValue : options.ignoreEntities)
+    let isIgnored = ignoreEntitiesJS.includes(entity).boolean == true
     if !isIgnored && !JSValueArrayContains(connectedToFixed, entity) {
       if entity.fixed.boolean == true {
         connectedToFixed.append(entity)
@@ -3504,9 +3508,9 @@ var connectsToFixed = { (startEntity: JSValue, options: JSValue) -> JSValue in
     ? 0.0 : (options.direction.isUndefined ? 0.0 : (options.direction.number ?? 0.0))
   let ignoreEntitiesJS =
     options.isUndefined
-    ? JSObject.global["Array"].function!.new()
+    ? JSObject.global["Array"].function!.new().jsValue
     : (options.ignoreEntities.isUndefined
-      ? JSObject.global["Array"].function!.new() : options.ignoreEntities)
+      ? JSObject.global["Array"].function!.new().jsValue : options.ignoreEntities)
 
   var visited = [JSValue]()
   var search: ((JSValue) -> Bool)!
@@ -3537,7 +3541,7 @@ var connectsToFixed = { (startEntity: JSValue, options: JSValue) -> JSValue in
     for otherEntity in entitiesToCheck {
       let oX = otherEntity.x.number ?? 0.0
       let oWidth = otherEntity.width.number ?? 0.0
-      let isIgnored = ignoreEntitiesJS.includes!(otherEntity).boolean == true
+      let isIgnored = ignoreEntitiesJS.includes(otherEntity).boolean == true
 
       if otherEntity.grabbed.boolean != true && !isIgnored
         && !JSValueArrayContains(visited, otherEntity) && fX + fWidth > oX && fX < oX + oWidth
@@ -3621,9 +3625,9 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
           {
 
             let ignoreArr = JSObject.global["Array"].function!.new()
-            for att in attached { _ = ignoreArr.push(att) }
+            for att in attached { _ = ignoreArr.push!(att) }
             let opts = JSObject.global.Object.function!.new()
-            opts.ignoreEntities = ignoreArr
+            opts.ignoreEntities = ignoreArr.jsValue
 
             if connectsToFixed.callAsFunction(this: JSValue.null, entity, opts).boolean != true {
               let entitiesToCheck3 = entitiesByBottomY[entity.y.number ?? 0.0] ?? []
@@ -3649,7 +3653,7 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
     return true
   }
 
-  if paused.boolean == true && editing.boolean != true {
+  if paused && !editing {
     return JSObject.global["Array"].function!.new()
   }
   let posObj = JSObject.global.Object.function!.new()
@@ -3710,7 +3714,7 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   return grabs
 }
 
-var pendingGrabs = JSObject.global["Array"].function!.new()
+var pendingGrabs: JSValue = JSObject.global["Array"].function!.new().jsValue
 var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
   let grabType: JSValue = options.isUndefined ? .undefined : options.grabType
   let duringPlayback = options.isUndefined ? false : (options.duringPlayback.boolean ?? false)
@@ -3736,7 +3740,7 @@ var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
   eventObj.t = .number(Double(frameCounter))
   eventObj.grabType = grabType
   eventObj.editing = .boolean(editing)
-  _ = playthroughEvents.push(eventObj)
+  playthroughEvents.append(eventObj.jsValue)
 
   _ = undoable.callAsFunction(this: JSValue.null, .undefined)
   dragging.removeAll()
@@ -3755,10 +3759,10 @@ var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
     let bX = brick.x.number ?? 0.0
     let bY = brick.y.number ?? 0.0
 
-    let fX = floor.callAsFunction(this: JSValue.null, .number(bX), snapX).number ?? 0.0
-    let fMX = floor.callAsFunction(this: JSValue.null, .number(mWorldX), snapX).number ?? 0.0
-    let fY = floor.callAsFunction(this: JSValue.null, .number(bY), snapY).number ?? 0.0
-    let fMY = floor.callAsFunction(this: JSValue.null, .number(mWorldY), snapY).number ?? 0.0
+    let fX = floor(bX, Double(snapX))
+    let fMX = floor(mWorldX, Double(snapX))
+    let fY = floor(bY, Double(snapY))
+    let fMY = floor(mWorldY, Double(snapY))
 
     gOffset.x = .number(fX - fMX)
     gOffset.y = .number(fY - fMY)
@@ -3767,8 +3771,8 @@ var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
       brick.selected = .boolean(true)
     }
   }
-  _ = playSound.callAsFunction(this: JSValue.null, .string("blockPickUp"))
-  if editing.boolean != true {
+  _ = playSound(.string("blockPickUp"), .undefined, .undefined)
+  if !editing {
     moves += 1
   }
   return .undefined
@@ -3776,7 +3780,7 @@ var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
 
 let wheelClosure = JSClosure { args in
   let event = args[0]
-  _ = updateMouse.callAsFunction(this: JSValue.null, event)
+  _ = updateMouse(event)
   _ = event.preventDefault()
   let delta =
     (event.deltaY.number == 0.0 && event.deltaX.number != nil && event.deltaX.number != 0.0)
@@ -3785,9 +3789,9 @@ let wheelClosure = JSClosure { args in
   pos.x = .number(mouse["x"] as? Double ?? 0.0)
   pos.y = .number(mouse["y"] as? Double ?? 0.0)
   if delta < 0.0 {
-    _ = zoomIn.callAsFunction(this: JSValue.null, pos)
+    _ = zoomIn.callAsFunction(this: JSObject.global, pos)
   } else {
-    _ = zoomOut.callAsFunction(this: JSValue.null, pos)
+    _ = zoomOut.callAsFunction(this: JSObject.global, pos)
   }
   return .undefined
 }
@@ -3796,7 +3800,7 @@ _ = JSObject.global.canvas.addEventListener("wheel", wheelClosure)
 
 let pointermoveClosure = JSClosure { args in
   let event = args[0]
-  _ = updateMouse.callAsFunction(this: JSValue.null, event)
+  _ = updateMouse(event)
   if pendingGrabs.length.number ?? 0.0 > 0.0 {
     let threshold = 10.0
     let mY = mouse["y"] as? Double ?? 0.0
@@ -3848,31 +3852,28 @@ let pointermoveClosure = JSClosure { args in
 retainedClosures.append(pointermoveClosure)
 _ = JSObject.global.canvas.addEventListener("pointermove", pointermoveClosure)
 
-let pointerdownClosure = JSClosure { args in
+let pointerdownClosure = JSClosure { args -> JSValue in
   let event = args[0]
-  if muted.boolean != true {
+  if !muted {
     _ = audioCtx.resume!()
   }
-  _ = JSObject.global.canvas.focus!()
-  _ = JSObject.global.window.getSelection!().removeAllRanges!()
-  if paused.boolean == true && editing.boolean != true {
+  _ = JSObject.global.canvas.focus()
+  _ = JSObject.global.window.getSelection().removeAllRanges()
+  if paused && !editing {
     return .undefined
   }
-  _ = updateMouse.callAsFunction(this: JSValue.null, event)
+  _ = updateMouse(event)
   if event.button.number != 0.0 {
     return .undefined
   }
-  _ = pointerEventCache.push(event)
+  pointerEventCache.append(event)
   mouse["atDragStartX"] = mouse["x"]
   mouse["atDragStartY"] = mouse["y"]
   mouse["atDragStartWorldX"] = mouse["worldX"]
   mouse["atDragStartWorldY"] = mouse["worldY"]
 
   if dragging.isEmpty {
-    _ = sortEntitiesForRendering.callAsFunction(this: JSValue.null, entities)  // wait entities is swift array. Need to pass JS array
-    let entitiesJS = JSObject.global["Array"].function!.new()
-    for e in entities { _ = entitiesJS.push(e) }
-    _ = sortEntitiesForRendering.callAsFunction(this: JSValue.null, entitiesJS)
+    _ = sortEntitiesForRendering(.undefined)
     // Actually sorting `entities` in Swift:
     entities.sort { a, b in
       let diff = (a.y.number ?? 0.0) - (b.y.number ?? 0.0)
@@ -3880,7 +3881,7 @@ let pointerdownClosure = JSClosure { args in
       return (a.x.number ?? 0.0) < (b.x.number ?? 0.0)
     }
 
-    let grabs = possibleGrabs.callAsFunction(this: JSValue.null, .undefined)
+    let grabs = possibleGrabs(.undefined)
     if grabs.selection.isUndefined {
       for entity in entities {
         entity.selected = .undefined
@@ -3890,11 +3891,11 @@ let pointerdownClosure = JSClosure { args in
     if length == 1 {
       let opts = JSObject.global.Object.function!.new()
       opts.grabType = .string("single")
-      _ = startGrab.callAsFunction(this: JSValue.null, grabs[0], opts)
-      _ = playSound.callAsFunction(this: JSValue.null, .string("blockClick"))
+      _ = startGrab(grabs[0], opts)
+      _ = playSound(.string("blockClick"), .undefined, .undefined)
     } else if length > 1 {
       pendingGrabs = grabs
-      _ = playSound.callAsFunction(this: JSValue.null, .string("blockClick"))
+      _ = playSound(.string("blockClick"), .undefined, .undefined)
     } else if editing {
       let box = JSObject.global.Object.function!.new()
       let wX = mouse["worldX"] as? Double ?? 0.0
@@ -3904,14 +3905,14 @@ let pointerdownClosure = JSClosure { args in
       box.x2 = .number(wX)
       box.y2 = .number(wY)
       selectionBox = box
-      _ = playSound.callAsFunction(this: JSValue.null, .string("selectStart"))
+      _ = playSound(.string("selectStart"), .undefined, .undefined)
     }
   }
   return .undefined
 }
 retainedClosures.append(pointerdownClosure)
 _ = JSObject.global.canvas.addEventListener("pointerdown", pointerdownClosure)
-let contextmenuClosure = JSClosure { args in
+let contextmenuClosure = JSClosure { args -> JSValue in
   let event = args[0]
   _ = event.preventDefault()
   let pos = JSObject.global.Object.function!.new()
@@ -3919,7 +3920,7 @@ let contextmenuClosure = JSClosure { args in
   pos.worldY = .number(mouse["worldY"] as? Double ?? 0.0)
   let opts = JSObject.global.Object.function!.new()
   opts.includeFixed = .boolean(true)
-  let hoveredBrick = brickAt.callAsFunction(this: JSValue.null, pos, opts)
+  let hoveredBrick = brickAt(pos.jsValue, opts.jsValue)
   if !hoveredBrick.isUndefined && !hoveredBrick.isNull {
     if hoveredBrick.switchID.isUndefined == false {
       _ = showPrompt.callAsFunction(
@@ -3971,14 +3972,14 @@ var updateDrag = { (mousePos: JSValue) -> JSValue in
   let wY = mousePos.worldY.number ?? 0.0
   if !wX.isNaN && !wX.isInfinite && !wY.isNaN && !wY.isInfinite {
     for brick in dragging {
-      let offset = brick.grabOffset
+      let offset = brick[property: "grabOffset"]
       let ox = offset.x.number ?? 0.0
       let oy = offset.y.number ?? 0.0
-      let fx = floor.callAsFunction(this: JSValue.null, .number(wX), snapX).number ?? 0.0
-      let fy = floor.callAsFunction(this: JSValue.null, .number(wY), snapY).number ?? 0.0
+      let fx = floor(wX, Double(snapX))
+      let fy = floor(wY, Double(snapY))
       brick.x = .number(fx + ox)
       brick.y = .number(fy + oy)
-      _ = entityMoved.callAsFunction(this: JSValue.null, brick)
+      entityMoved(brick)
     }
   }
   return .undefined
@@ -3991,7 +3992,7 @@ var canRelease = { () -> Bool in
   if editing {
     return true
   }
-  if paused.boolean == true && editing.boolean != true {
+  if paused && !editing {
     return false
   }
 
@@ -4077,7 +4078,7 @@ var finishDrag = { (options: JSValue) -> JSValue in
   eventObj.y = .number(mWorldY)
   eventObj.t = .number(Double(frameCounter))
   eventObj.editing = .boolean(editing)
-  _ = playthroughEvents.push(eventObj)
+  playthroughEvents.append(eventObj.jsValue)
 
   for entity in dragging {
     entity.grabbed = .undefined
@@ -5085,7 +5086,7 @@ var handleRewind = { () -> JSValue in
       if frameCounter < 0 {
         frameCounter = 0
       } else if frameCounter > 0 {
-        let pLen = Int(playthroughEvents.length.number ?? 0.0)
+        let pLen = playthroughEvents.count
         for j in 0..<pLen {
           let event = playthroughEvents[j]
           if Int(event.t.number ?? 0.0) == frameCounter + 1 {
@@ -5172,7 +5173,7 @@ var handlePlayback = { () -> JSValue in
             _ = startGrab.callAsFunction(this: JSValue.null, grabs.downward, opts)
           } else {
             opts.grabType = .string("single")
-            _ = startGrab.callAsFunction(this: JSValue.null, grabs[0], opts)
+            _ = startGrab(grabs[0], opts)
           }
         } else {
           desynchronized = true
@@ -5189,7 +5190,7 @@ var handlePlayback = { () -> JSValue in
         mouse["worldY"] = playbackMouse.worldY
         mouse["x"] = playbackMouse.x
         mouse["y"] = playbackMouse.y
-        _ = playthroughEvents.push(event)
+        playthroughEvents.append(event)
       }
     }
   }
@@ -5388,7 +5389,7 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
   let diff = diffPatcher.diff!(levelLastFrame, currentLevel)
   evt.levelPatch = diffPatcher.clone(diff)
 
-  _ = playthroughEvents.push(evt)
+  playthroughEvents.append(evt)
   levelLastFrame = diffPatcher.clone(currentLevel)
   return .undefined
 }
@@ -5715,8 +5716,8 @@ var checkLevelEnd = { () -> JSValue in
             && parseRoute.callAsFunction(this: JSValue.null, JSObject.global.location.hash).game
               .string != GAME_USER_CREATED.string
           {
-            let scoreKey = storageKeys.score!(titleStr).string ?? ""
-            let solutionKey = storageKeys.solutionRecording!(titleStr).string ?? ""
+            let scoreKey = storageKeys["score"]!.function!.callAsFunction(this: JSObject.global, titleStr).string ?? ""
+            let solutionKey = storageKeys["solutionRecording"]!.function!.callAsFunction(this: JSObject.global, titleStr).string ?? ""
             let formerFewestStr = JSObject.global.localStorage[scoreKey].string ?? "NaN"
             let formerFewest = Double(formerFewestStr) ?? .nan
 
