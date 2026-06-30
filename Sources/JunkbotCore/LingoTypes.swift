@@ -94,9 +94,9 @@ public enum LV: @unchecked Sendable {
     case point(x: Int, y: Int)
     case list(LingoList)
     indirect case propList(PropList)
-    case object(LingoObject)  // typed object reference (no AnyObject in Embedded Swift)
+case object(LingoObject)  // typed object reference (no AnyObject in Embedded Swift)
 
-public subscript(dynamicMember member: String) -> LV {
+    public subscript(dynamicMember member: String) -> LV {
         get {
             if case .propList(let p) = self { return p[member] }
             return .void
@@ -104,7 +104,6 @@ public subscript(dynamicMember member: String) -> LV {
         set {
             if case .propList(let p) = self {
                 p[member] = newValue
-                self = .propList(p)
             }
         }
     }
@@ -119,7 +118,6 @@ public subscript(dynamicMember member: String) -> LV {
     public func setProp(_ key: String, _ value: LV) {
         if case .propList(let p) = self {
             p[key] = value
-            self = .propList(p)
         }
     }
 
