@@ -25,7 +25,7 @@ public struct Point: Equatable, @unchecked Sendable {
 /// Mirrors Lingo's property list [:] type. Stored as `indirect` in LV to
 /// break the recursive value-type cycle.
 @dynamicMemberLookup
-public struct PropList: @unchecked Sendable {
+public final class PropList: @unchecked Sendable {
     public var props: [(key: String, value: LV)]
     public init(_ props: [(key: String, value: LV)] = []) { self.props = props }
 
@@ -45,13 +45,12 @@ public struct PropList: @unchecked Sendable {
         set { self[member] = newValue }
     }
     public var count: Int { props.count }
-    public func getPropAt(_ i: Int) -> String { props[i - 1].key }  // 1-based
-    public mutating func addProp(_ key: String, _ value: LV) { props.append((key, value)) }
-    public mutating func deleteOne(_ key: String) {
+    public func getPropAt(_ i: Int) -> (String, LV) { props[i - 1] }  // 1-based
+    public func addProp(_ key: String, _ value: LV) { props.append((key, value)) }
+    public func deleteOne(_ key: String) {
         if let i = props.firstIndex(where: { $0.key == key }) { props.remove(at: i) }
     }
-    /// Value-type structs copy by default; duplicate() kept for API compatibility.
-    public func duplicate() -> PropList { self }
+    public func duplicate() -> PropList { PropList(props) }
     public var isEmpty: Bool { props.isEmpty }
 }
 
@@ -140,7 +139,7 @@ extension LV: ExpressibleByStringLiteral, ExpressibleByIntegerLiteral, Expressib
     public init(floatLiteral value: Float) { self = .float(value) }
     public init(booleanLiteral value: Bool) { self = .int(value ? 1 : 0) } // Lingo uses 1/0 for true/false
     public init(arrayLiteral elements: LV...) { self = .list(LingoList(elements)) }
-    public init(dictionaryLiteral elements: (String, LV)...) { self = .propList(PropList(elements)) }
+    public init(dictionaryLiteral elements: (String, LV)...) { self = .propList(PropList(elements.map { ($0, $1) }) ) }
 }
 
 extension LV {
