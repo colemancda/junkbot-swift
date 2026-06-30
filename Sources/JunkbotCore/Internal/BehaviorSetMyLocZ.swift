@@ -5,6 +5,12 @@ class BehaviorSetMyLocZ: LingoObject, @unchecked Sendable {
 
     var spriteNum: Int = 0
 
+    // Original Lingo body: beginsprite
+    // ```lingo
+    // on beginSprite me
+    //   sprite(me.spriteNum).locZ = mylocz
+    // end
+    // ```
     func beginSprite() {
         // sprite(spriteNum).locZ = mylocz
     }

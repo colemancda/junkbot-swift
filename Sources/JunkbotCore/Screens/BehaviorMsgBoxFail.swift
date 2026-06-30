@@ -1,9 +1,21 @@
 // Translated from Lingo: behavior_msgBox_Fail.ls
 
-class BehaviorMsgBoxFail {
+class BehaviorMsgBoxFail: LingoObject, @unchecked Sendable {
     var prop: PropList = PropList()
     var myNum: Int = 0
 
+    // Original Lingo body: beginsprite
+    // ```lingo
+    // on beginSprite me
+    //   myNum = me.spriteNum
+    //   glob[#fail_msg_obj] = me
+    //   Prop = [:]
+    //   Prop[#state] = #hide
+    //   Prop[#loc] = [#Start: point(100, -190), #show: point(100, 130), #end: point(-300, 130)]
+    //   Prop[#speed] = [#move1: [0, 40], #move2: [-40, 0]]
+    //   Prop[#sprites] = [#ouch: myNum + 1, #but1: myNum + 2, #but2: myNum + 3, #but3: myNum + 4, #msg: myNum + 5]
+    // end
+    // ```
     func beginSprite() {
         myNum = spriteNum
         Glob.shared["fail_msg_obj"] = .void  // set externally as object reference
@@ -29,6 +41,17 @@ class BehaviorMsgBoxFail {
         prop["sprites"] = .propList(sprites)
     }
 
+    // Original Lingo body: updatedata
+    // ```lingo
+    // on updateData me
+    //   msg = ["I hate Mondays.", "I knew that was going to happen.", "Why me?", "There's got to be a better way."]
+    //   member("fail_msg").text = msg[random(msg.count)]
+    //   setCursor(#none)
+    //   sendAllSprites(#getOut)
+    //   Prop[#state] = #move1
+    //   me.fixLocZ()
+    // end
+    // ```
     func updateData() {
         let msgs = ["I hate Mondays.", "I knew that was going to happen.", "Why me?", "There's got to be a better way."]
         member("fail_msg")?.text = msgs[lingoRandom(msgs.count) - 1]
@@ -38,6 +61,36 @@ class BehaviorMsgBoxFail {
         fixLocZ()
     }
 
+    // Original Lingo body: exitframe
+    // ```lingo
+    // on exitFrame me
+    //   case Prop[#state] of
+    //     #hide:
+    //     #move1:
+    //       temp = me.doMove(Prop[#loc][#show], Prop[#speed][#move1])
+    //       if temp then
+    //         Prop[#state] = #show
+    //         if random(2) = 1 then
+    //           SndSFX("voice_ouch")
+    //         else
+    //           SndSFX("voice_uhoh")
+    //         end if
+    //       end if
+    //     #show:
+    //       setCursor(#none)
+    //     #move2:
+    //       temp = me.doMove(Prop[#loc][#end], Prop[#speed][#move2])
+    //       if temp then
+    //         Prop[#state] = #hide
+    //         me.updateLoc(Prop[#loc][#Start])
+    //         if not voidp(Prop[#callback]) then
+    //           Prop.callback.object.callback(Prop.callback.parameter)
+    //           Prop.callback = VOID
+    //         end if
+    //       end if
+    //   end case
+    // end
+    // ```
     func exitFrame() {
         switch prop["state"].asString! {
         case "hide":
@@ -77,6 +130,29 @@ class BehaviorMsgBoxFail {
     }
 
     @discardableResult
+    // Original Lingo body: domove
+    // ```lingo
+    // on doMove me, toWhere, speed
+    //   case Prop[#state] of
+    //     #move1:
+    //       if sprite(myNum).locV < toWhere[2] then
+    //         newloc = sprite(myNum).loc + point(speed[1], speed[2])
+    //         me.updateLoc(newloc)
+    //         return 0
+    //       else
+    //         return 1
+    //       end if
+    //     #move2:
+    //       if sprite(myNum).locH > toWhere[1] then
+    //         newloc = sprite(myNum).loc + point(speed[1], speed[2])
+    //         me.updateLoc(newloc)
+    //         return 0
+    //       else
+    //         return 1
+    //       end if
+    //   end case
+    // end
+    // ```
     func doMove(toWhere: Point, speed: [Int]) -> Int {
         switch prop["state"].asString! {
         case "move1":
@@ -100,6 +176,14 @@ class BehaviorMsgBoxFail {
         }
     }
 
+    // Original Lingo body: getout
+    // ```lingo
+    // on getOut me
+    //   if not (Prop[#state] = #hide) and not (Prop[#state] = #move2) then
+    //     Prop[#state] = #move2
+    //   end if
+    // end
+    // ```
     func getOut() {
         let state = prop["state"].asString!
         if state != "hide" && state != "move2" {
@@ -107,15 +191,38 @@ class BehaviorMsgBoxFail {
         }
     }
 
+    // Original Lingo body: updatestate
+    // ```lingo
+    // on updateState me, state, callback
+    //   Prop[#callback] = callback
+    //   Prop[#state] = state
+    // end
+    // ```
     func updateState(_ state: String, _ callback: LV = .void) {
         prop["callback"] = callback
         prop["state"] = .string(state)
     }
 
+    // Original Lingo body: reportstate
+    // ```lingo
+    // on reportState me
+    //   return Prop[#state]
+    // end
+    // ```
     func reportState() -> String {
         return prop["state"].asString!
     }
 
+    // Original Lingo body: updateloc
+    // ```lingo
+    // on updateLoc me, newloc
+    //   sprite(myNum).loc = newloc
+    //   repeat with sn = 1 to 4
+    //     sprite(Prop[#sprites][sn]).loc = sprite(myNum).loc
+    //   end repeat
+    //   sprite(Prop[#sprites][5]).loc = sprite(myNum).loc + point(77, 50)
+    // end
+    // ```
     func updateLoc(newloc: Point) {
         sprite(myNum).loc = newloc
         let sprites = prop["sprites"].asPropList!
@@ -126,6 +233,15 @@ class BehaviorMsgBoxFail {
         sprite(sprites["msg"].asInt!).loc = sprite(myNum).loc + Point(x: 77, y: 50)
     }
 
+    // Original Lingo body: fixlocz
+    // ```lingo
+    // on fixLocZ me
+    //   sprite(myNum).locZ = 1000000000
+    //   repeat with sn in Prop[#sprites]
+    //     sprite(sn).locZ = 1000000001
+    //   end repeat
+    // end
+    // ```
     func fixLocZ() {
         sprite(myNum).locZ = 1000000000
         let sprites = prop["sprites"].asPropList!

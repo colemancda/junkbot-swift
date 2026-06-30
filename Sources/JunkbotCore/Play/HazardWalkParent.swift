@@ -1,6 +1,6 @@
 // Translated from Lingo: parent_hazard walk parent.ls
 
-public class HazardWalkParent {
+public class HazardWalkParent: LingoObject, @unchecked Sendable {
     public var playfield_manager: LV = .void
     public var play_manager: PlayManager? = nil
     public var part: PropList
@@ -9,7 +9,26 @@ public class HazardWalkParent {
     public var last_step: Int = 0
     public var dir: Int = 1
 
+    // Original Lingo body: new
+    // ```lingo
+    // on new me, p
+    //   part = p
+    //   part[#behavior] = me
+    //   play_manager = glob.PLAYER.play_manager
+    //   playfield_manager = play_manager.playfield_manager
+    //   myWidth = 2
+    //   if part.state = "WALK_L" then
+    //     dir = -1
+    //   else
+    //     dir = 1
+    //   end if
+    //   speed = 4
+    //   last_step = the ticks
+    //   return me
+    // end
+    // ```
     public init(_ p: PropList) {
+        super.init()
         part = p
         // part["behavior"] = self -- set by caller
         play_manager = nil // Glob.shared.PLAYER.play_manager
@@ -25,10 +44,28 @@ public class HazardWalkParent {
         last_step = currentTicks
     }
 
+    // Original Lingo body: done
+    // ```lingo
+    // on done me
+    //   play_manager.actorDone(me)
+    // end
+    // ```
     public func done() {
         if let pm = play_manager { pm.actorDone(self) }
     }
 
+    // Original Lingo body: notify
+    // ```lingo
+    // on notify me, notes
+    //   if notes[#destroyed] = 1 then
+    //     me.done()
+    //   else
+    //     if notes[#pos] <> VOID then
+    //       part.pos = notes[#pos]
+    //     end if
+    //   end if
+    // end
+    // ```
     public func notify(_ notes: PropList) {
         if let destroyed = notes["destroyed"].asInt, destroyed == 1 {
             done()
@@ -37,6 +74,35 @@ public class HazardWalkParent {
         }
     }
 
+    // Original Lingo body: step
+    // ```lingo
+    // on step me
+    //   playfield_manager.erasePiece(part.pos)
+    //   pos = part.pos + point(dir, 0)
+    //   Ok = 0
+    //   fg = playfield_manager.checkFitOrMinifig(pos, part.type)
+    //   if fg = 1 then
+    //     ms = the milliSeconds
+    //     if playfield_manager.checkFloor(pos, myWidth) > 1 then
+    //       Ok = 1
+    //       part.pos = pos
+    //     end if
+    //   end if
+    //   if not Ok then
+    //     dir = -dir
+    //     if dir > 0 then
+    //       part.state = #WALK_R
+    //     else
+    //       part.state = #walk_l
+    //     end if
+    //   end if
+    //   if ilk(fg) = #propList then
+    //     SndSFX("robottouch4")
+    //     fg.behavior.notify([#damage: #walker])
+    //   end if
+    //   playfield_manager.placePiece(part)
+    // end
+    // ```
     public func step() {
         // playfield_manager.erasePiece(part.pos) -- stub
         // pos = part.pos + point(dir, 0) -- stub
@@ -58,6 +124,16 @@ public class HazardWalkParent {
         // playfield_manager.placePiece(part) -- stub
     }
 
+    // Original Lingo body: stepanim
+    // ```lingo
+    // on stepAnim me
+    //   if part.frame = 1 then
+    //     part.frame = 2
+    //   else
+    //     part.frame = 1
+    //   end if
+    // end
+    // ```
     public func stepAnim() {
         let frame = part["frame"].asInt ?? 1
         if frame == 1 {
@@ -67,6 +143,17 @@ public class HazardWalkParent {
         }
     }
 
+    // Original Lingo body: stepframe
+    // ```lingo
+    // on stepFrame me
+    //   if part.frame = 2 then
+    //     step(me)
+    //   end if
+    //   playfield_manager.erasePiece(part.pos)
+    //   me.stepAnim()
+    //   playfield_manager.placePiece(part)
+    // end
+    // ```
     public func stepFrame() {
         if let frame = part["frame"].asInt, frame == 2 {
             step()

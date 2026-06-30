@@ -1,8 +1,14 @@
 // Translated from Lingo: behavior_editor-choose color.ls
 
-class BehaviorEditorChooseColor {
+class BehaviorEditorChooseColor: LingoObject, @unchecked Sendable {
     var myColor: String = ""
 
+    // Original Lingo body: getpropertydescriptionlist
+    // ```lingo
+    // on getPropertyDescriptionList me
+    //   return [#myColor: [#comment: "Color:", #format: #string, #range: ["RED", "GREEN", "BLUE", "YELLOW", "BLACK", "WHITE", "GRAY"]]]
+    // end
+    // ```
     func getPropertyDescriptionList() -> PropList {
         var L = PropList()
         var desc = PropList()
@@ -17,6 +23,16 @@ class BehaviorEditorChooseColor {
         return L
     }
 
+    // Original Lingo body: mouseup
+    // ```lingo
+    // on mouseUp me
+    //   global glob
+    //   if glob.EDITOR[#edit_manager] <> VOID then
+    //     glob.EDITOR.edit_manager.settoolcolor(myColor)
+    //   end if
+    //   sendAllSprites(#editor_setcolor, myColor)
+    // end
+    // ```
     func mouseUp() {
         if !glob.EDITOR["edit_manager"].isVoid {
             glob.EDITOR.edit_manager.settoolcolor(.string(myColor))

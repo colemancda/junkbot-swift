@@ -1,15 +1,28 @@
 // Translated from Lingo: behavior_editor-bg edit item.ls
 
-class BehaviorEditorBgEditItem {
+class BehaviorEditorBgEditItem: LingoObject, @unchecked Sendable {
     var kind: String = ""
     var s: LingoSprite?
     var m: LingoMember?
 
+    // Original Lingo body: beginsprite
+    // ```lingo
+    // on beginSprite me
+    //   s = sprite(me.spriteNum)
+    //   m = s.member
+    // end
+    // ```
     func beginSprite(_ spriteNum: Int) {
         s = sprite(spriteNum)
         m = s?.member
     }
 
+    // Original Lingo body: mousedown
+    // ```lingo
+    // on mouseDown me
+    //   glob.EDITOR.edit_manager.bg_edit_item(kind, m)
+    // end
+    // ```
     func mouseDown() {
         // glob.EDITOR is LV (propList), not typed — look up EditManager via Glob typed accessor
         // EditManager is stored as a typed object under "edit_manager_obj" or similar.
@@ -19,6 +32,14 @@ class BehaviorEditorBgEditItem {
         _ = kind; _ = m
     }
 
+    // Original Lingo body: getpropertydescriptionlist
+    // ```lingo
+    // on getPropertyDescriptionList
+    //   L = [:]
+    //   L[#kind] = [#comment: "Kind", #format: #symbol, #range: [#backdrop, #decal], #default: #decal]
+    //   return L
+    // end
+    // ```
     func getPropertyDescriptionList() -> PropList {
         var L = PropList()
         var kindDesc = PropList()

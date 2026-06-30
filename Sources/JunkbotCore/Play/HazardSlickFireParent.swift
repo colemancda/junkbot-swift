@@ -1,6 +1,6 @@
 // Translated from Lingo: parent_hazard slick fire parent.ls
 
-public class HazardSlickFireParent {
+public class HazardSlickFireParent: LingoObject, @unchecked Sendable {
     public var playfield_manager: LV = .void
     public var play_manager: PlayManager? = nil
     public var part: PropList
@@ -8,7 +8,20 @@ public class HazardSlickFireParent {
     public var last_step: Int = 0
     public var dir: LV = .void
 
+    // Original Lingo body: new
+    // ```lingo
+    // on new me, p
+    //   part = p
+    //   part[#behavior] = me
+    //   play_manager = glob.PLAYER.play_manager
+    //   playfield_manager = play_manager.playfield_manager
+    //   myWidth = 2
+    //   last_step = the ticks
+    //   return me
+    // end
+    // ```
     public init(_ p: PropList) {
+        super.init()
         part = p
         // part["behavior"] = self -- set by caller
         play_manager = nil // Glob.shared.PLAYER.play_manager
@@ -17,10 +30,34 @@ public class HazardSlickFireParent {
         last_step = currentTicks
     }
 
+    // Original Lingo body: done
+    // ```lingo
+    // on done me
+    //   play_manager.actorDone(me)
+    // end
+    // ```
     public func done() {
         if let pm = play_manager { pm.actorDone(self) }
     }
 
+    // Original Lingo body: notify
+    // ```lingo
+    // on notify me, notes
+    //   if notes[#destroyed] = 1 then
+    //     me.done()
+    //   else
+    //     if not voidp(notes[#pos]) then
+    //       part.pos = notes[#pos]
+    //     else
+    //       if not voidp(notes[#switch]) then
+    //         part.state = notes[#switch]
+    //         me.stepAnim()
+    //         me.updatePart()
+    //       end if
+    //     end if
+    //   end if
+    // end
+    // ```
     public func notify(_ notes: PropList) {
         if let destroyed = notes["destroyed"].asInt, destroyed == 1 {
             done()
@@ -33,6 +70,16 @@ public class HazardSlickFireParent {
         }
     }
 
+    // Original Lingo body: stepframe
+    // ```lingo
+    // on stepFrame me
+    //   me.stepAnim()
+    //   me.updatePart()
+    //   if part.state = #on then
+    //     me.checkMiniFig()
+    //   end if
+    // end
+    // ```
     public func stepFrame() {
         stepAnim()
         updatePart()
@@ -42,11 +89,28 @@ public class HazardSlickFireParent {
         }
     }
 
+    // Original Lingo body: updatepart
+    // ```lingo
+    // on updatePart me
+    //   playfield_manager.erasePiece(part.pos)
+    //   playfield_manager.placePiece(part)
+    // end
+    // ```
     public func updatePart() {
         // playfield_manager.erasePiece(part.pos) -- stub
         // playfield_manager.placePiece(part) -- stub
     }
 
+    // Original Lingo body: stepanim
+    // ```lingo
+    // on stepAnim me
+    //   if part.state = #on then
+    //     part.frame = (part.frame mod 7) + 1
+    //   else
+    //     part.frame = 1
+    //   end if
+    // end
+    // ```
     public func stepAnim() {
         let state = part["state"].asString ?? ""
         if state == "#on" {
@@ -57,6 +121,16 @@ public class HazardSlickFireParent {
         }
     }
 
+    // Original Lingo body: checkminifig
+    // ```lingo
+    // on checkMiniFig me
+    //   fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), #BRICK_02)
+    //   if ilk(fig) = #propList then
+    //     SndSFX("fire")
+    //     fig.behavior.notify([#damage: #fire])
+    //   end if
+    // end
+    // ```
     public func checkMiniFig() {
         // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_02") -- stub
         let fig: LV = .void // stub
