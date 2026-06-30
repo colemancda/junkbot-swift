@@ -7221,13 +7221,13 @@ extension JSPromise: @unchecked Sendable {}
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
-    return try await JSPromise(from: res.json().function!())!.value
+    return try await JSPromise(from: res.object!["json"].function!.callAsFunction(this: res.object!))!.value
 }
 
 @MainActor func loadAtlasJSONAsync(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
-    let data = try await JSPromise(from: res.json().function!())!.value
+    let data = try await JSPromise(from: res.object!["json"].function!.callAsFunction(this: res.object!))!.value
     let frames = data.frames
     let animations = data.animations
     let result = JSObject.global.Object.function!.new()
@@ -7250,33 +7250,39 @@ extension JSPromise: @unchecked Sendable {}
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
-    return try await JSPromise(from: res.text().function!())!.value
+    return try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
 }
 
 @MainActor func loadLevelFromTextFileAsync(path: String, game: JSValue) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
-    return try await JSPromise(from: res.text().function!())!.value
+    return try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
 }
 
 @MainActor func loadSoundAsync(path: String, audioCtx: JSValue) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
-    let buf = try await JSPromise(from: res.arrayBuffer().function!())!.value
+    let buf = try await JSPromise(from: res.object!["arrayBuffer"].function!.callAsFunction(this: res.object!))!.value
     return try await JSPromise(from: audioCtx.decodeAudioData(buf))!.value
 }
 
 @MainActor func loadLevelListingAsync(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
-    let text = try await JSPromise(from: res.text().function!())!.value
-    let trimmed = text.object!.trim()
+    let text = try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
+    let trimFunc = text.object!["trim"].function!
+    let trimmed = trimFunc.callAsFunction(this: text.object!)
     let regex = JSObject.global.RegExp.function!.new("\\r?\\n", "g")
-    let lines = trimmed.object!.split(regex)
-    let mapFunc = JSClosure { args in return args[0].object!.trim() }
+    let splitFunc = trimmed.object!["split"].function!
+    let lines = splitFunc.callAsFunction(this: trimmed.object!, regex)
+    let mapFunc = JSClosure { args in 
+        let argTrim = args[0].object!["trim"].function!
+        return argTrim.callAsFunction(this: args[0].object!)
+    }
     defer { mapFunc.release() }
-    return lines.object!.map(mapFunc)
+    let arrayMap = lines.object!["map"].function!
+    return arrayMap.callAsFunction(this: lines.object!, mapFunc)
 }
 
 struct JSValueError: Error {
@@ -7308,7 +7314,7 @@ struct JSValueError: Error {
     var silenceErrors = false
     
     // We do them concurrently with a throwing task group
-    let results = try await withThrowingTaskGroup(of: (String, JSValue).self) { group in
+    let results = try await withThrowingTaskGroup(of: (String, JSValue, JSValue?).self) { group in
         for i in 0..<length {
             let entry = entries[i]
             let id = entry[0].string!
@@ -7316,38 +7322,45 @@ struct JSValueError: Error {
             
             group.addTask {
                 var resource: JSValue = .undefined
+                var errObj: JSValue? = nil
                 do {
                     resource = try await loadResourceAsync(path: path)
                 } catch {
-                    if !silenceErrors {
-                        if JSObject.global.location.protocol.string == "file:" {
-                            _ = showErrorMessage.callAsFunction(this: JSValue.null, .string("This page must be served by a web server..."), (error as? JSValueError)?.message.jsValue ?? .undefined)
-                            silenceErrors = true
-                        } else {
-                            _ = showErrorMessage.callAsFunction(this: JSValue.null, .string("Failed to load resource '\(path)'"), (error as? JSValueError)?.message.jsValue ?? .undefined)
-                        }
-                    }
+                    errObj = (error as? JSValueError)?.message.jsValue ?? .string(String(describing: error))
                 }
-                // Need to update global variables carefully, actor might be needed but in single-threaded Embedded Swift Wasm, we can just update them. Wait, TaskGroup executes concurrently, in Wasm it is cooperative so it's safe.
-                loadedResources += 1
-                if (loadedResources / totalResources * Double(numProgressBricks)) > Double(progressBricks.count) {
-                    let progressBrick = JSObject.global.document.createElement("div")
-                    _ = progressBrick.classList.add("load-progress-brick")
-                    progressBricks.append(progressBrick)
-                    _ = loadProgress.appendChild!(progressBrick)
-                }
-                return (id, resource)
+                return (id, resource, errObj)
             }
         }
         
         let resultObj = JSObject.global.Object.function!.new()
-        for try await (id, resource) in group {
+        for try await (id, resource, errObj) in group {
+            if let err = errObj {
+                let pathStr = resourcePathsByID[dynamicMember: id].string!
+                if !silenceErrors {
+                    if JSObject.global.location.protocol.string == "file:" {
+                        showErrorMessage("This page must be served by a web server...", err)
+                        silenceErrors = true
+                    } else {
+                        showErrorMessage("Failed to load resource '\(pathStr)'", err)
+                    }
+                }
+            }
+            
             resultObj[dynamicMember: id] = resource
+            
+            loadedResources += 1
+            if (loadedResources / totalResources * Double(numProgressBricks)) > Double(progressBricks.count) {
+                let progressBrick = JSObject.global.document.createElement("div")
+                _ = progressBrick.classList.add("load-progress-brick")
+                progressBricks.append(progressBrick)
+                _ = loadProgress.appendChild!(progressBrick)
+            }
         }
         return resultObj.jsValue
     }
     return results
 }
+
 
 
 @MainActor func loadAllLevelsAsync(games: JSValue) async throws -> JSValue {
