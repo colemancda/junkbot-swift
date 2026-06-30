@@ -8,7 +8,7 @@ Generated from translated Swift headers and original Lingo files
 - Swift files changed: 95
 - Original files missing: 0
 - Original handlers without a matching Swift function/init name: 8
-- Stub/TODO/commented pending lines: 94
+- Stub/TODO/commented pending lines: 61
 
 ## Handler Coverage
 
@@ -145,53 +145,23 @@ Generated from translated Swift headers and original Lingo files
 - `Sources/JunkbotCore/Internal/BehaviorTooltip.swift`:214: // displayLoc = the mouseLoc (stub)
 - `Sources/JunkbotCore/Internal/BehaviorTooltip.swift`:228: // stub: send DisplayText_SetText to enrolled display behaviors
 - `Sources/JunkbotCore/Internal/BehaviorTooltip.swift`:247: // stub: clear display text
-- `Sources/JunkbotCore/Internal/DatabaseManager.swift`:68: // Stub: initiate network request
-- `Sources/JunkbotCore/Internal/DatabaseManager.swift`:79: // Stub: post state to server
-- `Sources/JunkbotCore/Internal/DatabaseManager.swift`:165: // Stub: initiate network request
-- `Sources/JunkbotCore/Internal/DatabaseManager.swift`:235: // Stub: async network completion handled externally
-- `Sources/JunkbotCore/Internal/DatabaseManager.swift`:244: // Stub: async network completion handled externally
 - `Sources/JunkbotCore/Screens/BehaviorMsgBoxSuccess.swift`:539: // Image compositing stub — sets up key icon strip
 - `Sources/JunkbotCore/Play/PlayManager.swift`:93: // setLevel(Glob.shared.EDITOR.edit_manager.playfield_manager.current_level) -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:150: // if config["info"] != nil { member("level title")?.text = ... } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:171: Glob.shared["partclick_recipient"] = .void  // stub: store self reference
-- `Sources/JunkbotCore/Play/PlayManager.swift`:192: Glob.shared["partclick_recipient"] = .void  // stub: store self reference
-- `Sources/JunkbotCore/Play/PlayManager.swift`:308: // member("play status field")?.text = t -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:309: // member("play move counter field")?.text = String(gamestatus["#moves"].asInt ?? 0) -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:322: // repeat with part in playfield_manager.getPartsByLabel(args["label"]) { part.behavior.notify(["switch": args["state"]]) } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:338: // movePieceGroup sprite manipulation -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:509: // if Glob.shared.EDITOR["drag_sprite"] == nil { return } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:510: // if playfield_manager == nil { return } -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:514: // a.stepFrame() -- stub
-- `Sources/JunkbotCore/Play/PlayManager.swift`:552: let everythingPlaceable = 1 // Simplified stub for dragging
-- `Sources/JunkbotCore/Play/PlayManager.swift`:681: // playfield_manager.erasePieceGroup(movePieceGroup, 1) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickSwitchParent.swift`:94: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(0, -1), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickSwitchParent.swift`:97: // fig2 = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickJumpParent.swift`:153: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(0, -1), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickJumpParent.swift`:156: // fig2 = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickJumpParent.swift`:165: // fig.asPropList!.behavior.notify(["jump": part]) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickPipeParent.swift`:183: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_02") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickPipeParent.swift`:188: // fig.asPropList!.behavior.notify(["damage": "#drip"]) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickShieldParent.swift`:79: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(0, -1), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickShieldParent.swift`:82: // fig2 = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickShieldParent.swift`:89: // fig.asPropList!.behavior.notify(["SHIELD": 1]) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFireParent.swift`:138: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, -1), "#BRICK_02") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFireParent.swift`:143: // fig.asPropList!.behavior.notify(["damage": "#fire"]) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:40: // partloc = part.sprite[1].loc -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:45: // top_locz = playfield_manager.posToLocZ(point(50, 1)) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:196: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, y), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:209: // fig = playfield_manager.checkFitOrMinifig(part.pos + point(2, y), "#BRICK_01") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:225: // gotMinifig.asPropList!.behavior.notify(["FAN": part]) -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:234: // Render airjet sprites -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:237: // s.visible = 1; s.member = member("fanAir_\(airjet_height[i])_\(airjet_cycle)") -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:238: // s.loc = partloc + point((i+1)*15 + 2, -19); s.locZ = top_locz -- stub
-- `Sources/JunkbotCore/Play/HazardSlickFanParent.swift`:240: // s.visible = 0 -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:144: // config = Glob.shared["config_manager"].asObject()?.parseParams(confStr) -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:151: // if config["info"] != nil { member("level title")?.text = ... } -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:172: Glob.shared["partclick_recipient"] = .void  // stub: store self reference
+- `Sources/JunkbotCore/Play/PlayManager.swift`:193: Glob.shared["partclick_recipient"] = .void  // stub: store self reference
+- `Sources/JunkbotCore/Play/PlayManager.swift`:309: // member("play status field")?.text = t -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:310: // member("play move counter field")?.text = String(gamestatus["#moves"].asInt ?? 0) -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:323: // repeat with part in playfield_manager.getPartsByLabel(args["label"]) { part.behavior.notify(["switch": args["state"]]) } -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:339: // movePieceGroup sprite manipulation -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:510: // if Glob.shared.EDITOR["drag_sprite"] == nil { return } -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:511: // if playfield_manager == nil { return } -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:515: // a.stepFrame() -- stub
+- `Sources/JunkbotCore/Play/PlayManager.swift`:553: let everythingPlaceable = 1 // Simplified stub for dragging
+- `Sources/JunkbotCore/Play/PlayManager.swift`:682: // playfield_manager.erasePieceGroup(movePieceGroup, 1) -- stub
 - `Sources/JunkbotCore/Play/BehaviorMasterBoxOut.swift`:12: // Glob.shared["master_obj"].getOut() -- stub
 - `Sources/JunkbotCore/Play/BehaviorMasterBoxOut.swift`:13: // Glob.shared["award_obj"].dropBox() -- stub
-- `Sources/JunkbotCore/Play/MinifigWalkParent.swift`:377: // if fg.isPropList { eat animation, erase piece } -- stub
-- `Sources/JunkbotCore/Play/MinifigWalkParent.swift`:505: // if not playfield_manager.checkFloor(part.pos, 2) -- stub
-- `Sources/JunkbotCore/Play/MinifigWalkParent.swift`:506: let onFloor = true  // stub
-- `Sources/JunkbotCore/Play/MinifigWalkParent.swift`:581: // pos = part.pos + traj["v"] -- stub
-- `Sources/JunkbotCore/Play/MinifigWalkParent.swift`:582: // if playfield_manager.checkFit(pos, part.type) { ... } -- stub
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:214: // stub: boundary check using pf_size
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:218: let pos_x = 0  // stub
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:219: let pos_y = 0  // stub
@@ -202,12 +172,9 @@ Generated from translated Swift headers and original Lingo files
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:242: let myObj: PropList? = nil  // stub
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:258: let myObj: PropList? = nil  // stub
 - `Sources/JunkbotCore/Play/HazardFloatParent.swift`:274: let myObj: PropList? = nil  // stub
-- `Sources/JunkbotCore/Play/GameManager.swift`:72: // NOTE: Lingo iterates castMembers of castLib "levels"; stub out here
-- `Sources/JunkbotCore/Play/GameManager.swift`:73: let castMemberCount = 0  // stub: number of castMembers of castLib "levels"
-- `Sources/JunkbotCore/Play/GameManager.swift`:75: // levelmem = member(n, "levels") -- stub
-- `Sources/JunkbotCore/Play/GameManager.swift`:76: // leveldata = Glob.shared.config_manager.parseParams(levelmem.text) -- stub
-- `Sources/JunkbotCore/Play/GameManager.swift`:105: // let record = Glob.shared.database_manager.getRecord() -- stub
-- `Sources/JunkbotCore/Play/GameManager.swift`:106: let record: PropList? = nil  // stub
+- `Sources/JunkbotCore/Play/GameManager.swift`:72: let stubLevelText = "[info:[title:\"Stub Level\", hint:\"Walk to the exit!\", par:10], bricks:[[#BRICK_01, point(0,0)]]]"
+- `Sources/JunkbotCore/Play/GameManager.swift`:74: let leveldata = (Glob.shared["config_manager"].asObject() as? BehaviorConfigManager)?.parseParams(stubLevelText) ?? PropList()
+- `Sources/JunkbotCore/Play/GameManager.swift`:82: levelEntry["data"] = .string(stubLevelText)
 - `Sources/JunkbotCore/Play/HazardDripParent.swift`:98: // s = playfield_manager.getASprite() -- stub
 - `Sources/JunkbotCore/Play/HazardDripParent.swift`:99: // part.auxSprites["myDrip"] = s -- stub
 - `Sources/JunkbotCore/Play/HazardDripParent.swift`:100: // s.ink = 8 -- stub
