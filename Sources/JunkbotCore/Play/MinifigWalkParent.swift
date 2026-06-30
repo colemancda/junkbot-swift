@@ -302,8 +302,8 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
         var ok = false
         var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
-        let fg: LV = .void
-        _ = fg
+        // let fg: LV = .void
+        // _ = fg
         // if fg != 0 { if playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos } }
         if !ok {
             for s in 1...step_down {

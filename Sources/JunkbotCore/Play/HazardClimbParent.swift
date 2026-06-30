@@ -245,7 +245,7 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
 
         if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
-            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(["damage": .string("#climber")])
+            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(PropList([("damage", .string("#climber"))]))
         }
         playfield_manager?.placePiece(.propList(part))
     }

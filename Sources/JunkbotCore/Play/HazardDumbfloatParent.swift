@@ -147,7 +147,7 @@ public class HazardDumbfloatParent: LingoObject, @unchecked Sendable {
 
         if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
-            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(["damage": .string("#floater")])
+            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(PropList([("damage", .string("#floater"))]))
         }
 
         if flag == "#TURN" {
