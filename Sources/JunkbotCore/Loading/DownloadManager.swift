@@ -130,7 +130,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
         state = "sample_level"
         show(["intro_anim"], v: false)
         show(["intro_level"], v: true)
-        let currentLevel = member("loading_level")?.text
+        let currentLevel = member("loading_level")?.text ?? ""
         glob.PLAYER.play_manager.setLevel(.string(currentLevel))
         glob.PLAYER.play_manager.startLevel()
     }
@@ -158,7 +158,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
             displaysprites["intro_anim"]?[0].play()
         case "cleanup":
             if state == "sample_level" {
-                let currentLevel = member("loading_level")?.text
+                let currentLevel = member("loading_level")?.text ?? ""
                 glob.PLAYER.play_manager.leave()
                 glob.PLAYER.play_manager.setLevel(.string(currentLevel))
                 glob.PLAYER.play_manager.startLevel()
@@ -190,7 +190,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
                 // nothing
             } else if nextbrick > loadingbricksprites.count && glob.database_manager.READY().asInt ?? 0 != 0 {
                 show(["go_btn"], v: true)
-                displaysprites["loading_msg"]?[0].member.text = "READY TO PLAY"
+                displaysprites["loading_msg"]?[0].member?.text = "READY TO PLAY"
                 blinktimer = currentTicks
                 loadp = true
                 movieloaded()

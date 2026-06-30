@@ -7,7 +7,7 @@ class BehaviorStartButton {
 
     func beginSprite() {
         my = sprite(spriteNum)
-        myName = my?.member.name ?? ""
+        myName = my?.member?.name ?? ""
         my?.blend = 100
     }
 
