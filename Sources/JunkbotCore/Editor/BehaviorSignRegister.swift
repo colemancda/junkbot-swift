@@ -7,7 +7,7 @@ class BehaviorSignRegister {
     func beginSprite(_ spriteNum: Int) {
         my = sprite(spriteNum)
         my?.blend = 0
-        glob.PLAYER["signsprite"] = my
+        if let spr = my { glob.PLAYER["signsprite"] = .object(spr) }
     }
 
     func showSign(_ memName: String, pram: String) {

@@ -9,18 +9,18 @@ class BehaviorMsgBoxFail {
         Glob.shared["fail_msg_obj"] = .void  // set externally as object reference
         prop = PropList()
         prop["state"] = .string("hide")
-        let loc = PropList()
+        var loc = PropList()
         loc["Start"] = .point(x: 100, y: -190)
         loc["show"] = .point(x: 100, y: 130)
         loc["end"] = .point(x: -300, y: 130)
         prop["loc"] = .propList(loc)
-        let speed = PropList()
+        var speed = PropList()
         let move1 = LingoList([.int(0), .int(40)])
         let move2 = LingoList([.int(-40), .int(0)])
         speed["move1"] = .list(move1)
         speed["move2"] = .list(move2)
         prop["speed"] = .propList(speed)
-        let sprites = PropList()
+        var sprites = PropList()
         sprites["ouch"] = .int(myNum + 1)
         sprites["but1"] = .int(myNum + 2)
         sprites["but2"] = .int(myNum + 3)
@@ -31,7 +31,7 @@ class BehaviorMsgBoxFail {
 
     func updateData() {
         let msgs = ["I hate Mondays.", "I knew that was going to happen.", "Why me?", "There's got to be a better way."]
-        member("fail_msg").text = msgs[lingoRandom(msgs.count) - 1]
+        member("fail_msg")?.text = msgs[lingoRandom(msgs.count) - 1]
         setCursor("none")
         sendAllSprites("getOut")
         prop["state"] = .string("move1")

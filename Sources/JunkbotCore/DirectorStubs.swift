@@ -9,8 +9,8 @@ nonisolated(unsafe) public var currentMilliseconds: Int = 0  // updated by game 
 public let glob = Glob.shared
 nonisolated(unsafe) public var actorList: [LingoObject] = []
 nonisolated(unsafe) public var runMode: String = "Author"
-public var moviePath: String = ""
-public var movieName: String = ""
+nonisolated(unsafe) public var moviePath: String = ""
+nonisolated(unsafe) public var movieName: String = ""
 
 // MARK: - Input stubs
 nonisolated(unsafe) public var mouseIsDown: Bool = false
@@ -29,7 +29,7 @@ public func lingoRandom(_ n: Int) -> Int {
 // MARK: - Navigation
 public func go(_ scene: String) {}
 public func go(_ frame: Int) {}
-public var theFrameLabel: String = ""
+nonisolated(unsafe) public var theFrameLabel: String = ""
 
 // MARK: - Cursor
 public func setCursor(_ cursor: String) {}
@@ -110,7 +110,7 @@ public typealias Sprite = LingoSprite
 public typealias Member = LingoMember
 
 public func sprite(_ n: Int) -> LingoSprite { LingoSprite() }
-public func member(_ name: String) -> LingoMember { LingoMember() }
+public func member(_ name: String) -> LingoMember? { nil }
 public func member(_ name: String, _ castLib: String) -> LingoMember { LingoMember() }
 public func member(_ n: Int) -> LingoMember { LingoMember() }
 public func member(_ n: Int, _ castLib: String) -> LingoMember { LingoMember() }
@@ -120,3 +120,8 @@ public func rgb(_ r: Int, _ g: Int, _ b: Int) -> LV { .void }
 // MARK: - Debug
 public func debugLog(_ s: String) {}
 nonisolated(unsafe) public var theFrame: Int = 1
+
+public func field(_ name: String) -> String { member(name)?.text ?? "" }
+
+nonisolated(unsafe) public var frame: Int = 1
+public func marker(_ label: String) -> Int { 0 }

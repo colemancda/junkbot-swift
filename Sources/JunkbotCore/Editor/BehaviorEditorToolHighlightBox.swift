@@ -6,7 +6,7 @@ class BehaviorEditorToolHighlightBox {
     func beginSprite(_ spriteNum: Int) {
         s = sprite(spriteNum)
         s?.loc = Point(x: -100, y: -100)
-        glob.EDITOR["tool_highlight_box"] = s
+        if let spr = s { glob.EDITOR["tool_highlight_box"] = .object(spr) }
     }
 
     func highlight(_ spr: Sprite) {

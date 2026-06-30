@@ -21,12 +21,12 @@ class BehaviorGoldAwardNavBar {
         let levels = buildingEntry["LEVELS"].asList!
         let levelEntry = levels[level].asPropList!
         goal = levelEntry["goal"].asInt!
-        moves = Int(member("play move counter field").text) ?? 0
-        member("goal_amount_indicator").text = "\(goal) or fewer"
+        moves = Int(member("play move counter field")?.text) ?? 0
+        member("goal_amount_indicator")?.text = "\(goal) or fewer"
     }
 
     func exitFrame() {
-        moves = Int(member("play move counter field").text) ?? 0
+        moves = Int(member("play move counter field")?.text) ?? 0
         if moves <= goal {
             sprite(spriteNum).blend = 100
         } else {

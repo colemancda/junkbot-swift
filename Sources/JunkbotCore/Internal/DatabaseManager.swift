@@ -62,7 +62,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
         if let rankdata = Glob.shared["rankdata"].asPropList {
             rankdata["serverState"] = .string("network")
         }
-        let info = PropList()
+        var info = PropList()
         info["total"] = state["total"]
         info["state"] = state["state"]
         info["record"] = state["record"]
@@ -109,7 +109,7 @@ class DatabaseManager: LingoObject, @unchecked Sendable {
 
     /// Decode an HTTP query-string response ("key=value&key=value...") into a prop list.
     func decodeMulti(_ s: String) -> PropList {
-        let ret = PropList()
+        var ret = PropList()
         let pairs = splitOn(s, sep: "&")
         for pair in pairs {
             let parts = splitOn(pair, sep: "=")

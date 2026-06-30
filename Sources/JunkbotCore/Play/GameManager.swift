@@ -12,7 +12,7 @@ public class GameManager {
     }
 
     public func prepareLevelMenu() {
-        let firstBuilding = PropList()
+        var firstBuilding = PropList()
         firstBuilding["state"] = .string("#open")
         firstBuilding["LEVELS"] = .list(LingoList())
         let buildingList = LingoList()
@@ -30,7 +30,7 @@ public class GameManager {
             // leveldata.info.hint = Glob.shared.config_manager.restoreCommas(leveldata.info.hint)
             // Glob.shared.building[building].LEVELS[level] = [...]
             Glob.shared["keyrequired"] = .int(10)
-            let current = PropList()
+            var current = PropList()
             current["building"] = .int(1)
             current["level"] = .int(1)
             current["moves"] = .int(0)
@@ -41,7 +41,7 @@ public class GameManager {
                 building += 1
                 if let buildingLV = Glob.shared["building"].asList {
                     while buildingLV.count < building {
-                        let b = PropList()
+                        var b = PropList()
                         b["state"] = .string("#locked")
                         b["LEVELS"] = .list(LingoList())
                         buildingLV.add(.propList(b))
@@ -69,7 +69,7 @@ public class GameManager {
     }
 
     public func encodeRecord() -> PropList {
-        let rec = PropList()
+        var rec = PropList()
         var state = 2
         var record = ""
         var total = 0

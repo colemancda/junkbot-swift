@@ -64,7 +64,7 @@ public class PlayManager {
         }
         // playfield_manager = new PlayfieldManager(config.playfield) -- stub
         // playfield_manager.setPlayfield(config) -- stub
-        // if config["info"] != nil { member("level title").text = ... } -- stub
+        // if config["info"] != nil { member("level title")?.text = ... } -- stub
 
         myactors = []
         goalList = []
@@ -133,8 +133,8 @@ public class PlayManager {
         for prop in gamestatus.props {
             t += "\(prop.key): \(prop.value)\n"
         }
-        // member("play status field").text = t -- stub
-        // member("play move counter field").text = String(gamestatus["#moves"].asInt ?? 0) -- stub
+        // member("play status field")?.text = t -- stub
+        // member("play move counter field")?.text = String(gamestatus["#moves"].asInt ?? 0) -- stub
         debugLog(t)
     }
 

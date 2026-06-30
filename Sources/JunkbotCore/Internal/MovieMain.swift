@@ -21,7 +21,7 @@ func prepareMovie() {
 }
 
 func startMovie() {
-    let rankdata = PropList()
+    var rankdata = PropList()
     rankdata["keys"] = .int(0)
     rankdata["moves"] = .int(0)
     rankdata["rank"] = .int(0)
@@ -112,7 +112,7 @@ func setCursor(_ c: String?) {
         g["cursor"] = .propList(PropList())
     }
     if let sym = c {
-        let newCursor = PropList()
+        var newCursor = PropList()
         newCursor[sym] = .int(1)
         g["cursor"] = .propList(newCursor)
     }

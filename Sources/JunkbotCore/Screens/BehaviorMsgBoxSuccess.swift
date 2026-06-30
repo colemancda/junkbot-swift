@@ -9,16 +9,16 @@ class BehaviorMsgBoxSuccess {
         Glob.shared["BIG_MSG_OBJ"] = .void  // set externally as object reference
         prop = PropList()
         prop["state"] = .string("hide")
-        let loc = PropList()
+        var loc = PropList()
         loc["Start"] = .point(x: 60, y: -280)
         loc["show"] = .point(x: 60, y: 80)
         loc["end"] = .point(x: -340, y: 80)
         prop["loc"] = .propList(loc)
-        let speed = PropList()
+        var speed = PropList()
         speed["move1"] = .list(LingoList([.int(0), .int(40)]))
         speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
         prop["speed"] = .propList(speed)
-        let sprites = PropList()
+        var sprites = PropList()
         sprites["MSG1"] = .int(myNum + 9)
         sprites["MSG2"] = .int(myNum + 10)
         sprites["MSG3"] = .int(myNum + 11)
@@ -65,7 +65,7 @@ class BehaviorMsgBoxSuccess {
                 updateStage()
             }
         }
-        member("num.moves").text = String(moves)
+        member("num.moves")?.text = String(moves)
         sprite(sprites["newrecord"].asInt!).blend = 0
         let data = levelsList
         keys = 0
@@ -73,10 +73,10 @@ class BehaviorMsgBoxSuccess {
             let dataEntry = data[i].asPropList!
             if i == level {
                 if (dataEntry["moves"].asInt ?? 0) > 0 {
-                    member("msgbox_1").text = "KEYCARD ALREADY ACQUIRED"
+                    member("msgbox_1")?.text = "KEYCARD ALREADY ACQUIRED"
                     sprite(myNum + 15).blend = 0
                 } else {
-                    member("msgbox_1").text = "YOU GOT A BUILDING \(building) KEYCARD"
+                    member("msgbox_1")?.text = "YOU GOT A BUILDING \(building) KEYCARD"
                     sprite(myNum + 15).blend = 100
                     dataEntry["moves"] = .int(moves)
                 }
@@ -88,16 +88,16 @@ class BehaviorMsgBoxSuccess {
                 }
                 if gold == 1 {
                     sprite(sprites["gold"].asInt!).blend = 100
-                    member("msgbox_3").text = ""
+                    member("msgbox_3")?.text = ""
                 } else {
                     if (dataEntry["moves"].asInt ?? 0) <= (dataEntry["goal"].asInt ?? 0) {
                         buildingEntry["LEVELS"].asList![level]["gold"] = .int(1)
                         let todo = prop["todo"].asList!
                         todo.add(.string("goldaward"))
                         sprite(sprites["gold"].asInt!).blend = 100
-                        member("msgbox_3").text = ""
+                        member("msgbox_3")?.text = ""
                     } else {
-                        member("msgbox_3").text = "beat this level in \(dataEntry["goal"].asInt!) moves or fewer\nto get the gold award"
+                        member("msgbox_3")?.text = "beat this level in \(dataEntry["goal"].asInt!) moves or fewer\nto get the gold award"
                         sprite(sprites["gold"].asInt!).blend = 0
                     }
                 }
@@ -108,7 +108,7 @@ class BehaviorMsgBoxSuccess {
         }
         let keyrequired = Glob.shared["keyrequired"].asInt!
         if (keys >= keyrequired) && !(building == 4) && !(buildingList[building + 1]["state"].asString == "open") {
-            member("msgbox_2").text = "YOU UNLOCKED BUILDING \(building + 1)"
+            member("msgbox_2")?.text = "YOU UNLOCKED BUILDING \(building + 1)"
             let todo = prop["todo"].asList!
             todo.add(.string("unlock"))
             buildingList[building + 1]["state"] = .string("open")
@@ -118,15 +118,15 @@ class BehaviorMsgBoxSuccess {
                 (Glob.shared["PLAYER"]).game_manager.TotalKeys()
                 let rankdata = Glob.shared["rankdata"].asPropList!
                 if (rankdata["keys"].asInt ?? 0) == 60 {
-                    member("msgbox_2").text = ""
+                    member("msgbox_2")?.text = ""
                 } else {
-                    member("msgbox_2").text = "GET ALL THE KEYCARDS!"
+                    member("msgbox_2")?.text = "GET ALL THE KEYCARDS!"
                 }
             } else {
                 if (keys < keyrequired) && !(building == 4) {
-                    member("msgbox_2").text = "GET \(keyrequired - keys) MORE TO UNLOCK BUILDING \(building + 1)"
+                    member("msgbox_2")?.text = "GET \(keyrequired - keys) MORE TO UNLOCK BUILDING \(building + 1)"
                 } else {
-                    member("msgbox_2").text = ""
+                    member("msgbox_2")?.text = ""
                 }
             }
         }

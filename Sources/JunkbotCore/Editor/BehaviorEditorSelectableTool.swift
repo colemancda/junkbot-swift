@@ -13,35 +13,35 @@ class BehaviorEditorSelectableTool {
 
     func mouseUp() {
         if !glob.EDITOR["edit_manager"].isVoid {
-            glob.EDITOR["edit_manager"].settoolmode(mytoolmode, mytoolparam, mytoolstate, mytoolframe != nil ? mytoolframe! : 0)
+            glob.EDITOR["edit_manager"].settoolmode(.string(mytoolmode), mytoolparam.map { .string($0) } ?? .void, mytoolstate.map { .string($0) } ?? .void, .int(mytoolframe ?? 0))
         }
         if !glob.EDITOR["tool_highlight_box"].isVoid {
-            glob.EDITOR["tool_highlight_box"].highlight(s)
+            s.map { glob.EDITOR["tool_highlight_box"].highlight(.object($0)) }
         }
     }
 
     func getPropertyDescriptionList() -> PropList {
-        let L = PropList()
+        var L = PropList()
 
-        let modeDesc = PropList()
+        var modeDesc = PropList()
         modeDesc["comment"] = .string("Tool mode:")
         modeDesc["format"] = .string("symbol")
         modeDesc["default"] = .string("none")
         L["mytoolmode"] = .propList(modeDesc)
 
-        let paramDesc = PropList()
+        var paramDesc = PropList()
         paramDesc["comment"] = .string("Tool param:")
         paramDesc["format"] = .string("symbol")
         paramDesc["default"] = .void
         L["mytoolparam"] = .propList(paramDesc)
 
-        let stateDesc = PropList()
+        var stateDesc = PropList()
         stateDesc["comment"] = .string("Tool state:")
         stateDesc["format"] = .string("symbol")
         stateDesc["default"] = .void
         L["mytoolstate"] = .propList(stateDesc)
 
-        let frameDesc = PropList()
+        var frameDesc = PropList()
         frameDesc["comment"] = .string("Tool frame:")
         frameDesc["format"] = .string("integer")
         frameDesc["default"] = .void

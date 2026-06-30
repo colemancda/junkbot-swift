@@ -41,8 +41,8 @@ class BehaviorRankMeter {
                     sprite(spriteNum).loc = Point(x: 1000, y: 1000)
                 }
             }
-            member("rank_box1").text = String(rank)
-            member("rank_box2").text = "out of \(total)"
+            member("rank_box1")?.text = String(rank)
+            member("rank_box2")?.text = "out of \(total)"
         }
     }
 }

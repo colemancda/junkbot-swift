@@ -24,7 +24,7 @@ class BehaviorLegopartsManager: LingoObject, @unchecked Sendable {
     }
 
     func makePiece(color: Int, state: Int, frame: Int, shape: [[Int]]) -> PropList {
-        let p = PropList()
+        var p = PropList()
         p["color"] = .int(color)
         p["state"] = .int(state)
         p["frame"] = .int(frame)

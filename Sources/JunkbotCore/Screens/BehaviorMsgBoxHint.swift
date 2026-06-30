@@ -8,12 +8,12 @@ class BehaviorMsgBoxHint {
         Glob.shared["hint_obj"] = .void  // set externally as object reference
         prop = PropList()
         prop["state"] = .string("hide")
-        let loc = PropList()
+        var loc = PropList()
         loc["Start"] = .point(x: 275, y: -125)
         loc["show"] = .point(x: 275, y: 215)
         loc["end"] = .point(x: -195, y: 215)
         prop["loc"] = .propList(loc)
-        let speed = PropList()
+        var speed = PropList()
         speed["move1"] = .list(LingoList([.int(0), .int(40)]))
         speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
         prop["speed"] = .propList(speed)
@@ -24,7 +24,7 @@ class BehaviorMsgBoxHint {
         let building = current["building"].asInt!
         let level = current["level"].asInt!
         let hint: String = (Glob.shared["building"]).building(.int(building)).LEVELS(.int(level)).info.hint.asString ?? ""
-        member("hint_text").text = "level \(level) hint:\n\(hint)"
+        member("hint_text")?.text = "level \(level) hint:\n\(hint)"
         prop["state"] = .string("move1")
         prop["gameState"] = (Glob.shared["PLAYER"]).play_manager.activeState
         (Glob.shared["PLAYER"]).play_manager.activeState = "pause"

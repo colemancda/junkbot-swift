@@ -3,7 +3,7 @@
 struct MovieDummyDataManager {
     static func initDummy() {
         Glob.shared["keyrequired"] = .int(2)
-        let current = PropList()
+        var current = PropList()
         current["building"] = .int(1)
         current["level"] = .int(1)
         current["moves"] = .int(30)
@@ -12,14 +12,14 @@ struct MovieDummyDataManager {
         for i in 1...4 {
             let levels = LingoList()
             for _ in 1...15 {
-                let lvl = PropList()
+                var lvl = PropList()
                 lvl["title"] = .string("Dummy TITLE HAHA")
                 lvl["goal"] = .int(20)
                 lvl["moves"] = .int(0)
                 levels.add(.propList(lvl))
             }
             let state: String = (i == 1) ? "open" : "locked"
-            let building = PropList()
+            var building = PropList()
             building["state"] = .string(state)
             building["LEVELS"] = .list(levels)
             buildings.add(.propList(building))

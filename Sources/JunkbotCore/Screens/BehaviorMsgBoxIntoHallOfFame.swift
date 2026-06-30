@@ -9,12 +9,12 @@ class BehaviorMsgBoxIntoHallOfFame {
         Glob.shared["master_obj"] = .void  // set externally as object reference
         prop = PropList()
         prop["state"] = .string("hide")
-        let loc = PropList()
+        var loc = PropList()
         loc["Start"] = .point(x: 275, y: -220)
         loc["show"] = .point(x: 265, y: 210)
         loc["end"] = .point(x: -455, y: 210)
         prop["loc"] = .propList(loc)
-        let speed = PropList()
+        var speed = PropList()
         speed["move1"] = .list(LingoList([.int(0), .int(40)]))
         speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
         prop["speed"] = .propList(speed)
@@ -57,7 +57,7 @@ class BehaviorMsgBoxIntoHallOfFame {
 
     func updateScreen() {
         let rankdata = Glob.shared["rankdata"].asPropList!
-        member("total.moves").text = String(rankdata["moves"].asInt!)
+        member("total.moves")?.text = String(rankdata["moves"].asInt!)
         if rankdata["serverState"].asString == "READY" {
             let barwidth = 125
             let rank = rankdata["rank"].asInt!
@@ -70,11 +70,11 @@ class BehaviorMsgBoxIntoHallOfFame {
                 mybar = barwidth - Int(Double(barwidth) / ratio)
             }
             sprite(myNum + 1).width = mybar
-            member("rank_box1").text = String(rank)
-            member("rank_box2").text = "out of \(total)"
+            member("rank_box1")?.text = String(rank)
+            member("rank_box2")?.text = "out of \(total)"
         } else {
-            member("rank_box1").text = "processing"
-            member("rank_box2").text = ""
+            member("rank_box1")?.text = "processing"
+            member("rank_box2")?.text = ""
         }
     }
 

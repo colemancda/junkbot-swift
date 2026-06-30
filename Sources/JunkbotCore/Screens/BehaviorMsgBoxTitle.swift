@@ -8,16 +8,16 @@ class BehaviorMsgBoxTitle {
         Glob.shared["title_obj"] = .void  // set externally as object reference
         prop = PropList()
         prop["state"] = .string("hide")
-        let loc = PropList()
+        var loc = PropList()
         loc["Start"] = .point(x: 100, y: -190)
         loc["show"] = .point(x: 100, y: 130)
         loc["end"] = .point(x: -300, y: 130)
         prop["loc"] = .propList(loc)
-        let speed = PropList()
+        var speed = PropList()
         speed["move1"] = .list(LingoList([.int(0), .int(40)]))
         speed["move2"] = .list(LingoList([.int(-40), .int(0)]))
         prop["speed"] = .propList(speed)
-        let sprites = PropList()
+        var sprites = PropList()
         sprites["icon"] = .int(myNum + 1)
         sprites["num"] = .int(myNum + 2)
         sprites["title"] = .int(myNum + 3)
@@ -29,7 +29,7 @@ class BehaviorMsgBoxTitle {
         let buildingNum = data[1].asInt!
         sprite(sprites["icon"].asInt!).member = member("building_icon_\(buildingNum)")
         sprite(sprites["num"].asInt!).member = member("building_title_\(buildingNum)")
-        member("level_title").text = "LEVEL \(data[2].asString ?? ""): \(data[3].asString ?? "")"
+        member("level_title")?.text = "LEVEL \(data[2].asString ?? ""): \(data[3].asString ?? "")"
         prop["state"] = .string("move1")
         fixLocZ()
         prop["callback"] = callback

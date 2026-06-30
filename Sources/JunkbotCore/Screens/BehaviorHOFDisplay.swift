@@ -7,9 +7,9 @@ class BehaviorHOFDisplay {
     func beginSprite() {
         (Glob.shared["database_manager"]).loadHallOfFame()
         ready = 0
-        member("HOF_rank").text = ""
-        member("HOF_names").text = "\nLOADING\n"
-        member("HOF_moves").text = ""
+        member("HOF_rank")?.text = ""
+        member("HOF_names")?.text = "\nLOADING\n"
+        member("HOF_moves")?.text = ""
         page = 1
     }
 
@@ -67,9 +67,9 @@ class BehaviorHOFDisplay {
                 names = names + (hof[namekey].asString ?? "") + "\n"
                 moves = moves + (hof[movekey].asString ?? "") + "\n"
             }
-            member("HOF_rank").text = ranks
-            member("HOF_moves").text = moves
-            member("HOF_names").text = names
+            member("HOF_rank")?.text = ranks
+            member("HOF_moves")?.text = moves
+            member("HOF_names")?.text = names
             return 1
         } else {
             return 0

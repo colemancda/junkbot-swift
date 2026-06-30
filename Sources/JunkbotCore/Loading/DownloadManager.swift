@@ -26,7 +26,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
         ]
         displaysaveloc = [:]
         loadp = false
-        member("download_msg").text = "DOWNLOAD IN PROGRESS"
+        member("download_msg")?.text = "DOWNLOAD IN PROGRESS"
         db("new")
     }
 
@@ -69,7 +69,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
         for i in 21...34 {
             let spr = sprite(i)
             let origLocV = spr.locV
-            let entry = PropList()
+            var entry = PropList()
             entry["sprite"] = .object(spr)
             entry["locV"] = .int(origLocV)
             loadingbricksprites.append(entry)
@@ -130,7 +130,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
         state = "sample_level"
         show(["intro_anim"], v: false)
         show(["intro_level"], v: true)
-        let currentLevel = member("loading_level").text
+        let currentLevel = member("loading_level")?.text
         glob.PLAYER.play_manager.setLevel(.string(currentLevel))
         glob.PLAYER.play_manager.startLevel()
     }
@@ -158,7 +158,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
             displaysprites["intro_anim"]?[0].play()
         case "cleanup":
             if state == "sample_level" {
-                let currentLevel = member("loading_level").text
+                let currentLevel = member("loading_level")?.text
                 glob.PLAYER.play_manager.leave()
                 glob.PLAYER.play_manager.setLevel(.string(currentLevel))
                 glob.PLAYER.play_manager.startLevel()

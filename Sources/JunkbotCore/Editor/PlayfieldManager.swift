@@ -25,7 +25,7 @@ class PlayfieldManager {
         for i in 200...999 {
             spriteBuffer.append(sprite(i))
         }
-        let bg = PropList()
+        var bg = PropList()
         bg["backdrop"] = .object(member("bkg1", "backgrounds"))
         bg["decals"] = .list(LingoList())
         background = bg
@@ -132,7 +132,7 @@ class PlayfieldManager {
             out_partslist.append(part_text)
         }
 
-        let out_bglist = PropList()
+        var out_bglist = PropList()
         if background == nil {
             out_bglist["backdrop"] = .string("bkg1")
             out_bglist["decals"] = .list(LingoList())
@@ -158,12 +158,12 @@ class PlayfieldManager {
         for c in out_colorlist { colorsList.add(.string(c)) }
         let partsList = LingoList()
         for p in out_partslist { partsList.add(.string(p)) }
-        let partslistPL = PropList()
+        var partslistPL = PropList()
         partslistPL["types"] = .list(typesList)
         partslistPL["colors"] = .list(colorsList)
         partslistPL["parts"] = .list(partsList)
 
-        let wrapper = PropList()
+        var wrapper = PropList()
         wrapper["info"] = .propList(info)
         wrapper["background"] = .propList(out_bglist)
         wrapper["playfield"] = .propList(config)
@@ -187,12 +187,12 @@ class PlayfieldManager {
             info = i
         }
         if pfinfoDict["background"].isVoid {
-            let defaultBg = PropList()
+            var defaultBg = PropList()
             defaultBg["backdrop"] = .string("bkg1")
             defaultBg["decals"] = .list(LingoList())
             pfinfoDict["background"] = .propList(defaultBg)
         }
-        let bg = PropList()
+        var bg = PropList()
         bg["decals"] = .list(LingoList())
         let bgSection = pfinfoDict["background"].asPropList ?? PropList()
         bg["backdrop"] = .object(member(bgSection["backdrop"].asString ?? "", "backgrounds"))
@@ -209,7 +209,7 @@ class PlayfieldManager {
                     let parts = dStr.split(separator: ";")
                     if parts.count >= 3, let x = Int(parts[0]), let y = Int(parts[1]) {
                         let mName = String(parts[2])
-                        let decalPL = PropList()
+                        var decalPL = PropList()
                         decalPL["member"] = .object(member(mName, "backgrounds"))
                         decalPL["loc"] = .point(x: x, y: y)
                         bgDecalsList.add(.propList(decalPL))
@@ -254,7 +254,7 @@ class PlayfieldManager {
                 let part_labelval = String(items[6])
                 let part_type = part_typenum > 0 && part_typenum <= typeList.count ? typeList[part_typenum - 1] : ""
                 let part_color: String? = part_colornum == 0 ? nil : (part_colornum <= colorList.count ? colorList[part_colornum - 1] : nil)
-                let part = PropList()
+                var part = PropList()
                 part["pos"] = .point(x: part_pos_x, y: part_pos_y)
                 part["type"] = .string(part_type)
                 if let pc = part_color {

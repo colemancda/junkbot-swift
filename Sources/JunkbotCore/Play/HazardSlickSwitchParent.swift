@@ -51,7 +51,7 @@ public class HazardSlickSwitchParent {
                     SndSFX("switch_click")
                 }
                 let label = part["label"].asString ?? ""
-                let args = PropList()
+                var args = PropList()
                 args["label"] = .string(label)
                 args["state"] = part["state"]
                 play_manager?.doSwitch(args)

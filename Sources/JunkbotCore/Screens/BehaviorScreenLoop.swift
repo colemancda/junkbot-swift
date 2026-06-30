@@ -88,8 +88,8 @@ class BehaviorScreenLoop {
             sprite(39 + l).blend = 100
             sprite(54 + l).blend = 0
         }
-        member("level.name").text = titleText
-        member("level.moves").text = movesText
+        member("level.name")?.text = titleText
+        member("level.moves")?.text = movesText
     }
 
     func roTab(_ snum: Int, _ bnum: Int) -> Int {

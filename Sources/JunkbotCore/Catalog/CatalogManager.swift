@@ -85,9 +85,9 @@ class CatalogManager: LingoObject, @unchecked Sendable {
                 entries = LingoList()
             }
             var newEntry = PropList()
-            newEntry["name"] = .string(member("catalog name").text ?? "")
-            newEntry["title"] = .string(member("catalog title").text ?? "")
-            newEntry["comment"] = .string(member("catalog comment").text ?? "")
+            newEntry["name"] = .string(member("catalog name")?.text ?? "")
+            newEntry["title"] = .string(member("catalog title")?.text ?? "")
+            newEntry["comment"] = .string(member("catalog comment")?.text ?? "")
             entries.add(.propList(newEntry))
             localcatalog["Entry"] = .list(entries)
             var t = ""
@@ -108,9 +108,9 @@ class CatalogManager: LingoObject, @unchecked Sendable {
             if !netids.isEmpty { return }
             var params = PropList()
             params["mode"] = .string("save")
-            params["name"] = .string(member("catalog name").text ?? "")
-            params["title"] = .string(member("catalog title").text ?? "")
-            params["comment"] = .string(member("catalog comment").text ?? "")
+            params["name"] = .string(member("catalog name")?.text ?? "")
+            params["title"] = .string(member("catalog title")?.text ?? "")
+            params["comment"] = .string(member("catalog comment")?.text ?? "")
             params["level"] = .string("")
             params["database"] = .string(database)
             let nid = postNetText(cgi, params)

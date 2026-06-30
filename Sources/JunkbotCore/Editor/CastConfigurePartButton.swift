@@ -2,6 +2,6 @@
 
 class CastConfigurePartButton {
     func mouseUp() {
-        glob.EDITOR.edit_manager.doConfigPart(member("part inspector field").text)
+        glob.EDITOR.edit_manager.doConfigPart(.string(member("part inspector field")?.text ?? ""))
     }
 }

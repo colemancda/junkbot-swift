@@ -8,7 +8,7 @@ class BehaviorConfigManager: LingoObject, @unchecked Sendable {
     ///   - defaultList: optional default values (prop list)
     /// - Returns: parsed prop list
     func parseParams(_ t: String, defaultList: PropList? = nil) -> PropList {
-        let ret = PropList()
+        var ret = PropList()
         var section = ret
 
         let fixed = fixReturns(t)
@@ -36,7 +36,7 @@ class BehaviorConfigManager: LingoObject, @unchecked Sendable {
                             while arr.count < sectionNum {
                                 arr.add(.propList(PropList()))
                             }
-                            let newSec = PropList()
+                            var newSec = PropList()
                             arr[sectionNum] = .propList(newSec)  // 1-based
                             section = newSec
                         }
