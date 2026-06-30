@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
   name: "Junkbot",
-  platforms: [.macOS(.v13)],
+  platforms: [.macOS(.v14)],
   dependencies: [
     .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0")
   ],
