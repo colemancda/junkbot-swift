@@ -2,23 +2,23 @@
 import PackageDescription
 
 let package = Package(
-    name: "Junkbot",
-    platforms: [.macOS(.v13)],
-    dependencies: [
-        .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0")
-    ],
-    targets: [
-        .target(
-            name: "JunkbotCore"
-        ),
-        .executableTarget(
-            name: "JunkbotApp",
-            dependencies: [
-                .product(name: "JavaScriptKit", package: "JavaScriptKit")
-            ],
-            swiftSettings: [
-                .unsafeFlags(["-wmo", "-Osize"])
-            ]
-        )
-    ]
+  name: "Junkbot",
+  platforms: [.macOS(.v13)],
+  dependencies: [
+    .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0")
+  ],
+  targets: [
+    .target(
+      name: "JunkbotCore"
+    ),
+    .executableTarget(
+      name: "JunkbotApp",
+      dependencies: [
+        .product(name: "JavaScriptKit", package: "JavaScriptKit")
+      ],
+      swiftSettings: [
+        .unsafeFlags(["-wmo", "-Osize"])
+      ]
+    ),
+  ]
 )
