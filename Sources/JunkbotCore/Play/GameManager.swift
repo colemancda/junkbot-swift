@@ -1,6 +1,7 @@
 // Translated from Lingo: parent_game manager.ls
 
 public class GameManager: LingoObject, @unchecked Sendable {
+    public override var asGameManager: GameManager? { self }
     public var gameState: String = "#PREGAME"
     public var currentLevel: LV = .void
     public var currentLevelIndex: Int = 1

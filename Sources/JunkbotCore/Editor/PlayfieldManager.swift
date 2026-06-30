@@ -1,6 +1,7 @@
 // Translated from Lingo: parent_playfield manager.ls
 
-class PlayfieldManager: LingoObject, @unchecked Sendable {
+public class PlayfieldManager: LingoObject, @unchecked Sendable {
+    public override var asPlayfieldManager: PlayfieldManager? { self }
     var pf_size: [Int] = [0, 0]
     var pf_spacing: [Int] = [0, 0]
     var pf_scale: Int = 1

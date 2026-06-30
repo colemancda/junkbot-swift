@@ -310,6 +310,9 @@ public class LingoObject: FrameEvents, SpriteLifecycleEvents, MovieLifecycleEven
     // Virtual accessors replacing dynamic casting
     public var asSprite: LingoSprite? { nil }
     public var asMember: LingoMember? { nil }
+    public var asPlayfieldManager: PlayfieldManager? { nil }
+    public var asPlayManager: PlayManager? { nil }
+    public var asGameManager: GameManager? { nil }
 }
 
 public extension String {

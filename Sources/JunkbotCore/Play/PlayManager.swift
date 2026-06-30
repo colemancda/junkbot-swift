@@ -1,6 +1,7 @@
 // Translated from Lingo: parent_play manager.ls
 
 public class PlayManager: LingoObject, @unchecked Sendable {
+    public override var asPlayManager: PlayManager? { self }
     public var config: LV = .void
     public var playfield_manager: LV = .void
     public var dragmember: LV = .void

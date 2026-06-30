@@ -57,6 +57,10 @@ public func goToNetPage(_ url: LV) {}
 nonisolated(unsafe) public var selection: String = ""
 public func pass() {}
 // MARK: - Cast/member stubs
+
+public func SndSFX(_ soundName: String) {
+    // Stubbed sound effect playback
+}
 public func numberOfCastMembers(inCastLib: String) -> Int { 0 }
 public func member(_ n: Int, _ castLib: String) -> LingoMember? { nil }
 nonisolated(unsafe) public var mouseLine: Int = 0
