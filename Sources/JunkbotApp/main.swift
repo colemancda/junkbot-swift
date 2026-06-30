@@ -5136,16 +5136,14 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
           for j in 0..<newLen {
             let otherEntity = entities[j]
             if otherEntity.grabbed.boolean != true {
-              let ri =
-                rectanglesIntersect.callAsFunction(
-                  this: JSValue.null,
-                  .number(x), .number(y), .number(15.0), .number(18.0),
-                  otherEntity.x, otherEntity.y, otherEntity.width, otherEntity.height
-                ).boolean == true
+              let ri = rectanglesIntersect(
+                x, y, 15.0, 18.0,
+                otherEntity.x.number ?? 0, otherEntity.y.number ?? 0,
+                otherEntity.width.number ?? 0, otherEntity.height.number ?? 0)
               if ri {
                 if otherEntity.type.string == "junkbot" {
                   if otherEntity.wasFloating.boolean != true {
-                    _ = playSound.callAsFunction(this: JSValue.null, .string("fan"))
+                    _ = playSound(.string("fan"), .undefined, .undefined)
                   }
                   otherEntity.floating = .boolean(true)
                 } else if otherEntity.type.string != "droplet" {
@@ -5183,15 +5181,13 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
         for j in 0..<newLen {
           let otherEntity = entities[j]
           if otherEntity.grabbed.boolean != true {
-            let ri =
-              rectanglesIntersect.callAsFunction(
-                this: JSValue.null,
-                .number(x), .number(lbY), .number(15.0), .number(18.0),
-                otherEntity.x, otherEntity.y, otherEntity.width, otherEntity.height
-              ).boolean == true
+            let ri = rectanglesIntersect(
+              x, lbY, 15.0, 18.0,
+              otherEntity.x.number ?? 0, otherEntity.y.number ?? 0,
+              otherEntity.width.number ?? 0, otherEntity.height.number ?? 0)
             if ri {
               if otherEntity.type.string == "junkbot" {
-                _ = hurtJunkbot.callAsFunction(this: JSValue.null, otherEntity, .string("laser"))
+                _ = hurtJunkbot(otherEntity, .string("laser"))
               }
               if otherEntity.type.string != "droplet" {
                 collision = otherEntity
@@ -5214,22 +5210,22 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
 
   for i in 0..<newLen {
     let entity = entities[i]
-    _ = JSObject.global.Reflect.deleteProperty!(entity, "wasFloating")
+    _ = JSObject.global.Reflect.deleteProperty(entity, "wasFloating")
   }
 
   let sortFunc = JSObject.global.Function.function!.new("a", "b", "return a.id - b.id;")
-  _ = entities.sort!(sortFunc)
+  _ = entities.sort(sortFunc)
 
   let evt = JSObject.global.Object.function!.new()
   evt.type = .string("step")
   evt.t = .number(Double(frameCounter))
-  evt.x = mouse["worldX"]
-  evt.y = mouse["worldY"]
-  evt.editing = editing
-  let diff = diffPatcher.diff!(levelLastFrame, currentLevel)
+  evt.x = .number((mouse["worldX"] ?? nil) ?? 0.0)
+  evt.y = .number((mouse["worldY"] ?? nil) ?? 0.0)
+  evt.editing = .boolean(editing)
+  let diff = diffPatcher.diff(levelLastFrame, currentLevel)
   evt.levelPatch = diffPatcher.clone(diff)
 
-  playthroughEvents.append(evt)
+  playthroughEvents.append(evt.jsValue)
   levelLastFrame = diffPatcher.clone(currentLevel)
   return .undefined
 }
@@ -5249,17 +5245,17 @@ var detectProblems = { () -> JSValue in
   let maxEntityHeight = 100.0
   let reportedCollisions = JSObject.global.Map.function?.new()
 
-  let isNumJS = JSObject.global.Function.function!.new(
-    "value", "return typeof value === 'number' && isFinite(value);")
+  let isNum = { (v: JSValue) -> Bool in
+    guard let n = v.number else { return false }
+    return !n.isNaN && !n.isInfinite
+  }
 
   let problems = JSObject.global["Array"].function!.new()
   let len = Int(entities.length.number ?? 0.0)
 
   for i in 0..<len {
     let entity = entities[i]
-    if isNumJS.callAsFunction(this: JSValue.null, entity.x).boolean != true
-      || isNumJS.callAsFunction(this: JSValue.null, entity.y).boolean != true
-    {
+    if !isNum(entity.x) || !isNum(entity.y) {
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.stringify(entity, .null, "\t").string ?? ""
       p.message = .string("Invalid position (x/y) for entity \(str)\n")
@@ -5273,18 +5269,14 @@ var detectProblems = { () -> JSValue in
       _ = problems.push(p)
       continue
     }
-    if isNumJS.callAsFunction(this: JSValue.null, entity.width).boolean != true
-      || isNumJS.callAsFunction(this: JSValue.null, entity.height).boolean != true
-    {
+    if !isNum(entity.width) || !isNum(entity.height) {
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.stringify(entity, .null, "\t").string ?? ""
       p.message = .string("Invalid size (width/height) for entity \(str)\n")
       _ = problems.push(p)
       continue
     }
-    if entity.type.string == "brick"
-      && isNumJS.callAsFunction(this: JSValue.null, entity.widthInStuds).boolean != true
-    {
+    if entity.type.string == "brick" && !isNum(entity.widthInStuds) {
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.stringify(entity, .null, "\t").string ?? ""
       p.message = .string("Invalid widthInStuds for entity \(str)\n")
@@ -5319,16 +5311,16 @@ var detectProblems = { () -> JSValue in
           let otherEntity = byTopY[j]
           let isSame = JSObject.global.Object.is(otherEntity, entity).boolean == true
           if !isSame {
-            let repE = reportedCollisions.get!(entity)
+            let repE = reportedCollisions?.get(entity) ?? .undefined
             var hasRepE = false
             if !repE.isUndefined && !repE.isNull {
-              hasRepE = (repE.indexOf!(otherEntity).number ?? -1.0) != -1.0
+              hasRepE = (repE.indexOf(otherEntity).number ?? -1.0) != -1.0
             }
 
-            let repOE = reportedCollisions.get!(otherEntity)
+            let repOE = reportedCollisions?.get(otherEntity) ?? .undefined
             var hasRepOE = false
             if !repOE.isUndefined && !repOE.isNull {
-              hasRepOE = (repOE.indexOf!(entity).number ?? -1.0) != -1.0
+              hasRepOE = (repOE.indexOf(entity).number ?? -1.0) != -1.0
             }
 
             if !hasRepE && !hasRepOE {
@@ -5337,12 +5329,7 @@ var detectProblems = { () -> JSValue in
               let oeW = otherEntity.width.number ?? 0.0
               let oeH = otherEntity.height.number ?? 0.0
 
-              let ri =
-                rectanglesIntersect.callAsFunction(
-                  this: JSValue.null,
-                  .number(eX), .number(eY), .number(eW), .number(eH),
-                  .number(oeX), .number(oeY), .number(oeW), .number(oeH)
-                ).boolean == true
+              let ri = rectanglesIntersect(eX, eY, eW, eH, oeX, oeY, oeW, oeH)
 
               if ri {
                 let worldX = (eX + oeX + (eW + oeW) / 2.0) / 2.0
@@ -5356,19 +5343,19 @@ var detectProblems = { () -> JSValue in
                 p.worldY = .number(worldY)
                 _ = problems.push(p)
 
-                if reportedCollisions.has!(entity).boolean == true {
-                  _ = reportedCollisions.get!(entity).push(otherEntity)
+                if reportedCollisions?.has(entity).boolean == true {
+                  _ = (reportedCollisions?.get(entity) ?? .undefined).push(otherEntity)
                 } else {
                   let arr = JSObject.global["Array"].function!.new()
                   _ = arr.push(otherEntity)
-                  _ = reportedCollisions.set!(entity, arr)
+                  _ = reportedCollisions?.set(entity, arr)
                 }
-                if reportedCollisions.has!(otherEntity).boolean == true {
-                  _ = reportedCollisions.get!(otherEntity).push(entity)
+                if reportedCollisions?.has(otherEntity).boolean == true {
+                  _ = (reportedCollisions?.get(otherEntity) ?? .undefined).push(entity)
                 } else {
                   let arr = JSObject.global["Array"].function!.new()
                   _ = arr.push(entity)
-                  _ = reportedCollisions.set!(otherEntity, arr)
+                  _ = reportedCollisions?.set(otherEntity, arr)
                 }
               }
             }
@@ -5525,39 +5512,39 @@ var controlViewport = { () -> JSValue in
 }
 
 var checkLevelEnd = { () -> JSValue in
-  let wol = winOrLose.callAsFunction(this: JSValue.null).string ?? ""
+  let wol = winOrLose()
   if wol != (winLoseState.string ?? "") {
     winLoseState = .string(wol)
     if wol == "lose" && paused.boolean != true {
       paused = .boolean(true)
       if testing.boolean != true {
-        _ = showLevelLoseUI.callAsFunction(this: JSValue.null)
+        _ = showLevelLoseUI()
         let c = JSClosure { _ in
-          let r = JSObject.global.Math.random!().number ?? 0.0
-          _ = playSound.callAsFunction(this: JSValue.null, .string(r < 0.5 ? "ouch" : "uhoh"))
+          let r = JSObject.global.Math.random().number ?? 0.0
+          _ = playSound(.string(r < 0.5 ? "ouch" : "uhoh"), .undefined, .undefined)
           return .undefined
         }
-        _ = JSObject.global.setTimeout!(c.object, 1000.0)
+        _ = JSObject.global.setTimeout(c.object, 1000.0)
       }
     }
     if wol == "win" && paused.boolean != true {
       paused = .boolean(true)
       if testing.boolean != true {
-        let n = JSObject.global.Date.now!().number ?? 0.0
+        let n = JSObject.global.Date.now().number ?? 0.0
         let timeSinceCollectBin = n - (collectBinTime.number ?? 0.0)
         let levelAtWin = currentLevel
         let c = JSClosure { _ in
           let isSame = JSObject.global.Object.is(currentLevel, levelAtWin).boolean == true
           if !isSame { return .undefined }
-          _ = playSound.callAsFunction(this: JSValue.null, .string("ohYeah"))
+          _ = playSound(.string("ohYeah"), .undefined, .undefined)
 
           let titleStr = currentLevel.title.string ?? ""
           if titleStr != ""
-            && parseRoute.callAsFunction(this: JSValue.null, JSObject.global.location.hash).game
+            && parseRoute.function?.callAsFunction(this: JSValue.null, JSObject.global.location.hash).game
               .string != GAME_USER_CREATED.string
           {
-            let scoreKey = storageKeys["score"]!.function!.callAsFunction(this: JSObject.global, titleStr).string ?? ""
-            let solutionKey = storageKeys["solutionRecording"]!.function!.callAsFunction(this: JSObject.global, titleStr).string ?? ""
+            let scoreKey = storageKeys["score"]?.function?.callAsFunction(this: JSObject.global, titleStr).string ?? ""
+            let solutionKey = storageKeys["solutionRecording"]?.function?.callAsFunction(this: JSObject.global, titleStr).string ?? ""
             let formerFewestStr = JSObject.global.localStorage[scoreKey].string ?? "NaN"
             let formerFewest = Double(formerFewestStr) ?? .nan
 
@@ -5565,24 +5552,22 @@ var checkLevelEnd = { () -> JSValue in
             if formerFewest.isNaN || formerFewest >= mvs {
               JSObject.global.localStorage[scoreKey] = .number(mvs)
               if (playbackEvents.length.number ?? 0.0) == 0.0 {
-                let filterJS = JSObject.global.Function.function!.new(
-                  "obj", "return obj.type != 'step';")
-                let filtered = playthroughEvents.filter!(filterJS)
-                JSObject.global.localStorage[solutionKey] = JSObject.global.JSON.stringify(filtered)
-                _ = printJS.callAsFunction(
-                  this: JSValue.null, .string("Saved solution for"), currentLevel.title)
+                let filtered = playthroughEvents.filter { $0.type.string != "step" }
+                let filteredArr = JSObject.global["Array"].function!.new()
+                for e in filtered { _ = filteredArr.push(e) }
+                JSObject.global.localStorage[solutionKey] = JSObject.global.JSON.stringify(filteredArr)
+                _ = printJS.function?.callAsFunction(this: JSValue.null, .string("Saved solution for"), currentLevel.title)
               }
             } else {
-              _ = printJS.callAsFunction(
-                this: JSValue.null, .string("Not saving solution for"), currentLevel.title)
+              _ = printJS.function?.callAsFunction(this: JSValue.null, .string("Not saving solution for"), currentLevel.title)
             }
           }
-          _ = showLevelWinUI.callAsFunction(this: JSValue.null)
+          _ = showLevelWinUI()
           return .undefined
         }
         let cbD = resources.collectBin.duration.number ?? 0.0
         let cb2D = resources.collectBin2.duration.number ?? 0.0
-        _ = JSObject.global.setTimeout!(c.object, max(cbD, cb2D) * 1000.0 - timeSinceCollectBin)
+        _ = JSObject.global.setTimeout(c.object, max(cbD, cb2D) * 1000.0 - timeSinceCollectBin)
       }
     }
   }
@@ -5607,7 +5592,7 @@ var animate = JSClosure { args in
 //                      ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // #region GUI (Graphical User Interface)
 
-_ = JSObject.global.eval!(
+_ = JSObject.global.eval(
   #"""
   var toggleInfoBox = function() {
   	infoBox.hidden = !infoBox.hidden;
