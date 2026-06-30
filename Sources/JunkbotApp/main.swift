@@ -300,7 +300,7 @@ var currentLevel: JSValue = .object(JSObject.global.Object.function!.new([
   "title": JSValue.string("Custom World"),
 ]))
 var playthroughEvents = [JSValue]()
-var playbackEvents = [JSValue]()
+var playbackEvents: JSValue = .undefined
 var playbackLevel: JSValue = .object(JSObject.global.Object.function!.new())
 var levelLastFrame: JSValue = .object(JSObject.global.Object.function!.new())
 var winLoseState = ""
@@ -1244,7 +1244,7 @@ var resetAndInit = { (level: JSValue) in
   laserBeams.removeAll()
   teleportEffects.removeAll()
   playthroughEvents.removeAll()
-  playbackEvents.removeAll()
+  playbackEvents = .object(JSObject.global.Array.function!.new())
   // playbackEvents = playthroughEvents // for rewinding with negative rewind speed
   playbackLevel = .object(JSObject.global.Object.function!.new())
   levelLastFrame = .object(JSObject.global.Object.function!.new())
@@ -3220,7 +3220,7 @@ let keydownClosure = JSClosure { args -> JSValue in
       if editing {
         _ = toggleEditing.callAsFunction(this: JSObject.global)
       }
-      playbackEvents = JSObject.global.JSON.parse!(json)
+        playbackEvents = JSObject.global.JSON.parse(json)
     }
   }
   if altKey && (code == "Enter" || code == "NumpadEnter") {
@@ -3997,17 +3997,11 @@ var canRelease = { () -> Bool in
   }
 
   let opts = JSObject.global.Object.function!.new()
-  let connectedToFixed = allConnectedToFixed(opts)
+  let connectedToFixed = allConnectedToFixed(opts.jsValue)
 
-  // We need to write a simple entityCollisionTest for Swift, since JS entityCollisionTest takes JS closures!
-  // But since `entityCollisionTest` expects a JS closure, we can wrap our Swift closure or we can pass a JS function!
   var someCollision = false
-  let notDropletJS = JSObject.global.Function.function!.new(
-    "entity", "return entity.type != 'droplet';")
   for entity in dragging {
-    if entityCollisionTest.callAsFunction(
-      this: JSValue.null, entity.x, entity.y, entity, notDropletJS
-    ).boolean == true {
+    if entityCollisionTest(entity.x.number ?? 0, entity.y.number ?? 0, entity, notDroplet) != nil {
       someCollision = true
       break
     }
@@ -4033,20 +4027,15 @@ var canRelease = { () -> Bool in
       if otherEntity.grabbed.boolean != true {
         let ot = otherEntity.type.string ?? ""
         if (ot == "fire" || ot == "fan")
-          && connects.callAsFunction(this: JSValue.null, entity, otherEntity, .undefined).boolean
-            == true
+          && connects(entity, otherEntity, .undefined).boolean == true
         {
           return false
         }
         if ot == "brick" && JSValueArrayContains(connectedToFixed, otherEntity) {
-          if connects.callAsFunction(this: JSValue.null, entity, otherEntity, .number(-1.0)).boolean
-            == true
-          {
+          if connects(entity, otherEntity, .number(-1.0)).boolean == true {
             connectsToCeiling = true
           }
-          if connects.callAsFunction(this: JSValue.null, entity, otherEntity, .number(1.0)).boolean
-            == true
-          {
+          if connects(entity, otherEntity, .number(1.0)).boolean == true {
             connectsToFloor = true
           }
         }
@@ -4133,45 +4122,31 @@ var simulateGravity = { () -> JSValue in
       let eWidth = entity.width.number ?? 0.0
       let eHeight = entity.height.number ?? 0.0
 
-      let rectCollides =
-        rectangleLevelBoundsCollisionTest.callAsFunction(
-          this: JSValue.null, .number(eX), .number(eY + 1.0), .number(eWidth), .number(eHeight)
-        ).boolean == true
+      let rectCollides = rectangleLevelBoundsCollisionTest(eX, eY + 1.0, eWidth, eHeight) != nil
       let opts = JSObject.global.Object.function!.new()
       opts.direction = .number(
         (eType == "junkbot" || eType == "gearbot" || eType == "crate" || eType == "bin") ? 1.0 : 0.0
       )
-      let fixedCollides =
-        connectsToFixed.callAsFunction(this: JSValue.null, entity, opts).boolean == true
+      let fixedCollides = connectsToFixed(entity, opts.jsValue).boolean == true
 
       if !rectCollides && !fixedCollides {
-        let notDropletJS = JSObject.global.Function.function!.new(
-          "entity", "return entity.type != 'droplet';")
-        if entityCollisionTest.callAsFunction(
-          this: JSValue.null, .number(eX), .number(eY), entity, notDropletJS
-        ).boolean == true {
-          _ = debug.callAsFunction(
-            this: JSValue.null, .string("GRAVITY COLLISION"),
-            .string("\(eType) stuck in ground at \(eX), \(eY)"))
+        if entityCollisionTest(eX, eY, entity, notDroplet) != nil {
+          debug("GRAVITY COLLISION", ["\(eType) stuck in ground at \(eX), \(eY)"])
           continue  // wait, was return. Should it return? The original was `return;` inside a `forEach` maybe? No, original was `for (var entity of entities) { ... return; }`. Returning exits the entire `simulateGravity` loop! Let's exit then.
         }
 
         let cellDownY = eY + 18.0
-        let groundArr = entityCollisionAll.callAsFunction(
-          this: JSValue.null, .number(eX), .number(cellDownY + 1.0), entity, notDropletJS)
-        let sortFunc = JSObject.global.Function.function!.new("a", "b", "return a.y - b.y;")
-        let sorted = groundArr.sort!(sortFunc)
-        let ground = sorted[0]
+        let groundArr = entityCollisionAll(eX, cellDownY + 1.0, entity, notDroplet)
+        let sorted = groundArr.sorted { ($0.y.number ?? 0) < ($1.y.number ?? 0) }
+        let ground = sorted.first
 
-        _ = debug.callAsFunction(
-          this: JSValue.null, .string("GRAVITY COLLISION"),
-          .string("ground: \(JSObject.global.JSON.stringify(ground, .null, "\t").string ?? "")"))
-        if !ground.isUndefined && !ground.isNull {
+        debug("GRAVITY COLLISION", ["ground: \(JSObject.global.JSON.stringify(ground ?? .undefined, .null, "\t").string ?? "")"])
+        if let ground = ground {
           entity.y = .number((ground.y.number ?? 0.0) - eHeight)
-          _ = entityMoved.callAsFunction(this: JSValue.null, entity)
+          entityMoved(entity)
         } else {
           entity.y = .number(cellDownY)
-          _ = entityMoved.callAsFunction(this: JSValue.null, entity)
+          entityMoved(entity)
         }
       }
     }
@@ -4188,13 +4163,13 @@ var hurtJunkbot = { (junkbot: JSValue, cause: JSValue) -> JSValue in
   if junkbot.losingShield.boolean != true {
     let causeStr = cause.string ?? ""
     if causeStr == "fire" {
-      _ = playSound.callAsFunction(this: JSValue.null, .string("deathByFire"))
+      _ = playSound(.string("deathByFire"), .undefined, .undefined)
     } else if causeStr == "water" {
-      _ = playSound.callAsFunction(this: JSValue.null, .string("deathByWater"))
+      _ = playSound(.string("deathByWater"), .undefined, .undefined)
     } else if causeStr == "laser" {
-      _ = playSound.callAsFunction(this: JSValue.null, .string("deathByLaser"))
+      _ = playSound(.string("deathByLaser"), .undefined, .undefined)
     } else {
-      _ = playSound.callAsFunction(this: JSValue.null, .string("deathByBot"))
+      _ = playSound(.string("deathByBot"), .undefined, .undefined)
     }
   }
   if junkbot.armored.boolean == true {
@@ -4221,80 +4196,55 @@ var walk = { (junkbot: JSValue) -> JSValue in
   let posInFrontX = jX + jFacing * 15.0
   let posInFrontY = jY
 
-  let notBinOrDropletOrEnemyBotJS = JSObject.global.Function.function!.new(
-    "entity",
-    "return entity.type != 'bin' && entity.type != 'droplet' && entity.type != 'gearbot' && entity.type != 'climbbot' && entity.type != 'flybot' && entity.type != 'eyebot';"
-  )
-  let notBinOrDropletJS = JSObject.global.Function.function!.new(
-    "entity", "return entity.type != 'bin' && entity.type != 'droplet';")
-
-  let stepOrWall = entityCollisionTest.callAsFunction(
-    this: JSValue.null, .number(posInFrontX), .number(posInFrontY), junkbot,
-    notBinOrDropletOrEnemyBotJS)
-  if !stepOrWall.isUndefined && !stepOrWall.isNull {
+  let stepOrWall = entityCollisionTest(posInFrontX, posInFrontY, junkbot, notBinOrDropletOrEnemyBot)
+  if let stepOrWall {
     let posStepUpX = posInFrontX
     let posStepUpY = (stepOrWall.y.number ?? 0.0) - jHeight
     if posStepUpY - jY >= -18.0 && posStepUpY - jY < 0.0
-      && entityCollisionTest.callAsFunction(
-        this: JSValue.null, .number(posStepUpX), .number(posStepUpY), junkbot, notBinOrDropletJS
-      ).boolean != true
+      && entityCollisionTest(posStepUpX, posStepUpY, junkbot, notBinOrDroplet) == nil
     {
-      _ = debug.callAsFunction(this: JSValue.null, .string("JUNKBOT"), .string("STEP UP"))
+      debug("JUNKBOT", ["STEP UP"])
       junkbot.x = .number(posStepUpX)
       junkbot.y = .number(posStepUpY)
-      _ = entityMoved.callAsFunction(this: JSValue.null, junkbot)
+      entityMoved(junkbot)
       return .undefined
     }
   }
 
-  let ground = entityCollisionTest.callAsFunction(
-    this: JSValue.null, .number(posInFrontX), .number(posInFrontY + 1.0), junkbot,
-    notBinOrDropletOrEnemyBotJS)
-  if !ground.isUndefined && !ground.isNull
-    && entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(posInFrontX), .number(posInFrontY), junkbot, notBinOrDropletJS
-    ).boolean != true
-  {
-    _ = debug.callAsFunction(this: JSValue.null, .string("JUNKBOT"), .string("WALK"))
+  let ground = entityCollisionTest(posInFrontX, posInFrontY + 1.0, junkbot, notBinOrDropletOrEnemyBot)
+  if ground != nil && entityCollisionTest(posInFrontX, posInFrontY, junkbot, notBinOrDroplet) == nil {
+    debug("JUNKBOT", ["WALK"])
     junkbot.x = .number(posInFrontX)
     junkbot.y = .number(posInFrontY)
-    _ = entityMoved.callAsFunction(this: JSValue.null, junkbot)
+    entityMoved(junkbot)
     return .undefined
   }
 
-  let groundArr = entityCollisionAll.callAsFunction(
-    this: JSValue.null, .number(posInFrontX), .number(posInFrontY + 19.0), junkbot,
-    notBinOrDropletOrEnemyBotJS)
-  let sortFunc = JSObject.global.Function.function!.new("a", "b", "return a.y - b.y;")
-  let sorted = groundArr.sort!(sortFunc)
-  var step = sorted[0]
+  let groundArr = entityCollisionAll(posInFrontX, posInFrontY + 19.0, junkbot, notBinOrDropletOrEnemyBot)
+  let sortedGround = groundArr.sorted { ($0.y.number ?? 0) < ($1.y.number ?? 0) }
+  var step = sortedGround.first
 
-  if !step.isUndefined && !step.isNull {
+  if let step0 = step {
     let posStepDownX = posInFrontX
-    let posStepDownY = (step.y.number ?? 0.0) - jHeight
+    let posStepDownY = (step0.y.number ?? 0.0) - jHeight
 
-    let groundArr2 = entityCollisionAll.callAsFunction(
-      this: JSValue.null, .number(posStepDownX), .number(posStepDownY + 1.0), junkbot,
-      notBinOrDropletOrEnemyBotJS)
-    let sorted2 = groundArr2.sort!(sortFunc)
-    step = sorted2[0]
+    let groundArr2 = entityCollisionAll(posStepDownX, posStepDownY + 1.0, junkbot, notBinOrDropletOrEnemyBot)
+    let sortedGround2 = groundArr2.sorted { ($0.y.number ?? 0) < ($1.y.number ?? 0) }
+    step = sortedGround2.first
 
-    if posStepDownY - jY <= 18.0 && posStepDownY - jY > 0.0 && !step.isUndefined && !step.isNull
-      && entityCollisionTest.callAsFunction(
-        this: JSValue.null, .number(posStepDownX), .number(posStepDownY), junkbot, notBinOrDropletJS
-      ).boolean != true
+    if posStepDownY - jY <= 18.0 && posStepDownY - jY > 0.0 && step != nil
+      && entityCollisionTest(posStepDownX, posStepDownY, junkbot, notBinOrDroplet) == nil
     {
-      _ = debug.callAsFunction(this: JSValue.null, .string("JUNKBOT"), .string("STEP DOWN"))
+      debug("JUNKBOT", ["STEP DOWN"])
       junkbot.x = .number(posStepDownX)
       junkbot.y = .number(posStepDownY)
-      _ = entityMoved.callAsFunction(this: JSValue.null, junkbot)
+      entityMoved(junkbot)
       return .undefined
     }
   }
-  _ = debug.callAsFunction(
-    this: JSValue.null, .string("JUNKBOT"), .string("CLIFF/WALL/BOT - TURN AROUND"))
+  debug("JUNKBOT", ["CLIFF/WALL/BOT - TURN AROUND"])
   junkbot.facing = .number(jFacing * -1.0)
-  _ = playSound.callAsFunction(this: JSValue.null, .string("turn"))
+  _ = playSound(.string("turn"), .undefined, .undefined)
   return .string("turned")
 }
 
@@ -4315,23 +4265,17 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
   let jWidth = junkbot.width.number ?? 0.0
   let jHeight = junkbot.height.number ?? 0.0
 
-  let notDropletJS = JSObject.global.Function.function!.new(
-    "entity", "return entity.type != 'droplet';")
-
-  var aboveHeadOpt = entityCollisionTest.callAsFunction(
-    this: JSValue.null, .number(jX), .number(jY - 1.0), junkbot, notDropletJS)
-  let aboveHead = (!aboveHeadOpt.isUndefined && !aboveHeadOpt.isNull) ? aboveHeadOpt : .undefined
+  let aboveHead = entityCollisionTest(jX, jY - 1.0, junkbot, notDroplet)
 
   var headLoaded = false
-  if !aboveHead.isUndefined {
+  if let aboveHead {
     let ahFixed = aboveHead.fixed.boolean == true
     let ahType = aboveHead.type.string ?? ""
 
     let ignoreArr = JSObject.global["Array"].function!.new(junkbot)
     let opts = JSObject.global.Object.function!.new()
-    opts.ignoreEntities = ignoreArr
-    let ahConnected =
-      connectsToFixed.callAsFunction(this: JSValue.null, aboveHead, opts).boolean == true
+    opts.ignoreEntities = ignoreArr.jsValue
+    let ahConnected = connectsToFixed(aboveHead, opts.jsValue).boolean == true
 
     if junkbot.floating.boolean == true
       || (!ahFixed && !ahConnected && ahType != "levelBounds" && ahType != "flybot"
@@ -4345,7 +4289,7 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
     junkbot.headLoaded = .boolean(false)
   } else if headLoaded && junkbot.headLoaded.boolean != true && junkbot.grabbed.boolean != true {
     junkbot.headLoaded = .boolean(true)
-    _ = playSound.callAsFunction(this: JSValue.null, .string("headBonk"))
+    _ = playSound(.string("headBonk"), .undefined, .undefined)
   }
   if junkbot.losingShield.boolean == true {
     junkbot.losingShieldTime = .number((junkbot.losingShieldTime.number ?? 0.0) + 1.0)
@@ -4353,7 +4297,7 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
       junkbot.armored = .boolean(false)
       junkbot.losingShield = .boolean(false)
       junkbot.losingShieldTime = .number(0.0)
-      _ = playSound.callAsFunction(this: JSValue.null, .string("losePowerup"))
+      _ = playSound(.string("losePowerup"), .undefined, .undefined)
     }
   }
   junkbot.animationFrame = .number((junkbot.animationFrame.number ?? 0.0) + 1.0)
@@ -4380,25 +4324,20 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
       return .undefined
     }
   }
-  let insideOpt = entityCollisionTest.callAsFunction(
-    this: JSValue.null, .number(jX), .number(jY), junkbot, notDropletJS)
-  if !insideOpt.isUndefined && !insideOpt.isNull {
-    _ = debug.callAsFunction(this: JSValue.null, .string("JUNKBOT"), .string("STUCK IN WALL"))
+  if entityCollisionTest(jX, jY, junkbot, notDroplet) != nil {
+    debug("JUNKBOT", ["STUCK IN WALL"])
     return .undefined
   }
   if junkbot.floating.boolean == true {
     let abovePosX = jX
     let abovePosY = jY - 18.0
-    let aboveHead2 = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(abovePosX), .number(abovePosY), junkbot, notDropletJS)
-    if !aboveHead2.isUndefined && !aboveHead2.isNull {
-      _ = debug.callAsFunction(
-        this: JSValue.null, .string("JUNKBOT"), .string("FLOATING - CAN'T GO UP"))
+    if entityCollisionTest(abovePosX, abovePosY, junkbot, notDroplet) != nil {
+      debug("JUNKBOT", ["FLOATING - CAN'T GO UP"])
     } else {
-      _ = debug.callAsFunction(this: JSValue.null, .string("JUNKBOT"), .string("FLOATING - GO UP"))
+      debug("JUNKBOT", ["FLOATING - GO UP"])
       junkbot.x = .number(abovePosX)
       junkbot.y = .number(abovePosY)
-      _ = entityMoved.callAsFunction(this: JSValue.null, junkbot)
+      entityMoved(junkbot)
     }
     return .undefined
   }
@@ -4415,22 +4354,16 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
   junkbot.momentumX = .number(mX)
   junkbot.momentumY = .number(mY)
 
-  let inAirOpt = entityCollisionTest.callAsFunction(
-    this: JSValue.null, .number(jX), .number(jY + 1.0), junkbot, notDropletJS)
-  let inAir = inAirOpt.isUndefined || inAirOpt.isNull
+  let inAir = entityCollisionTest(jX, jY + 1.0, junkbot, notDroplet) == nil
   let unaligned = jX.truncatingRemainder(dividingBy: 15.0) != 0.0
   let jumpStarting = mY < -2.0
   if inAir || jumpStarting || unaligned {
     if inAir {
-      _ = debug.callAsFunction(
-        this: JSValue.null, .string("JUNKBOT"), .string("IN AIR - DO GRID-BASED BALLISTIC MOTION"))
+      debug("JUNKBOT", ["IN AIR - DO GRID-BASED BALLISTIC MOTION"])
     } else if jumpStarting {
-      _ = debug.callAsFunction(
-        this: JSValue.null, .string("JUNKBOT"), .string("JUMP - DO GRID-BASED BALLISTIC MOTION"))
+      debug("JUNKBOT", ["JUMP - DO GRID-BASED BALLISTIC MOTION"])
     } else if unaligned {
-      _ = debug.callAsFunction(
-        this: JSValue.null, .string("JUNKBOT"),
-        .string("UNALIGNED - DO (BALLISTIC MOTION AND) SNAPPING TO GROUND"))
+      debug("JUNKBOT", ["UNALIGNED - DO (BALLISTIC MOTION AND) SNAPPING TO GROUND"])
     }
 
     let dirX = mY < -2.0 ? 0.0 : (mX > 0.0 ? 1.0 : (mX < 0.0 ? -1.0 : 0.0))
@@ -4438,28 +4371,19 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
     let newX = jX + dirX * 15.0
     let newY = jY + dirY * 18.0
 
-    let collidesBothOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(newX), .number(newY), junkbot, notDropletJS)
-    if !collidesBothOpt.isUndefined && !collidesBothOpt.isNull {
-      let collidesYOpt = entityCollisionTest.callAsFunction(
-        this: JSValue.null, .number(jX), .number(newY), junkbot, notDropletJS)
-      if collidesYOpt.isUndefined || collidesYOpt.isNull {
+    if entityCollisionTest(newX, newY, junkbot, notDroplet) != nil {
+      if entityCollisionTest(jX, newY, junkbot, notDroplet) == nil {
         junkbot.momentumX = .number(0.0)
         junkbot.y = .number(newY)
+      } else if entityCollisionTest(newX, jY, junkbot, notDroplet) == nil {
+        junkbot.momentumY = .number(0.0)
+        junkbot.x = .number(newX)
       } else {
-        let collidesXOpt = entityCollisionTest.callAsFunction(
-          this: JSValue.null, .number(newX), .number(jY), junkbot, notDropletJS)
-        if collidesXOpt.isUndefined || collidesXOpt.isNull {
-          junkbot.momentumY = .number(0.0)
-          junkbot.x = .number(newX)
-        } else {
-          _ = debug.callAsFunction(
-            this: JSValue.null, .string("JUNKBOT"), .string("collision in both X and Y directions"))
-          junkbot.momentumX = .number(0.0)
-          junkbot.momentumY = .number(0.0)
-        }
+        debug("JUNKBOT", ["collision in both X and Y directions"])
+        junkbot.momentumX = .number(0.0)
+        junkbot.momentumY = .number(0.0)
       }
-      _ = playSound.callAsFunction(this: JSValue.null, .string("headBonk"))
+      _ = playSound(.string("headBonk"), .undefined, .undefined)
     } else {
       junkbot.x = .number(newX)
       junkbot.y = .number(newY)
@@ -4471,38 +4395,32 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
       junkbot.animationFrame = .number(9.0)
     }
     if mY == 5.0 {
-      _ = playSound.callAsFunction(this: JSValue.null, .string("fall"))
+      _ = playSound(.string("fall"), .undefined, .undefined)
     }
 
-    let isJumpBrickJS = JSObject.global.Function.function!.new(
-      "brick", "return brick.type == 'jump';")
-    let jumpBrickOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(junkbot.x.number ?? 0.0),
-      .number((junkbot.y.number ?? 0.0) + 1.0), junkbot, isJumpBrickJS)
-    let aheadOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null,
-      .number((junkbot.x.number ?? 0.0) + (junkbot.facing.number ?? 0.0) * 15.0),
-      .number(junkbot.y.number ?? 0.0), junkbot, notDropletJS)
+    let isJumpBrick: (JSValue) -> Bool = { $0.type.string == "jump" }
+    let jumpBrickOpt = entityCollisionTest(junkbot.x.number ?? 0.0, (junkbot.y.number ?? 0.0) + 1.0, junkbot, isJumpBrick)
+    let aheadOpt = entityCollisionTest(
+      (junkbot.x.number ?? 0.0) + (junkbot.facing.number ?? 0.0) * 15.0,
+      junkbot.y.number ?? 0.0, junkbot, notDroplet)
 
-    if !jumpBrickOpt.isUndefined && !jumpBrickOpt.isNull {
+    if let jumpBrickOpt {
       let jbX = jumpBrickOpt.x.number ?? 0.0
       let jbWidth = jumpBrickOpt.width.number ?? 0.0
       let curX = junkbot.x.number ?? 0.0
       let curWidth = junkbot.width.number ?? 0.0
-      if jbX <= curX && jbX + jbWidth >= curX + curWidth
-        && (aheadOpt.isUndefined || aheadOpt.isNull)
-      {
+      if jbX <= curX && jbX + jbWidth >= curX + curWidth && aheadOpt == nil {
         if jumpBrickOpt.active.boolean != true {
           junkbot.animationFrame = .number(0.0)
           junkbot.momentumY = .number(-3.0)
           junkbot.momentumX = .number((junkbot.facing.number ?? 0.0) * 5.0)
-          _ = playSound.callAsFunction(this: JSValue.null, .string("jump"))
+          _ = playSound(.string("jump"), .undefined, .undefined)
           jumpBrickOpt.active = .boolean(true)
           jumpBrickOpt.animationFrame = .number(0.0)
         }
       }
     }
-    _ = entityMoved.callAsFunction(this: JSValue.null, junkbot)
+    entityMoved(junkbot)
     return .undefined
   }
 
@@ -4512,36 +4430,18 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
     let posInFrontX = jX + jFacing * 15.0
     let posInFrontY = jY
 
-    let isCratePushJS = JSObject.global.Function.function!.new(
-      "otherEntity", "junkbot",
-      "return otherEntity.type == 'crate' && (otherEntity.x + otherEntity.width <= junkbot.x || junkbot.x + junkbot.width <= otherEntity.x);"
-    )
-    let cratesInFront = rectangleCollisionAll.callAsFunction(
-      this: JSValue.null, .number(posInFrontX), .number(posInFrontY), .number(jWidth),
-      .number(jHeight + 1.0), isCratePushJS)  // Wait, JS closure cannot access junkbot from Swift directly without binding or wrapping.
-    // Actually, let's filter in Swift.
-    let rawCrates = rectangleCollisionAll.callAsFunction(
-      this: JSValue.null, .number(posInFrontX), .number(posInFrontY), .number(jWidth),
-      .number(jHeight + 1.0), JSObject.global.Function.function!.new("entity", "return true;"))
-    var filteredCrates = [JSValue]()
-    let len = Int(rawCrates.length.number ?? 0.0)
-    for i in 0..<len {
-      let c = rawCrates[i]
-      if c.type.string == "crate"
-        && ((c.x.number ?? 0.0) + (c.width.number ?? 0.0) <= jX
-          || jX + jWidth <= (c.x.number ?? 0.0))
-      {
-        filteredCrates.append(c)
+    let filteredCrates = rectangleCollisionAll(posInFrontX, posInFrontY, jWidth, jHeight + 1.0) { _ in true }
+      .filter { c in
+        c.type.string == "crate"
+          && ((c.x.number ?? 0.0) + (c.width.number ?? 0.0) <= jX
+            || jX + jWidth <= (c.x.number ?? 0.0))
       }
-    }
 
     var canPushAll = true
     for crate in filteredCrates {
       let cx = crate.x.number ?? 0.0
       let cy = crate.y.number ?? 0.0
-      if entityCollisionTest.callAsFunction(
-        this: JSValue.null, .number(cx + jFacing * 15.0), .number(cy), crate, notDropletJS
-      ).boolean == true {
+      if entityCollisionTest(cx + jFacing * 15.0, cy, crate, notDroplet) != nil {
         canPushAll = false
         break
       }
@@ -4551,7 +4451,7 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
         crate.x = .number((crate.x.number ?? 0.0) + jFacing * 15.0)
       }
     }
-    let turnedAround = walk.callAsFunction(this: JSValue.null, junkbot).string == "turned"
+    let turnedAround = walk(junkbot).string == "turned"
     let groundLevelEntities = entitiesByTopY[jY + jHeight] ?? []
     for groundLevelEntity in groundLevelEntities {
       let glX = groundLevelEntity.x.number ?? 0.0
@@ -4568,12 +4468,10 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
               entity.on = .boolean(entity.on.boolean != true)
             }
           }
-          _ = playSound.callAsFunction(this: JSValue.null, .string("switchClick"))
-          _ = playSound.callAsFunction(
-            this: JSValue.null,
-            .string(groundLevelEntity.on.boolean == true ? "switchOn" : "switchOff"))
+          _ = playSound(.string("switchClick"), .undefined, .undefined)
+          _ = playSound(.string(groundLevelEntity.on.boolean == true ? "switchOn" : "switchOff"), .undefined, .undefined)
         } else if glType == "fire" && groundLevelEntity.on.boolean == true {
-          _ = hurtJunkbot.callAsFunction(this: JSValue.null, junkbot, .string("fire"))
+          _ = hurtJunkbot(junkbot, .string("fire"))
         } else if glType == "shield" && groundLevelEntity.used.boolean != true
           && (junkbot.losingShield.boolean == true || junkbot.armored.boolean != true)
         {
@@ -4582,22 +4480,21 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
           junkbot.losingShield = .boolean(false)
           junkbot.losingShieldTime = .number(0.0)
           groundLevelEntity.used = .boolean(true)
-          _ = playSound.callAsFunction(this: JSValue.null, .string("getShield"))
-          _ = playSound.callAsFunction(this: JSValue.null, .string("getPowerup"))
+          _ = playSound(.string("getShield"), .undefined, .undefined)
+          _ = playSound(.string("getPowerup"), .undefined, .undefined)
         } else if glType == "jump" {
           if groundLevelEntity.active.boolean != true {
             junkbot.animationFrame = .number(0.0)
             junkbot.momentumY = .number(-3.0)
             junkbot.momentumX = .number(jFacing * 5.0)
-            _ = playSound.callAsFunction(this: JSValue.null, .string("jump"))
+            _ = playSound(.string("jump"), .undefined, .undefined)
             groundLevelEntity.active = .boolean(true)
             groundLevelEntity.animationFrame = .number(0.0)
           }
         } else if glType == "teleport" && (groundLevelEntity.timer.number ?? 0.0) == 0.0
           && jX == glX + 15.0
         {
-          let linkedTeleport = findLinkedTeleport.callAsFunction(
-            this: JSValue.null, groundLevelEntity)
+          let linkedTeleport = findLinkedTeleport(groundLevelEntity)
           if !linkedTeleport.isUndefined && !linkedTeleport.isNull
             && linkedTeleport.blocked.boolean != true
           {
@@ -4605,24 +4502,21 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
             junkbot.y = .number((linkedTeleport.y.number ?? 0.0) - jHeight)
             linkedTeleport.timer = .number(Double(TELEPORT_COOLDOWN))
             groundLevelEntity.timer = .number(Double(TELEPORT_COOLDOWN))
-            _ = entityMoved.callAsFunction(this: JSValue.null, junkbot)
-            _ = playSound.callAsFunction(this: JSValue.null, .string("teleport"))
+            entityMoved(junkbot)
+            _ = playSound(.string("teleport"), .undefined, .undefined)
           }
         }
       }
     }
   }
 
-  let isBinJS = JSObject.global.Function.function!.new("entity", "return entity.type == 'bin';")
-  let binOpt = entityCollisionTest.callAsFunction(
-    this: JSValue.null, .number(jX + (junkbot.facing.number ?? 0.0) * 15.0), .number(jY), junkbot,
-    isBinJS)
-  if !binOpt.isUndefined && !binOpt.isNull {
+  let isBin: (JSValue) -> Bool = { $0.type.string == "bin" }
+  if let binOpt = entityCollisionTest(jX + (junkbot.facing.number ?? 0.0) * 15.0, jY, junkbot, isBin) {
     junkbot.animationFrame = .number(0.0)
     junkbot.collectingBin = .boolean(true)
     binOpt.removeBeforeRender = .boolean(true)
-    _ = playSound.callAsFunction(this: JSValue.null, .string("collectBin"))
-    _ = playSound.callAsFunction(this: JSValue.null, .string("collectBin2"))
+    _ = playSound(.string("collectBin"), .undefined, .undefined)
+    _ = playSound(.string("collectBin2"), .undefined, .undefined)
     collectBinTime = JSObject.global.Date.now!().number ?? 0.0
   }
   return .undefined
@@ -4640,25 +4534,21 @@ var simulateGearbot = { (gearbot: JSValue) -> JSValue in
 
     let aheadPosX = gbX + gbFacing * 15.0
     let aheadPosY = gbY
-    let notDropletJS = JSObject.global.Function.function!.new(
-      "entity", "return entity.type != 'droplet';")
-    let aheadOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(aheadPosX), .number(aheadPosY), gearbot, notDropletJS)
-    let groundAheadOpt = rectangleCollisionTest.callAsFunction(
-      this: JSValue.null, .number(gbX + (gbFacing == -1.0 ? -15.0 : gbWidth)), .number(gbY + 1.0),
-      .number(15.0), .number(gbHeight), notDropletJS)
+    let aheadOpt = entityCollisionTest(aheadPosX, aheadPosY, gearbot, notDroplet)
+    let groundAheadOpt = rectangleCollisionTest(
+      gbX + (gbFacing == -1.0 ? -15.0 : gbWidth), gbY + 1.0, 15.0, gbHeight, notDroplet)
 
-    if !aheadOpt.isUndefined && !aheadOpt.isNull {
+    if let aheadOpt {
       if aheadOpt.type.string == "junkbot" && aheadOpt.dying.boolean != true
         && aheadOpt.dead.boolean != true
       {
-        _ = hurtJunkbot.callAsFunction(this: JSValue.null, aheadOpt, .string("bot"))
+        _ = hurtJunkbot(aheadOpt, .string("bot"))
       }
       gearbot.facing = .number(gbFacing * -1.0)
-    } else if !groundAheadOpt.isUndefined && !groundAheadOpt.isNull {
+    } else if groundAheadOpt != nil {
       gearbot.x = .number(aheadPosX)
       gearbot.y = .number(aheadPosY)
-      _ = entityMoved.callAsFunction(this: JSValue.null, gearbot)
+      entityMoved(gearbot)
     } else {
       gearbot.facing = .number(gbFacing * -1.0)
     }
@@ -4680,31 +4570,22 @@ var simulateScaredy = { (bin: JSValue) -> JSValue in
     let searchRectY = bY
     let searchRectW = bWidth + searchDist * 2.0
     let searchRectH = bHeight
-    _ = debugWorldSpaceRect.callAsFunction(
-      this: JSValue.null, .number(searchRectX), .number(searchRectY), .number(searchRectW),
-      .number(searchRectH))
-    let isJunkbotJS = JSObject.global.Function.function!.new(
-      "otherEntity", "return otherEntity.type == 'junkbot';")
-    let junkbotOpt = rectangleCollisionTest.callAsFunction(
-      this: JSValue.null, .number(searchRectX), .number(searchRectY), .number(searchRectW),
-      .number(searchRectH), isJunkbotJS)
+    debugWorldSpaceRect(searchRectX, searchRectY, searchRectW, searchRectH)
+    let isJunkbot: (JSValue) -> Bool = { $0.type.string == "junkbot" }
+    let junkbotOpt = rectangleCollisionTest(searchRectX, searchRectY, searchRectW, searchRectH, isJunkbot)
 
-    if !junkbotOpt.isUndefined && !junkbotOpt.isNull {
+    if let junkbotOpt {
       let jx = junkbotOpt.x.number ?? 0.0
       bin.facing = .number(jx > bX ? -1.0 : 1.0)
       let bFacing = bin.facing.number ?? 0.0
       let aheadPosX = bX + bFacing * 15.0
       let aheadPosY = bY
-      let notDropletJS = JSObject.global.Function.function!.new(
-        "entity", "return entity.type != 'droplet';")
-      let aheadOpt = entityCollisionTest.callAsFunction(
-        this: JSValue.null, .number(aheadPosX), .number(aheadPosY), bin, notDropletJS)
-      if !aheadOpt.isUndefined && !aheadOpt.isNull {
+      if entityCollisionTest(aheadPosX, aheadPosY, bin, notDroplet) != nil {
         bin.facing = .number(0.0)
       } else {
         bin.x = .number(aheadPosX)
         bin.y = .number(aheadPosY)
-        _ = entityMoved.callAsFunction(this: JSValue.null, bin)
+        entityMoved(bin)
       }
     } else {
       bin.facing = .number(0.0)
@@ -4722,19 +4603,15 @@ var simulateFlybot = { (flybot: JSValue) -> JSValue in
 
     let aheadPosX = fX + fFacing * 15.0
     let aheadPosY = fY
-    let notDropletJS = JSObject.global.Function.function!.new(
-      "entity", "return entity.type != 'droplet';")
-    let aheadOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(aheadPosX), .number(aheadPosY), flybot, notDropletJS)
-    if !aheadOpt.isUndefined && !aheadOpt.isNull {
+    if let aheadOpt = entityCollisionTest(aheadPosX, aheadPosY, flybot, notDroplet) {
       if aheadOpt.type.string == "junkbot" {
-        _ = hurtJunkbot.callAsFunction(this: JSValue.null, aheadOpt, .string("bot"))
+        _ = hurtJunkbot(aheadOpt, .string("bot"))
       }
       flybot.facing = .number(fFacing * -1.0)
     } else {
       flybot.x = .number(aheadPosX)
       flybot.y = .number(aheadPosY)
-      _ = entityMoved.callAsFunction(this: JSValue.null, flybot)
+      entityMoved(flybot)
     }
   }
   return .undefined
@@ -4757,18 +4634,15 @@ var doEyebotTargeting = { (eyebot: JSValue) -> JSValue in
       opts.directionX = .number(directionX)
       opts.directionY = .number(directionY)
       opts.maxSteps = .number(50.0)
-      let isNotDropletAndNotEyebotJS = JSObject.global.Function.function!.new(
-        "entity", "eyebot", "return entity.type != 'droplet' && entity !== eyebot;")
-      // wait, we can't bind eyebot to JS easily from Swift. Let's use a closure!
-      let filterClosure = JSClosure { args in
-        let entity = args[0]
-        return .boolean(
-          entity.type.string != "droplet"
-            && JSObject.global.Object.is(entity, eyebot).boolean != true)
+      let eyebotFilter: (JSValue) -> Bool = { entity in
+        entity.type.string != "droplet"
+          && JSObject.global.Object.is(entity, eyebot).boolean != true
       }
-      opts.entityFilter = .object(filterClosure.object)
-      let res = raycast.callAsFunction(this: JSValue.null, opts)
-      let hit = res.hit
+      let res = raycast(
+        (eyebot.x.number ?? 0.0) + offsetX,
+        (eyebot.y.number ?? 0.0) + offsetY,
+        15.0, 18.0, directionX, directionY, 50, eyebotFilter)
+      let hit = res["hit"] ?? .undefined
       if !hit.isUndefined && !hit.isNull && hit.type.string == "junkbot" {
         eyebot.facing = .number(directionX)
         eyebot.facingY = .number(directionY)
@@ -4791,20 +4665,16 @@ var doEyebotMovement = { (eyebot: JSValue) -> JSValue in
     let eFacingY = eyebot.facingY.number ?? 0.0
     let aheadPosX = eX + eFacing * 15.0
     let aheadPosY = eY + eFacingY * 18.0
-    let notDropletJS = JSObject.global.Function.function!.new(
-      "entity", "return entity.type != 'droplet';")
-    let aheadOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(aheadPosX), .number(aheadPosY), eyebot, notDropletJS)
-    if !aheadOpt.isUndefined && !aheadOpt.isNull {
+    if let aheadOpt = entityCollisionTest(aheadPosX, aheadPosY, eyebot, notDroplet) {
       if aheadOpt.type.string == "junkbot" {
-        _ = hurtJunkbot.callAsFunction(this: JSValue.null, aheadOpt, .string("bot"))
+        _ = hurtJunkbot(aheadOpt, .string("bot"))
       }
       eyebot.facing = .number(eFacing * -1.0)
       eyebot.facingY = .number(eFacingY * -1.0)
     } else {
       eyebot.x = .number(aheadPosX)
       eyebot.y = .number(aheadPosY)
-      _ = entityMoved.callAsFunction(this: JSValue.null, eyebot)
+      entityMoved(eyebot)
     }
   }
   return .undefined
@@ -4830,32 +4700,20 @@ var simulateClimbbot = { (climbbot: JSValue) -> JSValue in
     let belowPosX = cx
     let belowPosY = cy + 18.0
 
-    let notDropletJS = JSObject.global.Function.function!.new(
-      "entity", "return entity.type != 'droplet';")
-    let notBinOrDropletJS = JSObject.global.Function.function!.new(
-      "entity", "return entity.type != 'bin' && entity.type != 'droplet';")
+    let asideOpt = entityCollisionTest(asidePosX, asidePosY, climbbot, notDroplet)
+    let groundAsideOpt = entityCollisionTest(groundAsidePosX, groundAsidePosY, climbbot, notBinOrDroplet)
+    let aheadOpt = entityCollisionTest(aheadPosX, aheadPosY, climbbot, notDroplet)
+    let behindHorizontallyOpt = entityCollisionTest(behindHorizontallyPosX, behindHorizontallyPosY, climbbot, notDroplet)
+    let belowOpt = entityCollisionTest(belowPosX, belowPosY, climbbot, notDroplet)
 
-    let asideOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(asidePosX), .number(asidePosY), climbbot, notDropletJS)
-    let groundAsideOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(groundAsidePosX), .number(groundAsidePosY), climbbot,
-      notBinOrDropletJS)
-    let aheadOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(aheadPosX), .number(aheadPosY), climbbot, notDropletJS)
-    let behindHorizontallyOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(behindHorizontallyPosX), .number(behindHorizontallyPosY),
-      climbbot, notDropletJS)
-    let belowOpt = entityCollisionTest.callAsFunction(
-      this: JSValue.null, .number(belowPosX), .number(belowPosY), climbbot, notDropletJS)
+    let aside = asideOpt != nil
+    let groundAside = groundAsideOpt != nil
+    let ahead = aheadOpt != nil
+    let behindHorizontally = behindHorizontallyOpt != nil
+    let below = belowOpt != nil
 
-    let aside = !asideOpt.isUndefined && !asideOpt.isNull
-    let groundAside = !groundAsideOpt.isUndefined && !groundAsideOpt.isNull
-    let ahead = !aheadOpt.isUndefined && !aheadOpt.isNull
-    let behindHorizontally = !behindHorizontallyOpt.isUndefined && !behindHorizontallyOpt.isNull
-    let below = !belowOpt.isUndefined && !belowOpt.isNull
-
-    if ahead && aheadOpt.type.string == "junkbot" {
-      _ = hurtJunkbot.callAsFunction(this: JSValue.null, aheadOpt, .string("bot"))
+    if ahead, let aheadOpt, aheadOpt.type.string == "junkbot" {
+      _ = hurtJunkbot(aheadOpt, .string("bot"))
     }
     if cFacingY == -1.0 {
       if !aside && groundAside {
@@ -4866,7 +4724,7 @@ var simulateClimbbot = { (climbbot: JSValue) -> JSValue in
         climbbot.energy = .number((climbbot.energy.number ?? 0.0) - 1.0)
         climbbot.x = .number(aheadPosX)
         climbbot.y = .number(aheadPosY)
-        _ = entityMoved.callAsFunction(this: JSValue.null, climbbot)
+        entityMoved(climbbot)
       } else {
         climbbot.facingY = .number(1.0)
       }
@@ -4882,18 +4740,18 @@ var simulateClimbbot = { (climbbot: JSValue) -> JSValue in
               climbbot.facing = .number(cFacing * -1.0)
               climbbot.x = .number(behindHorizontallyPosX)
               climbbot.y = .number(behindHorizontallyPosY)
-              _ = entityMoved.callAsFunction(this: JSValue.null, climbbot)
+              entityMoved(climbbot)
             }
           } else {
             climbbot.x = .number(asidePosX)
             climbbot.y = .number(asidePosY)
-            _ = entityMoved.callAsFunction(this: JSValue.null, climbbot)
+            entityMoved(climbbot)
           }
         }
       } else {
         climbbot.x = .number(belowPosX)
         climbbot.y = .number(belowPosY)
-        _ = entityMoved.callAsFunction(this: JSValue.null, climbbot)
+        entityMoved(climbbot)
       }
     } else {
       if below {
@@ -4903,7 +4761,7 @@ var simulateClimbbot = { (climbbot: JSValue) -> JSValue in
         } else {
           climbbot.x = .number(asidePosX)
           climbbot.y = .number(asidePosY)
-          _ = entityMoved.callAsFunction(this: JSValue.null, climbbot)
+          entityMoved(climbbot)
         }
       } else {
         if aside {
@@ -4912,7 +4770,7 @@ var simulateClimbbot = { (climbbot: JSValue) -> JSValue in
           climbbot.facingY = .number(1.0)
           climbbot.x = .number(belowPosX)
           climbbot.y = .number(belowPosY)
-          _ = entityMoved.callAsFunction(this: JSValue.null, climbbot)
+          entityMoved(climbbot)
         }
       }
     }
@@ -4934,7 +4792,7 @@ var simulateDroplet = { (droplet: JSValue) -> JSValue in
       let underneath =
         entitiesByTopY[(droplet.y.number ?? 0.0) + (droplet.height.number ?? 0.0)] ?? []
       droplet.y = .number((droplet.y.number ?? 0.0) + 1.0)
-      _ = entityMoved.callAsFunction(this: JSValue.null, droplet)
+      entityMoved(droplet)
       for ground in underneath {
         if ground.grabbed.boolean != true
           && (droplet.x.number ?? 0.0) + (droplet.width.number ?? 0.0) > (ground.x.number ?? 0.0)
@@ -4943,7 +4801,7 @@ var simulateDroplet = { (droplet: JSValue) -> JSValue in
         {
 
           if ground.type.string == "junkbot" {
-            _ = hurtJunkbot.callAsFunction(this: JSValue.null, ground, .string("water"))
+            _ = hurtJunkbot(ground, .string("water"))
           }
 
           droplet.splashing = .boolean(true)
@@ -4951,8 +4809,8 @@ var simulateDroplet = { (droplet: JSValue) -> JSValue in
 
           let rnd = JSObject.global.Math.random!().number ?? 0.0
           let num = numDrips.number ?? 3.0
-          let idx = Int(floor.callAsFunction(this: JSValue.null, .number(rnd * num)).number ?? 0.0)
-          _ = playSound.callAsFunction(this: JSValue.null, .string("drip\(idx)"))
+          let idx = Int(rnd * num)
+          _ = playSound(.string("drip\(idx)"), .undefined, .undefined)
           return .undefined
         }
       }
@@ -4973,9 +4831,7 @@ var simulatePipe = { (pipe: JSValue) -> JSValue in
   }
   if (pipe.timer.number ?? 0.0) <= 0.0 {
     let rnd = JSObject.global.Math.random!().number ?? 0.0
-    let val =
-      floor.callAsFunction(this: JSValue.null, .number(rnd * (maxDripPeriod - minDripPeriod)))
-      .number ?? 0.0
+    let val = Foundation.floor(rnd * (maxDripPeriod - minDripPeriod))
     pipe.timer = .number(val + minDripPeriod)
   }
   return .undefined
@@ -4998,28 +4854,17 @@ var simulateTeleport = { (teleport: JSValue) -> JSValue in
   if (teleport.timer.number ?? 0.0) > 0.0 {
     teleport.timer = .number((teleport.timer.number ?? 0.0) - 1.0)
   }
-  let targetTeleport = findLinkedTeleport.callAsFunction(this: JSValue.null, teleport)
-
-  let notDropletOrJunkbotJS = JSObject.global.Function.function!.new(
-    "entity", "return entity.type != 'droplet' && entity.type != 'junkbot';")
+  let targetTeleport = findLinkedTeleport(teleport)
 
   let tpX = teleport.x.number ?? 0.0
   let tpY = teleport.y.number ?? 0.0
-  let rColl1 =
-    rectangleCollisionTest.callAsFunction(
-      this: JSValue.null, .number(tpX + 15.0), .number(tpY - 18.0 * 4.0), .number(15.0 * 2.0),
-      .number(18.0 * 4.0), notDropletOrJunkbotJS
-    ).boolean == true
+  let rColl1 = rectangleCollisionTest(tpX + 15.0, tpY - 18.0 * 4.0, 15.0 * 2.0, 18.0 * 4.0, notDropletOrJunkbot) != nil
 
   var rColl2 = false
   if !targetTeleport.isUndefined && !targetTeleport.isNull {
     let ttX = targetTeleport.x.number ?? 0.0
     let ttY = targetTeleport.y.number ?? 0.0
-    rColl2 =
-      rectangleCollisionTest.callAsFunction(
-        this: JSValue.null, .number(ttX + 15.0), .number(ttY - 18.0 * 4.0), .number(15.0 * 2.0),
-        .number(18.0 * 4.0), notDropletOrJunkbotJS
-      ).boolean == true
+    rColl2 = rectangleCollisionTest(ttX + 15.0, ttY - 18.0 * 4.0, 15.0 * 2.0, 18.0 * 4.0, notDropletOrJunkbot) != nil
   }
 
   teleport.blocked = .boolean(
@@ -5074,7 +4919,7 @@ var handleRewind = { () -> JSValue in
       playbackLevel = diffPatcher.clone(currentLevel)
     }
     if frameCounter > 0 {
-      _ = playSound.callAsFunction(this: JSValue.null, .string("undo"), .number(0.1), .number(0.6))
+      _ = playSound(.string("undo"), .number(0.1), .number(0.6))
     }
     entities.sort { a, b in
       let aId = a.id.number ?? 0.0
