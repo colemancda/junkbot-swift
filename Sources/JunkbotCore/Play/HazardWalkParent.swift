@@ -31,7 +31,7 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         myWidth = 2
         let state = p["state"].asString ?? ""
@@ -80,7 +80,7 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
     //   playfield_manager.erasePiece(part.pos)
     //   pos = part.pos + point(dir, 0)
     //   Ok = 0
-    //   fg = playfield_manager.checkFitOrMinifig(pos, part.type)
+    //   fg = playfield_manager.checkFitOrMinifig(LV.pt(pos.x, pos.y), part["type"].asString ?? "")
     //   if fg = 1 then
     //     ms = the milliSeconds
     //     if playfield_manager.checkFloor(pos, myWidth) > 1 then
@@ -105,11 +105,11 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
     // ```
     public func step() {
         playfield_manager?.erasePiece(part.pos)
-        pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
+        var pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
         var ok = false
-        var fg = playfield_manager?.checkFitOrMinifig(pos, part.type) ?? .void
-        let fg: LV = .void
-        _ = fg
+        var fg = playfield_manager?.checkFitOrMinifig(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+        // let fg: LV = .void
+        // _ = fg
 
         // if fg == 1 { if playfield_manager.checkFloor(pos, myWidth) > 1 { ok = true; part.pos = pos } }
         if !ok {
@@ -120,8 +120,8 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
                 part["state"] = .string("#walk_l")
             }
         }
-        if fg.isPropList { SndSFX("robottouch4"); fg.asPropList()?["behavior"].asObject()?.notify(["damage": .string("#walker")]) }
-        playfield_manager?.placePiece(.propList(part))
+        if fg.isPropList { SndSFX("robottouch4"); fg.asPropList?["behavior"].asObject()?.notify(PropList([("damage", .string("#walker"))])) }
+        playfield_manager?.placePiece(part)
     }
 
     // Original Lingo body: stepanim
@@ -160,6 +160,6 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
         }
         playfield_manager?.erasePiece(part.pos)
         stepAnim()
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 }

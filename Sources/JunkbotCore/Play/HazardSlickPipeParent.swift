@@ -30,7 +30,7 @@ public class HazardSlickPipeParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         part["auxSprites"] = .propList(PropList())
         myWidth = 2
@@ -89,7 +89,7 @@ public class HazardSlickPipeParent: LingoObject, @unchecked Sendable {
         playfield_manager?.erasePiece(part.pos)
         stepAnim()
         myDrip?.stepFrame()
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 
     // Original Lingo body: stepanim

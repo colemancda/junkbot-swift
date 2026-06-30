@@ -32,7 +32,7 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         // partloc = part.sprite[1].loc -- stub
         myWidth = 2
@@ -247,6 +247,6 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
     // ```
     public func updatePart() {
         playfield_manager?.erasePiece(part.pos)
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 }

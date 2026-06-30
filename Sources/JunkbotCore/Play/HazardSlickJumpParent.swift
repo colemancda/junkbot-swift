@@ -24,7 +24,7 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         last_jump = 0
     }
@@ -112,7 +112,7 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
         playfield_manager?.erasePiece(part.pos)
         stepAnim()
         checkMiniFig()
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 
     // Original Lingo body: stepanim

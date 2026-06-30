@@ -33,7 +33,7 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
 
         super.init()
         dripstate = .falling
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         // top_locz = playfield_manager.posToLocZ(point(50, 1)) -- stub
         // driploc = playfield_manager.getLoc(part.pos) + point(0, 17) -- stub

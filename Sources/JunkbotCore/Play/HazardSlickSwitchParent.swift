@@ -21,7 +21,7 @@ public class HazardSlickSwitchParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         stepped_on = 0
     }
@@ -129,6 +129,6 @@ public class HazardSlickSwitchParent: LingoObject, @unchecked Sendable {
     // ```
     public func redrawPart() {
         playfield_manager?.erasePiece(part.pos)
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 }
