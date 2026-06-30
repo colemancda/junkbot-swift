@@ -96,19 +96,19 @@ public enum LV: @unchecked Sendable {
     indirect case propList(PropList)
     case object(LingoObject)  // typed object reference (no AnyObject in Embedded Swift)
 
-    public subscript(dynamicMember member: String) -> LV {
+public subscript(dynamicMember member: String) -> LV {
         get {
             if case .propList(let p) = self { return p[member] }
             return .void
         }
         set {
-            if case .propList(var p) = self {
+            if case .propList(let p) = self {
                 p[member] = newValue
                 self = .propList(p)
             }
         }
     }
-    
+
     public subscript(key: String) -> LV {
         get { self[dynamicMember: key] }
         set { self[dynamicMember: key] = newValue }
@@ -116,8 +116,8 @@ public enum LV: @unchecked Sendable {
 
     /// Mutates a PropList entry in-place through the LV.
     /// Use instead of `["key"] = value` (which discards the write).
-    public mutating func setProp(_ key: String, _ value: LV) {
-        if case .propList(var p) = self {
+    public func setProp(_ key: String, _ value: LV) {
+        if case .propList(let p) = self {
             p[key] = value
             self = .propList(p)
         }
