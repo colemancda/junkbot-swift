@@ -160,7 +160,7 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
             // check fig === fig2 (same object) — only possible to verify at runtime with identity
             SndSFX("jump3")
             // fig.asPropList!.behavior.notify(["jump": part]) -- stub
-            fig.asPropList?["behavior"].asObject()?.notify(PropList([("jump", part)]))
+            fig.asPropList?["behavior"].asObject()?.notify(PropList([("jump", .propList(part))]))
             part["state"] = .string("#Active")
             part["frame"] = .int(1)
             last_jump = ticks

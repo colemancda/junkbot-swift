@@ -220,7 +220,7 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
                     switch_ = 1
                 }
                 // gotMinifig.asPropList!.behavior.notify(["FAN": part]) -- stub
-                gotMinifig.asPropList?["behavior"].asObject()?.notify(PropList([("FAN", part)]))
+                gotMinifig.asPropList?["behavior"].asObject()?.notify(PropList([("FAN", .propList(part))]))
             } else {
                 switch_ = 0
             }

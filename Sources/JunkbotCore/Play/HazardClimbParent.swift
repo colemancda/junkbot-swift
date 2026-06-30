@@ -47,7 +47,7 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
         myWidth = 2
         let state = p["state"].asString ?? ""
@@ -245,7 +245,7 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
 
         if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
-            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(PropList([("damage", .string("#climber"))]))
+            Glob.shared["minifigHit"].asPropList?["behavior"].asObject()?.notify(PropList([("damage", .string("#climber"))]))
         }
         playfield_manager?.placePiece(part)
     }

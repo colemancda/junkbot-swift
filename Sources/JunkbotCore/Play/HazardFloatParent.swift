@@ -33,7 +33,7 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
         pSpeed = 2
         pCounter = 0
         pTarget = 0
-        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
         playfield_manager = play_manager?.playfield_manager
     }
 
