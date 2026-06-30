@@ -1638,65 +1638,10 @@ var loadImage = { (imagePath: String) -> JSValue in
   return JSObject.global.Promise.function!.new(closure)
 }
 
-.then(res => { if(res.ok) return res.json(); throw new Error('HTTP ' + res.status); })"
-)
-
-.then(res => res.json()).then(data => {
-          let frames = data.frames;
-          let animations = data.animations;
-          let result = {};
-          for(let name in animations) {
-              result[name.replace(/\\.png/i, "")] = { bounds: frames[animations[name][0]] };
-          }
-          return result;
-      });
-  """)
-
-.then(res => { if(res.ok) return res.text(); throw new Error('HTTP ' + res.status); })"
-)
-
-.then(res => res.text());
-  """)
-
-.then(res => { if(res.ok) return res.arrayBuffer(); throw new Error('HTTP ' + res.status); }).then(buf => audioCtx.decodeAudioData(buf));
-  """)
-
-.then(res => res.text()).then(t => t.trim().split(/\\r?\\n/g).map(l => l.trim()));"
-)
-
-
-
 var numProgressBricks = 14
 var progressBricks = [JSValue]()
 var totalResources = Double(Object.keys(allResourcePaths).length.number ?? 0)
 var loadedResources = 0.0
-
-;
-      let silenceErrors = false;
-      return Promise.all(entries.map(async ([id, path]) => {
-          let resource;
-          try {
-              resource = await loadResource(path);
-          } catch (error) {
-              if (!silenceErrors) {
-                  if (location.protocol == "file:") {
-                      showErrorMessage('This page must be served by a web server...', error);
-                      silenceErrors = true;
-                  } else {
-                      showErrorMessage(`Failed to load resource '${path}'`, error);
-                  }
-              }
-          }
-          loadedResources += 1;
-          if (loadedResources / totalResources * numProgressBricks > progressBricks.length) {
-              let progressBrick = document.createElement("div");
-              progressBrick.classList.add("load-progress-brick");
-              progressBricks.push(progressBrick);
-              loadProgress.appendChild(progressBrick);
-          }
-          return [id, resource];
-      })).then(results => Object.fromEntries(results));
-  """)
 
 var hotResourcesLoadedPromise: JSValue = .undefined
 var allResourcesLoadedPromise: JSValue = .undefined
@@ -7029,16 +6974,16 @@ func loadFromHashAsync() async {
 
     if screen == SCREEN_LEVEL_SELECT.string {
       _ = hideTitleScreen.callAsFunction(this: JSValue.null)
-      _ = try? await JSPromise(from: closeNonErrorDialogs.callAsFunction(this: JSValue.null))?.value
+      closeNonErrorDialogs()
       _ = showLevelSelectScreen.callAsFunction(this: JSValue.null, game, levelGroup)
       return
     }
 
     if toShowTestRunner {
       _ = runTests.callAsFunction(this: JSValue.null)
-      _ = closeNonErrorDialogs.callAsFunction(this: JSValue.null)
+      closeNonErrorDialogs()
       _ = hideTitleScreen.callAsFunction(this: JSValue.null)
-      _ = hideLevelSelectScreen.callAsFunction(this: JSValue.null)
+      _ = hideLevelSelectScreen.function!.callAsFunction(this: JSObject.global)
     } else {
       if levelSlug != "" && game == GAME_USER_CREATED.string {
         do {
@@ -7074,8 +7019,8 @@ func loadFromHashAsync() async {
 
       paused = true
       _ = hideTitleScreen.callAsFunction(this: JSValue.null)
-      _ = hideLevelSelectScreen.callAsFunction(this: JSValue.null)
-      _ = try? await JSPromise(from: closeNonErrorDialogs.callAsFunction(this: JSValue.null))?.value
+      _ = hideLevelSelectScreen.function!.callAsFunction(this: JSObject.global)
+      closeNonErrorDialogs()
 
       if wantsEdit != editing {
         _ = toggleEditing.callAsFunction(this: JSValue.null)
@@ -7088,13 +7033,13 @@ func loadFromHashAsync() async {
           let levelInfoContent = JSObject.global.document.createElement("div")
           levelInfoContent.innerHTML = .string("<h1>Toast</h1>") // simplified
           let opts = JSObject.global.Object.function!.new()
-          opts.buttons = JSObject.global.Array.function!.new()
+          opts.buttons = JSObject.global.Array.function!.new().jsValue
           opts.className = .string("level-info-toast")
           
           let arr = JSObject.global.Array.function!.new()
-          _ = arr.push!(levelInfoContent)
+          arr.append(levelInfoContent)
           let toast = showMessageBox.callAsFunction(this: JSValue.null, arr, opts)
-          _ = nonErrorDialogs.push!(toast)
+          nonErrorDialogs.append(toast)
           
           _ = JSObject.global.setTimeout!(JSClosure { _ in
             Task {
@@ -7110,9 +7055,9 @@ func loadFromHashAsync() async {
     }
   } else {
     if JSObject.global.location.hash.string != loadingFrom { return }
-    _ = hideLevelSelectScreen.callAsFunction(this: JSValue.null)
-    _ = try? await JSPromise(from: closeNonErrorDialogs.callAsFunction(this: JSValue.null))?.value
-    _ = showTitleScreen.callAsFunction(this: JSValue.null)
+    _ = hideLevelSelectScreen.function!.callAsFunction(this: JSObject.global)
+    closeNonErrorDialogs()
+    _ = showTitleScreen.function!.callAsFunction(this: JSObject.global)
   }
 }
 
@@ -7135,13 +7080,13 @@ func mainAsync() async {
   if volume < 0.0 || volume > 1.0 {
     volume = 0.5
   }
-  mainGain.gain.value = .number(volume)
+  mainGain.gain.value = volume.jsValue
 
-  _ = initGUI.callAsFunction(this: JSValue.null)
-  winLoseState = .string(winOrLose.callAsFunction(this: JSValue.null).string ?? "")
+  _ = initGUI.function!.callAsFunction(this: JSObject.global)
+  winLoseState = winOrLose.function!.callAsFunction(this: JSObject.global).string ?? ""
 
   await loadFromHashAsync()
-  _ = animate.callAsFunction(this: JSValue.null)
+  _ = animate.function!.callAsFunction(this: JSObject.global)
 }
 
 var main = JSClosure { _ in
@@ -7236,7 +7181,7 @@ extension JSPromise: @unchecked Sendable {}
     let regex = JSObject.global.RegExp.function!.new("\\.png", "i")
     for i in 0..<len {
         let name = keys[i].string!
-        let cleanName = name.object!.replace(regex, "")
+        let cleanName = name.replacingOccurrences(of: ".png", with: "")
         let frameIndex = animations[dynamicMember: name][0]
         let bounds = frames[dynamicMember: frameIndex.string!]
         let obj = JSObject.global.Object.function!.new()
@@ -7280,7 +7225,7 @@ extension JSPromise: @unchecked Sendable {}
         let argTrim = args[0].object!["trim"].function!
         return argTrim.callAsFunction(this: args[0].object!)
     }
-    defer { mapFunc.release() }
+    
     let arrayMap = lines.object!["map"].function!
     return arrayMap.callAsFunction(this: lines.object!, mapFunc)
 }
