@@ -6987,6 +6987,7 @@ var runTests = JSClosure { _ in
   return .undefined
 }
 
+@MainActor
 func loadFromHashAsync() async {
   let canonicalHash = JSObject.global.location.hash.string ?? ""
   var loadingFrom = canonicalHash
@@ -7126,6 +7127,7 @@ _ = JSObject.global.window.addEventListener("hashchange", loadFromHash)
 var renderBannerComment = JSClosure { _ in return .string("") }
 var renderFIGletFont = JSClosure { _ in return .string("") }
 
+@MainActor
 func mainAsync() async {
   showDebug = JSObject.global.localStorage[dynamicMember: "showDebug"].string == "true"
   muted = JSObject.global.localStorage[dynamicMember: "muteSoundEffects"].string == "true"

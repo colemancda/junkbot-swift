@@ -1,14 +1,14 @@
 import JavaScriptKit
 import JavaScriptEventLoop
 
-func loadJSON(path: String) async throws -> JSValue {
+@MainActor func loadJSON(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
     return try await JSPromise(from: res.json().function!())!.value
 }
 
-func loadAtlasJSON(path: String) async throws -> JSValue {
+@MainActor func loadAtlasJSON(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     let data = try await JSPromise(from: res.json().function!())!.value
@@ -30,20 +30,20 @@ func loadAtlasJSON(path: String) async throws -> JSValue {
     return result.jsValue
 }
 
-func loadTextFile(path: String) async throws -> JSValue {
+@MainActor func loadTextFile(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
     return try await JSPromise(from: res.text().function!())!.value
 }
 
-func loadLevelFromTextFile(path: String, game: JSValue) async throws -> JSValue {
+@MainActor func loadLevelFromTextFile(path: String, game: JSValue) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     return try await JSPromise(from: res.text().function!())!.value
 }
 
-func loadSound(path: String, audioCtx: JSValue) async throws -> JSValue {
+@MainActor func loadSound(path: String, audioCtx: JSValue) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
@@ -51,7 +51,7 @@ func loadSound(path: String, audioCtx: JSValue) async throws -> JSValue {
     return try await JSPromise(from: audioCtx.decodeAudioData(buf))!.value
 }
 
-func loadLevelListing(path: String) async throws -> JSValue {
+@MainActor func loadLevelListing(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
     let res = try await JSPromise(from: fetch(path))!.value
     let text = try await JSPromise(from: res.text().function!())!.value
@@ -67,7 +67,7 @@ struct JSValueError: Error {
     let message: String
 }
 
-func loadResource(path: String) async throws -> JSValue {
+@MainActor func loadResource(path: String) async throws -> JSValue {
     if JSObject.global.RegExp.function!.new("spritesheets/.*\\.json$", "i").test!(path).boolean == true {
         return try await loadAtlasJSON(path: path)
     } else if JSObject.global.RegExp.function!.new("\\.json$", "i").test!(path).boolean == true {
@@ -86,7 +86,7 @@ func loadResource(path: String) async throws -> JSValue {
     return .undefined
 }
 
-func loadResources(resourcePathsByID: JSValue) async throws -> JSValue {
+@MainActor func loadResources(resourcePathsByID: JSValue) async throws -> JSValue {
     let entries = JSObject.global.Object.entries(resourcePathsByID)
     let length = Int(entries.length.number ?? 0)
     var silenceErrors = false
@@ -134,7 +134,7 @@ func loadResources(resourcePathsByID: JSValue) async throws -> JSValue {
 }
 
 
-func loadAllLevels(games: JSValue) async throws -> JSValue {
+@MainActor func loadAllLevels(games: JSValue) async throws -> JSValue {
     let getLevelListsFunc = JSObject.global.getLevelLists.function!
     let lists = getLevelListsFunc(resources)
     var promises = JSObject.global.Array.function!.new()
@@ -147,7 +147,7 @@ func loadAllLevels(games: JSValue) async throws -> JSValue {
         let levelNames = listObj.levelNames
         
         let includesFunc = games.includes.function!
-        if includesFunc.callAsFunction(this: games, gameVal).boolean == true {
+        if includesFunc.callAsFunction(this: games.object!, gameVal).boolean == true {
             let namesLen = Int(levelNames.length.number ?? 0)
             for j in 0..<namesLen {
                 let levelName = levelNames[j]
@@ -163,10 +163,10 @@ func loadAllLevels(games: JSValue) async throws -> JSValue {
         }
     }
     
-    return try await JSPromise(from: JSObject.global.Promise.all!(promises))!.value
+    return try await JSPromise(from: JSObject.global.Promise.all.function!(promises))!.value
 }
 
-func gatherStatistics(games: JSValue) async throws -> JSValue {
+@MainActor func gatherStatistics(games: JSValue) async throws -> JSValue {
     let occurrencesPerEntityType = JSObject.global.Object.function!.new()
     let levelsPerEntityType = JSObject.global.Object.function!.new()
     
