@@ -281,8 +281,8 @@ var currentLevel: JSValue = .object(JSObject.global.Object.function!.new([
 ]))
 var playthroughEvents = [JSValue]()
 var playbackEvents = [JSValue]()
-var playbackLevel = [String: JSValue]()
-var levelLastFrame = [String: JSValue]()
+var playbackLevel: JSValue = .object(JSObject.global.Object.function!.new())
+var levelLastFrame: JSValue = .object(JSObject.global.Object.function!.new())
 var winLoseState = ""
 var moves = 0
 var frameCounter = 0
@@ -391,7 +391,7 @@ var toggleFullscreen = { () in
   }
 }
 
-var showMessageBox = { (message: JSValue, optionsArgs: JSValue...) -> JSValue in
+func showMessageBox(_ message: JSValue, _ optionsArgs: JSValue...) -> JSValue {
   let options = optionsArgs.first ?? .undefined
   let messageBoxContainer = document.createElement!("div").object!
   messageBoxContainer.className = "dialog-container"
@@ -402,7 +402,7 @@ var showMessageBox = { (message: JSValue, optionsArgs: JSValue...) -> JSValue in
   }
   let messageContentEl = document.createElement!("div").object!
   messageContentEl.className = "message-content"
-  if message.isString {
+  if message.string != nil {
     messageContentEl.textContent = message
   } else {
     _ = messageContentEl.append!(message)
@@ -1176,17 +1176,17 @@ var serializeLevel = { (level: JSValue) -> String in
     return res.joined(separator: ",")
   }
 
-  let bounds = level.bounds
+  let bounds = level[property: "bounds"]
   var boundsStr = ""
   if !bounds.isUndefined && !bounds.isNull {
     boundsStr =
       "size=\(Int((bounds.width.number ?? 0)/15.0)),\(Int((bounds.height.number ?? 0)/18.0))"
   }
 
-  let title = level.title.string ?? "Saved World"
-  let par = level.par.number ?? 10000.0
-  let hint = level.hint.string ?? ""
-  let backdropName = level.backdropName.string ?? "bkg1"
+  let title = level[property: "title"].string ?? "Saved World"
+  let par = level[property: "par"].number ?? 10000.0
+  let hint = level[property: "hint"].string ?? ""
+  let backdropName = level[property: "backdropName"].string ?? "bkg1"
 
   return """
     [info]
@@ -1217,18 +1217,17 @@ var resetAndInit = { (level: JSValue) in
 
   entitiesByTopY = [Double: [JSValue]]()
   entitiesByBottomY = [Double: [JSValue]]()
-  lastKeys = JSObject.global.Map.function?.new()
+  lastKeys = JSObject.global.Map.function!.new()
 
-  let lengthZero = JSValue.number(0)
-  dragging.length = lengthZero
-  wind.length = lengthZero
-  laserBeams.length = lengthZero
-  teleportEffects.length = lengthZero
-  playthroughEvents.length = lengthZero
-  playbackEvents.length = lengthZero
+  dragging.removeAll()
+  wind.removeAll()
+  laserBeams.removeAll()
+  teleportEffects.removeAll()
+  playthroughEvents.removeAll()
+  playbackEvents.removeAll()
   // playbackEvents = playthroughEvents // for rewinding with negative rewind speed
-  playbackLevel = JSObject.global.Object.function!.new()
-  levelLastFrame = JSObject.global.Object.function!.new()
+  playbackLevel = .object(JSObject.global.Object.function!.new())
+  levelLastFrame = .object(JSObject.global.Object.function!.new())
 
   // skip sorting and diffpatching for now to avoid JS logic translation overhead
 
@@ -1238,13 +1237,13 @@ var resetAndInit = { (level: JSValue) in
   idCounter = 0
 
   for entity in entities {
-    _ = JSObject.global.Reflect.deleteProperty!(entity, "grabbed")
-    _ = JSObject.global.Reflect.deleteProperty!(entity, "grabOffset")
+    _ = JSObject.global.Reflect.deleteProperty(entity, "grabbed")
+    _ = JSObject.global.Reflect.deleteProperty(entity, "grabOffset")
     idCounter = Int(Swift.max(Double(idCounter), (entity.id.number ?? 0.0) + 1.0))
   }
   for entity in entities {
     // separate from the above loop to avoid ID collisions
-    if entity.id.isUndefined || !entity.id.isNumber {
+    if entity.id.number == nil {
       entity.id = .number(Double(getID()))
     }
   }
@@ -1253,7 +1252,7 @@ var resetAndInit = { (level: JSValue) in
 }
 // @TODO: make this pure, and use initLevel in cases where loading from a file, so undos/etc. are reset
 var deserializeJSON = { (json: JSValue) in
-  let state = JSObject.global.JSON.parse!(json)
+  let state = JSObject.global.JSON.parse(json)
   if !state.version.isUndefined && (state.version.number ?? 0) < 0.3 {
     let newLevel = JSObject.global.Object.function!.new()
     newLevel.entities = state.entities
@@ -1266,7 +1265,7 @@ var loadLevelFromText = { (levelData: JSValue, game: JSValue) -> JSValue in
   var sections = [String: [String]]()
   var sectionName = ""
 
-  let linesObj = levelData.split!(JSObject.global.RegExp.function!.new("\\r?\\n", "g"))
+  let linesObj = levelData.split(JSObject.global.RegExp.function!.new("\\r?\\n", "g"))
   let numLines = Int(linesObj.length.number ?? 0)
   for i in 0..<numLines {
     let line = linesObj[i].string ?? ""
@@ -1290,9 +1289,9 @@ var loadLevelFromText = { (levelData: JSValue, game: JSValue) -> JSValue in
   level.hint = ""
   level.par = .number(Double.infinity)
   level.backdropName = .null
-  level.decals = JSObject.global.Array.function?.new()
-  level.backgroundDecals = JSObject.global.Array.function?.new()
-  level.entities = JSObject.global.Array.function?.new()
+  level.decals = .object(JSObject.global.Array.function!.new())
+  level.backgroundDecals = .object(JSObject.global.Array.function!.new())
+  level.entities = .object(JSObject.global.Array.function!.new())
   level.game = game
   level.bounds = .null
 
@@ -1676,35 +1675,35 @@ var deriveHotResources = { (resources: JSValue) -> JSValue in
 }
 
 var loadImage = { (imagePath: String) -> JSValue in
-  let image = JSObject.global.Image.function?.new()
+  let image = JSObject.global.Image.function!.new()
 
   let closure = JSClosure { args in
     let resolve = args[0]
     let reject = args[1]
 
     let onloadClosure = JSClosure { _ in
-      _ = resolve.callAsFunction(this: JSValue.null, image)
+      _ = resolve(image)
       return .undefined
     }
-    image.onload = .function(onloadClosure)
+    image.onload = onloadClosure.jsValue
 
     let onerrorClosure = JSClosure { _ in
       let error = JSObject.global.Error.function!.new("Image failed to load ('\(imagePath)')")
-      _ = reject.callAsFunction(this: JSValue.null, error)
+      _ = reject(error)
       return .undefined
     }
-    image.onerror = .function(onerrorClosure)
+    image.onerror = onerrorClosure.jsValue
 
     image.src = .string(imagePath)
     return .undefined
   }
 
-  return JSObject.global.Promise.function!.new(closure)
+  return .object(JSObject.global.Promise.function!.new(closure))
 }
 
 var numProgressBricks = 14
 var progressBricks = [JSValue]()
-var totalResources = Double(Object.keys(allResourcePaths).length.number ?? 0)
+var totalResources = Double(JSObject.global.Object.keys!(allResourcePaths).length.number ?? 0)
 var loadedResources = 0.0
 
 var hotResourcesLoadedPromise: JSValue = .undefined
@@ -1725,7 +1724,7 @@ var playSound = {
   let rate = playbackRate.isUndefined ? 1.0 : (playbackRate.number ?? 1.0)
   let cutOff = cutOffEndFraction.isUndefined ? 0.0 : (cutOffEndFraction.number ?? 0.0)
 
-  let audioBuffer = resources[soundName.string ?? ""]
+  let audioBuffer = resources.object![soundName.string ?? ""]
   if audioBuffer.isUndefined || audioBuffer.isNull {
     // throw new Error(`No AudioBuffer loaded for sound '${soundName}'`);
     return .undefined
