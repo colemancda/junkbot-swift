@@ -346,8 +346,9 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
   public func step() {
     var pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
     var ok = false
-    var fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
-    
+    var fg =
+      playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+
     if (fg.asInt != nil && fg.asInt != 0) || fg.isPropList {
       if playfield_manager?.checkFloor([pos.x, pos.y], 2) != 0 {
         ok = true
@@ -355,11 +356,13 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         part["pos"] = LV.pt(pos.x, pos.y)
       }
     }
-    
+
     if !ok {
       for s in 1...step_down {
         pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0) + Point(x: 0, y: s)
-        fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+        fg =
+          playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "")
+          ?? .void
         if (fg.asInt != nil && fg.asInt != 0) || fg.isPropList {
           if playfield_manager?.checkFloor([pos.x, pos.y], 2) != 0 {
             ok = true
@@ -373,7 +376,9 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     if !ok {
       for s in 1...step_up {
         pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0) + Point(x: 0, y: -s)
-        fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
+        fg =
+          playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"].asString ?? "")
+          ?? .void
         if (fg.asInt != nil && fg.asInt != 0) || fg.isPropList {
           if playfield_manager?.checkFloor([pos.x, pos.y], 2) != 0 {
             ok = true
@@ -389,7 +394,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
       doWalkState()
       SndSFX("turn1")
     }
-    
+
     if fg.isPropList {
       SndSFX("garbage1")
       SndSFX("eat1")
@@ -608,15 +613,16 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
       if let o = traj["o"].asPoint {
         traj["o"] = .point(x: o.x * dir, y: o.y)
       }
-      
+
       let vPoint: Point
       if let vList = traj["v"].asList, vList.items.count >= 2,
-         let vx = vList.items[0].asInt, let vy = vList.items[1].asInt {
-         vPoint = Point(x: vx, y: vy)
+        let vx = vList.items[0].asInt, let vy = vList.items[1].asInt
+      {
+        vPoint = Point(x: vx, y: vy)
       } else {
-         vPoint = Point(x: 0, y: 0)
+        vPoint = Point(x: 0, y: 0)
       }
-      
+
       let pos = (part["pos"].asPoint ?? Point()) + vPoint
       if playfield_manager?.checkFit(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? false {
         part["pos"] = LV.pt(pos.x, pos.y)

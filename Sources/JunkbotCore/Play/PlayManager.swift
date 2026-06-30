@@ -550,13 +550,13 @@ public class PlayManager: LingoObject, @unchecked Sendable {
       if fieldpos == nil {
         // sprite blend = 0
       } else {
-        let everythingPlaceable = 1 // Simplified stub for dragging
+        let everythingPlaceable = 1  // Simplified stub for dragging
         // place pieces...
         if everythingPlaceable == 1 && (mousestate == "#press" || mousestate == "#release") {
           if let group = movePieceGroup.asList?.items {
             for mpLV in group {
-               let mp = mpLV.asPropList
-               playfield_manager?.placePiece(mp ?? PropList())
+              let mp = mpLV.asPropList
+              playfield_manager?.placePiece(mp ?? PropList())
             }
           }
           toolmode = "#move"
@@ -574,9 +574,13 @@ public class PlayManager: LingoObject, @unchecked Sendable {
         var temp = PropList()
         let pos = fieldpos![0].asPoint ?? Point()
         let posArr = [pos.x, pos.y]
-        temp["#down"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#down").map { .propList($0) } ?? []))
-        temp["#UP"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#UP").map { .propList($0) } ?? []))
-        
+        temp["#down"] = .list(
+          LingoList(
+            playfield_manager?.findPieceGroup(posArr, dir: "#down").map { .propList($0) } ?? []))
+        temp["#UP"] = .list(
+          LingoList(
+            playfield_manager?.findPieceGroup(posArr, dir: "#UP").map { .propList($0) } ?? []))
+
         let downEmpty = temp["#down"].asList?.isEmpty ?? true
         let upEmpty = temp["#UP"].asList?.isEmpty ?? true
 
@@ -653,11 +657,14 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   public func doPressing(_ ml: Point) {
     var temp = PropList()
     let posArr = [pressPos.asPoint?.x ?? 0, pressPos.asPoint?.y ?? 0]
-    temp["#down"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#down").map { .propList($0) } ?? []))
-    temp["#UP"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#UP").map { .propList($0) } ?? []))
+    temp["#down"] = .list(
+      LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#down").map { .propList($0) } ?? [])
+    )
+    temp["#UP"] = .list(
+      LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#UP").map { .propList($0) } ?? []))
     var dragDir: String? = nil
     let pressOffSet = Point(x: ml.x - pressLoc.x, y: ml.y - pressLoc.y)
-    
+
     let upEmpty = temp["#UP"].asList?.isEmpty ?? true
     let downEmpty = temp["#down"].asList?.isEmpty ?? true
 
