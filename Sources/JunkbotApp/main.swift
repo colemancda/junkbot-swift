@@ -7085,7 +7085,7 @@ _ = main.callAsFunction(this: JSValue.null)
 
 // ── Exported Functions matching previous implementation ──
 
-nonisolated(unsafe) let exports = JSObject.global.Object.function?.new()
+nonisolated(unsafe) let exports = JSObject.global.Object.function!.new()!
 
 exports.game_init = JSClosure { _ in return .undefined }.jsValue
 exports.game_tick = JSClosure { _ in return .undefined }.jsValue

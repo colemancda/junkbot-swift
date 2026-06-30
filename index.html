@@ -1095,6 +1095,13 @@
 	</div>
 	<script src="lib/jsondiffpatch.umd.js"></script>
 	<script src="lib/ruffle-nightly-2022_01_30/ruffle.js"></script>
+	<script type="importmap">
+		{
+			"imports": {
+				"@bjorn3/browser_wasi_shim": "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.3.0/dist/index.js"
+			}
+		}
+	</script>
 	<script type="module">
 		import { init } from './web/Package/index.js';
 		init();
