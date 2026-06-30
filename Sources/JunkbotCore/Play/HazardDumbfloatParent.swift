@@ -135,9 +135,9 @@ public class HazardDumbfloatParent: LingoObject, @unchecked Sendable {
         }
         let frame = part["frame"].asInt ?? 1
         part["frame"] = .int(frame == 1 ? 2 : 1)
-        playfield_manager?.erasePiece(part.pos)
-        pos = (part["pos"].asPoint ?? Point()) + pDir
-        var fg = playfield_manager?.checkFitMiniFigHit(pos, part.type) ?? false
+        playfield_manager?.erasePiece(part["pos"] ?? .void)
+        let _pos = (part["pos"].asPoint ?? Point()) + Point(x: pDir[0], y: pDir[1])
+        var fg = playfield_manager?.checkFitMiniFigHit(LV.pt(_pos.x, _pos.y), part["type"].asString ?? "") ?? false
         var flag: String? = nil
         // ok = fg; if !ok { flag = "#TURN" } else { part.pos = pos }
 
@@ -147,14 +147,15 @@ public class HazardDumbfloatParent: LingoObject, @unchecked Sendable {
 
         if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
-            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(PropList([("damage", .string("#floater"))]))
+            Glob.shared["minifigHit"].asPropList?["behavior"].asObject()?.notify(PropList([("damage", .string("#floater"))]))
         }
 
         if flag == "#TURN" {
             pDir = pDir.map { -$0 }
         } else {
-            pLoc = pLoc + pDir
+            let _pLoc = (pLoc.asPoint ?? Point()) + Point(x: pDir[0], y: pDir[1])
+            pLoc = LV.pt(_pLoc.x, _pLoc.y)
         }
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 }

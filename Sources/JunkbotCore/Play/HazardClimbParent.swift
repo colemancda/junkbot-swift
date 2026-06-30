@@ -247,7 +247,7 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
             SndSFX("robottouch4")
             Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(PropList([("damage", .string("#climber"))]))
         }
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 
     // Original Lingo body: stepanim
@@ -278,6 +278,6 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
         }
         playfield_manager?.erasePiece(part.pos)
         stepAnim()
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
     }
 }

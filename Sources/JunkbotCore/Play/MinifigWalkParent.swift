@@ -299,23 +299,23 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func step() {
-        pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
+        let pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
         var ok = false
-        var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
+        var fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"]?.asString ?? "") ?? .void
         // let fg: LV = .void
         // _ = fg
         // if fg != 0 { if playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos } }
         if !ok {
             for s in 1...step_down {
                 _ = s
-                var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
+                var fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"]?.asString ?? "") ?? .void
                 // if fg != 0 && playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos; break }
             }
         }
         if !ok {
             for s in 1...step_up {
                 _ = s
-                var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
+                var fg = playfield_manager?.checkFitOrGoal(LV.pt(pos.x, pos.y), part["type"]?.asString ?? "") ?? .void
                 // if fg != 0 && playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos; break }
             }
         }
@@ -424,8 +424,8 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func fanAnim() {
-        pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: -1)
-        var fit = playfield_manager?.checkFit(pos, part.type) ?? false
+        let pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: -1)
+        var fit = playfield_manager?.checkFit(LV.pt(pos.x, pos.y), part["type"]?.asString ?? "") ?? false
         // if fit { part.pos = pos }
     }
 
@@ -455,7 +455,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         // if not playfield_manager.checkFloor(part.pos, 2) -- stub
         let onFloor = true // stub
         if !onFloor {
-            pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: 1)
+            let pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: 1)
             // if playfield_manager.checkFit(pos, part.type) { part.pos = pos }
             if mode != "#FALL" && mode != "#DEAD" {
                 SndSFX("fall")
@@ -713,7 +713,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         if let fr = part["frame"].asInt, fr > frameMax {
             part["frame"] = .int(frameMax)
         }
-        playfield_manager?.placePiece(.propList(part))
+        playfield_manager?.placePiece(part)
         fanMode = 0
     }
 }

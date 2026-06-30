@@ -191,7 +191,8 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
             var y = -1
             while true {
                 // fig = playfield_manager.checkFitOrMinifig(part.pos + point(1, y), "#BRICK_01") -- stub
-                let fig: LV = .int(1) // stub
+                let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 1, y: y)
+                var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_01") ?? .void
                 if let figInt = fig.asInt, figInt == 0 { break }
                 if fig.isPropList {
                     gotMinifig = fig
@@ -203,7 +204,8 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
             y = -1
             while true {
                 // fig = playfield_manager.checkFitOrMinifig(part.pos + point(2, y), "#BRICK_01") -- stub
-                let fig: LV = .int(1) // stub
+                let _pos = (part["pos"].asPoint ?? Point()) + Point(x: 2, y: y)
+                var fig = playfield_manager?.checkFitOrMinifig(LV.pt(_pos.x, _pos.y), "#BRICK_01") ?? .void
                 if let figInt = fig.asInt, figInt == 0 { break }
                 if fig.isPropList {
                     gotMinifig = fig
@@ -218,6 +220,7 @@ public class HazardSlickFanParent: LingoObject, @unchecked Sendable {
                     switch_ = 1
                 }
                 // gotMinifig.asPropList!.behavior.notify(["FAN": part]) -- stub
+                gotMinifig.asPropList?["behavior"].asObject()?.notify(PropList([("FAN", part)]))
             } else {
                 switch_ = 0
             }

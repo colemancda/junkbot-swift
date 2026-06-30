@@ -104,7 +104,7 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func step() {
-        playfield_manager?.erasePiece(part.pos)
+        playfield_manager?.erasePiece(part["pos"] ?? .void)
         var pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
         var ok = false
         var fg = playfield_manager?.checkFitOrMinifig(LV.pt(pos.x, pos.y), part["type"].asString ?? "") ?? .void
@@ -158,7 +158,7 @@ public class HazardWalkParent: LingoObject, @unchecked Sendable {
         if let frame = part["frame"].asInt, frame == 2 {
             step()
         }
-        playfield_manager?.erasePiece(part.pos)
+        playfield_manager?.erasePiece(part["pos"] ?? .void)
         stepAnim()
         playfield_manager?.placePiece(part)
     }
