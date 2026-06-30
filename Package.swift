@@ -5,11 +5,18 @@ let package = Package(
   name: "Junkbot",
   platforms: [.macOS(.v14)],
   dependencies: [
-    .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0")
+    .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0"),
+    .package(url: "https://github.com/MillerTechnologyPeru/swift-lingo.git", branch: "master")
   ],
   targets: [
     .target(
-      name: "JunkbotCore"
+      name: "JunkbotCore",
+      dependencies: [
+        .product(name: "LingoRuntime", package: "swift-lingo")
+      ],
+      plugins: [
+        .plugin(name: "LingoTranspilerPlugin", package: "swift-lingo")
+      ]
     ),
     .executableTarget(
       name: "JunkbotApp",
