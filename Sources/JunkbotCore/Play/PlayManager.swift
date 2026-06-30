@@ -44,7 +44,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
     myactorstime = PropList()
     tracktime = 0
     reported_fieldpos = .void
-    // add(the actorList, me) -- stub: register in global actor list
+    Glob.shared["actorList"].asList?.items.append(.object(self))
   }
 
   // Original Lingo body: destroy
@@ -56,7 +56,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   // ```
   public func destroy() {
     leave()
-    // deleteOne(the actorList, me) -- stub
+    Glob.shared["actorList"].asList?.items.removeAll(where: { $0.asObject() === self })
   }
 
   // Original Lingo body: leave
@@ -79,7 +79,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
     activeState = "#STANDBY"
     setCursor("#none")
     myactors = []
-    // if playfield_manager != nil { playfield_manager.leave() }
+    playfield_manager?.leave()
     playfield_manager = nil
   }
 
@@ -141,13 +141,13 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   public func setLevel(_ conf: LV) {
     toolmode = "#move"
     if conf.isString {
-      // config = Glob.shared.config_manager.parseParams(confStr) -- stub
+      // config = Glob.shared["config_manager"].asObject()?.parseParams(confStr) -- stub
       config = conf
     } else {
       config = conf
     }
-    // playfield_manager = new PlayfieldManager(config.playfield) -- stub
-    // playfield_manager.setPlayfield(config) -- stub
+    playfield_manager = PlayfieldManager(config["playfield"] ?? .void)
+    playfield_manager?.setPlayfield(config)
     // if config["info"] != nil { member("level title")?.text = ... } -- stub
 
     myactors = []
@@ -353,7 +353,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   public func partclick(_ part: LV, _ evt: String) {
     switch evt {
     case "#mouseEnter":
-      // reported_fieldpos = [part.pos, part.sprite[1].loc] -- stub
+      reported_fieldpos = .list(LingoList([part.asPropList?["pos"] ?? .void]))
       break
     case "#mouseLeave":
       reported_fieldpos = .void
@@ -537,12 +537,76 @@ public class PlayManager: LingoObject, @unchecked Sendable {
       }
     }
 
-    // let ml = mouseLoc -- stub
-    // let fieldpos = playfield_manager.getPos(ml) -- stub
+    let ml = Glob.shared["mouseLoc"].asPoint ?? Point()
+    var mlWithOffset = ml
+    if toolmode == "#dragging" {
+      mlWithOffset = ml + moveoffset
+    }
+    let fieldposArr = playfield_manager?.getPos(mlWithOffset)
+    var fieldpos: [LV]? = fieldposArr
 
-    // toolmode switch omitted as it references many stubs (drag_sprite, playfield_manager, etc.)
+    switch toolmode {
+    case "#dragging":
+      if fieldpos == nil {
+        // sprite blend = 0
+      } else {
+        let everythingPlaceable = 1 // Simplified stub for dragging
+        // place pieces...
+        if everythingPlaceable == 1 && (mousestate == "#press" || mousestate == "#release") {
+          if let group = movePieceGroup.asList?.items {
+            for mpLV in group {
+               let mp = mpLV.asPropList
+               playfield_manager?.placePiece(mp ?? PropList())
+            }
+          }
+          toolmode = "#move"
+          SndSFX("blockdrop")
+          movePieceGroup = .void
+        }
+      }
+    case "#move":
+      if !reported_fieldpos.isVoid {
+        fieldpos = reported_fieldpos.asList?.items
+      }
+      if fieldpos == nil || fieldpos!.isEmpty {
+        setCursor("#none")
+      } else {
+        var temp = PropList()
+        let pos = fieldpos![0].asPoint ?? Point()
+        let posArr = [pos.x, pos.y]
+        temp["#down"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#down").map { .propList($0) } ?? []))
+        temp["#UP"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#UP").map { .propList($0) } ?? []))
+        
+        let downEmpty = temp["#down"].asList?.isEmpty ?? true
+        let upEmpty = temp["#UP"].asList?.isEmpty ?? true
 
-    // if keyPressed(" ") && activeState == "#Run" { instantWin() }
+        if downEmpty && upEmpty {
+          setCursor("#none")
+        } else if downEmpty {
+          setCursor("#grab_up")
+        } else if upEmpty {
+          setCursor("#grab_down")
+        } else {
+          setCursor("#grab_both")
+        }
+
+        if mousestate == "#press" {
+          pressLoc = ml
+          pressPos = fieldpos![0]
+          toolmode = "#pressing"
+          SndSFX("blockclick")
+          doPressing(ml)
+        }
+      }
+    case "#pressing":
+      doPressing(ml)
+    default:
+      break
+    }
+
+    if keyPressed(" ") && activeState == "#Run" {
+      instantWin()
+    }
   }
 
   // Original Lingo body: dopressing
@@ -587,14 +651,20 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func doPressing(_ ml: Point) {
-    // temp["#down"] = playfield_manager.findPieceGroup(pressPos, "#down") -- stub
-    // temp["#UP"] = playfield_manager.findPieceGroup(pressPos, "#UP") -- stub
+    var temp = PropList()
+    let posArr = [pressPos.asPoint?.x ?? 0, pressPos.asPoint?.y ?? 0]
+    temp["#down"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#down").map { .propList($0) } ?? []))
+    temp["#UP"] = .list(LingoList(playfield_manager?.findPieceGroup(posArr, dir: "#UP").map { .propList($0) } ?? []))
     var dragDir: String? = nil
     let pressOffSet = Point(x: ml.x - pressLoc.x, y: ml.y - pressLoc.y)
-    if pressOffSet.y > 3 {
+    
+    let upEmpty = temp["#UP"].asList?.isEmpty ?? true
+    let downEmpty = temp["#down"].asList?.isEmpty ?? true
+
+    if pressOffSet.y > 3 || upEmpty {
       dragDir = "#down"
     }
-    if pressOffSet.y < -3 {
+    if pressOffSet.y < -3 || downEmpty {
       dragDir = "#UP"
     }
     if dragDir == nil {
@@ -602,10 +672,19 @@ public class PlayManager: LingoObject, @unchecked Sendable {
         toolmode = "#move"
       }
     }
-    if dragDir != nil {
-      // movePieceGroup = temp[dragDir] -- stub
-      // if movePieceGroup == [] { if abs(pressOffSet.y) > 20 { toolmode = "#move" } }
-      // else { playfield_manager.erasePieceGroup(movePieceGroup, 1) ... toolmode = "#dragging" }
+    if let dDir = dragDir {
+      movePieceGroup = temp[dDir]
+      if movePieceGroup.asList?.isEmpty ?? true {
+        if abs(pressOffSet.y) > 20 {
+          toolmode = "#move"
+        }
+      } else {
+        // playfield_manager.erasePieceGroup(movePieceGroup, 1) -- stub
+        toolmode = "#dragging"
+        setCursor("#grabber")
+        SndSFX("blockpickup")
+        addStatus("#moves", 1)
+      }
     }
   }
 }

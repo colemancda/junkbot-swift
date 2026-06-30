@@ -139,16 +139,33 @@ public class HazardDumbfloatParent: LingoObject, @unchecked Sendable {
     let frame = part["frame"].asInt ?? 1
     part["frame"] = .int(frame == 1 ? 2 : 1)
     playfield_manager?.erasePiece(part["pos"] ?? .void)
-    let _pos = (part["pos"].asPoint ?? Point()) + Point(x: pDir[0], y: pDir[1])
+    let origPos = part["pos"].asPoint ?? Point()
+    var pos = origPos + Point(x: pDir[0], y: pDir[1])
     var fg =
-      playfield_manager?.checkFitMiniFigHit(LV.pt(_pos.x, _pos.y), part["type"].asString ?? "")
+      playfield_manager?.checkFitMiniFigHit(LV.pt(pos.x, pos.y), part["type"].asString ?? "")
       ?? false
     var flag: String? = nil
-    // ok = fg; if !ok { flag = "#TURN" } else { part.pos = pos }
+    var ok = fg
+    if !ok {
+      flag = "#TURN"
+    } else {
+      part["pos"] = LV.pt(pos.x, pos.y)
+    }
 
-    // stub: boundary check
-    // if pos out of bounds { flag = "#TURN"; pos = part.pos }
-    // else if getPart(pos) != nil { flag = "#TURN"; pos = part.pos }
+    let pf_size = playfield_manager?.pf_size.asPoint ?? Point(x: 20, y: 15)
+    let mW = pf_size.x
+    let mH = pf_size.y
+
+    if pos.x > mW || pos.x < 1 || pos.y > mH || pos.y < 1 {
+      flag = "#TURN"
+      pos = origPos
+    } else {
+      let cell = playfield_manager?.getPart(LV.pt(pos.x, pos.y))
+      if cell != nil {
+        flag = "#TURN"
+        pos = origPos
+      }
+    }
 
     if !Glob.shared["minifigHit"].isVoid {
       SndSFX("robottouch4")

@@ -38,10 +38,10 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
       Glob.shared["PLAYER"].asObject()?.asPlayManager
       ?? Glob.shared["PLAYER"].asPropList?["play_manager"].asPlayManager
     playfield_manager = play_manager?.playfield_manager
-    // top_locz = playfield_manager.posToLocZ(point(50, 1)) -- stub
-    // driploc = playfield_manager.getLoc(part.pos) + point(0, 17) -- stub
-    let partPos = mypart["pos"].asPoint ?? Point()
-    _ = partPos
+    if let pm = playfield_manager {
+      top_locz = .int(pm.posToLocZ(Point(x: 50, y: 1)))
+      driploc = pm.getLoc(mypart["pos"]) + Point(x: 0, y: 17)
+    }
   }
 
   // Original Lingo body: done
@@ -103,21 +103,20 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
     switch dripstate {
     case .falling:
       let newloc = Point(x: driploc.x, y: driploc.y + 18)
-      // posloc = playfield_manager.getPos(newloc) -- stub
-      let posloc: LV = .void  // stub
+      let arr = playfield_manager?.getPos(newloc)
+      let posloc: LV = arr != nil ? .list(LingoList(arr!)) : .void
       var fit: LV = .int(0)
       if posloc.isVoid {
         fit = .int(0)
       } else {
-        var fit = playfield_manager?.checkFitOrMinifig(posloc, "#BRICK_02") ?? .void
-        fit = .int(1)  // stub
+        fit = playfield_manager?.checkFitOrMinifig(posloc, "#BRICK_02") ?? .int(0)
       }
       if let fitInt = fit.asInt, fitInt == 1 {
         driploc = newloc
       } else {
         dripstate = .splashing(1)
         if fit.isPropList {
-          // fit.asPropList!.behavior.notify(["damage": "#drip"]) -- stub
+          fit.asPropList?["behavior"].asObject()?.notify(PropList([("damage", .string("#drip"))]))
           SndSFX("electricity1")
         } else {
           SndSFX("drip\(lingoRandom(3))")
