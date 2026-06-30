@@ -14,7 +14,8 @@ let package = Package(
     .executableTarget(
       name: "JunkbotApp",
       dependencies: [
-        .product(name: "JavaScriptKit", package: "JavaScriptKit")
+        .product(name: "JavaScriptKit", package: "JavaScriptKit"),
+        .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
       swiftSettings: [
         .unsafeFlags(["-wmo", "-Osize"])

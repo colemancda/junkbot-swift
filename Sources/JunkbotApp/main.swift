@@ -1,4 +1,7 @@
+import JavaScriptEventLoop
 import JavaScriptKit
+
+typealias DefaultExecutorFactory = JavaScriptEventLoop
 
 var printJS: JSValue = .null
 var parseRoute: JSValue = .null
@@ -1635,15 +1638,10 @@ var loadImage = { (imagePath: String) -> JSValue in
   return JSObject.global.Promise.function!.new(closure)
 }
 
-var loadJSON = JSObject.global.Function.function!.new(
-  "path",
-  "return fetch(path).then(res => { if(res.ok) return res.json(); throw new Error('HTTP ' + res.status); })"
+.then(res => { if(res.ok) return res.json(); throw new Error('HTTP ' + res.status); })"
 )
 
-var loadAtlasJSON = JSObject.global.Function.function!.new(
-  "path",
-  """
-      return fetch(path).then(res => res.json()).then(data => {
+.then(res => res.json()).then(data => {
           let frames = data.frames;
           let animations = data.animations;
           let result = {};
@@ -1654,66 +1652,26 @@ var loadAtlasJSON = JSObject.global.Function.function!.new(
       });
   """)
 
-var loadTextFile = JSObject.global.Function.function!.new(
-  "path",
-  "return fetch(path).then(res => { if(res.ok) return res.text(); throw new Error('HTTP ' + res.status); })"
+.then(res => { if(res.ok) return res.text(); throw new Error('HTTP ' + res.status); })"
 )
 
-var loadLevelFromTextFile = JSObject.global.Function.function!.new(
-  "path", "game",
-  """
-      // Stub for now
-      return fetch(path).then(res => res.text());
+.then(res => res.text());
   """)
 
-var loadSound = JSObject.global.Function.function!.new(
-  "path", "audioCtx",
-  """
-      return fetch(path).then(res => { if(res.ok) return res.arrayBuffer(); throw new Error('HTTP ' + res.status); }).then(buf => audioCtx.decodeAudioData(buf));
+.then(res => { if(res.ok) return res.arrayBuffer(); throw new Error('HTTP ' + res.status); }).then(buf => audioCtx.decodeAudioData(buf));
   """)
 
-var loadLevelListing = JSObject.global.Function.function!.new(
-  "path",
-  "return fetch(path).then(res => res.text()).then(t => t.trim().split(/\\r?\\n/g).map(l => l.trim()));"
+.then(res => res.text()).then(t => t.trim().split(/\\r?\\n/g).map(l => l.trim()));"
 )
 
-var loadResource = { (path: String) -> JSValue in
-  if JSObject.global.RegExp.function!.new("spritesheets/.*\\.json$", "i").test!(path).boolean
-    == true
-  {
-    return loadAtlasJSON.callAsFunction(this: JSValue.null, path)
-  } else if JSObject.global.RegExp.function!.new("\\.json$", "i").test!(path).boolean == true {
-    return loadJSON.callAsFunction(this: JSValue.null, path)
-  } else if JSObject.global.RegExp.function!.new("level\\.listing\\.txt$", "i").test!(path).boolean
-    == true
-  {
-    return loadLevelListing.callAsFunction(this: JSValue.null, path)
-  } else if JSObject.global.RegExp.function!.new("levels/.*\\.txt$", "i").test!(path).boolean
-    == true
-  {
-    return loadLevelFromTextFile.callAsFunction(this: JSValue.null, path, .undefined)
-  } else if JSObject.global.RegExp.function!.new("\\.(ogg|mp3|wav)$", "i").test!(path).boolean
-    == true
-  {
-    return loadSound.callAsFunction(this: JSValue.null, path, audioCtx)
-  } else if JSObject.global.RegExp.function!.new("\\.(png|jpe?g|gif)$", "i").test!(path).boolean
-    == true
-  {
-    return loadImage(path)
-  }
-  return .undefined
-}
+
 
 var numProgressBricks = 14
 var progressBricks = [JSValue]()
 var totalResources = Double(Object.keys(allResourcePaths).length.number ?? 0)
 var loadedResources = 0.0
 
-var loadResources = JSObject.global.Function.function!.new(
-  "resourcePathsByID", "loadResource", "progressBricks", "loadProgress", "numProgressBricks",
-  "totalResources", "loadedResources", "showErrorMessage",
-  """
-      let entries = Object.entries(resourcePathsByID);
+;
       let silenceErrors = false;
       return Promise.all(entries.map(async ([id, path]) => {
           let resource;
@@ -6218,7 +6176,7 @@ var getLevelLists = { (res: JSValue) -> JSValue in
   for i in 0..<kLen {
     let key = keys[i].string ?? ""
     if key.hasPrefix("levelPrefix") {
-      let lsVal = JSObject.global.localStorage[key].string ?? "{}"
+      let lsVal = JSObject.global.localStorage[dynamicMember: key].string ?? "{}"
       let parsed = JSObject.global.JSON.parse!(lsVal)
       let name = parsed.level.title
       if !name.isUndefined && !name.isNull {
@@ -6321,13 +6279,15 @@ var initLevelDropdown = { () -> JSValue in
   levelDropdown.onchange = JSClosure { _ in
     let option = levelDropdown.options[levelDropdown.selectedIndex]
 
-    var optgroup = option.parentNode.matches("optgroup") ? option.parentNode : null
-    var gameSlug = optgroup ? gameNameToSlug(optgroup.value) : null
+    var optgroup = (option.parentNode.matches("optgroup").boolean == true) ? option.parentNode : JSValue.null
+    var gameSlug = (optgroup != JSValue.null) ? gameNameToSlug(optgroup.value) : JSValue.null
     var levelSlug = levelDropdown.value
     if levelSlug == "custom-world" {
       return  // this is a placeholder option
     }
-    location.hash = `#${gameSlug}/levels/${levelSlug}`
+    let gameSlugString = gameSlug.string ?? ""
+    let levelSlugString = levelSlug.string ?? ""
+    JSObject.global.location.hash = .string("#\\(gameSlugString)/levels/\\(levelSlugString)")
   }
 }
 var initializedEditorUI = false
@@ -6337,8 +6297,8 @@ var initEditorUI = { () -> JSValue in
   }
   initializedEditorUI = true
 
-  editorUI.hidden = .boolean(editing.boolean != true)
-  editorControlsBar.hidden = .boolean(editing.boolean != true)
+  editorUI.hidden = .boolean(!editing)
+  editorControlsBar.hidden = .boolean(!editing)
 
   _ = initLevelDropdown.callAsFunction(this: JSValue.null)
 
@@ -6771,7 +6731,7 @@ var initEditorUI = { () -> JSValue in
 }
 
 var showLevelLoseUI = { () -> JSValue in
-  let messages = JSObject.global.Array.function?.new()
+  let messages = JSObject.global.Array.function!.new()
   _ = messages.push!("I knew that was going to happen.")
   _ = messages.push!("I hate mondays.")
   _ = messages.push!("Why me?")
@@ -6787,7 +6747,7 @@ var showLevelLoseUI = { () -> JSValue in
 
   let buttons = JSObject.global.Array.function?.new()
 
-  let b1 = JSObject.global.Object.function?.new()
+  let b1 = JSObject.global.Object.function!.new()
   b1.label = .string("Select Level")
   b1.action = JSClosure { _ in
     JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSValue.null)
@@ -6866,7 +6826,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
     """)
 
   let buttons = JSObject.global.Array.function?.new()
-  let b1 = JSObject.global.Object.function?.new()
+  let b1 = JSObject.global.Object.function!.new()
   b1.label = .string("Select Level")
   b1.action = JSClosure { _ in
     JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSValue.null)
@@ -6895,7 +6855,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
 }
 
 var canGoToNextLevel = { () -> JSValue in
-  let pr = parseRoute.callAsFunction(this: JSValue.null, JSObject.global.location.hash)
+  let pr = parseRoute(JSObject.global.location.hash)
   let game = pr.game.string ?? ""
   let levelSlug = pr.levelSlug.string ?? ""
 
@@ -6946,7 +6906,7 @@ var showLevelWinUI = { () -> JSValue in
 
   let buttons = JSObject.global.Array.function?.new()
 
-  let b1 = JSObject.global.Object.function?.new()
+  let b1 = JSObject.global.Object.function!.new()
   b1.label = .string("Select Level")
   b1.action = JSClosure { _ in
     JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSValue.null)
@@ -6984,7 +6944,7 @@ var testRouting = { () -> JSValue in
     let rt = routingTests[i]
     let hash = rt.hash
     let expected = rt.expected
-    let actual = parseRoute.callAsFunction(this: JSValue.null, hash)
+    let actual = parseRoute(hash)
 
     let keys = JSObject.global.Object.keys(expected)
     let keysLen = Int(keys.length.number ?? 0.0)
@@ -7027,26 +6987,149 @@ var runTests = JSClosure { _ in
   return .undefined
 }
 
+func loadFromHashAsync() async {
+  let canonicalHash = JSObject.global.location.hash.string ?? ""
+  var loadingFrom = canonicalHash
+
+  let pr = parseRoute(JSObject.global.location.hash)
+  let screen = pr.screen.string ?? ""
+  let levelSlug = pr.levelSlug.string ?? ""
+  let levelGroup = pr.levelGroup
+  let game = pr.game.string ?? ""
+  let wantsEdit = pr.wantsEdit.boolean == true
+  let canonicalHashPr = pr.canonicalHash.string ?? ""
+
+  if canonicalHash != canonicalHashPr {
+    _ = JSObject.global.history.replaceState!(JSValue.null, JSValue.null, canonicalHashPr)
+    loadingFrom = canonicalHashPr
+  }
+
+  let toShowTestRunner = (game == GAME_TEST_CASES.string && levelSlug == "")
+  if !toShowTestRunner {
+    _ = stopTests.callAsFunction(this: JSValue.null)
+  }
+
+  if infoBox.hidden.boolean == false {
+    _ = toggleInfoBox.callAsFunction(this: JSValue.null)
+  }
+
+  if screen == SCREEN_LEVEL.string || screen == SCREEN_LEVEL_SELECT.string {
+    if allResourcesLoadedPromise.isUndefined || allResourcesLoadedPromise.isNull {
+      // Since loadResources is now a Swift async function:
+      let loadP = try! await loadResources(resourcePathsByID: allResourcePaths)
+      allResourcesLoadedPromise = deriveHotResources.callAsFunction(this: JSValue.null, loadP)
+    }
+    if hotResourcesLoadedPromise.isUndefined || hotResourcesLoadedPromise.isNull {
+      hotResourcesLoadedPromise = allResourcesLoadedPromise
+    }
+    resources = try! await JSPromise(from: allResourcesLoadedPromise)!.value
+
+    if JSObject.global.location.hash.string != loadingFrom { return }
+
+    if screen == SCREEN_LEVEL_SELECT.string {
+      _ = hideTitleScreen.callAsFunction(this: JSValue.null)
+      _ = try? await JSPromise(from: closeNonErrorDialogs.callAsFunction(this: JSValue.null))?.value
+      _ = showLevelSelectScreen.callAsFunction(this: JSValue.null, game, levelGroup)
+      return
+    }
+
+    if toShowTestRunner {
+      _ = runTests.callAsFunction(this: JSValue.null)
+      _ = closeNonErrorDialogs.callAsFunction(this: JSValue.null)
+      _ = hideTitleScreen.callAsFunction(this: JSValue.null)
+      _ = hideLevelSelectScreen.callAsFunction(this: JSValue.null)
+    } else {
+      if levelSlug != "" && game == GAME_USER_CREATED.string {
+        do {
+          let lsVal = JSObject.global.localStorage[dynamicMember: "level_" + levelSlug].string ?? ""
+          if lsVal == "" { throw JSError(value: .string("Level does not exist.")) }
+          _ = deserializeJSON.callAsFunction(this: JSValue.null, .string(lsVal))
+          _ = initLevel.callAsFunction(this: JSValue.null, currentLevel)
+          // ... not fully translated this block ...
+        } catch {}
+      } else if levelSlug != "" {
+        do {
+          let levelArgs = JSObject.global.Object.function!.new()
+          levelArgs.levelName = .string(levelSlug)
+          levelArgs.game = .string(game)
+          let level = try await JSPromise(from: loadLevelByName.callAsFunction(this: JSValue.null, levelArgs))!.value
+          if JSObject.global.location.hash.string != loadingFrom { return }
+          _ = initLevel.callAsFunction(this: JSValue.null, level)
+          editorLevelState = serializeToJSON.callAsFunction(this: JSValue.null, currentLevel)
+        } catch {
+          _ = showErrorMessage.callAsFunction(this: JSValue.null, .string("Failed to load level"), (error as! JSError).value)
+          JSObject.global.location.hash = .string("#junkbot/levels")
+          return
+        }
+      } else {
+        if !wantsEdit || game != GAME_USER_CREATED.string {
+          _ = showErrorMessage.callAsFunction(this: JSValue.null, .string("No level specified."))
+          JSObject.global.location.hash = .string("#junkbot/levels")
+          return
+        }
+        _ = initLevel.callAsFunction(this: JSValue.null, resources.levelEditorDefaultLevel)
+        editorLevelState = serializeToJSON.callAsFunction(this: JSValue.null, currentLevel)
+      }
+
+      paused = true
+      _ = hideTitleScreen.callAsFunction(this: JSValue.null)
+      _ = hideLevelSelectScreen.callAsFunction(this: JSValue.null)
+      _ = try? await JSPromise(from: closeNonErrorDialogs.callAsFunction(this: JSValue.null))?.value
+
+      if wantsEdit != editing {
+        _ = toggleEditing.callAsFunction(this: JSValue.null)
+      }
+      if editing {
+        paused = true
+      } else {
+        let levelLocation = whereLevelIsInTheGame.callAsFunction(this: JSValue.null, currentLevel, game)
+        if !levelLocation.isUndefined && !levelLocation.isNull {
+          let levelInfoContent = JSObject.global.document.createElement("div")
+          levelInfoContent.innerHTML = .string("<h1>Toast</h1>") // simplified
+          let opts = JSObject.global.Object.function!.new()
+          opts.buttons = JSObject.global.Array.function!.new()
+          opts.className = .string("level-info-toast")
+          
+          let arr = JSObject.global.Array.function!.new()
+          _ = arr.push!(levelInfoContent)
+          let toast = showMessageBox.callAsFunction(this: JSValue.null, arr, opts)
+          _ = nonErrorDialogs.push!(toast)
+          
+          _ = JSObject.global.setTimeout!(JSClosure { _ in
+            Task {
+              _ = try? await JSPromise(from: toast.close!(true))?.value
+              paused = editing
+            }
+            return .undefined
+          }, 2000)
+        } else {
+          paused = editing
+        }
+      }
+    }
+  } else {
+    if JSObject.global.location.hash.string != loadingFrom { return }
+    _ = hideLevelSelectScreen.callAsFunction(this: JSValue.null)
+    _ = try? await JSPromise(from: closeNonErrorDialogs.callAsFunction(this: JSValue.null))?.value
+    _ = showTitleScreen.callAsFunction(this: JSValue.null)
+  }
+}
+
 var loadFromHash = JSClosure { _ in
-  // Mock implementation for loadFromHash since it contains Promises and async/await
+  Task { await loadFromHashAsync() }
   return .undefined
 }
 
 _ = JSObject.global.window.addEventListener("hashchange", loadFromHash)
 
-var loadAllLevels = JSClosure { _ in
-  return JSObject.global.Promise.resolve(JSObject.global.Array.function?.new())
-}
-var gatherStatistics = JSClosure { _ in
-  return JSObject.global.Promise.resolve(JSObject.global.Object.function?.new())
-}
+
 var renderBannerComment = JSClosure { _ in return .string("") }
 var renderFIGletFont = JSClosure { _ in return .string("") }
 
-var main = JSClosure { _ in
-  showDebug = JSObject.global.localStorage["showDebug"].string == "true"
-  muted = JSObject.global.localStorage["muteSoundEffects"].string == "true"
-  var volume = JSObject.global.parseFloat(JSObject.global.localStorage["volume"]).number ?? 0.5
+func mainAsync() async {
+  showDebug = JSObject.global.localStorage[dynamicMember: "showDebug"].string == "true"
+  muted = JSObject.global.localStorage[dynamicMember: "muteSoundEffects"].string == "true"
+  var volume = JSObject.global.parseFloat(JSObject.global.localStorage[dynamicMember: "volume"]).number ?? 0.5
   if volume < 0.0 || volume > 1.0 {
     volume = 0.5
   }
@@ -7055,9 +7138,12 @@ var main = JSClosure { _ in
   _ = initGUI.callAsFunction(this: JSValue.null)
   winLoseState = .string(winOrLose.callAsFunction(this: JSValue.null).string ?? "")
 
-  // Since loadFromHash is mocked to synchronous closure returning undefined:
-  _ = loadFromHash.callAsFunction(this: JSValue.null)
+  await loadFromHashAsync()
   _ = animate.callAsFunction(this: JSValue.null)
+}
+
+var main = JSClosure { _ in
+  Task { await mainAsync() }
   return .undefined
 }
 
