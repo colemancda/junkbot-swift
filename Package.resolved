@@ -1,4 +1,5 @@
 {
+  "originHash" : "e03ec675b9f03059c8cd48b19addf23a23dd5e0290f19d10450549108074fcbd",
   "pins" : [
     {
       "identity" : "javascriptkit",
@@ -7,6 +8,24 @@
       "state" : {
         "revision" : "3b4bba1b56581e6ae42cf0d12f78817fe00c546d",
         "version" : "0.56.0"
+      }
+    },
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+        "version" : "1.8.2"
+      }
+    },
+    {
+      "identity" : "swift-lingo",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/MillerTechnologyPeru/swift-lingo.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "e1f2a778169591844fbf8686e76a12a130fd45e3"
       }
     },
     {
@@ -19,5 +38,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }
