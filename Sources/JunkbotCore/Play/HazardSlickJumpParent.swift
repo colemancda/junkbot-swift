@@ -1,7 +1,7 @@
 // Translated from Lingo: parent_hazard slick jump parent.ls
 
 public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var play_manager: PlayManager? = nil
     public var part: PropList
     public var last_jump: Int = 0
@@ -24,8 +24,8 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = .void // play_manager.playfield_manager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        playfield_manager = play_manager?.playfield_manager
         last_jump = 0
     }
 
@@ -109,10 +109,10 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
     // ```
     public func stepFrame() {
         if paused == 1 { return }
-        // playfield_manager.erasePiece(part.pos) -- stub
+        playfield_manager?.erasePiece(part.pos)
         stepAnim()
         checkMiniFig()
-        // playfield_manager.placePiece(part) -- stub
+        playfield_manager?.placePiece(.propList(part))
     }
 
     // Original Lingo body: stepanim

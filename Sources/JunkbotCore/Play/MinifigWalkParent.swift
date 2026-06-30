@@ -1,7 +1,7 @@
 // Translated from Lingo: parent_minifig walk parent.ls
 
 public class MinifigWalkParent: LingoObject, @unchecked Sendable {
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var play_manager: PlayManager? = nil
     public var part: PropList
     public var myWidth: Int = 2
@@ -62,8 +62,8 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = .void // play_manager.playfield_manager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        playfield_manager = play_manager?.playfield_manager
         painmode = 0
         fanMode = 0
         mode = "#WALK"
@@ -299,23 +299,23 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func step() {
-        // pos = part.pos + point(dir, 0) -- stub
+        pos = (part["pos"].asPoint ?? Point()) + Point(x: dir, y: 0)
         var ok = false
-        // fg = playfield_manager.checkFitOrGoal(pos, part.type) -- stub
+        var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
         let fg: LV = .void
         _ = fg
         // if fg != 0 { if playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos } }
         if !ok {
             for s in 1...step_down {
                 _ = s
-                // fg = playfield_manager.checkFitOrGoal(pos, part.type) -- stub
+                var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
                 // if fg != 0 && playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos; break }
             }
         }
         if !ok {
             for s in 1...step_up {
                 _ = s
-                // fg = playfield_manager.checkFitOrGoal(pos, part.type) -- stub
+                var fg = playfield_manager?.checkFitOrGoal(pos, part.type) ?? .void
                 // if fg != 0 && playfield_manager.checkFloor(pos, 2) { ok = true; doWalkState(); part.pos = pos; break }
             }
         }
@@ -424,8 +424,8 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func fanAnim() {
-        // pos = part.pos + point(0, -1) -- stub
-        // fit = playfield_manager.checkFit(pos, part.type) -- stub
+        pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: -1)
+        var fit = playfield_manager?.checkFit(pos, part.type) ?? false
         // if fit { part.pos = pos }
     }
 
@@ -455,7 +455,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         // if not playfield_manager.checkFloor(part.pos, 2) -- stub
         let onFloor = true // stub
         if !onFloor {
-            // pos = part.pos + point(0, 1) -- stub
+            pos = (part["pos"].asPoint ?? Point()) + Point(x: 0, y: 1)
             // if playfield_manager.checkFit(pos, part.type) { part.pos = pos }
             if mode != "#FALL" && mode != "#DEAD" {
                 SndSFX("fall")
@@ -631,7 +631,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func stepFrame() {
-        // playfield_manager.erasePiece(part.pos) -- stub
+        playfield_manager?.erasePiece(part.pos)
         let ticks = currentTicks
         let frame = part["frame"].asInt ?? 0
         if (mode == "#WALK" || mode == "#FAN") && (frame == 1) && shieldticks != nil {
@@ -713,7 +713,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
         if let fr = part["frame"].asInt, fr > frameMax {
             part["frame"] = .int(frameMax)
         }
-        // playfield_manager.placePiece(part) -- stub
+        playfield_manager?.placePiece(.propList(part))
         fanMode = 0
     }
 }

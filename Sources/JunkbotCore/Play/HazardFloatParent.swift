@@ -3,7 +3,7 @@
 public class HazardFloatParent: LingoObject, @unchecked Sendable {
     public var part: PropList
     public var play_manager: PlayManager? = nil
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var pLoc: LV = .void
     public var pBaseLoc: LV = .void
     public var pDir: [Int] = [1, 0]
@@ -33,8 +33,8 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
         pSpeed = 2
         pCounter = 0
         pTarget = 0
-        play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = .void // play_manager.playfield_manager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        playfield_manager = play_manager?.playfield_manager
     }
 
     // Original Lingo body: stepframe
@@ -200,9 +200,9 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
         }
         let frame = part["frame"].asInt ?? 1
         part["frame"] = .int(frame == 1 ? 2 : 1)
-        // playfield_manager.erasePiece(part.pos) -- stub
-        // pos = part.pos + pDir -- stub
-        // fg = playfield_manager.checkFitMiniFigHit(pos, part.type) -- stub
+        playfield_manager?.erasePiece(part.pos)
+        pos = (part["pos"].asPoint ?? Point()) + pDir
+        var fg = playfield_manager?.checkFitMiniFigHit(pos, part.type) ?? false
         var flag: String? = nil
         // ok = fg; if !ok { flag = "#TURN" } else { part.pos = pos }
 
@@ -282,15 +282,15 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
 
         if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
-            // Glob.shared.minifigHit.behavior.notify(["damage": "#floater"]) -- stub
+            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(["damage": .string("#floater")])
         }
 
         if flag == "#TURN" {
             pDir = pDir.map { -$0 }
         } else {
-            // pLoc = pLoc + pDir -- stub
+            pLoc = pLoc + pDir
         }
-        // playfield_manager.placePiece(part) -- stub
+        playfield_manager?.placePiece(.propList(part))
         _ = mW; _ = mH; _ = pos_x; _ = pos_y
     }
 }

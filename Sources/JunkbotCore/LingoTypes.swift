@@ -190,6 +190,15 @@ extension LV {
         if case .object(let o) = self { return o }
         return nil
     }
+    public var asPlayfieldManager: PlayfieldManager? {
+        asObject()?.asPlayfieldManager
+    }
+    public var asPlayManager: PlayManager? {
+        asObject()?.asPlayManager
+    }
+    public var asGameManager: GameManager? {
+        asObject()?.asGameManager
+    }
     public var isVoid: Bool {
         if case .void = self { return true }
         return false

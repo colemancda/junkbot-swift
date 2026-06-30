@@ -1,7 +1,7 @@
 // Translated from Lingo: parent_hazard slick pipe parent.ls
 
 public class HazardSlickPipeParent: LingoObject, @unchecked Sendable {
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var play_manager: PlayManager? = nil
     public var part: PropList
     public var myWidth: Int = 2
@@ -30,8 +30,8 @@ public class HazardSlickPipeParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = .void // play_manager.playfield_manager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        playfield_manager = play_manager?.playfield_manager
         part["auxSprites"] = .propList(PropList())
         myWidth = 2
         let ticks = currentTicks
@@ -86,10 +86,10 @@ public class HazardSlickPipeParent: LingoObject, @unchecked Sendable {
     // end
     // ```
     public func stepFrame() {
-        // playfield_manager.erasePiece(part.pos) -- stub
+        playfield_manager?.erasePiece(part.pos)
         stepAnim()
         myDrip?.stepFrame()
-        // playfield_manager.placePiece(part) -- stub
+        playfield_manager?.placePiece(.propList(part))
     }
 
     // Original Lingo body: stepanim

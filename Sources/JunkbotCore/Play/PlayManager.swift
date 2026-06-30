@@ -3,7 +3,7 @@
 public class PlayManager: LingoObject, @unchecked Sendable {
     public override var asPlayManager: PlayManager? { self }
     public var config: LV = .void
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var dragmember: LV = .void
     public var toolmode: String = "#move"
     public var movepart: LV = .void
@@ -80,7 +80,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
         setCursor("#none")
         myactors = []
         // if playfield_manager != nil { playfield_manager.leave() }
-        playfield_manager = .void
+        playfield_manager = nil
     }
 
     // Original Lingo body: refresh

@@ -6,7 +6,7 @@ public enum DripState {
 }
 
 public class HazardDripParent: LingoObject, @unchecked Sendable {
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var play_manager: PlayManager? = nil
     public var part: PropList
     public var pipe: HazardSlickPipeParent? = nil
@@ -33,8 +33,8 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
 
         super.init()
         dripstate = .falling
-        play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = .void // play_manager.playfield_manager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        playfield_manager = play_manager?.playfield_manager
         // top_locz = playfield_manager.posToLocZ(point(50, 1)) -- stub
         // driploc = playfield_manager.getLoc(part.pos) + point(0, 17) -- stub
         let partPos = mypart["pos"].asPoint ?? Point()
@@ -106,7 +106,7 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
             if posloc.isVoid {
                 fit = .int(0)
             } else {
-                // fit = playfield_manager.checkFitOrMinifig(posloc, "#BRICK_02") -- stub
+                var fit = playfield_manager?.checkFitOrMinifig(posloc.asPoint ?? Point(), "#BRICK_02") ?? .void
                 fit = .int(1) // stub
             }
             if let fitInt = fit.asInt, fitInt == 1 {

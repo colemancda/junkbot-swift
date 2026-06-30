@@ -1,7 +1,7 @@
 // Translated from Lingo: parent_hazard climb parent.ls
 
 public class HazardClimbParent: LingoObject, @unchecked Sendable {
-    public var playfield_manager: LV = .void
+    public var playfield_manager: PlayfieldManager? = nil
     public var play_manager: PlayManager? = nil
     public var part: PropList
     public var myWidth: Int = 2
@@ -47,8 +47,8 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
 
         super.init()
         // part["behavior"] = self -- set by caller
-        play_manager = nil // Glob.shared.PLAYER.play_manager
-        playfield_manager = .void // play_manager.playfield_manager
+        play_manager = Glob.shared["PLAYER"].asObject()?.asPlayManager ?? Glob.shared["PLAYER"].asPropList()?["play_manager"]?.asPlayManager
+        playfield_manager = play_manager?.playfield_manager
         myWidth = 2
         let state = p["state"].asString ?? ""
         if state == "#walk_l" {
@@ -184,7 +184,7 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
     // ```
     public func step() {
         Glob.shared["minifigHit"] = .void
-        // playfield_manager.erasePiece(part.pos) -- stub
+        playfield_manager?.erasePiece(part.pos)
         let state = part["state"].asString ?? ""
         let partPos = part["pos"].asPoint ?? Point()
 
@@ -245,9 +245,9 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
 
         if !Glob.shared["minifigHit"].isVoid {
             SndSFX("robottouch4")
-            // Glob.shared["minifigHit"].behavior.notify(["damage": "#climber"]) -- stub
+            Glob.shared["minifigHit"].asPropList()?["behavior"].asObject()?.notify(["damage": .string("#climber")])
         }
-        // playfield_manager.placePiece(part) -- stub
+        playfield_manager?.placePiece(.propList(part))
     }
 
     // Original Lingo body: stepanim
@@ -276,8 +276,8 @@ public class HazardClimbParent: LingoObject, @unchecked Sendable {
         if let frame = part["frame"].asInt, frame == 6 {
             step()
         }
-        // playfield_manager.erasePiece(part.pos) -- stub
+        playfield_manager?.erasePiece(part.pos)
         stepAnim()
-        // playfield_manager.placePiece(part) -- stub
+        playfield_manager?.placePiece(.propList(part))
     }
 }
