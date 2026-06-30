@@ -20,9 +20,9 @@ public class HazardSlickJumpParent: LingoObject, @unchecked Sendable {
     //   return me
     // end
     // ```
-    public init(_ p: PropList) {
+    public init(_ p: PropList) {        part = p
+
         super.init()
-        part = p
         // part["behavior"] = self -- set by caller
         play_manager = nil // Glob.shared.PLAYER.play_manager
         playfield_manager = .void // play_manager.playfield_manager

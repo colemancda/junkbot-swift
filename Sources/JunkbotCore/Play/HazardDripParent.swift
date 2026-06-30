@@ -28,10 +28,10 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
     //   return me
     // end
     // ```
-    public init(_ mypipe: HazardSlickPipeParent, _ mypart: PropList) {
-        super.init()
-        pipe = mypipe
+    public init(_ mypipe: HazardSlickPipeParent, _ mypart: PropList) {        pipe = mypipe
         part = mypart
+
+        super.init()
         dripstate = .falling
         play_manager = nil // Glob.shared.PLAYER.play_manager
         playfield_manager = .void // play_manager.playfield_manager
