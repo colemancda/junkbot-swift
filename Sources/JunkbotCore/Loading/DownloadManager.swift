@@ -14,6 +14,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
     var loadp: Bool = false
 
     override init() {
+        super.init()
         files = [moviePath + movieName]
         state = "preload"
         displaysprites = [

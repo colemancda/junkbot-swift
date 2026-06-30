@@ -13,6 +13,7 @@ class CatalogManager: LingoObject, @unchecked Sendable {
     var levelTitles: [LV] = []
 
     override init() {
+        super.init()
         // localmode = (the environment).internetConnected = #offline
         localmode = !isInternetConnected()
         database = "alpha"

@@ -13,7 +13,7 @@ class BehaviorHOFPageButtons {
 
     func beginSprite() {
         sp = sprite(spriteNum)
-        mem = sp?.member.name ?? ""
+        mem = sp?.member?.name ?? ""
         highlight = 0
         hofSprite = sprite(8)
     }
@@ -33,7 +33,7 @@ class BehaviorHOFPageButtons {
     }
 
     func updateProp() {
-        mem = sp?.member.name ?? ""
+        mem = sp?.member?.name ?? ""
     }
 
     func highlight(_ flag: Int) {

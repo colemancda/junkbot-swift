@@ -105,8 +105,8 @@ class EditManager: LingoObject, @unchecked Sendable {
         case "decal":
             toolmode = "place_decal"
             let dragmember = mem
-            glob.EDITOR.drag_sprite.member = dragmember.map { .object($0) } ?? .void
-            glob.EDITOR.drag_sprite.rect = dragmember.map { .object($0) } ?? .void
+            glob.EDITOR.drag_sprite.member = dragmember.map { .object($0 as LingoObject) } ?? .void
+            glob.EDITOR.drag_sprite.rect = dragmember.map { .object($0 as LingoObject) } ?? .void
             glob.EDITOR.drag_sprite.ink = 36
             glob.EDITOR.drag_sprite.locZ = 200
             setCursor("none")
@@ -138,9 +138,9 @@ class EditManager: LingoObject, @unchecked Sendable {
         if let dp = dragpart {
             let dragmembername = glob.legoparts_manager.getPieceMemberName(dp, "single")
             let dragmember = member(dragmembername)
-            glob.EDITOR.drag_sprite.member = .object(dragmember)
-            glob.EDITOR.drag_sprite.width = .int((dragmember.flatMap { $0.rect?.width } ?? 0) * (playfield_manager?.pf_scale ?? 1))
-            glob.EDITOR.drag_sprite.height = .int((dragmember.flatMap { $0.rect?.height } ?? 0) * (playfield_manager?.pf_scale ?? 1))
+            glob.EDITOR.drag_sprite.member = dragmember.map { .object($0 as LingoObject) } ?? .void
+            glob.EDITOR.drag_sprite.width = Int(dragmember?.rect.width.asString ?? "") ?? 0
+            glob.EDITOR.drag_sprite.height = Int(dragmember?.rect.height.asString ?? "") ?? 0
         }
     }
 
