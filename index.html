@@ -1095,7 +1095,10 @@
 	</div>
 	<script src="lib/jsondiffpatch.umd.js"></script>
 	<script src="lib/ruffle-nightly-2022_01_30/ruffle.js"></script>
-	<script src="src/game.js"></script>
+	<script type="module">
+		import { init } from './web/Package/index.js';
+		init();
+	</script>
 </body>
 
 </html>
