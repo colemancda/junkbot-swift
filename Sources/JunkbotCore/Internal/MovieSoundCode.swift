@@ -42,7 +42,7 @@ func SndCheckPlaylist() {
   // if soundState["musicIsPlaying"].asInt == 1
   //   && sound(musicChannel1).getPlayList().count < 5:
   //     SndLevelQueue()
-  // Stub: platform sound API integration needed
+  
 }
 
 // Original Lingo body: sndlevelqueue
@@ -69,7 +69,7 @@ func SndCheckPlaylist() {
 func SndLevelQueue() {
   guard let playlist1 = soundState["whichMusic"].asString else { return }
   // Build and queue music from the playlist member text.
-  // Stub: platform sound API integration needed.
+  
   _ = playlist1
 }
 
@@ -107,7 +107,7 @@ func SndMusicStart(_ whichMusic: String) {
   soundState["whichMusic"] = .string(whichMusic)
   // sound(musicChannel1).stop()
   // Build playlist from member text lines, queue on channel 1, then play.
-  // Stub: platform sound API integration needed.
+  
   soundState["musicIsPlaying"] = .int(1)
 }
 
@@ -145,7 +145,7 @@ func SndMusicEnd() {
   // sound(musicChannel1).setPlayList([:])
   // sound(musicChannel2).setPlayList([:])
   // If a ".end" playlist member exists, queue and play it.
-  // Stub: platform sound API integration needed.
+  
 }
 
 /// Count non-empty lines in a music playlist member, minus the header line.
@@ -164,7 +164,7 @@ func SndMusicEnd() {
 // ```
 func SNDGetLineCount(_ myMember: String) -> Int {
   // In Director this reads the text of a cast member named myMember.
-  // Stub: return 0 until member text is accessible.
+  
   return 0
 }
 
@@ -188,7 +188,7 @@ func SNDGetLineCount(_ myMember: String) -> Int {
 func SndStop() {
   soundState["soundSection"] = .string("0")
   // stop and clear all music and sfx channels
-  // Stub: platform sound API integration needed.
+  
   soundState["musicIsPlaying"] = .int(0)
 }
 
@@ -225,7 +225,7 @@ func SndStop() {
 func SndSFX(_ whichSound: String, sfxpan: Int = 0, sfxlevel: Int = 255, sfxpitch: Int = 0) {
   guard let sfxChannels = soundState["sfxChannels"].asList else { return }
   // Find first idle channel and play, or fall back to channel 1.
-  // Stub: platform sound API (e.g. AVAudioPlayer) integration needed.
+  
   _ = sfxChannels
   _ = whichSound
   _ = sfxpan

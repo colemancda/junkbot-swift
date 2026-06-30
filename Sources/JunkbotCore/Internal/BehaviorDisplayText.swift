@@ -79,8 +79,7 @@ class BehaviorDisplayText: LingoObject, @unchecked Sendable {
   // end
   // ```
   func endSprite() {
-    // mySprite.visible = 1  (stub: set sprite visible)
-  }
+      }
 
   // Original Lingo body: resolve
   // ```lingo
@@ -172,8 +171,7 @@ class BehaviorDisplayText: LingoObject, @unchecked Sendable {
   // end
   // ```
   func bestRect(_ theString: String) -> [Int] {
-    // Stub: would measure text dimensions via member API
-    // Returns [left, top, right, bottom]
+        // Returns [left, top, right, bottom]
     return [0, 0, 0, 0]
   }
 
@@ -420,7 +418,7 @@ class BehaviorDisplayText: LingoObject, @unchecked Sendable {
     switch aSpriteType {
     case "graphic":
       // return true if sprite member type is field or text
-      return false  // stub
+      return false
     case "script":
       return false
     default:

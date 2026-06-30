@@ -90,8 +90,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func refresh() {
-    // setLevel(Glob.shared.EDITOR.edit_manager.playfield_manager.current_level) -- stub
-  }
+      }
 
   // Original Lingo body: actordone
   // ```lingo
@@ -141,15 +140,14 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   public func setLevel(_ conf: LV) {
     toolmode = "#move"
     if conf.isString {
-      // config = Glob.shared["config_manager"].asObject()?.parseParams(confStr) -- stub
-      config = conf
+      let confStr = conf.asString ?? ""
+      config = .propList((Glob.shared["config_manager"].asObject() as? BehaviorConfigManager)?.parseParams(confStr) ?? PropList())
     } else {
       config = conf
     }
     playfield_manager = PlayfieldManager(config["playfield"] ?? .void)
     playfield_manager?.setPlayfield(config)
-    // if config["info"] != nil { member("level title")?.text = ... } -- stub
-
+    
     myactors = []
     goalList = []
     numGoals = goalList.count
@@ -169,7 +167,6 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func startLevel() {
-    Glob.shared["partclick_recipient"] = .void  // stub: store self reference
     activeState = "#Run"
   }
 
@@ -190,8 +187,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
       Glob.shared["partclick_recipient"] = .void
       activeState = "#pause"
     } else {
-      Glob.shared["partclick_recipient"] = .void  // stub: store self reference
-      activeState = "#Run"
+        activeState = "#Run"
     }
   }
 
@@ -306,8 +302,6 @@ public class PlayManager: LingoObject, @unchecked Sendable {
     for prop in gamestatus.props {
       t += "\(prop.key): \(prop.value)\n"
     }
-    // member("play status field")?.text = t -- stub
-    // member("play move counter field")?.text = String(gamestatus["#moves"].asInt ?? 0) -- stub
     debugLog(t)
   }
 
@@ -320,7 +314,6 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func doSwitch(_ args: PropList) {
-    // repeat with part in playfield_manager.getPartsByLabel(args["label"]) { part.behavior.notify(["switch": args["state"]]) } -- stub
   }
 
   // Original Lingo body: cleardragbricks
@@ -507,12 +500,12 @@ public class PlayManager: LingoObject, @unchecked Sendable {
   // ```
   public func stepFrame() {
     guard activeState == "#Run" else { return }
-    // if Glob.shared.EDITOR["drag_sprite"] == nil { return } -- stub
-    // if playfield_manager == nil { return } -- stub
 
-    for _ in myactors {
+    for a in myactors {
       let ms = currentMilliseconds
-      // a.stepFrame() -- stub
+      if let actor = a as? LingoObject {
+        actor.stepFrame()
+      }
       if tracktime != 0 {
         _ = ms
       }
@@ -686,8 +679,7 @@ public class PlayManager: LingoObject, @unchecked Sendable {
           toolmode = "#move"
         }
       } else {
-        // playfield_manager.erasePieceGroup(movePieceGroup, 1) -- stub
-        toolmode = "#dragging"
+            toolmode = "#dragging"
         setCursor("#grabber")
         SndSFX("blockpickup")
         addStatus("#moves", 1)

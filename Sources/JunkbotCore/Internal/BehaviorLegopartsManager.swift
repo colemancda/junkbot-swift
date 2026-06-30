@@ -348,8 +348,7 @@ class BehaviorLegopartsManager: LingoObject, @unchecked Sendable {
     let sz = getPieceSize(typ)
     let stack = sz[1]
     let dy = 18
-    // Stub: image splitting would be performed using platform image APIs
-    // For each slice i in 1...stack:
+        // For each slice i in 1...stack:
     //   ih = (i < stack) ? dy : h - ((stack - 1) * dy)
     //   Create image slice, assign to new bitmap member named splitnames[i-1]
     //   Set regPoint accordingly

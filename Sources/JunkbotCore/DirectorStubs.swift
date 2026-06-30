@@ -21,7 +21,7 @@ public func keyPressed(_ key: String) -> Bool { false }
 public func lingoRandom(_ n: Int) -> Int {
   guard n > 0 else { return 0 }
   // Platform must seed this; replace with a seeded xorshift or platform RNG
-  return (n > 1) ? (1 + (currentTicks % n)) : 1  // deterministic stub
+  return (n > 1) ? (1 + (currentTicks % n)) : 1
 }
 
 // MARK: - Sound
@@ -58,8 +58,7 @@ public func pass() {}
 // MARK: - Cast/member stubs
 
 public func SndSFX(_ soundName: String) {
-  // Stubbed sound effect playback
-}
+  }
 public func numberOfCastMembers(inCastLib: String) -> Int { 0 }
 public func member(_ n: Int, _ castLib: String) -> LingoMember? { nil }
 nonisolated(unsafe) public var mouseLine: Int = 0

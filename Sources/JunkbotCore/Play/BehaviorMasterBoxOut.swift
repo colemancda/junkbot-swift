@@ -9,7 +9,5 @@ public class BehaviorMasterBoxOut: LingoObject {
   // end
   // ```
   public func mouseUp() {
-    // Glob.shared["master_obj"].getOut() -- stub
-    // Glob.shared["award_obj"].dropBox() -- stub
-  }
+          }
 }

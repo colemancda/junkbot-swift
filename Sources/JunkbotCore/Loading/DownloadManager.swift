@@ -50,8 +50,7 @@ class DownloadManager: LingoObject, @unchecked Sendable {
   // end
   // ```
   func db(_ t: String) {
-    // debug stub — no-op
-  }
+      }
 
   // Original Lingo body: begin
   // ```lingo

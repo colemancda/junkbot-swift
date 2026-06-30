@@ -215,15 +215,14 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
     // if pos out of bounds { flag = "#TURN"; pos = part.pos }
     // else if getPart(pos) != nil { flag = "#TURN"; pos = part.pos }
 
-    let pos_x = 0  // stub
-    let pos_y = 0  // stub
-    let mW = 0  // stub: playfield_manager.pf_size width
-    let mH = 0  // stub: playfield_manager.pf_size height
+    let pos_x = Int(_pos.x)
+    let pos_y = Int(_pos.y)
+    let mW = (playfield_manager?.pf_size.asPoint ?? Point(x: 0, y: 0)).x
+    let mH = (playfield_manager?.pf_size.asPoint ?? Point(x: 0, y: 0)).y
 
     // Scan row right for minifig
     for r in pos_x...max(pos_x, mW) {
-      // myObj = playfield_manager.getPart(point(r, pos_y)) -- stub
-      let myObj: PropList? = nil  // stub
+      let myObj = playfield_manager?.getPart(LV.pt(r, pos_y))?.asPropList
       guard let obj = myObj else { continue }
       let myPartType = obj["type"].asString ?? ""
       if myPartType != "#MINIFIG" { break }
@@ -239,7 +238,7 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
 
     // Scan row left for minifig
     for r in stride(from: pos_x, through: 1, by: -1) {
-      let myObj: PropList? = nil  // stub
+      let myObj = playfield_manager?.getPart(LV.pt(r, pos_y))?.asPropList
       guard let obj = myObj else { continue }
       let myPartType = obj["type"].asString ?? ""
       if myPartType != "#MINIFIG" { break }
@@ -255,7 +254,7 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
 
     // Scan column down for minifig
     for c in pos_y...max(pos_y, mH) {
-      let myObj: PropList? = nil  // stub
+      let myObj = playfield_manager?.getPart(LV.pt(pos_x, c))?.asPropList
       guard let obj = myObj else { continue }
       let myPartType = obj["type"].asString ?? ""
       if myPartType != "#MINIFIG" { break }
@@ -271,7 +270,7 @@ public class HazardFloatParent: LingoObject, @unchecked Sendable {
 
     // Scan column up for minifig
     for c in stride(from: pos_y, through: 1, by: -1) {
-      let myObj: PropList? = nil  // stub
+      let myObj = playfield_manager?.getPart(LV.pt(pos_x, c))?.asPropList
       guard let obj = myObj else { continue }
       let myPartType = obj["type"].asString ?? ""
       if myPartType != "#MINIFIG" { break }

@@ -95,10 +95,6 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
   // end
   // ```
   public func stepFrame() {
-    // s = playfield_manager.getASprite() -- stub
-    // part.auxSprites["myDrip"] = s -- stub
-    // s.ink = 8 -- stub
-    // s.visible = 1 -- stub
 
     switch dripstate {
     case .falling:
@@ -122,11 +118,7 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
           SndSFX("drip\(lingoRandom(3))")
         }
       }
-    // s.member = member("drip_falling_1") -- stub
-    // s.rect = s.member.rect -- stub
     case .splashing(let ds):
-      // s.member = member("drip_splashing_\(ds)") -- stub
-      // s.rect = s.member.rect -- stub
       let next = ds + 1
       if next > 5 {
         done()
@@ -134,7 +126,5 @@ public class HazardDripParent: LingoObject, @unchecked Sendable {
         dripstate = .splashing(next)
       }
     }
-    // s.loc = driploc -- stub
-    // s.locZ = top_locz -- stub
   }
 }

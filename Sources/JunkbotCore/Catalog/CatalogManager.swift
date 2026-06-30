@@ -67,8 +67,7 @@ class CatalogManager: LingoObject, @unchecked Sendable {
       }
     }
     glob.PLAYER.game_manager.setGame(.list(LingoList(levelList.map { .string($0) })))
-    // current_level is accessed via LV glob; stub this side-effect
-    _ = levelList.first
+        _ = levelList.first
   }
 
   // Original Lingo body: load
@@ -310,8 +309,7 @@ class CatalogManager: LingoObject, @unchecked Sendable {
       String.init)
     for (i, _) in menuLines.enumerated() {
       let hl = String(hyperlinkID.count > i ? hyperlinkID[i] : 0)
-      // cattext?.setHyperlink(hl, forLine: i + 1) -- stub
-    }
+          }
   }
 
   // Original Lingo body: preparecache

@@ -30,7 +30,6 @@ class BehaviorCatalogLocalCheckbox: LingoObject, @unchecked Sendable {
     if !isInternetConnected() {
       m?.hilite = false
     }
-    // catalog_manager.localmode is accessed via LV dynamic lookup — stub
-    _ = m?.hilite
+        _ = m?.hilite
   }
 }

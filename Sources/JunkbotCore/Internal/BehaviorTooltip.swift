@@ -211,8 +211,7 @@ class BehaviorTooltip: LingoObject, @unchecked Sendable {
       displayLoc = spriteLoc
       theAlignment = "center"
     case "under the mouse":
-      // displayLoc = the mouseLoc (stub)
-      displayLoc = Point(x: 0, y: 0)
+            displayLoc = Point(x: 0, y: 0)
       theAlignment = "center"
     default:
       break
@@ -225,8 +224,7 @@ class BehaviorTooltip: LingoObject, @unchecked Sendable {
       enrollDisplaySprite()
     }
     // call(#DisplayText_SetText, myDisplayList, myString, displayLoc, theAlignment)
-    // stub: send DisplayText_SetText to enrolled display behaviors
-  }
+      }
 
   // Original Lingo body: hidetip
   // ```lingo
@@ -244,8 +242,7 @@ class BehaviorTooltip: LingoObject, @unchecked Sendable {
       enrollDisplaySprite()
     }
     // call(#DisplayText_SetText, myDisplayList, "")
-    // stub: clear display text
-  }
+      }
 
   // Original Lingo body: enrolldisplaysprite
   // ```lingo

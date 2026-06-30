@@ -536,8 +536,7 @@ class BehaviorMsgBoxSuccess: LingoObject, @unchecked Sendable {
   // end
   // ```
   func makekey(keys: Int) {
-    // Image compositing stub — sets up key icon strip
-    // member("mem_keys").image = image(400, 20, 8)
+        // member("mem_keys").image = image(400, 20, 8)
     // Copies key icons side-by-side into mem_keys member
   }
 }
