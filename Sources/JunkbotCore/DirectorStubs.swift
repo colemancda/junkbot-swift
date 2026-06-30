@@ -82,7 +82,7 @@ public class LingoMember: LingoObject, @unchecked Sendable {
 }
 
 public class LingoSprite: LingoObject, @unchecked Sendable {
-    public var member: LingoMember = LingoMember()
+    public var member: LingoMember? = nil
     public var loc: Point = Point()
     public var locH: Int { get { loc.x } set { loc.x = newValue } }
     public var locV: Int { get { loc.y } set { loc.y = newValue } }
