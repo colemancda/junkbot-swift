@@ -35,7 +35,7 @@ public class HazardSlickSwitchParent: LingoObject, @unchecked Sendable {
     //   end if
     // end
     // ```
-    public func notify(_ args: PropList) {
+    public override func notify(_ args: PropList) {
         if !args["switch"].isVoid {
             part["state"] = args["switch"]
             redrawPart()

@@ -31,7 +31,7 @@ public class HazardSlickShieldParent: LingoObject, @unchecked Sendable {
     // on notify me, args
     // end
     // ```
-    public func notify(_ args: PropList) {
+    public override func notify(_ args: PropList) {
         // No-op in original
     }
 

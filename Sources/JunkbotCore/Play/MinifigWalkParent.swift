@@ -182,7 +182,7 @@ public class MinifigWalkParent: LingoObject, @unchecked Sendable {
     //   end if
     // end
     // ```
-    public func notify(_ notes: PropList) {
+    public override func notify(_ notes: PropList) {
         if let destroyed = notes["destroyed"].asInt, destroyed == 1 {
             done()
         } else if !notes["pos"].isVoid {
