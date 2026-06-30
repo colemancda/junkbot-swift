@@ -6,7 +6,7 @@ class BehaviorEditorColorableMenuItem {
 
     func beginSprite(_ spriteNum: Int) {
         s = sprite(spriteNum)
-        b = s?.member.name ?? ""
+        b = s?.member?.name ?? ""
         // Original: parse itemDelimiter "_", strip last item from b
         // The Lingo "delete char -30002 of b" removes the last item-delimited segment
         if let lastUnderscore = b.lastIndex(of: "_") {

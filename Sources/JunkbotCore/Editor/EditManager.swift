@@ -15,6 +15,7 @@ class EditManager: LingoObject, @unchecked Sendable {
     var mousestate: String = "UP"
 
     override init() {
+        super.init()
         self.setConfig()
         if !config["playfield"].isVoid {
             playfield_manager = PlayfieldManager(config["playfield"])
@@ -35,7 +36,7 @@ class EditManager: LingoObject, @unchecked Sendable {
         infoList["title"] = .string(member("catalog title")?.text ?? "")
         infoList["par"] = .string(member("editor par field")?.text ?? "")
         infoList["hint"] = .string(member("editor hint field")?.text ?? "")
-        playfield_manager?.setInfo(.propList(infoList))
+        playfield_manager?.setInfo(infoList)
         let currentLevel = playfield_manager?.toString() ?? ""
         glob.PLAYER.game_manager.setGame(.list(LingoList([.string(currentLevel)])))
         setCursor("none")
@@ -58,7 +59,7 @@ class EditManager: LingoObject, @unchecked Sendable {
 
     func setConfig() {
         let configtext = member("config field")?.text
-        config = glob["config_manager"].parseParams(.string(configtext ?? "")).asPropList ?? PropList()
+        config = glob.config_manager.parseParams(configtext ?? "")
         if playfield_manager != nil {
             playfield_manager?.setConfig(config["playfield"])
         }
@@ -101,7 +102,7 @@ class EditManager: LingoObject, @unchecked Sendable {
     func bg_edit_item(_ kind: String, _ mem: LingoMember?) {
         switch kind {
         case "backdrop":
-            playfield_manager?.setBackdrop(mem?.name ?? "")
+            playfield_manager?.setBackdrop(.string(mem?.name ?? ""))
         case "decal":
             toolmode = "place_decal"
             let dragmember = mem
@@ -136,17 +137,17 @@ class EditManager: LingoObject, @unchecked Sendable {
             return
         }
         if let dp = dragpart {
-            let dragmembername = glob.legoparts_manager.getPieceMemberName(dp, "single")
+            let dragmembername = glob.legoparts_manager.getPieceMemberName(part: dp, single: "single").asString ?? ""
             let dragmember = member(dragmembername)
-            glob.EDITOR.drag_sprite.member = dragmember.map { .object($0 as LingoObject) } ?? .void
-            glob.EDITOR.drag_sprite.width = Int(dragmember?.rect.width.asString ?? "") ?? 0
-            glob.EDITOR.drag_sprite.height = Int(dragmember?.rect.height.asString ?? "") ?? 0
+            glob.EDITOR.drag_sprite.member = dragmember.map { LV.object($0) } ?? .void
+            glob.EDITOR.drag_sprite.width = .int(dragmember?.width ?? 0)
+            glob.EDITOR.drag_sprite.height = .int(dragmember?.height ?? 0)
         }
     }
 
     func stepFrame() {
         // guard frame == marker("edit") else { return }
-        if mouseDown {
+        if mouseIsDown {
             if mousestate == "UP" {
                 mousestate = "press"
             } else {
@@ -175,7 +176,7 @@ class EditManager: LingoObject, @unchecked Sendable {
                     }
                     let row = fieldpos![0].asPoint?.y ?? 0
                     let col = fieldpos![0].asPoint?.x ?? 0
-                    glob.EDITOR.drag_sprite.locZ = 100000 - (1000 * row) + 999
+                    glob.EDITOR.drag_sprite.locZ = .int(100000 - (1000 * row) + 999)
                     if playfield_manager?.checkFit(fieldpos![0], toolparam ?? "") == true {
                         glob.EDITOR.drag_sprite.blend = 100
                         if mousestate == "press" {
@@ -198,7 +199,7 @@ class EditManager: LingoObject, @unchecked Sendable {
                     if let fp = fieldpos {
                         var tpart = playfield_manager?.getPart(fp[0])
                         if tpart == nil {
-                            member("part inspector field")?.text ?? "".text = ""
+                            member("part inspector field")?.text = ""
                         } else {
                             tpart = tpart?.duplicate()
                             tpart?.deleteOne("sprite")
@@ -222,7 +223,7 @@ class EditManager: LingoObject, @unchecked Sendable {
                                 }
                                 var wrapper = PropList()
                                 wrapper["part"] = .propList(tp)
-                                member("part inspector field")?.text ?? "".text = glob.config_manager.toString(wrapper)
+                                member("part inspector field")?.text = glob.config_manager.toString(wrapper)
                             }
                         }
                     }
@@ -235,7 +236,7 @@ class EditManager: LingoObject, @unchecked Sendable {
                         // glob.EDITOR.drag_sprite.loc = pt // skip LV Point
                     }
                     let row = fieldpos![0].asPoint?.y ?? 0
-                    glob.EDITOR.drag_sprite.locZ = 100000 - (1000 * row) + 999
+                    glob.EDITOR.drag_sprite.locZ = .int(100000 - (1000 * row) + 999)
                     let mpType = movepart?["type"].asString ?? ""
                     if playfield_manager?.checkFit(fieldpos![0], mpType) == true {
                         glob.EDITOR.drag_sprite.blend = 100
@@ -284,7 +285,7 @@ class EditManager: LingoObject, @unchecked Sendable {
                         setdragsprite(.propList(movepart!))
                         // glob.EDITOR.drag_sprite.loc = playfield_manager // skip LV Point?.getLoc(movepart?["pos"] ?? .void)
                         let row = fp[0].asPoint?.y ?? 0
-                        glob.EDITOR.drag_sprite.locZ = 100000 - (1000 * row) + 999
+                        glob.EDITOR.drag_sprite.locZ = .int(100000 - (1000 * row) + 999)
                         toolmode = "moving"
                     }
                 }
@@ -294,8 +295,8 @@ class EditManager: LingoObject, @unchecked Sendable {
                 glob.EDITOR.drag_sprite.locZ = 200
                 if mousestate == "release", fieldpos != nil {
                     var decalPL = PropList()
-                    decalPL["loc"] = .point(x: glob.EDITOR.drag_sprite.loc?.x ?? 0, y: glob.EDITOR.drag_sprite.loc?.y ?? 0)
-                    decalPL["member"] = glob.EDITOR.drag_sprite.member.map { .object($0) } ?? .void
+                    decalPL["loc"] = .point(x: mouseLoc.x, y: mouseLoc.y)
+                    decalPL["member"] = glob.EDITOR.drag_sprite.member
                     playfield_manager?.placeDecal(decalPL)
                     toolmode = "move"
                     setdragsprite(.string("reset"))

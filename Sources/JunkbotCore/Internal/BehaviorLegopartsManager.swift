@@ -149,6 +149,10 @@ class BehaviorLegopartsManager: LingoObject, @unchecked Sendable {
         }
     }
 
+    func getPieceMemberName(_ part: PropList, _ single: String = "") -> LV {
+        getPieceMemberName(part: part, single: single)
+    }
+
     /// Split a tall member image into per-row sub-members.
     func splitTallMember(typ: String, basename: String, splitnames: [String]) {
         let sz = getPieceSize(typ)

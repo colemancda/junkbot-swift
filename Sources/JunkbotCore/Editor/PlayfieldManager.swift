@@ -18,7 +18,7 @@ class PlayfieldManager {
     init(_ conf: LV) {
         var resolvedConf: LV = conf
         if let confStr = conf.asString {
-            let p = glob["config_manager"].parseParams(confStr)
+            let p = glob.config_manager.parseParams(confStr)
             resolvedConf = p["playfield"]
         }
         setConfig(resolvedConf)
@@ -294,7 +294,7 @@ class PlayfieldManager {
 
     func getPos(_ L: Point) -> [LV]? {
         guard !glob.EDITOR["playfield_sprite"].isVoid else { return nil }
-        let spriteLoc = glob.EDITOR.playfield_sprite.loc ?? Point(x: 0, y: 0)
+        let spriteLoc = glob.EDITOR.playfield_sprite.loc.asPoint ?? Point(x: 0, y: 0)
         let px = (L.x - spriteLoc.x) / pf_grid[0]
         let py = (L.y - spriteLoc.y) / pf_grid[1]
         let l2x = ((px + 0) * pf_grid[0]) + spriteLoc.x
@@ -318,7 +318,7 @@ class PlayfieldManager {
         } else {
             p = arg.asPoint ?? Point(x: 0, y: 0)
         }
-        let spriteLoc = glob.EDITOR.playfield_sprite.loc ?? Point(x: 0, y: 0)
+        let spriteLoc = glob.EDITOR.playfield_sprite.loc.asPoint ?? Point(x: 0, y: 0)
         return Point(
             x: ((p.x - 1) * pf_grid[0]) + spriteLoc.x + o.x,
             y: (p.y * pf_grid[1]) + spriteLoc.y + o.y
@@ -562,11 +562,11 @@ class PlayfieldManager {
                 let shiftedPos = Point(x: partPos.x, y: partPos.y - (si - 1))
                 s.locZ = posToLocZ(shiftedPos)
                 s.blend = 100
-                s.scriptInstanceList.append(PartClickBehavior(part))
+                s.scriptInstanceList.append(BehaviorPartClick(p: .propList(part)))
             }
         }
         if let behavior = part["behavior"].asObject() {
-            behavior.notify(["Start": 1])
+            behavior.notify(PropList([("Start", .int(1))]))
         }
     }
 
@@ -590,8 +590,8 @@ class PlayfieldManager {
         partslist[partnum - 1] = nil
         if let part = part {
             let basepos = part["pos"].asPoint ?? Point(x: 0, y: 0)
-            let sh = glob.legoparts_manager.getPieceShape(.string(part["type"].asString ?? ""))
-            for d in sh.asList?.items ?? [] {
+            let sh = glob.legoparts_manager.getPieceShape(part["type"].asString ?? "")
+            for d in sh {
                 let dx = d.asPoint?.x ?? 0
                 let dy = d.asPoint?.y ?? 0
                 let tx = basepos.x + dx
@@ -686,9 +686,9 @@ class PlayfieldManager {
     func partNeighbors(_ p: PropList, dir: String? = nil, exclude: [String]? = nil) -> [PropList] {
         let exclude = exclude ?? []
         var nei = [PropList]()
-        let sh = glob.legoparts_manager.getPieceShape(.string(p["type"].asString ?? ""))
+        let sh = glob.legoparts_manager.getPieceShape(p["type"].asString ?? "")
         let pPos = p["pos"].asPoint ?? Point(x: 0, y: 0)
-        for d in sh.asList?.items ?? [] {
+        for d in sh {
             let dx = d.asPoint?.x ?? 0
             let dy = d.asPoint?.y ?? 0
             let pos = Point(x: pPos.x + dx, y: pPos.y + dy)
@@ -887,8 +887,8 @@ class PlayfieldManager {
             guard let m = decal["member"].asObject()?.asMember,
                   let loc = decal["loc"].asPoint else { continue }
             let r = Rect(
-                x: loc.x - (m.regPoint?.x ?? 0),
-                y: loc.y - (m.regPoint?.y ?? 0),
+                x: loc.x - m.regPoint.x,
+                y: loc.y - m.regPoint.y,
                 width: m.width,
                 height: m.height
             )
@@ -920,7 +920,14 @@ class PlayfieldManager {
     }
 
     func refreshBackground() {
-        glob.EDITOR.playfield_sprite.member = background?["backdrop"].asObject()?.asMember
+        let backdrop = background?["backdrop"] ?? .void
+        if let backdropMember = backdrop.asObject()?.asMember {
+            glob.EDITOR.playfield_sprite.member = .object(backdropMember)
+        } else if let backdropName = backdrop.asString, let backdropMember = member(backdropName) {
+            glob.EDITOR.playfield_sprite.member = .object(backdropMember)
+        } else {
+            glob.EDITOR.playfield_sprite.member = .void
+        }
         var z = 10001
         guard let decals = background?["decals"].asList else { return }
         for i in 1...max(1, decals.count) {

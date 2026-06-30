@@ -4,7 +4,8 @@ class BehaviorPartClick: LingoObject, @unchecked Sendable {
     var part: LV = .void
 
     init(p: LV) {
-        part = p
+        self.part = p
+        super.init()
     }
 
     func mouseEnter() {
