@@ -6,6 +6,10 @@
 public struct Rect: Equatable, @unchecked Sendable {
     public var x, y, width, height: Int
     public init(x: Int, y: Int, width: Int, height: Int) { self.x = x; self.y = y; self.width = width; self.height = height }
+
+    public func contains(_ point: Point) -> Bool {
+        point.x >= x && point.y >= y && point.x < x + width && point.y < y + height
+    }
 }
 public struct Point: Equatable, @unchecked Sendable {
     public var x: Int
@@ -17,6 +21,13 @@ public struct Point: Equatable, @unchecked Sendable {
     public static func / (l: Point, r: Point) -> Point { Point(x: l.x / r.x, y: l.y / r.y) }
     public static prefix func - (p: Point) -> Point { Point(x: -p.x, y: -p.y) }
     public func offset(dx: Int, dy: Int) -> Point { Point(x: x + dx, y: y + dy) }
+}
+
+public extension Array where Element == Int {
+    var asPoint: Point? {
+        guard count >= 2 else { return nil }
+        return Point(x: self[0], y: self[1])
+    }
 }
 
 // MARK: - LV (LingoValue) — replaces Any in all dynamic Lingo contexts
@@ -322,4 +333,12 @@ public final class Glob: @unchecked Sendable {
         set { data[member] = newValue }
     }
     private init() {}
+}
+
+let globalConfigManager = BehaviorConfigManager()
+let globalLegopartsManager = BehaviorLegopartsManager()
+
+extension Glob {
+    var config_manager: BehaviorConfigManager { globalConfigManager }
+    var legoparts_manager: BehaviorLegopartsManager { globalLegopartsManager }
 }
