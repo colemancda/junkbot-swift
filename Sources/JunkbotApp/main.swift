@@ -64,6 +64,22 @@ extension String {
     }
     return result
   }
+
+  func removingTrailingWhitespaceAfterFinalNewline() -> String {
+    var characters = Array(self)
+    var index = characters.count
+    while index > 0 {
+      let character = characters[index - 1]
+      if character != " " && character != "\t" && character != "\n" && character != "\r" {
+        break
+      }
+      index -= 1
+    }
+    if index > 0 && characters[index - 1] == "\n" {
+      characters.removeSubrange((index - 1)..<characters.count)
+    }
+    return String(characters)
+  }
 }
 
 var printJS: JSValue = .null
@@ -1682,14 +1698,14 @@ var loadImage = { (imagePath: String) -> JSValue in
     let reject = args[1]
 
     let onloadClosure = JSClosure { _ in
-      _ = resolve(image)
+      _ = resolve.function!.callAsFunction(image)
       return .undefined
     }
     image.onload = onloadClosure.jsValue
 
     let onerrorClosure = JSClosure { _ in
       let error = JSObject.global.Error.function!.new("Image failed to load ('\(imagePath)')")
-      _ = reject(error)
+      _ = reject.function!.callAsFunction(error)
       return .undefined
     }
     image.onerror = onerrorClosure.jsValue
@@ -1739,15 +1755,17 @@ var playSound = {
   _ = gain.connect(mainGain)
   source.playbackRate.value = .number(rate)
   if cutOff > 0 {
-    let linearRampToValueAtTime = gain.gain.linearRampToValueAtTime
-    if !linearRampToValueAtTime.isUndefined {
+    if let gainObject = gain.gain.object,
+      let linearRampToValueAtTime = gainObject["linearRampToValueAtTime"].function
+    {
       _ = linearRampToValueAtTime.callAsFunction(
-        this: gain.gain, 0,
+        this: gainObject,
+        0,
         (audioCtx.currentTime.number ?? 0.0) + (audioBuffer.duration.number ?? 0.0) * (1.0 - cutOff)
       )
     }
   }
-  _ = source.start!(0)
+  _ = source.start(0)
   return .undefined
 }
 
@@ -1782,14 +1800,14 @@ for (index, char) in fontChars.enumerated() {
 
 var colorizeWhiteAlphaImage = { (image: JSValue, color: String) -> JSValue in
   let canvas = document.createElement!("canvas")
-  let ctx = canvas.getContext!("2d")
+  let ctx = canvas.getContext("2d")
   canvas.width = image.width
   canvas.height = image.height
   ctx.imageSmoothingEnabled = .boolean(false)
-  _ = ctx.drawImage!(image, 0, 0)
+  _ = ctx.drawImage(image, 0, 0)
   ctx.globalCompositeOperation = .string("source-atop")
   ctx.fillStyle = .string(color)
-  _ = ctx.fillRect!(0, 0, canvas.width, canvas.height)
+  _ = ctx.fillRect(0, 0, canvas.width, canvas.height)
   return canvas
 }
 var fontColors: [String: String] = [
@@ -1824,8 +1842,9 @@ var drawText = {
   var y = startY.number ?? 0.0
   var text = (textStr.string ?? "").uppercased()
   if padding {
-    text = " \(text) ".replacingOccurrences(of: "\n", with: " \n ").replacingOccurrences(
-      of: "\n\\s*$", with: "", options: .regularExpression)
+    text = " \(text) "
+      .replacingOccurrences(of: "\n", with: " \n ")
+      .removingTrailingWhitespaceAfterFinalNewline()
   }
   ctx.fillStyle = .string(bgColor)
   for char in text {
@@ -1835,7 +1854,7 @@ var drawText = {
       w = 6
     } else if char == "\t" {
       w = 6 * 4
-      _ = ctx.fillRect!(x - 1, y - 2, 2, fontCharHeight + 4)
+      _ = ctx.fillRect(x - 1, y - 2, 2, fontCharHeight + 4)
     } else if char == "\n" {
       x = startX.number ?? 0.0
       y += fontCharHeight + 4
@@ -1854,9 +1873,9 @@ var drawText = {
       w = fontCharW[charIndex]
       advance = w + 1
     }
-    _ = ctx.fillRect!(x - 1, y - 2, advance, fontCharHeight + 4)
+    _ = ctx.fillRect(x - 1, y - 2, advance, fontCharHeight + 4)
     if charIndex > -1 {
-      _ = ctx.drawImage!(
+      _ = ctx.drawImage(
         fontImage, fontCharX[charIndex], 0, w, fontCharHeight, x, y, w, fontCharHeight)
     }
     x += advance
@@ -1887,19 +1906,19 @@ var drawSwitchConnection = {
   let startY = (switchEntity.y.number ?? 0.0) + (switchEntity.height.number ?? 0.0) * 0.8
   let endX = (controlledEntity.x.number ?? 0.0) + (controlledEntity.width.number ?? 0.0) / 2
   let endY = (controlledEntity.y.number ?? 0.0) + (controlledEntity.height.number ?? 0.0) * 0.8
-  let dist = JSObject.global.Math.hypot!(endX - startX, endY - startY).number ?? 0.0
+  let dist = JSObject.global.Math.hypot(endX - startX, endY - startY).number ?? 0.0
   let controlPointX = (startX + endX) / 2
   let controlPointY = (startY + endY) / 2 + 50 + dist * 0.2
-  _ = ctx.beginPath!()
-  _ = ctx.moveTo!(startX, startY)
-  _ = ctx.quadraticCurveTo!(controlPointX, controlPointY, endX, endY)
+  _ = ctx.beginPath()
+  _ = ctx.moveTo(startX, startY)
+  _ = ctx.quadraticCurveTo(controlPointX, controlPointY, endX, endY)
   ctx.lineCap = .string("round")
   ctx.strokeStyle = .string(controlledEntity.on.boolean == true ? "#005500" : "#550000")
   ctx.lineWidth = .number(4)
-  _ = ctx.stroke!()
+  _ = ctx.stroke()
   ctx.strokeStyle = .string(controlledEntity.on.boolean == true ? "#00ff00" : "#ff0000")
   ctx.lineWidth = .number(3)
-  _ = ctx.stroke!()
+  _ = ctx.stroke()
   return .undefined
 }
 
@@ -1908,7 +1927,7 @@ var drawTeleportConnection = { (ctx: JSValue, teleportA: JSValue, teleportB: JSV
   let startY = (teleportA.y.number ?? 0.0) - 4
   let endX = (teleportB.x.number ?? 0.0) + (teleportB.width.number ?? 0.0) / 2 + 4
   let endY = (teleportB.y.number ?? 0.0) - 4
-  let dist = JSObject.global.Math.hypot!(endX - startX, endY - startY).number ?? 0.0
+  let dist = JSObject.global.Math.hypot(endX - startX, endY - startY).number ?? 0.0
   var fraction = -0.1
   var controlPointX1 = startX + (endX - startX) * fraction
   var controlPointY1 = (startY + endY) / 2 - 100 - dist * 0.2
@@ -1940,7 +1959,7 @@ var drawDecal = { (ctx: JSValue, x: JSValue, y: JSValue, name: JSValue, game: JS
   let image = resources.object![imageKey]
   if !frame.isTruthy {
     if showDebug {
-      _ = drawText(ctx, .string("decal \(name.string ?? "") missing"), x, y, .string("sand"))
+      _ = drawText(ctx, .string("decal \(name.string ?? "") missing"), x, y, .string("sand"), .undefined, .undefined)
     }
     return .undefined
   }
@@ -2011,7 +2030,7 @@ var drawCrate = { (ctx: JSValue, bin: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.spritesUndercover, left, top, width, height, bin.x,
     (bin.y.number ?? 0.0) + (bin.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2033,7 +2052,7 @@ var drawFire = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 1,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 4, width, height)
   return .undefined
@@ -2051,7 +2070,7 @@ var drawFan = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 1,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 4, width, height)
   return .undefined
@@ -2086,7 +2105,7 @@ var drawWind = { (ctx: JSValue, fan: JSValue, targetExtents: JSValue) -> JSValue
       let top = bounds[1].number ?? 0.0
       let width = bounds[2].number ?? 0.0
       let height = bounds[3].number ?? 0.0
-      _ = ctx.drawImage!(
+      _ = ctx.drawImage(
         resources.sprites, left, top, width, height, x + 4, y - frameIndex * 2 + 8, width, height)
 
       y -= 18
@@ -2129,7 +2148,7 @@ var drawLaserBeam = {
       // depth illusion: "go behind" things to the right
       width -= 5
     }
-    _ = ctx.drawImage!(
+    _ = ctx.drawImage(
       resources.spritesUndercover, left, top, width, height, x + 4, laserY, width, height)
   }
   return .undefined
@@ -2147,7 +2166,7 @@ var drawTeleportEffect = {
   let offsetX: Double = 5
   let offsetY: Double = 2
   ctx.globalAlpha = .number(0.5)
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.spritesUndercover, left, top, width, height, (leftX.number ?? 0.0) + offsetX,
     (bottomY.number ?? 0.0) - height + offsetY, width, height)
   ctx.globalAlpha = .number(1)
@@ -2174,7 +2193,7 @@ var drawJump = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2191,7 +2210,7 @@ var drawShield = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     image, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2208,12 +2227,12 @@ var drawLaser = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let height = bounds[3].number ?? 0.0
   let alignRight = entity.facing.number == -1.0
   if alignRight {
-    _ = ctx.drawImage!(
+    _ = ctx.drawImage(
       resources.spritesUndercover, left, top, width, height,
       (entity.x.number ?? 0.0) + (entity.width.number ?? 0.0) - width + 11,
       (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - 1 - height, width, height)
   } else {
-    _ = ctx.drawImage!(
+    _ = ctx.drawImage(
       resources.spritesUndercover, left, top, width, height, entity.x,
       (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - 1 - height, width, height)
   }
@@ -2233,7 +2252,7 @@ var drawTeleport = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.spritesUndercover, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2247,7 +2266,7 @@ var drawSwitch = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2263,7 +2282,7 @@ var drawPipe = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 11,
     (entity.y.number ?? 0.0) - 12, width, height)
   if showDebug.boolean == true {
@@ -2289,7 +2308,7 @@ var drawDroplet = { (ctx: JSValue, entity: JSValue) -> JSValue in
   // @TODO: proper frame offsets (this is an approximation)
   let offsetX = (-3 - animFrame) * (splashing ? 1.0 : 0.0)
   let offsetY = (-15.0) * (splashing ? 1.0 : 0.0)
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 15 + offsetX,
     (entity.y.number ?? 0.0) + offsetY, width, height)
   return .undefined
@@ -2306,7 +2325,7 @@ var drawGearbot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2327,7 +2346,7 @@ var drawClimbbot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, entity.x, (entity.y.number ?? 0.0) - 6, width,
     height)
   return .undefined
@@ -2342,7 +2361,7 @@ var drawFlybot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2358,7 +2377,7 @@ var drawEyebot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites, left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
@@ -2422,7 +2441,7 @@ var drawJunkbot = { (ctx: JSValue, junkbot: JSValue) -> JSValue in
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
-  _ = ctx.drawImage!(
+  _ = ctx.drawImage(
     resources.sprites,
     left,
     top,
@@ -2451,22 +2470,22 @@ var renderSelectionHilight = {
   let canvas = document.createElement!("canvas")
   canvas.width = .number(width + depth + 1)
   canvas.height = .number(height + depth + 1)
-  let ctx = canvas.getContext!("2d")
+  let ctx = canvas.getContext("2d")
   ctx.fillStyle = .string("aqua")
 
   _ = ctx.translate!(depth, 0)
   for z in 0...10 {
     if z == 0 || z == 10 {
       for x in [0.0, 0.0 + width] {
-        _ = ctx.fillRect!(x, 0, 1, height + 1)
+        _ = ctx.fillRect(x, 0, 1, height + 1)
       }
       for y in [0.0, 0.0 + height] {
-        _ = ctx.fillRect!(0, y, width + 1, 1)
+        _ = ctx.fillRect(0, y, width + 1, 1)
       }
     } else {
       for x in [0.0, 0.0 + width] {
         for y in [0.0, 0.0 + height] {
-          _ = ctx.fillRect!(x, y, 1, 1)
+          _ = ctx.fillRect(x, y, 1, 1)
         }
       }
       _ = ctx.clearRect!(1, 0, width - 1, 1)
@@ -2500,7 +2519,7 @@ var drawSelectionHilight = {
   let image = renderSelectionHilight(width, height, .number(depth), .boolean(studsOnTop))
   _ = ctx.save!()
   _ = ctx.translate!(0, -2 - depth)
-  _ = ctx.drawImage!(image, x, y)
+  _ = ctx.drawImage(image, x, y)
   _ = ctx.restore!()
   return .undefined
 }
@@ -3163,13 +3182,12 @@ let keydownClosure = JSClosure { args in
   if event.defaultPrevented.boolean == true {
     return .undefined
   }
-  let tagName = event.target.tagName.string ?? ""
-  if tagName.range(of: "(?i)input|textarea|select", options: .regularExpression) != nil {
+  let tagName = (event.target.tagName.string ?? "").lowercased()
+  if tagName == "input" || tagName == "textarea" || tagName == "select" {
     return .undefined
   }
   let key = event.key.string ?? ""
-  if tagName.range(of: "(?i)button", options: .regularExpression) != nil
-    && (key == " " || key == "Enter")
+  if tagName == "button" && (key == " " || key == "Enter")
   {
     return .undefined
   }
@@ -3810,7 +3828,7 @@ let pointermoveClosure = JSClosure { args in
     let b = pointerEventCache[1]
     let dx = (a.clientX.number ?? 0.0) - (b.clientX.number ?? 0.0)
     let dy = (a.clientY.number ?? 0.0) - (b.clientY.number ?? 0.0)
-    let dist = JSObject.global.Math.hypot!(dx, dy).number ?? 0.0
+    let dist = JSObject.global.Math.hypot(dx, dy).number ?? 0.0
 
     if prevPointerDist > 0.0 {
       if dist > prevPointerDist + 50.0 {
@@ -4950,7 +4968,7 @@ var simulatePipe = { (pipe: JSValue) -> JSValue in
     let opts = JSObject.global.Object.function!.new()
     opts.x = pipe.x
     opts.y = pipe.y
-    entities.append(makeDroplet.callAsFunction(this: JSValue.null, opts))
+    entities.append(makeDroplet(opts))
   }
   if (pipe.timer.number ?? 0.0) <= 0.0 {
     let rnd = JSObject.global.Math.random!().number ?? 0.0
@@ -6608,53 +6626,53 @@ var initEditorUI = { () -> JSValue in
   sh1.y = .number(0.0)
   sh1.fixed = .boolean(false)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeShield.callAsFunction(this: JSValue.null, sh1))
+    this: JSValue.null, makeShield(sh1))
 
   let sh2 = JSObject.global.Object.function!.new()
   sh2.x = .number(0.0)
   sh2.y = .number(0.0)
   sh2.fixed = .boolean(true)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeShield.callAsFunction(this: JSValue.null, sh2))
+    this: JSValue.null, makeShield(sh2))
 
   let pipe = JSObject.global.Object.function!.new()
   pipe.x = .number(0.0)
   pipe.y = .number(0.0)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makePipe.callAsFunction(this: JSValue.null, pipe))
+    this: JSValue.null, makePipe(pipe))
 
   let drop = JSObject.global.Object.function!.new()
   drop.x = .number(0.0)
   drop.y = .number(0.0)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeDroplet.callAsFunction(this: JSValue.null, drop))
+    this: JSValue.null, makeDroplet(drop))
 
   let gb = JSObject.global.Object.function!.new()
   gb.x = .number(0.0)
   gb.y = .number(0.0)
   gb.facing = .number(1.0)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeGearbot.callAsFunction(this: JSValue.null, gb))
+    this: JSValue.null, makeGearbot(gb))
 
   let cb = JSObject.global.Object.function!.new()
   cb.x = .number(0.0)
   cb.y = .number(0.0)
   cb.facing = .number(1.0)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeClimbbot.callAsFunction(this: JSValue.null, cb))
+    this: JSValue.null, makeClimbbot(cb))
 
   let fb = JSObject.global.Object.function!.new()
   fb.x = .number(0.0)
   fb.y = .number(0.0)
   fb.facing = .number(1.0)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeFlybot.callAsFunction(this: JSValue.null, fb))
+    this: JSValue.null, makeFlybot(fb))
 
   let eb = JSObject.global.Object.function!.new()
   eb.x = .number(0.0)
   eb.y = .number(0.0)
   _ = makeInsertEntityButton.callAsFunction(
-    this: JSValue.null, makeEyebot.callAsFunction(this: JSValue.null, eb))
+    this: JSValue.null, makeEyebot(eb))
 
   var lastScrollSoundTime = JSObject.global.Date.now!().number ?? 0.0
   _ = entitiesScrollContainer.addEventListener(
