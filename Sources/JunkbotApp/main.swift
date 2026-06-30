@@ -1977,20 +1977,20 @@ var drawBrick = { (ctx: JSValue, brick: JSValue) -> JSValue in
   let colorName = brick.colorName.string ?? "gray"
   let spriteColorName = colorName == "gray" ? "immobile" : colorName
   let widthInStuds = Int(brick.widthInStuds.number ?? 2)
-  let frame = resources.spritesAtlas.object!["brick_\(spriteColorName)_\(widthInStuds)"]
+  let frame = resources.object!["spritesAtlas"].object!["brick_\(spriteColorName)_\(widthInStuds)"]
   let bounds = frame[property: "bounds"]
   let left = bounds[0]
   let top = bounds[1]
   let width = bounds[2]
   let height = bounds[3]
   let drawY = (brick.y.number ?? 0) + (brick.height.number ?? 0) - (height.number ?? 0) - 1
-  _ = ctx.drawImage(resources.sprites, left, top, width, height, brick.x, drawY, width, height)
+  _ = ctx.drawImage(resources.object!["sprites"], left, top, width, height, brick.x, drawY, width, height)
   return .undefined
 }
 
 var drawBin = { (ctx: JSValue, bin: JSValue) -> JSValue in
-  var frame = resources.spritesAtlas.bin
-  var spritesheet = resources.sprites
+  var frame = resources.object!["spritesAtlas"].object!["bin"]
+  var spritesheet = resources.object!["sprites"]
   var rotation = 0.0
   if bin.scaredy.isTruthy && ((bin.facing.number ?? 0) != 0 || editing) {
     var frameIndex = Int((bin.animationFrame.number ?? 0).truncatingRemainder(dividingBy: 2))
@@ -2001,8 +2001,8 @@ var drawBin = { (ctx: JSValue, bin: JSValue) -> JSValue in
       rotation = ((Math.random!().number ?? 0) - 0.5) / 4
     }
     let direction = (bin.facing.number ?? 0) == 1 ? "WALK_R" : "walk_l"
-    frame = resources.spritesUndercoverAtlas.object!["SCAREDY_\(direction)_\(1 + frameIndex)_s3"]
-    spritesheet = resources.spritesUndercover
+    frame = resources.object!["spritesUndercoverAtlas"].object!["SCAREDY_\(direction)_\(1 + frameIndex)_s3"]
+    spritesheet = resources.object!["spritesUndercover"]
   }
 
   let bounds = frame[property: "bounds"]
@@ -2024,14 +2024,14 @@ var drawBin = { (ctx: JSValue, bin: JSValue) -> JSValue in
 }
 
 var drawCrate = { (ctx: JSValue, bin: JSValue) -> JSValue in
-  let frame = resources.spritesUndercoverAtlas.HAZ_SLICKCRATE
-  let bounds = frame.bounds
+  let frame = resources.object!["spritesUndercoverAtlas"].object!["HAZ_SLICKCRATE"]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.spritesUndercover, left, top, width, height, bin.x,
+    resources.object!["spritesUndercover"], left, top, width, height, bin.x,
     (bin.y.number ?? 0.0) + (bin.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
@@ -2040,20 +2040,20 @@ var drawFire = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
     entity.on.boolean == true
-    ? JSObject.global.Math.floor!(
+    ? JSObject.global.Math.floor(
       animFrame.truncatingRemainder(dividingBy: 8) < 4
         ? animFrame.truncatingRemainder(dividingBy: 4)
         : 4 - (animFrame.truncatingRemainder(dividingBy: 4))
     ).number ?? 0.0 : 0
-  let frame = resources.spritesAtlas[
+  let frame = resources.object!["spritesAtlas"].object![
     "haz_slickFire_\(entity.on.boolean == true ? "on" : "off")_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 1,
+    resources.object!["sprites"], left, top, width, height, (entity.x.number ?? 0.0) + 1,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 4, width, height)
   return .undefined
 }
@@ -2062,16 +2062,16 @@ var drawFan = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
     entity.on.boolean == true
-    ? JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 4)).number ?? 0.0 : 0
-  let frame = resources.spritesAtlas[
+    ? JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 4)).number ?? 0.0 : 0
+  let frame = resources.object!["spritesAtlas"].object![
     "haz_slickFan_\(entity.on.boolean == true ? "on" : "off")_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 1,
+    resources.object!["sprites"], left, top, width, height, (entity.x.number ?? 0.0) + 1,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 4, width, height)
   return .undefined
 }
@@ -2098,15 +2098,15 @@ var drawWind = { (ctx: JSValue, fan: JSValue, targetExtents: JSValue) -> JSValue
       }
       extent += 1
       let frameIndex =
-        JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 7)).number ?? 0.0
-      let frame = resources.spritesAtlas["fanAir_1_\(1 + Int(frameIndex))"]
-      let bounds = frame.bounds
+        JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 7)).number ?? 0.0
+      let frame = resources.object!["spritesAtlas"].object!["fanAir_1_\(1 + Int(frameIndex))"]
+      let bounds = frame[property: "bounds"]
       let left = bounds[0].number ?? 0.0
       let top = bounds[1].number ?? 0.0
       let width = bounds[2].number ?? 0.0
       let height = bounds[3].number ?? 0.0
       _ = ctx.drawImage(
-        resources.sprites, left, top, width, height, x + 4, y - frameIndex * 2 + 8, width, height)
+        resources.object!["sprites"], left, top, width, height, x + 4, y - frameIndex * 2 + 8, width, height)
 
       y -= 18
     }
@@ -2134,9 +2134,9 @@ var drawLaserBeam = {
       break
     }
     let frameIndex =
-      JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 3)).number ?? 0.0
-    let frame = resources.spritesUndercoverAtlas["laserbeam_1_\(1 + Int(frameIndex))"]
-    let bounds = frame.bounds
+      JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 3)).number ?? 0.0
+    let frame = resources.object!["spritesUndercoverAtlas"].object!["laserbeam_1_\(1 + Int(frameIndex))"]
+    let bounds = frame[property: "bounds"]
     let left = bounds[0].number ?? 0.0
     let top = bounds[1].number ?? 0.0
     var width = bounds[2].number ?? 0.0
@@ -2149,7 +2149,7 @@ var drawLaserBeam = {
       width -= 5
     }
     _ = ctx.drawImage(
-      resources.spritesUndercover, left, top, width, height, x + 4, laserY, width, height)
+      resources.object!["spritesUndercover"], left, top, width, height, x + 4, laserY, width, height)
   }
   return .undefined
 }
@@ -2157,8 +2157,8 @@ var drawLaserBeam = {
 var drawTeleportEffect = {
   (ctx: JSValue, leftX: JSValue, bottomY: JSValue, frameIndex: JSValue) -> JSValue in
   let frameName = "transEfx_\(1 + Int(frameIndex.number ?? 0.0))"
-  let frame = resources.spritesUndercoverAtlas[frameName]
-  let bounds = frame.bounds
+  let frame = resources.object!["spritesUndercoverAtlas"].object![frameName]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
@@ -2167,7 +2167,7 @@ var drawTeleportEffect = {
   let offsetY: Double = 2
   ctx.globalAlpha = .number(0.5)
   _ = ctx.drawImage(
-    resources.spritesUndercover, left, top, width, height, (leftX.number ?? 0.0) + offsetX,
+    resources.object!["spritesUndercover"], left, top, width, height, (leftX.number ?? 0.0) + offsetX,
     (bottomY.number ?? 0.0) - height + offsetY, width, height)
   ctx.globalAlpha = .number(1)
   // @TODO: check timings and frame offsets, and the animation should start before junkbot teleports
@@ -2183,29 +2183,29 @@ var drawJump = { (ctx: JSValue, entity: JSValue) -> JSValue in
   }
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
-    JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
+    JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
     .number ?? 0.0
-  let frame = resources.spritesAtlas[
+  let frame = resources.object!["spritesAtlas"].object![
     "\(entity.fixed.boolean == true ? "haz" : "brick")_slickJump_\(animName)_\(Int(frameIndex) + 1)"
   ]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, entity.x,
+    resources.object!["sprites"], left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
 
 var drawShield = { (ctx: JSValue, entity: JSValue) -> JSValue in
-  let atlas = resources[entity.fixed.boolean == true ? "spritesAtlas" : "spritesUndercoverAtlas"]
-  let image = resources[entity.fixed.boolean == true ? "sprites" : "spritesUndercover"]
+  let atlas = resources.object![entity.fixed.boolean == true ? "spritesAtlas" : "spritesUndercoverAtlas"].object!
+  let image = resources.object![entity.fixed.boolean == true ? "sprites" : "spritesUndercover"]
   let frame = atlas[
     "\(entity.fixed.boolean == true ? "HAZ" : "BRICK")_SLICKSHIELD_\(entity.used.boolean == true ? "OFF" : "ON")"
   ]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
@@ -2218,9 +2218,9 @@ var drawShield = { (ctx: JSValue, entity: JSValue) -> JSValue in
 
 var drawLaser = { (ctx: JSValue, entity: JSValue) -> JSValue in
   // entity name and sprite name are confusing in regard to direction
-  let frame = resources.spritesUndercoverAtlas[
+  let frame = resources.object!["spritesUndercoverAtlas"].object![
     "haz_slickLaser_\(entity.facing.number == 1.0 ? "L" : "R")_ON_1"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
@@ -2228,12 +2228,12 @@ var drawLaser = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let alignRight = entity.facing.number == -1.0
   if alignRight {
     _ = ctx.drawImage(
-      resources.spritesUndercover, left, top, width, height,
+      resources.object!["spritesUndercover"], left, top, width, height,
       (entity.x.number ?? 0.0) + (entity.width.number ?? 0.0) - width + 11,
       (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - 1 - height, width, height)
   } else {
     _ = ctx.drawImage(
-      resources.spritesUndercover, left, top, width, height, entity.x,
+      resources.object!["spritesUndercover"], left, top, width, height, entity.x,
       (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - 1 - height, width, height)
   }
   return .undefined
@@ -2246,28 +2246,28 @@ var drawTeleport = { (ctx: JSValue, entity: JSValue) -> JSValue in
   if timer > 30 {
     frameName = "haz_slickTeleport_active_\(1 + Int(timer.truncatingRemainder(dividingBy: 2.0)))"
   }
-  let frame = resources.spritesUndercoverAtlas[frameName]
-  let bounds = frame.bounds
+  let frame = resources.object!["spritesUndercoverAtlas"].object![frameName]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.spritesUndercover, left, top, width, height, entity.x,
+    resources.object!["spritesUndercover"], left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
 
 var drawSwitch = { (ctx: JSValue, entity: JSValue) -> JSValue in
-  let frame = resources.spritesAtlas[
+  let frame = resources.object!["spritesAtlas"].object![
     "haz_slickSwitch_\(entity.on.boolean == true ? "on" : "off")_1"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, entity.x,
+    resources.object!["sprites"], left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
@@ -2275,17 +2275,17 @@ var drawSwitch = { (ctx: JSValue, entity: JSValue) -> JSValue in
 var drawPipe = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let timer = entity.timer.number ?? 0.0
   let wet = timer <= 6 && timer > -1  // < 7 would cause error if timer is non-integer
-  let frameIndex = JSObject.global.Math.floor!(wet ? 6 - timer : 0).number ?? 0.0
-  let frame = resources.spritesAtlas["haz_slickPipe_\(wet ? "wet" : "dry")_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let frameIndex = JSObject.global.Math.floor(wet ? 6 - timer : 0).number ?? 0.0
+  let frame = resources.object!["spritesAtlas"].object!["haz_slickPipe_\(wet ? "wet" : "dry")_\(1 + Int(frameIndex))"]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 11,
+    resources.object!["sprites"], left, top, width, height, (entity.x.number ?? 0.0) + 11,
     (entity.y.number ?? 0.0) - 12, width, height)
-  if showDebug.boolean == true {
+  if showDebug {
     _ = drawText(
       ctx, .string(String(timer)), .number((entity.x.number ?? 0.0)),
       .number((entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) + 5), .string("white"),
@@ -2297,10 +2297,10 @@ var drawPipe = { (ctx: JSValue, entity: JSValue) -> JSValue in
 var drawDroplet = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let splashing = entity.splashing.boolean == true
   let animFrame = entity.animationFrame.number ?? 0.0
-  let frameIndex = JSObject.global.Math.floor!(splashing ? animFrame : 0).number ?? 0.0
-  let frame = resources.spritesAtlas[
+  let frameIndex = JSObject.global.Math.floor(splashing ? animFrame : 0).number ?? 0.0
+  let frame = resources.object!["spritesAtlas"].object![
     "drip_\(splashing ? "splashing" : "falling")_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
@@ -2309,7 +2309,7 @@ var drawDroplet = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let offsetX = (-3 - animFrame) * (splashing ? 1.0 : 0.0)
   let offsetY = (-15.0) * (splashing ? 1.0 : 0.0)
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, (entity.x.number ?? 0.0) + 15 + offsetX,
+    resources.object!["sprites"], left, top, width, height, (entity.x.number ?? 0.0) + 15 + offsetX,
     (entity.y.number ?? 0.0) + offsetY, width, height)
   return .undefined
 }
@@ -2317,68 +2317,68 @@ var drawDroplet = { (ctx: JSValue, entity: JSValue) -> JSValue in
 var drawGearbot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
-    JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 2.0)).number ?? 0.0
-  let frame = resources.spritesAtlas[
+    JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 2.0)).number ?? 0.0
+  let frame = resources.object!["spritesAtlas"].object![
     "gearbot_walk_\(entity.facing.number == 1.0 ? "r" : "l")_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, entity.x,
+    resources.object!["sprites"], left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
 var drawClimbbot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
-    JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 6.0)).number ?? 0.0
+    JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 6.0)).number ?? 0.0
   var direction = entity.facing.number == 1.0 ? "r" : "l"
   if entity.facingY.number == -1.0 {
     direction = "u"
   } else if entity.facingY.number == 1.0 {
     direction = "d"
   }
-  let frame = resources.spritesAtlas["climbbot_walk_\(direction)_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let frame = resources.object!["spritesAtlas"].object!["climbbot_walk_\(direction)_\(1 + Int(frameIndex))"]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, entity.x, (entity.y.number ?? 0.0) - 6, width,
+    resources.object!["sprites"], left, top, width, height, entity.x, (entity.y.number ?? 0.0) - 6, width,
     height)
   return .undefined
 }
 var drawFlybot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
-    JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 2.0)).number ?? 0.0
-  let frame = resources.spritesAtlas["flybot_\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+    JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 2.0)).number ?? 0.0
+  let frame = resources.object!["spritesAtlas"].object!["flybot_\(1 + Int(frameIndex))"]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, entity.x,
+    resources.object!["sprites"], left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
 var drawEyebot = { (ctx: JSValue, entity: JSValue) -> JSValue in
   let animFrame = entity.animationFrame.number ?? 0.0
   let frameIndex =
-    JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: 2.0)).number ?? 0.0
-  let frame = resources.spritesAtlas[
+    JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: 2.0)).number ?? 0.0
+  let frame = resources.object!["spritesAtlas"].object![
     "eyebot_\((entity.activeTimer.number ?? 0.0) > 0 ? "active_" : "")\(1 + Int(frameIndex))"]
-  let bounds = frame.bounds
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites, left, top, width, height, entity.x,
+    resources.object!["sprites"], left, top, width, height, entity.x,
     (entity.y.number ?? 0.0) + (entity.height.number ?? 0.0) - height - 1, width, height)
   return .undefined
 }
@@ -2413,14 +2413,14 @@ var drawJunkbot = { (ctx: JSValue, junkbot: JSValue) -> JSValue in
       animName = "shield_\(animName)"
     }
   }
-  let animation = resources.junkbotAnimations[animName]
+  let animation = resources.object!["junkbotAnimations"].object![animName]
   var frameName = ""
   var offsetX = 0.0
   var offsetY = 0.0
   if !animation.isUndefined {
     animLength = Int(animation.length.number ?? 0.0)
     let t =
-      JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
+      JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
       .number ?? 0.0
     let keyFrame = animation[Int(t)]
     offsetX = keyFrame.offset.x.number ?? 0.0
@@ -2431,18 +2431,18 @@ var drawJunkbot = { (ctx: JSValue, junkbot: JSValue) -> JSValue in
     }
   } else {
     let t =
-      JSObject.global.Math.floor!(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
+      JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
       .number ?? 0.0
     frameName = animName == "dead" ? "minifig_dead" : "minifig_\(animName)_\(1 + Int(t))"
   }
-  let frame = resources.spritesAtlas[frameName]
-  let bounds = frame.bounds
+  let frame = resources.object!["spritesAtlas"].object![frameName]
+  let bounds = frame[property: "bounds"]
   let left = bounds[0].number ?? 0.0
   let top = bounds[1].number ?? 0.0
   let width = bounds[2].number ?? 0.0
   let height = bounds[3].number ?? 0.0
   _ = ctx.drawImage(
-    resources.sprites,
+    resources.object!["sprites"],
     left,
     top,
     width,
@@ -2473,7 +2473,7 @@ var renderSelectionHilight = {
   let ctx = canvas.getContext("2d")
   ctx.fillStyle = .string("aqua")
 
-  _ = ctx.translate!(depth, 0)
+  _ = ctx.translate(depth, 0)
   for z in 0...10 {
     if z == 0 || z == 10 {
       for x in [0.0, 0.0 + width] {
@@ -2488,18 +2488,18 @@ var renderSelectionHilight = {
           _ = ctx.fillRect(x, y, 1, 1)
         }
       }
-      _ = ctx.clearRect!(1, 0, width - 1, 1)
-      _ = ctx.clearRect!(width, 1, 1, height - 1)
+      _ = ctx.clearRect(1, 0, width - 1, 1)
+      _ = ctx.clearRect(width, 1, 1, height - 1)
     }
-    _ = ctx.translate!(-1, 1)
+    _ = ctx.translate(-1, 1)
   }
-  _ = ctx.clearRect!(2, 0, width - 1, height - 1)
+  _ = ctx.clearRect(2, 0, width - 1, height - 1)
   if studsOnTop {
     var z = 0.0
     while z < width {
       var x = 0.0
       while x < width {
-        _ = ctx.clearRect!(x + 6 + z, -7 - z, 11, 5)
+        _ = ctx.clearRect(x + 6 + z, -7 - z, 11, 5)
         x += 15
       }
       z += 6
@@ -2516,9 +2516,9 @@ var drawSelectionHilight = {
   ) -> JSValue in
   let depth = depthArg.isUndefined ? 10.0 : (depthArg.number ?? 10.0)
   let studsOnTop = studsOnTopArg.isUndefined ? false : (studsOnTopArg.boolean ?? false)
-  let image = renderSelectionHilight(width, height, .number(depth), .boolean(studsOnTop))
+  let image = renderSelectionHilight(width, height, JSValue.number(depth), JSValue.boolean(studsOnTop))
   _ = ctx.save!()
-  _ = ctx.translate!(0, -2 - depth)
+  _ = ctx.translate(0, -2 - depth)
   _ = ctx.drawImage(image, x, y)
   _ = ctx.restore!()
   return .undefined
@@ -2667,7 +2667,7 @@ var save = JSObject.global.Function.function!.new(
   """#)
 
 var toggleShowDebug = { () -> JSValue in
-  showDebug = showDebug.boolean != true
+  showDebug.toggle()
   // try {
   // 	localStorage[storageKeys.showDebug] = showDebug;
   // } catch (error) {
@@ -2676,11 +2676,11 @@ var toggleShowDebug = { () -> JSValue in
   return .undefined
 }
 var updateMuteButton = { () -> JSValue in
-  toggleMuteButton.ariaPressed = muted
+  toggleMuteButton.ariaPressed = .boolean(muted)
   let volume = mainGain.gain.value.number ?? 0.0
   let icon = toggleMuteButton.querySelector!(".sprited-icon")
   var iconIndex = 24
-  if muted.boolean == true {
+  if muted {
     iconIndex = 21  // muted
   } else if volume < 0.3 {
     iconIndex = 22  // volume-low
@@ -2714,7 +2714,7 @@ var toggleMute = JSObject.global.Function.function!.new(
   """)
 
 var setVolume = { (volume: JSValue) -> JSValue in
-  if muted.boolean == true {
+  if muted {
     _ = toggleMute.callAsFunction(this: JSValue.null, .undefined)
   }
   mainGain.gain.value = volume
@@ -2727,7 +2727,7 @@ var setVolume = { (volume: JSValue) -> JSValue in
   return .undefined
 }
 var togglePause = { () -> JSValue in
-  paused = .boolean(paused.boolean != true)
+  paused.toggle()
   // if (editing && !paused) {
   // if (editing != paused) {
   // 	toggleEditing();
@@ -2735,9 +2735,9 @@ var togglePause = { () -> JSValue in
   return .undefined
 }
 var updateEditingButton = { () -> JSValue in
-  toggleEditingButton.ariaPressed = editing
+  toggleEditingButton.ariaPressed = .boolean(editing)
   toggleEditingButton.querySelector!("img").src = .string(
-    editing.boolean == true
+    editing
       ? "images/icons/toggle-editing-edit-mode.png" : "images/icons/toggle-editing-play-mode.png")
   return .undefined
 }
@@ -3177,7 +3177,7 @@ var zoomOut = JSObject.global.Function.function!.new(
 
 var retainedClosures = [JSClosure]()
 
-let keydownClosure = JSClosure { args in
+let keydownClosure = JSClosure { args -> JSValue in
   let event = args[0]
   if event.defaultPrevented.boolean == true {
     return .undefined
@@ -3207,20 +3207,20 @@ let keydownClosure = JSClosure { args in
   let shiftKey = event.shiftKey.boolean == true
   let repeatKey = event.repeat.boolean == true
   if ctrlKey && key == "p" {
-    _ = event.preventDefault!()
+    _ = event.preventDefault()
     // playback saved solution recording
     let json = JSObject.global.localStorage[
       storageKeys.solutionRecording(currentLevel.title.string ?? "")]
     if !json.isUndefined && !json.isNull {
       _ = toggleEditing.callAsFunction(this: JSValue.null, .undefined)
-      if editing.boolean == true {
+      if editing {
         _ = toggleEditing.callAsFunction(this: JSValue.null, .undefined)
       }
       playbackEvents = JSObject.global.JSON.parse!(json)
     }
   }
   if altKey && (code == "Enter" || code == "NumpadEnter") {
-    _ = event.preventDefault!()
+    _ = event.preventDefault()
     _ = toggleFullscreen.callAsFunction(this: JSValue.null, .undefined)
   }
   switch key.uppercased() {
@@ -3293,13 +3293,13 @@ let keydownClosure = JSClosure { args in
   default:
     return .undefined
   }
-  _ = event.preventDefault!()
+  _ = event.preventDefault()
   return .undefined
 }
 retainedClosures.append(keydownClosure)
-_ = JSObject.global.addEventListener("keydown", keydownClosure)
+_ = JSObject.global.addEventListener!("keydown", keydownClosure)
 
-let keyupClosure = JSClosure { args in
+let keyupClosure = JSClosure { args -> JSValue in
   let event = args[0]
   let code = event.code.string ?? ""
   keys.removeValue(forKey: code)
@@ -3310,7 +3310,7 @@ let keyupClosure = JSClosure { args in
   return .undefined
 }
 retainedClosures.append(keyupClosure)
-_ = JSObject.global.addEventListener("keyup", keyupClosure)
+_ = JSObject.global.addEventListener!("keyup", keyupClosure)
 
 // #endregion
 //                                    ____{ ((______     ◣
@@ -3322,26 +3322,26 @@ _ = JSObject.global.addEventListener("keyup", keyupClosure)
 //                                                     ◤    ◥◼◣
 // #region Mouse
 
-let dropClosure = JSClosure { args in
+let dropClosure = JSClosure { args -> JSValue in
   let event = args[0]
-  _ = event.preventDefault!()
+  _ = event.preventDefault()
   if (event.dataTransfer.files.length.number ?? 0.0) > 0 {
     _ = openFromFile.callAsFunction(this: JSValue.null, event.dataTransfer.files[0])
   }
   return .undefined
 }
 retainedClosures.append(dropClosure)
-_ = JSObject.global.addEventListener("drop", dropClosure)
+_ = JSObject.global.addEventListener!("drop", dropClosure)
 
-let dragoverClosure = JSClosure { args in
+let dragoverClosure = JSClosure { args -> JSValue in
   let event = args[0]
-  _ = event.preventDefault!()
+  _ = event.preventDefault()
   return .undefined
 }
 retainedClosures.append(dragoverClosure)
-_ = JSObject.global.addEventListener("dragover", dragoverClosure)
+_ = JSObject.global.addEventListener!("dragover", dragoverClosure)
 
-let blurClosure = JSClosure { args in
+let blurClosure = JSClosure { args -> JSValue in
   // prevent stuck keys
   keys = [:]
   // prevent margin panning until pointermove
@@ -3352,7 +3352,7 @@ let blurClosure = JSClosure { args in
   return .undefined
 }
 retainedClosures.append(blurClosure)
-_ = JSObject.global.addEventListener("blur", blurClosure)
+_ = JSObject.global.addEventListener!("blur", blurClosure)
 var releasePointer = { (event: JSValue) -> JSValue in
   pointerEventCache = pointerEventCache.filter { oldEvent in oldEvent.pointerId != event.pointerId }
 
@@ -3662,12 +3662,12 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
     return JSObject.global.Array.function?.new()
   }
   let grabs = JSObject.global.Array.function?.new()
-  if editing.boolean == true && (keys["ControlLeft"] == true || keys["ControlRight"] == true) {
+  if editing && (keys["ControlLeft"] == true || keys["ControlRight"] == true) {
     let arr = JSObject.global.Array.function!.new(brick)
     _ = grabs.push(arr)
     return grabs
   }
-  if editing.boolean == true && brick.selected.boolean == true {
+  if editing && brick.selected.boolean == true {
     let selectedArr = JSObject.global.Array.function?.new()
     for e in entities {
       if e.selected.boolean == true {
@@ -3682,7 +3682,7 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
     || (brick.type.string != "brick" && brick.type.string != "jump"
       && brick.type.string != "shield")
   {
-    if editing.boolean == true {
+    if editing {
       let arr = JSObject.global.Array.function!.new(brick)
       _ = grabs.push(arr)
       return grabs
@@ -3694,7 +3694,7 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   let grabUpward = JSObject.global.Array.function!.new(brick)
   let canGrabDownward = findAttached(brick, 1.0, &grabDownward, true)
   let canGrabUpward = findAttached(brick, -1.0, &grabUpward, true)
-  if editing.boolean == true && canGrabDownward == canGrabUpward {
+  if editing && canGrabDownward == canGrabUpward {
     let arr = JSObject.global.Array.function!.new(brick)
     _ = grabs.push(arr)
     return grabs
@@ -3763,7 +3763,7 @@ var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
     gOffset.x = .number(fX - fMX)
     gOffset.y = .number(fY - fMY)
     brick.grabOffset = gOffset
-    if editing.boolean == true {
+    if editing {
       brick.selected = .boolean(true)
     }
   }
@@ -3777,7 +3777,7 @@ var startGrab = { (grab: JSValue, options: JSValue) -> JSValue in
 let wheelClosure = JSClosure { args in
   let event = args[0]
   _ = updateMouse.callAsFunction(this: JSValue.null, event)
-  _ = event.preventDefault!()
+  _ = event.preventDefault()
   let delta =
     (event.deltaY.number == 0.0 && event.deltaX.number != nil && event.deltaX.number != 0.0)
     ? (event.deltaX.number ?? 0.0) : (event.deltaY.number ?? 0.0)
@@ -3895,7 +3895,7 @@ let pointerdownClosure = JSClosure { args in
     } else if length > 1 {
       pendingGrabs = grabs
       _ = playSound.callAsFunction(this: JSValue.null, .string("blockClick"))
-    } else if editing.boolean == true {
+    } else if editing {
       let box = JSObject.global.Object.function!.new()
       let wX = mouse["worldX"] as? Double ?? 0.0
       let wY = mouse["worldY"] as? Double ?? 0.0
@@ -3913,7 +3913,7 @@ retainedClosures.append(pointerdownClosure)
 _ = JSObject.global.canvas.addEventListener("pointerdown", pointerdownClosure)
 let contextmenuClosure = JSClosure { args in
   let event = args[0]
-  _ = event.preventDefault!()
+  _ = event.preventDefault()
   let pos = JSObject.global.Object.function!.new()
   pos.worldX = .number(mouse["worldX"] as? Double ?? 0.0)
   pos.worldY = .number(mouse["worldY"] as? Double ?? 0.0)
@@ -3988,7 +3988,7 @@ var canRelease = { () -> Bool in
   if dragging.isEmpty {
     return false  // optimization mainly - don't do allConnectedToFixed()
   }
-  if editing.boolean == true {
+  if editing {
     return true
   }
   if paused.boolean == true && editing.boolean != true {
@@ -6090,7 +6090,7 @@ var initGUI = { () -> JSValue in
 
   _ = toggleFullscreenButton.addEventListener("click", toggleFullscreen)
   toggleFullscreenButton.ariaPressed = .boolean(false)
-  _ = JSObject.global.addEventListener(
+  _ = JSObject.global.addEventListener!(
     "fullscreenchange",
     JSClosure { _ in
       toggleFullscreenButton.ariaPressed = .boolean(
@@ -6137,7 +6137,7 @@ var initGUI = { () -> JSValue in
       rewindingWithButton = .boolean(true)
       return .undefined
     })
-  _ = JSObject.global.addEventListener(
+  _ = JSObject.global.addEventListener!(
     "pointerup",
     JSClosure { _ in
       rewindingWithButton = .boolean(false)
@@ -6167,7 +6167,7 @@ var initGUI = { () -> JSValue in
     "drop",
     JSClosure { args in
       let event = args[0]
-      _ = event.preventDefault!()
+      _ = event.preventDefault()
       _ = openFromFile.callAsFunction(this: JSValue.null, event.dataTransfer.files[0])
       return .undefined
     })
@@ -6744,7 +6744,7 @@ var initEditorUI = { () -> JSValue in
     levelTitleInput.value = .string(tStr)
     levelHintInput.value = .string(level.hint.string ?? "")
     levelParInput.value = .string(level.par.string ?? "")
-    let showLevelTitle = tStr != "" && (tStr != "Title Screen" || editing.boolean == true)
+    let showLevelTitle = tStr != "" && (tStr != "Title Screen" || editing)
     let projectTitle = "Janitorial Android (HTML5 Junkbot Remake)"
     JSObject.global.document.title = .string(
       showLevelTitle ? "\(tStr) - \(projectTitle)" : projectTitle)
