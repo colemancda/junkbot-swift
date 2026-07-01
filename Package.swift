@@ -33,5 +33,9 @@ let package = Package(
         .swiftLanguageMode(.v5),
       ],
     ),
+    .testTarget(
+      name: "JunkbotCoreTests",
+      dependencies: ["JunkbotCore"]
+    ),
   ]
 )
