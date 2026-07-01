@@ -7222,7 +7222,7 @@ struct JSValueError: Error {
 @MainActor func loadAllLevelsAsync(games: JSValue) async throws -> JSValue {
     let getLevelListsFunc = JSObject.global.getLevelLists.function!
     let lists = getLevelListsFunc(resources)
-    var promises = JSObject.global["Array"].function!.new()
+    let promises = JSObject.global["Array"].function!.new()
     
     // In original: for (const { game, levelNames } of getLevelLists(resources)) ...
     let len = Int(lists.length.number ?? 0)
