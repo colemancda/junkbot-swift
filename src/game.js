@@ -1413,7 +1413,6 @@ const resetAndInit = (level) => {
 			entity.id = getID();
 		}
 	}
-	initSwiftEngine(level);
 	winLoseState = winOrLose(); // in case there's no bins, don't say OH YEAH; and in case there's no junkbots, don't consider it a lose
 	updateEditorUIForLevelChange(currentLevel);
 };
@@ -4282,6 +4281,130 @@ window.sync_teleport_effects = (i, x, y, frameIndex) => {
 	t.y = y;
 	t.frameIndex = frameIndex;
 };
+
+// #region Rewind + Playback
+// Restored from the original janitorial-android source: this whole region (findMisplacedEntities,
+// handleRewind, handlePlayback) was missing from this file even though `animate()` below still calls
+// handleRewind()/handlePlayback() every frame, which threw ReferenceErrors continuously.
+
+// Helps to detect desynchronization between playback and recording.
+// There's also a separate detection in the problem detection code.
+const findMisplacedEntities = (withinEntities, compareToEntities) => {
+	return withinEntities.filter((entity) => {
+		for (const compareToEntity of compareToEntities) {
+			if (
+				entity.type === compareToEntity.type &&
+				(
+					(entity.grabbed &&
+						compareToEntity.grabbed) ||
+					(entity.x === compareToEntity.x &&
+						entity.y === compareToEntity.y)
+				)
+			) {
+				return false;
+			}
+		}
+		return true;
+	});
+};
+
+let pausedForRewind = false;
+const rewindRate = 2;
+const handleRewind = () => {
+	// rewind, like in Braid etc.
+	if (keys.ShiftLeft || keys.ShiftRight || rewindingWithButton) {
+		if (!paused) {
+			pausedForRewind = true;
+			paused = true;
+			playbackLevel = diffPatcher.clone(currentLevel); // HACK
+		}
+		if (frameCounter > 0) {
+			playSound("undo", 0.1, 0.6);
+		}
+		// sort for consistency for level delta patching
+		entities.sort((a, b) => a.id - b.id);
+		for (let i = 0; i < rewindRate; i++) {
+			frameCounter -= 1;
+			if (frameCounter < 0) {
+				frameCounter = 0;
+			} else if (frameCounter > 0) { // don't undo level initialization
+				// handle playbackLevel and currentLevel separately, as
+				// they could have their own notions of what's going on
+				for (const event of playthroughEvents) {
+					if (event.t === frameCounter + 1) {
+						diffPatcher.unpatch(currentLevel, event.levelPatch);
+					}
+				}
+				for (const event of playbackEvents) {
+					if (event.t === frameCounter + 1) {
+						diffPatcher.unpatch(playbackLevel, event.levelPatch);
+					}
+				}
+			}
+		}
+	} else if (pausedForRewind) {
+		pausedForRewind = false;
+		paused = false;
+	}
+};
+const handlePlayback = () => {
+	debug("handlePlayback: frameCounter", frameCounter);
+	for (const event of playbackEvents) {
+		if (event.t === frameCounter + 1) {
+			if (event.levelPatch) {
+				// sort for consistency for level delta patching
+				playbackLevel.entities?.sort((a, b) => a.id - b.id);
+				diffPatcher.patch(playbackLevel, event.levelPatch);
+
+				// compare level state to see if it's desynchronized
+				if (currentLevel.name !== playbackLevel.name) {
+					desynchronized = true;
+					paused = true;
+					showErrorMessage("Wrong level for playback.");
+					return;
+				}
+				const misplacedInSimulation = findMisplacedEntities(entities, playbackLevel.entities);
+				const misplacedInRecording = findMisplacedEntities(playbackLevel.entities, entities);
+				if (misplacedInSimulation.length || misplacedInRecording.length) {
+					desynchronized = true;
+					for (const entity of [...misplacedInSimulation, ...misplacedInRecording]) {
+						entity.misplaced = true;
+					}
+				}
+			}
+
+			const playbackMouse = { worldX: event.x, worldY: event.y };
+			const { x, y } = worldToCanvas(playbackMouse.worldX, playbackMouse.worldY);
+			playbackMouse.x = x;
+			playbackMouse.y = y;
+			if (event.type === "pickup") {
+				const grabs = possibleGrabs(playbackMouse);
+				if (grabs && !dragging.length) {
+					if (event.grabType === "upward") {
+						startGrab(grabs.upward, { grabType: "upward", duringPlayback: true, mouse: playbackMouse });
+					} else if (event.grabType === "downward") {
+						startGrab(grabs.downward, { grabType: "downward", duringPlayback: true, mouse: playbackMouse });
+					} else {
+						startGrab(grabs[0], { grabType: "single", duringPlayback: true, mouse: playbackMouse });
+					}
+				} else {
+					desynchronized = true;
+				}
+			} else if (event.type === "place") {
+				updateDrag(playbackMouse);
+				finishDrag({ duringPlayback: true, mouse: playbackMouse });
+			} else if (event.type === "pointer") {
+				updateDrag(playbackMouse);
+				mouse.worldX = playbackMouse.worldX;
+				mouse.worldY = playbackMouse.worldY;
+				mouse.x = playbackMouse.x;
+				mouse.y = playbackMouse.y;
+				playthroughEvents.push(event); // preserve this information in case of re-saving a recording from playback
+			}
+		}
+	}
+};
+// #endregion
 
 const animate = () => {
 	rafid = requestAnimationFrame(animate);
