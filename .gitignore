@@ -33,6 +33,9 @@ playground.xcworkspace
 *.o
 *.dia
 *.d
+*.d*
+*.swiftdeps
+*.swiftmodule*
 
 # CocoaPods
 #
