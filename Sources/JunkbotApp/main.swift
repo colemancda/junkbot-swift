@@ -6143,23 +6143,26 @@ var initLevelDropdown = { () -> JSValue in
       let levelName = levelNames[j]
       let op = JSObject.global.document.createElement("option")
       op.textContent = levelName
-      op.value = levelNameToSlug.function!.callAsFunction(this: JSObject.global, levelName)
-      _ = optgroup.append!(op)
+      op.value = .string(levelNameToSlug(levelName.string ?? ""))
+      _ = optgroup.append(op)
     }
   }
-  levelDropdown.onchange = JSClosure { _ in
+  let levelDropdownChangeClosure: JSClosure = JSClosure { _ -> JSValue in
     let option = levelDropdown.options[levelDropdown.selectedIndex]
 
-    var optgroup = (option.parentNode.matches("optgroup").boolean == true) ? option.parentNode : JSValue.null
-    var gameSlug = (optgroup != JSValue.null) ? gameNameToSlug(optgroup.value) : JSValue.null
+    let optgroup: JSValue = (option.parentNode.matches("optgroup").boolean == true) ? option.parentNode : JSValue.null
+    let gameSlug: JSValue = (optgroup != JSValue.null) ? JSValue.string(gameNameToSlug(optgroup.value.string ?? "")) : JSValue.null
     var levelSlug = levelDropdown.value
-    if levelSlug == "custom-world" {
-      return  // this is a placeholder option
+    if levelSlug.string == "custom-world" {
+      return .undefined  // this is a placeholder option
     }
     let gameSlugString = gameSlug.string ?? ""
     let levelSlugString = levelSlug.string ?? ""
     JSObject.global.location.hash = .string("#\\(gameSlugString)/levels/\\(levelSlugString)")
+    return .undefined
   }
+  levelDropdown.onchange = levelDropdownChangeClosure.jsValue
+  return .undefined
 }
 var initializedEditorUI = false
 var initEditorUI = { () -> JSValue in
@@ -6171,7 +6174,7 @@ var initEditorUI = { () -> JSValue in
   editorUI.hidden = .boolean(!editing)
   editorControlsBar.hidden = .boolean(!editing)
 
-  _ = initLevelDropdown.function!.callAsFunction(this: JSObject.global)
+  _ = initLevelDropdown()
 
   var hilitButton = JSValue.undefined
   var makeInsertEntityButton = JSClosure { args in
@@ -6182,7 +6185,7 @@ var initEditorUI = { () -> JSValue in
     }
     let button = JSObject.global.document.createElement("button")
     let buttonCanvas = JSObject.global.document.createElement("canvas")
-    let buttonCtx = buttonCanvas.getContext!("2d")
+    let buttonCtx = buttonCanvas.getContext("2d")
 
     button.style.object!.margin = .string("0")
     button.style.object!.padding = .string("1px 6px")
@@ -6195,14 +6198,14 @@ var initEditorUI = { () -> JSValue in
     _ = button.addEventListener(
       "click",
       JSClosure { _ in
-        let len = Int(entities.length.number ?? 0.0)
+        let len = entities.count
         for i in 0..<len {
           let entity = entities[i]
-          _ = JSObject.global.Reflect.deleteProperty!(entity, "selected")
-          _ = JSObject.global.Reflect.deleteProperty!(entity, "grabbed")
-          _ = JSObject.global.Reflect.deleteProperty!(entity, "grabOffset")
+          _ = JSObject.global.Reflect.deleteProperty(entity, "selected")
+          _ = JSObject.global.Reflect.deleteProperty(entity, "grabbed")
+          _ = JSObject.global.Reflect.deleteProperty(entity, "grabOffset")
         }
-        let entity = getEntityCopy.function!.callAsFunction(this: JSObject.global)
+        let entity = getEntityCopy()
 
         let arr = JSObject.global["Array"].function!.new()
         _ = arr.push(entity)
