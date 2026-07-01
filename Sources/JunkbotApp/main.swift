@@ -5845,7 +5845,7 @@ var initGUI = { () -> JSValue in
       let event = args[0]
       let button = event.target.closest(".generic-sound")
       if button = .undefined && !button != .null {
-        _ = playSound.callAsFunction(this: JSObject.global, .string("buttonClick"))
+        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("buttonClick"))
       }
       return .undefined
     })
@@ -5895,7 +5895,7 @@ var initGUI = { () -> JSValue in
       let event = args[0]
       let tab = event.target.closest(".level-group-tab")
       if tab = .undefined && !tab != .null && tab.classList.contains("selected").boolean != true {
-        _ = playSound.callAsFunction(this: JSObject.global, .string("tabSwitch"))
+        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("tabSwitch"))
       }
       return .undefined
     })
@@ -5906,7 +5906,7 @@ var initGUI = { () -> JSValue in
       let event = args[0]
       let a = event.target.closest("a")
       if a = .undefined && !a != .null {
-        _ = playSound.callAsFunction(this: JSObject.global, .string("enterLevel"))
+        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("enterLevel"))
       }
       return .undefined
     })
@@ -6032,7 +6032,7 @@ var initGUI = { () -> JSValue in
         _ = wrapContents.callAsFunction(this: JSObject.global, actionCell, button)
       }
     } else if controlCell.matches("th").boolean != true {
-      _ = printJS.callAsFunction(
+      _ = printJS.function!.callAsFunction(
         this: JSObject.global, .string("No keyboard shortcut for"), actionCell.textContent, actionCell)
     }
   }
@@ -6052,7 +6052,7 @@ var getLevelLists = { (res: JSValue) -> JSValue in
       if name != .undefined && name != .null {
         _ = localLevels.push(name)
       } else {
-        _ = printJS.callAsFunction(
+        _ = printJS.function!.callAsFunction(
           this: JSObject.global, .string("No name found in locally stored level"), .string(key),
           JSObject.global.localStorage[key])
       }
@@ -6212,7 +6212,7 @@ var initEditorUI = { () -> JSValue in
         }
         button.style.object!.borderColor = .string("yellow")
         hilitButton = button
-        _ = playSound.callAsFunction(this: JSObject.global, .string("insert"))
+        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("insert"))
         _ = canvas.focus()
         return .undefined
       })
@@ -6505,7 +6505,7 @@ var initEditorUI = { () -> JSValue in
       if n > lastScrollSoundTime + 200.0 {
         let r = JSObject.global.Math.random().number ?? 0.0
         let nr = numRustles.number ?? 0.0
-        _ = playSound.callAsFunction(this: JSObject.global, .string("rustle\(Int(r * nr))"))
+        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("rustle\(Int(r * nr))"))
         lastScrollSoundTime = n
       }
       return .undefined
@@ -6833,7 +6833,7 @@ var testRouting = { () -> JSValue in
         let act = JSObject.global.JSON.stringify(actual[key]).string ?? ""
         errStr += "\"\(key)\": expected \(exp) but got \(act)\n"
       }
-      _ = printJS.callAsFunction(this: JSObject.global, .string(errStr))
+      _ = printJS.function!.callAsFunction(this: JSObject.global, .string(errStr))
     }
   }
   return .undefined
