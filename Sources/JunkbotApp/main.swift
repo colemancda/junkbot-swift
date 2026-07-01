@@ -5533,7 +5533,7 @@ var checkLevelEnd = { () -> JSValue in
         let n = JSObject.global.Date.now().number ?? 0.0
         let timeSinceCollectBin = n - collectBinTime
         let levelAtWin = currentLevel
-        let c = JSClosure { _ in
+        let c = JSClosure { _ -> JSValue in
           let isSame = JSObject.global.Object.is(currentLevel, levelAtWin).boolean == true
           if !isSame { return .undefined }
           _ = playSound(.string("ohYeah"), .undefined, .undefined)
@@ -5548,18 +5548,18 @@ var checkLevelEnd = { () -> JSValue in
             let formerFewestStr = JSObject.global.localStorage[dynamicMember: scoreKey].string ?? "NaN"
             let formerFewest = Double(formerFewestStr) ?? .nan
 
-            let mvs = moves.number ?? 0.0
+            let mvs = Double(moves)
             if formerFewest.isNaN || formerFewest >= mvs {
-              JSObject.global.localStorage[scoreKey] = .number(mvs)
+              JSObject.global.localStorage[dynamicMember: scoreKey] = .number(mvs)
               if (playbackEvents.length.number ?? 0.0) == 0.0 {
                 let filtered = playthroughEvents.filter { $0.type.string != "step" }
                 let filteredArr = JSObject.global["Array"].function!.new()
-                for e in filtered { _ = filteredArr.push(e) }
-                JSObject.global.localStorage[solutionKey] = JSObject.global.JSON.stringify(filteredArr)
-                _ = printJS.function?.callAsFunction(this: JSObject.global, .string("Saved solution for"), currentLevel.title)
+                for e in filtered { _ = filteredArr.push!(e) }
+                JSObject.global.localStorage[dynamicMember: solutionKey] = JSObject.global.JSON.stringify(filteredArr)
+                _ = printJS.function!.callAsFunction(JSValue.string("Saved solution for"), currentLevel.title)
               }
             } else {
-              _ = printJS.function?.callAsFunction(this: JSObject.global, .string("Not saving solution for"), currentLevel.title)
+              _ = printJS.function!.callAsFunction(JSValue.string("Not saving solution for"), currentLevel.title)
             }
           }
           _ = showLevelWinUI()
@@ -6679,7 +6679,7 @@ var showLevelLoseUI = { () -> JSValue in
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
   _ = arr2.push!(div)
-  opts.buttons = buttons.jsValue
+  opts.buttons = buttons.jsValue.jsValue
   opts.className = .string("level-lose")
 
   nonErrorDialogs.append(showMessageBox(arr2.jsValue, opts.jsValue))
@@ -6704,7 +6704,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
   }.jsValue
   _ = buttons.jsValue.push(b1)
 
-  if game.string == GAME_JUNKBOT.string {
+  if game.string == GAME_JUNKBOT {
     let b2 = JSObject.global.Object.function!.new()
     b2.label = .string("Play Junkbot Undercover")
     b2.action = JSClosure { _ in
@@ -6716,7 +6716,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
 
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
-  _ = arr2.push(win)
+  _ = arr2.push!(win)
   opts.buttons = buttons
   opts.className = .string("game-win")
 
