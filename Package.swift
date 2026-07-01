@@ -14,6 +14,9 @@ let package = Package(
       dependencies: [
         .product(name: "LingoRuntime", package: "swift-lingo")
       ],
+      swiftSettings: [
+        .enableUpcomingFeature("ApproachableConcurrency")
+      ],
       plugins: [
         .plugin(name: "LingoTranspilerPlugin", package: "swift-lingo")
       ]
@@ -25,6 +28,7 @@ let package = Package(
         .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
       swiftSettings: [
+        .enableUpcomingFeature("ApproachableConcurrency"),
         .unsafeFlags(["-wmo", "-Osize"])
       ]
     ),
