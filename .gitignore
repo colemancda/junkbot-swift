@@ -69,3 +69,7 @@ fastlane/test_output
 
 # Node JS
 node_modules/
+
+# VS Code
+.vscode/
+.claude/
