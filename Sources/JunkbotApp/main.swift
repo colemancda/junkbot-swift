@@ -6883,20 +6883,20 @@ func loadFromHashAsync() async {
     _ = toggleInfoBox.function!.callAsFunction(this: JSObject.global)
   }
 
-  if screen == SCREEN_LEVEL.string || screen == SCREEN_LEVEL_SELECT.string {
+  if screen == SCREEN_LEVEL || screen == SCREEN_LEVEL_SELECT {
     if allResourcesLoadedPromise.isUndefined || allResourcesLoadedPromise.isNull {
       // Since loadResources is now a Swift async function:
-      let loadP = try! await loadResources(resourcePathsByID: allResourcePaths)
-      allResourcesLoadedPromise = deriveHotResources.function!.callAsFunction(this: JSObject.global, loadP)
+      let loadP = try! await loadResourcesAsync(resourcePathsByID: allResourcePaths)
+      allResourcesLoadedPromise = deriveHotResources(loadP)
     }
     if hotResourcesLoadedPromise.isUndefined || hotResourcesLoadedPromise.isNull {
       hotResourcesLoadedPromise = allResourcesLoadedPromise
     }
-    resources = try! await JSPromise(from: allResourcesLoadedPromise)!.value
+    resources = try! await JSPromise(from: allResourcesLoadedPromise)!.value(isolation: #isolation)
 
     if JSObject.global.location.hash.string != loadingFrom { return }
 
-    if screen == SCREEN_LEVEL_SELECT.string {
+    if screen == SCREEN_LEVEL_SELECT {
       _ = hideTitleScreen.function!.callAsFunction(this: JSObject.global)
       closeNonErrorDialogs()
       _ = showLevelSelectScreen.function!.callAsFunction(this: JSObject.global, game, levelGroup)
@@ -6904,7 +6904,7 @@ func loadFromHashAsync() async {
     }
 
     if toShowTestRunner {
-      _ = runTests.function!.callAsFunction(this: JSObject.global)
+      _ = runTests.callAsFunction()
       closeNonErrorDialogs()
       _ = hideTitleScreen.function!.callAsFunction(this: JSObject.global)
       _ = hideLevelSelectScreen.function!.callAsFunction(this: JSObject.global)
@@ -6912,9 +6912,9 @@ func loadFromHashAsync() async {
       if levelSlug != "" && game == GAME_USER_CREATED {
         do {
           let lsVal = JSObject.global.localStorage[dynamicMember: "level_" + levelSlug].string ?? ""
-          if lsVal == "" { throw JSError(value: .string("Level does not exist.")) }
-          _ = deserializeJSON.function!.callAsFunction(this: JSObject.global, .string(lsVal))
-          _ = initLevel.function!.callAsFunction(this: JSObject.global, currentLevel)
+          if lsVal == "" { throw JSValueError(message: "Level does not exist.") }
+          deserializeJSON(JSValue.string(lsVal))
+          _ = initLevel(currentLevel)
           // ... not fully translated this block ...
         } catch {}
       } else if levelSlug != "" {
@@ -6922,23 +6922,23 @@ func loadFromHashAsync() async {
           let levelArgs = JSObject.global.Object.function!.new()
           levelArgs.levelName = .string(levelSlug)
           levelArgs.game = .string(game)
-          let level = try await JSPromise(from: loadLevelByName.function!.callAsFunction(this: JSObject.global, levelArgs))!.value
+          let level = try await JSPromise(from: loadLevelByName.callAsFunction(this: JSObject.global, levelArgs))!.value(isolation: #isolation)
           if JSObject.global.location.hash.string != loadingFrom { return }
-          _ = initLevel.function!.callAsFunction(this: JSObject.global, level)
-          editorLevelState = serializeToJSON.function!.callAsFunction(this: JSObject.global, currentLevel)
+          _ = initLevel(level)
+          editorLevelState = serializeToJSON(currentLevel)
         } catch {
-          _ = showErrorMessage.function!.callAsFunction(this: JSObject.global, .string("Failed to load level"), (error as! JSError).value)
+          showErrorMessage("Failed to load level", (error as? JSException)?.thrownValue ?? .undefined)
           JSObject.global.location.hash = .string("#junkbot/levels")
           return
         }
       } else {
         if !wantsEdit || game != GAME_USER_CREATED {
-          _ = showErrorMessage.function!.callAsFunction(this: JSObject.global, .string("No level specified."))
+          showErrorMessage("No level specified.", .undefined)
           JSObject.global.location.hash = .string("#junkbot/levels")
           return
         }
-        _ = initLevel.function!.callAsFunction(this: JSObject.global, resources.levelEditorDefaultLevel)
-        editorLevelState = serializeToJSON.function!.callAsFunction(this: JSObject.global, currentLevel)
+        _ = initLevel(resources.levelEditorDefaultLevel)
+        editorLevelState = serializeToJSON(currentLevel)
       }
 
       paused = true
@@ -6952,7 +6952,7 @@ func loadFromHashAsync() async {
       if editing {
         paused = true
       } else {
-        let levelLocation = whereLevelIsInTheGame.function!.callAsFunction(this: JSObject.global, currentLevel, game)
+        let levelLocation = whereLevelIsInTheGame(currentLevel, .string(game))
         if !levelLocation.isUndefined && !levelLocation.isNull {
           let levelInfoContent = JSObject.global.document.createElement("div")
           levelInfoContent.innerHTML = .string("<h1>Toast</h1>") // simplified
@@ -6961,13 +6961,13 @@ func loadFromHashAsync() async {
           opts.className = .string("level-info-toast")
           
           let arr = JSObject.global["Array"].function!.new()
-          arr.append(levelInfoContent)
-          let toast = showMessageBox.function!.callAsFunction(this: JSObject.global, arr, opts)
+          _ = arr.jsValue.push(levelInfoContent)
+          let toast = showMessageBox(arr.jsValue, opts.jsValue)
           nonErrorDialogs.append(toast)
           
           _ = JSObject.global.setTimeout!(JSClosure { _ in
             Task {
-              _ = try? await JSPromise(from: toast.close!(true))?.value
+              _ = try? await JSPromise(from: toast.close!(true))?.value(isolation: #isolation)
               paused = editing
             }
             return .undefined
@@ -7000,17 +7000,17 @@ var renderFIGletFont = JSClosure { _ in return .string("") }
 func mainAsync() async {
   showDebug = JSObject.global.localStorage[dynamicMember: "showDebug"].string == "true"
   muted = JSObject.global.localStorage[dynamicMember: "muteSoundEffects"].string == "true"
-  var volume = JSObject.global.parseFloat(JSObject.global.localStorage[dynamicMember: "volume"]).number ?? 0.5
+  var volume = JSObject.global.parseFloat!(JSObject.global.localStorage[dynamicMember: "volume"]).number ?? 0.5
   if volume < 0.0 || volume > 1.0 {
     volume = 0.5
   }
   mainGain.gain.value = volume.jsValue
 
-  _ = initGUI.function!.callAsFunction(this: JSObject.global)
-  winLoseState = winOrLose.function!.callAsFunction(this: JSObject.global).string ?? ""
+  _ = initGUI()
+  winLoseState = winOrLose()
 
   await loadFromHashAsync()
-  _ = animate.function!.callAsFunction(this: JSObject.global)
+  _ = animate.callAsFunction()
 }
 
 var main = JSClosure { _ in
@@ -7085,17 +7085,17 @@ if let ready = window.onWasmReady.function { _ = ready() }
 
 @MainActor func loadJSONAsync(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
-    let res = try await JSPromise(from: fetch(path))!.value
+    let res = try await JSPromise(from: fetch(path))!.value(isolation: #isolation)
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
-    return try await JSPromise(from: res.object!["json"].function!.callAsFunction(this: res.object!))!.value
+    return try await JSPromise(from: res.object!["json"].function!.callAsFunction(this: res.object!))!.value(isolation: #isolation)
 }
 
 @MainActor func loadAtlasJSONAsync(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
-    let res = try await JSPromise(from: fetch(path))!.value
-    let data = try await JSPromise(from: res.object!["json"].function!.callAsFunction(this: res.object!))!.value
-    let frames = data.frames
-    let animations = data.animations
+    let res = try await JSPromise(from: fetch(path))!.value(isolation: #isolation)
+    let data = try await JSPromise(from: res.object!["json"].function!.callAsFunction(this: res.object!))!.value(isolation: #isolation)
+    let frames: JSValue = data.frames
+    let animations: JSValue = data.animations
     let result = JSObject.global.Object.function!.new()
     let keys = JSObject.global.Object.keys(animations)
     let len = Int(keys.length.number ?? 0)
@@ -7114,41 +7114,41 @@ if let ready = window.onWasmReady.function { _ = ready() }
 
 @MainActor func loadTextFileAsync(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
-    let res = try await JSPromise(from: fetch(path))!.value
+    let res = try await JSPromise(from: fetch(path))!.value(isolation: #isolation)
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
-    return try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
+    return try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value(isolation: #isolation)
 }
 
 @MainActor func loadLevelFromTextFileAsync(path: String, game: JSValue) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
-    let res = try await JSPromise(from: fetch(path))!.value
-    return try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
+    let res = try await JSPromise(from: fetch(path))!.value(isolation: #isolation)
+    return try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value(isolation: #isolation)
 }
 
 @MainActor func loadSoundAsync(path: String, audioCtx: JSValue) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
-    let res = try await JSPromise(from: fetch(path))!.value
+    let res = try await JSPromise(from: fetch(path))!.value(isolation: #isolation)
     if res.ok.boolean == false { throw JSValueError(message: "HTTP \(res.status.number ?? 0)") }
-    let buf = try await JSPromise(from: res.object!["arrayBuffer"].function!.callAsFunction(this: res.object!))!.value
-    return try await JSPromise(from: audioCtx.decodeAudioData(buf))!.value
+    let buf = try await JSPromise(from: res.object!["arrayBuffer"].function!.callAsFunction(this: res.object!))!.value(isolation: #isolation)
+    return try await JSPromise(from: audioCtx.decodeAudioData(buf))!.value(isolation: #isolation)
 }
 
 @MainActor func loadLevelListingAsync(path: String) async throws -> JSValue {
     let fetch = JSObject.global.fetch.function!
-    let res = try await JSPromise(from: fetch(path))!.value
-    let text = try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
+    let res = try await JSPromise(from: fetch(path))!.value(isolation: #isolation)
+    let text = try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value(isolation: #isolation)
     let trimFunc = text.object!["trim"].function!
-    let trimmed = trimFunc.function!.callAsFunction(this: text.object!)
+    let trimmed = trimFunc.callAsFunction(this: text.object!)
     let regex = JSObject.global.RegExp.function!.new("\\r?\\n", "g")
     let splitFunc = trimmed.object!["split"].function!
-    let lines = splitFunc.function!.callAsFunction(this: trimmed.object!, regex)
-    let mapFunc = JSClosure { args in 
+    let lines = splitFunc.callAsFunction(this: trimmed.object!, regex)
+    let mapFunc = JSClosure { args in
         let argTrim = args[0].object!["trim"].function!
-        return argTrim.function!.callAsFunction(this: args[0].object!)
+        return argTrim.callAsFunction(this: args[0].object!)
     }
-    
+
     let arrayMap = lines.object!["map"].function!
-    return arrayMap.function!.callAsFunction(this: lines.object!, mapFunc)
+    return arrayMap.callAsFunction(this: lines.object!, mapFunc)
 }
 
 struct JSValueError: Error {
@@ -7165,11 +7165,11 @@ struct JSValueError: Error {
     } else if JSObject.global.RegExp.function!.new("levels/.*\\.txt$", "i").test!(path).boolean == true {
         return try await loadLevelFromTextFileAsync(path: path, game: .undefined)
     } else if JSObject.global.RegExp.function!.new("\\.(ogg|mp3|wav)$", "i").test!(path).boolean == true {
-        return try await loadSoundAsync(path: path, audioCtx: audioCtx)
+        return try await loadSoundAsync(path: path, audioCtx: audioCtx.jsValue)
     } else if JSObject.global.RegExp.function!.new("\\.(png|jpe?g|gif)$", "i").test!(path).boolean == true {
         // loadImage in main.swift is synchronous and returns a promise natively. Let's await it.
         let p = loadImage(path)
-        return try await JSPromise(from: p)!.value
+        return try await JSPromise(from: p)!.value(isolation: #isolation)
     }
     return .undefined
 }
@@ -7219,7 +7219,7 @@ struct JSValueError: Error {
                 let progressBrick = JSObject.global.document.createElement("div")
                 _ = progressBrick.classList.add("load-progress-brick")
                 progressBricks.append(progressBrick)
-                _ = loadProgress.appendChild!(progressBrick)
+                _ = loadProgress.appendChild(progressBrick)
             }
         }
         return resultObj.jsValue
@@ -7238,11 +7238,11 @@ struct JSValueError: Error {
     let len = Int(lists.length.number ?? 0)
     for i in 0..<len {
         let listObj = lists[i]
-        let gameVal = listObj.game
-        let levelNames = listObj.levelNames
+        let gameVal: JSValue = listObj.game
+        let levelNames: JSValue = listObj.levelNames
         
         let includesFunc = games.includes.function!
-        if includesFunc.function!.callAsFunction(this: games.object!, gameVal).boolean == true {
+        if includesFunc.callAsFunction(this: games.object!, gameVal).boolean == true {
             let namesLen = Int(levelNames.length.number ?? 0)
             for j in 0..<namesLen {
                 let levelName = levelNames[j]
@@ -7252,13 +7252,13 @@ struct JSValueError: Error {
                 levelArgs.levelName = levelName
                 
                 // loadLevelByName is a JS Promise returning func in main.swift. Wait, no, it's a JS string function.
-                let p = loadLevelByName.function!.callAsFunction(this: JSObject.global, levelArgs)
-                _ = promises.push(p)
+                let p = loadLevelByName.callAsFunction(this: JSObject.global, levelArgs)
+                _ = promises.jsValue.push(p)
             }
         }
     }
     
-    return try await JSPromise(from: JSObject.global.Promise.all.function!(promises))!.value
+    return try await JSPromise(from: JSObject.global.Promise.all.function!(promises))!.value(isolation: #isolation)
 }
 
 @MainActor func gatherStatisticsAsync(games: JSValue) async throws -> JSValue {
@@ -7271,15 +7271,15 @@ struct JSValueError: Error {
         let level = levels[i]
         let recordedTypesInThisLevel = JSObject.global["Array"].function!.new()
         
-        let entities = level.entities
+        let entities: JSValue = level.entities
         let entsLen = Int(entities.length.number ?? 0)
         for j in 0..<entsLen {
             let entity = entities[j]
             let entityType = entity.type
             
             let indexOfFunc = recordedTypesInThisLevel.indexOf.function!
-            if indexOfFunc.function!.callAsFunction(this: recordedTypesInThisLevel, entityType).number == -1.0 {
-                _ = recordedTypesInThisLevel.push(entityType)
+            if indexOfFunc.callAsFunction(this: recordedTypesInThisLevel, entityType).number == -1.0 {
+                _ = recordedTypesInThisLevel.jsValue.push(entityType)
                 let prevLevels = levelsPerEntityType[dynamicMember: entityType.string ?? ""].number ?? 0.0
                 levelsPerEntityType[dynamicMember: entityType.string ?? ""] = .number(prevLevels + 1.0)
             }
