@@ -6886,7 +6886,9 @@ func loadFromHashAsync() async {
   if screen == SCREEN_LEVEL || screen == SCREEN_LEVEL_SELECT {
     if allResourcesLoadedPromise.isUndefined || allResourcesLoadedPromise.isNull {
       // Since loadResources is now a Swift async function:
-      let loadP = try! await loadResourcesAsync(resourcePathsByID: allResourcePaths)
+      let resourcePathsObj = JSObject.global.Object.function!.new()
+      for (id, path) in allResourcePaths { resourcePathsObj[dynamicMember: id] = .string(path) }
+      let loadP = try! await loadResourcesAsync(resourcePathsByID: resourcePathsObj.jsValue)
       allResourcesLoadedPromise = deriveHotResources(loadP)
     }
     if hotResourcesLoadedPromise.isUndefined || hotResourcesLoadedPromise.isNull {
@@ -6967,7 +6969,7 @@ func loadFromHashAsync() async {
           
           _ = JSObject.global.setTimeout!(JSClosure { _ in
             Task {
-              _ = try? await JSPromise(from: toast.close!(true))?.value(isolation: #isolation)
+              _ = try? await JSPromise(from: toast.close(true))?.value(isolation: #isolation)
               paused = editing
             }
             return .undefined
@@ -7103,11 +7105,11 @@ if let ready = window.onWasmReady.function { _ = ready() }
     for i in 0..<len {
         let name = keys[i].string!
         let cleanName = name.replacingOccurrences(of: ".png", with: "")
-        let frameIndex = animations[dynamicMember: name][0]
-        let bounds = frames[dynamicMember: frameIndex.string!]
+        let frameIndex: JSValue = animations.object![name][0]
+        let bounds: JSValue = frames.object![frameIndex.string!]
         let obj = JSObject.global.Object.function!.new()
         obj.bounds = bounds
-        result[dynamicMember: cleanName.string!] = obj.jsValue
+        result[dynamicMember: cleanName] = obj.jsValue
     }
     return result.jsValue
 }
