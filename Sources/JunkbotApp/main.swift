@@ -5281,14 +5281,14 @@ var detectProblems = { () -> JSValue in
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("Invalid size (width/height) for entity \(str)\n")
-      _ = problems.push(p)
+      _ = problems.push!(p)
       continue
     }
     if entity.type.string == "brick" && !isNum(entity.widthInStuds) {
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("Invalid widthInStuds for entity \(str)\n")
-      _ = problems.push(p)
+      _ = problems.push!(p)
       continue
     }
     if entity.type.string == "brick"
@@ -5297,7 +5297,7 @@ var detectProblems = { () -> JSValue in
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("width doesn't match widthInStuds * 15 for entity \(str)\n")
-      _ = problems.push(p)
+      _ = problems.push!(p)
       continue
     }
 
@@ -5311,13 +5311,13 @@ var detectProblems = { () -> JSValue in
         for otherEntity in byTopY {
           let isSame = JSObject.global.Object.is(otherEntity, entity).boolean == true
           if !isSame {
-            let repE = reportedCollisions.get(entity) ?? .undefined
+            let repE = reportedCollisions.get!(entity)
             var hasRepE = false
             if !repE.isUndefined && !repE.isNull {
               hasRepE = (repE.indexOf(otherEntity).number ?? -1.0) != -1.0
             }
 
-            let repOE = reportedCollisions.get(otherEntity) ?? .undefined
+            let repOE = reportedCollisions.get!(otherEntity)
             var hasRepOE = false
             if !repOE.isUndefined && !repOE.isNull {
               hasRepOE = (repOE.indexOf(entity).number ?? -1.0) != -1.0
@@ -5341,21 +5341,21 @@ var detectProblems = { () -> JSValue in
                 p.message = .string("\(t1) to \(t2) collision")
                 p.worldX = .number(worldX)
                 p.worldY = .number(worldY)
-                _ = problems.push(p)
+                _ = problems.push!(p)
 
                 if reportedCollisions.has!(entity).boolean == true {
-                  _ = (reportedCollisions.get(entity) ?? .undefined).push(otherEntity)
+                  _ = reportedCollisions.get!(entity).push(otherEntity)
                 } else {
                   let arr = JSObject.global["Array"].function!.new()
-                  _ = arr.push(otherEntity)
-                  _ = reportedCollisions.set(entity, arr)
+                  _ = arr.push!(otherEntity)
+                  _ = reportedCollisions.set!(entity, arr)
                 }
                 if reportedCollisions.has!(otherEntity).boolean == true {
-                  _ = (reportedCollisions.get(otherEntity) ?? .undefined).push(entity)
+                  _ = reportedCollisions.get!(otherEntity).push(entity)
                 } else {
                   let arr = JSObject.global["Array"].function!.new()
-                  _ = arr.push(entity)
-                  _ = reportedCollisions.set(otherEntity, arr)
+                  _ = arr.push!(entity)
+                  _ = reportedCollisions.set!(otherEntity, arr)
                 }
               }
             }
