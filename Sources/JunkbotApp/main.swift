@@ -6620,7 +6620,7 @@ var showLevelLoseUI = { () -> JSValue in
   b1.action = JSClosure { _ in
     JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
-  }
+  }.jsValue
   _ = buttons.push(b1)
 
   let b2 = JSObject.global.Object.function!.new()
@@ -6632,7 +6632,7 @@ var showLevelLoseUI = { () -> JSValue in
     let pRes = whereLevelIsInTheGame.function!.callAsFunction(this: JSObject.global, currentLevel)
     if !pRes.isUndefined && !pRes.isNull {
       positionInfo = pRes.levelNumber
-    }
+    }.jsValue
 
     if !positionInfo.isUndefined && !positionInfo.isNull {
       heading.textContent = .string("Level \(positionInfo.number ?? 0.0) hint:")
@@ -6647,7 +6647,7 @@ var showLevelLoseUI = { () -> JSValue in
       _ = loadFromHash.function!.callAsFunction(this: JSObject.global)
       paused = false
       return .undefined
-    }
+    }.jsValue
     hb.isDefault = .boolean(true)
     _ = hintBtns.push(hb)
 
@@ -6670,7 +6670,7 @@ var showLevelLoseUI = { () -> JSValue in
     _ = loadFromHash.function!.callAsFunction(this: JSObject.global)
     paused = false
     return .undefined
-  }
+  }.jsValue
   b3.isDefault = .boolean(true)
   _ = buttons.push(b3)
 
@@ -6699,7 +6699,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
   b1.action = JSClosure { _ in
     JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
-  }
+  }.jsValue
   _ = buttons.push(b1)
 
   if game.string == GAME_JUNKBOT.string {
@@ -6708,7 +6708,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
     b2.action = JSClosure { _ in
       JSObject.global.location.hash = .string("#junkbot2")
       return .undefined
-    }
+    }.jsValue
     _ = buttons.push(b2)
   }
 
@@ -6779,7 +6779,7 @@ var showLevelWinUI = { () -> JSValue in
   b1.action = JSClosure { _ in
     JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
-  }
+  }.jsValue
   _ = buttons.push(b1)
 
   let b2 = JSObject.global.Object.function!.new()
@@ -6788,7 +6788,7 @@ var showLevelWinUI = { () -> JSValue in
   b2.action = JSClosure { _ in
     if canGo {
       _ = goToNextLevel.function!.callAsFunction(this: JSObject.global)
-    } else {
+    }.jsValue else {
       _ = toggleEditing.function!.callAsFunction(this: JSObject.global)
     }
     return .undefined
