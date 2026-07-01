@@ -94,7 +94,7 @@ public final class GameEngine: @unchecked Sendable {
     resetLevel()
     entities = newEntities
     levelBounds = newLevelBounds
-    idCounter = max(nextID, newEntities.map(\.id).max() ?? 0)
+    idCounter = max(nextID, maxEntityID(in: newEntities))
     rebuildAccelerationStructures()
     winLoseState = winOrLose()
   }
@@ -102,8 +102,18 @@ public final class GameEngine: @unchecked Sendable {
   public func replaceLiveState(entities newEntities: [Entity], levelBounds newLevelBounds: LevelBounds?, nextID: Int32) {
     entities = newEntities
     levelBounds = newLevelBounds
-    idCounter = max(nextID, idCounter, newEntities.map(\.id).max() ?? 0)
+    idCounter = max(nextID, idCounter, maxEntityID(in: newEntities))
     rebuildAccelerationStructures()
+  }
+
+  private func maxEntityID(in entities: [Entity]) -> Int32 {
+    var result: Int32 = 0
+    for entity in entities {
+      if entity.id > result {
+        result = entity.id
+      }
+    }
+    return result
   }
 
   // MARK: - Public API
