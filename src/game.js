@@ -1553,6 +1553,23 @@ const loadLevelFromText = (levelData, game) => {
 	if (!sections.partslist) {
 		throw new SyntaxError("No [partslist] section found.");
 	}
+	// The level text format's object relation ID (field [6], e.g. "switch1") is an arbitrary string,
+	// but GameEngine.Entity.switchID/teleportID are Int32. Map each distinct relation-ID string to a
+	// unique per-level integer here (shared between switch/fan/fire/laser and teleport relations,
+	// since those are only ever compared within their own kind, never against each other).
+	const relationIDsByRawID = new Map();
+	let nextRelationID = 1;  // start at 1, not 0: some code (e.g. serializeLevel) treats switchID/teleportID
+	// truthily (`entity.switchID || ...`), where 0 would be indistinguishable from unset
+	const relationID = (rawID) => {
+		if (!rawID) {
+			return -1;
+		}
+		if (!relationIDsByRawID.has(rawID)) {
+			relationIDsByRawID.set(rawID, nextRelationID);
+			nextRelationID += 1;
+		}
+		return relationIDsByRawID.get(rawID);
+	};
 	for (const [key, value] of sections.partslist) {
 		if (key === "types") {
 			types = types.concat(value.toLowerCase().split(","));
@@ -1602,19 +1619,19 @@ const loadLevelFromText = (levelData, game) => {
 				} else if (typeName === "haz_slickcrate") {
 					entities.push(makeCrate({ x, y: y - 18 }));
 				} else if (typeName === "haz_slickfire") {
-					entities.push(makeFire({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6] }));
+					entities.push(makeFire({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]) }));
 				} else if (typeName === "haz_slickfan") {
-					entities.push(makeFan({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6] }));
+					entities.push(makeFan({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]) }));
 				} else if (typeName === "haz_slicklaser_l") {
 					// entity name is confusing in regard to direction, haz_slicklaser_l points right in the game
-					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6], facing: 1 }));
+					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]), facing: 1 }));
 				} else if (typeName === "haz_slicklaser_r") {
 					// entity name is confusing in regard to direction, haz_slicklaser_r points left in the game
-					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6], facing: -1 }));
+					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]), facing: -1 }));
 				} else if (typeName === "haz_slickswitch") {
-					entities.push(makeSwitch({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6] }));
+					entities.push(makeSwitch({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]) }));
 				} else if (typeName === "haz_slickteleport") {
-					entities.push(makeTeleport({ x, y, teleportID: e[6] }));
+					entities.push(makeTeleport({ x, y, teleportID: relationID(e[6]) }));
 				} else if (typeName === "haz_slickjump") {
 					entities.push(makeJump({ x, y, fixed: true }));
 				} else if (typeName === "brick_slickjump") {
