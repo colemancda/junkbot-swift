@@ -69,12 +69,16 @@ func rectangleLevelBoundsCollisionObject(x: Int32, y: Int32, width: Int32, heigh
     return obj.jsValue
 }
 
-func rectangleCollision(
+/// Core collision scan taking a native Swift predicate, so Swift-side callers (e.g. a ported
+/// simulate function) don't need to round-trip through a JS callable the way the JS-facing
+/// `rectangleCollision`/`rectangleCollisionAll` below do.
+func rectangleCollisionCore(
     x: Int32, y: Int32, width: Int32, height: Int32,
-    filter: JSObject, entities: JSObject
+    entities: JSObject,
+    filter: (JSObject) -> Bool
 ) -> JSValue? {
     if let bounds = rectangleLevelBoundsCollisionObject(x: x, y: y, width: width, height: height),
-        filter(bounds).boolean == true
+        let boundsObj = bounds.object, filter(boundsObj)
     {
         return bounds
     }
@@ -83,7 +87,7 @@ func rectangleCollision(
         let other = entities[i]
         guard let otherObj = other.object else { continue }
         if otherObj.grabbed.boolean == true { continue }
-        guard filter(other).boolean == true else { continue }
+        guard filter(otherObj) else { continue }
         let ox = Int32(otherObj.x.number ?? 0)
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
@@ -95,13 +99,14 @@ func rectangleCollision(
     return nil
 }
 
-func rectangleCollisionAll(
+func rectangleCollisionAllCore(
     x: Int32, y: Int32, width: Int32, height: Int32,
-    filter: JSObject, entities: JSObject
+    entities: JSObject,
+    filter: (JSObject) -> Bool
 ) -> [JSValue] {
     var result: [JSValue] = []
     if let bounds = rectangleLevelBoundsCollisionObject(x: x, y: y, width: width, height: height),
-        filter(bounds).boolean == true
+        let boundsObj = bounds.object, filter(boundsObj)
     {
         result.append(bounds)
     }
@@ -110,7 +115,7 @@ func rectangleCollisionAll(
         let other = entities[i]
         guard let otherObj = other.object else { continue }
         if otherObj.grabbed.boolean == true { continue }
-        guard filter(other).boolean == true else { continue }
+        guard filter(otherObj) else { continue }
         let ox = Int32(otherObj.x.number ?? 0)
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
@@ -120,6 +125,24 @@ func rectangleCollisionAll(
         }
     }
     return result
+}
+
+func rectangleCollision(
+    x: Int32, y: Int32, width: Int32, height: Int32,
+    filter: JSObject, entities: JSObject
+) -> JSValue? {
+    rectangleCollisionCore(x: x, y: y, width: width, height: height, entities: entities) { obj in
+        filter(obj.jsValue).boolean == true
+    }
+}
+
+func rectangleCollisionAll(
+    x: Int32, y: Int32, width: Int32, height: Int32,
+    filter: JSObject, entities: JSObject
+) -> [JSValue] {
+    rectangleCollisionAllCore(x: x, y: y, width: width, height: height, entities: entities) { obj in
+        filter(obj.jsValue).boolean == true
+    }
 }
 
 exports.rectangleLevelBoundsCollisionTest =
@@ -309,6 +332,44 @@ exports.connects =
         return .boolean(entitiesConnect(a, b, direction: direction))
     }.jsValue
 
+func connectsToFixedCore(
+    startEntity: JSObject, entitiesByTopY: JSObject, entitiesByBottomY: JSObject,
+    direction: Int32, ignoreEntities: [JSObject]
+) -> Bool {
+    var visited: [JSObject] = []
+
+    func search(_ fromEntity: JSObject) -> Bool {
+        let fx = Int32(fromEntity.x.number ?? 0), fy = Int32(fromEntity.y.number ?? 0)
+        let fw = Int32(fromEntity.width.number ?? 0), fh = Int32(fromEntity.height.number ?? 0)
+
+        if let currentLevel = window.currentLevel.object, let bounds = currentLevel.bounds.object,
+            let by = bounds.y.number, let bh = bounds.height.number,
+            Double(fy + fh) >= by + bh
+        {
+            return true
+        }
+
+        let sameAsStart = fromEntity == startEntity
+        let above = (!sameAsStart || direction != -1) ? yBucket(entitiesByTopY, fy + fh) : []
+        let below = (!sameAsStart || direction != 1) ? yBucket(entitiesByBottomY, fy) : []
+
+        for otherValue in above + below {
+            guard let otherEntity = otherValue.object else { continue }
+            if otherEntity.grabbed.boolean == true { continue }
+            if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
+            if visited.contains(where: { $0 == otherEntity }) { continue }
+            let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
+            guard fx + fw > ox && fx < ox + ow else { continue }
+            visited.append(otherEntity)
+            if otherEntity.fixed.boolean == true { return true }
+            if search(otherEntity) { return true }
+        }
+        return false
+    }
+
+    return search(startEntity)
+}
+
 exports.connectsToFixed =
     JSClosure { args in
         guard let startEntity = args[0].object,
@@ -318,38 +379,10 @@ exports.connectsToFixed =
         let direction = Int32(args[3].number ?? 0)
         let ignoreEntities = jsObjectArray(args[4])
 
-        var visited: [JSObject] = []
-
-        func search(_ fromEntity: JSObject) -> Bool {
-            let fx = Int32(fromEntity.x.number ?? 0), fy = Int32(fromEntity.y.number ?? 0)
-            let fw = Int32(fromEntity.width.number ?? 0), fh = Int32(fromEntity.height.number ?? 0)
-
-            if let currentLevel = window.currentLevel.object, let bounds = currentLevel.bounds.object,
-                let by = bounds.y.number, let bh = bounds.height.number,
-                Double(fy + fh) >= by + bh
-            {
-                return true
-            }
-
-            let sameAsStart = fromEntity == startEntity
-            let above = (!sameAsStart || direction != -1) ? yBucket(entitiesByTopY, fy + fh) : []
-            let below = (!sameAsStart || direction != 1) ? yBucket(entitiesByBottomY, fy) : []
-
-            for otherValue in above + below {
-                guard let otherEntity = otherValue.object else { continue }
-                if otherEntity.grabbed.boolean == true { continue }
-                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
-                if visited.contains(where: { $0 == otherEntity }) { continue }
-                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
-                guard fx + fw > ox && fx < ox + ow else { continue }
-                visited.append(otherEntity)
-                if otherEntity.fixed.boolean == true { return true }
-                if search(otherEntity) { return true }
-            }
-            return false
-        }
-
-        return .boolean(search(startEntity))
+        return .boolean(
+            connectsToFixedCore(
+                startEntity: startEntity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                direction: direction, ignoreEntities: ignoreEntities))
     }.jsValue
 
 exports.allConnectedToFixed =
@@ -426,6 +459,85 @@ exports.findMisplacedEntities =
             if misplaced { result.append(entityValue) }
         }
         return result.jsValue
+    }.jsValue
+
+exports.simulateGravity =
+    JSClosure { args in
+        guard let entities = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object,
+            let entityMoved = args[3].function
+        else { return .undefined }
+
+        let dropletType: JSString = "droplet"
+        let junkbotType: JSString = "junkbot"
+        let climbbotType: JSString = "climbbot"
+        let flybotType: JSString = "flybot"
+        let eyebotType: JSString = "eyebot"
+        let gearbotType: JSString = "gearbot"
+        let crateType: JSString = "crate"
+        let binType: JSString = "bin"
+
+        func isNotDroplet(_ e: JSObject) -> Bool {
+            e.type.jsString != dropletType
+        }
+
+        let length = Int(entities.length.number ?? 0)
+        for i in 0..<length {
+            let entityValue = entities[i]
+            guard let entity = entityValue.object else { continue }
+            if entity.fixed.boolean == true { continue }
+            if entity.grabbed.boolean == true { continue }
+            if entity.floating.boolean == true { continue }
+            let type = entity.type.jsString
+            if type == dropletType || type == junkbotType || type == climbbotType || type == flybotType
+                || type == eyebotType
+            {
+                continue
+            }
+
+            let ex = Int32(entity.x.number ?? 0)
+            let ey = Int32(entity.y.number ?? 0)
+            let ew = Int32(entity.width.number ?? 0)
+            let eh = Int32(entity.height.number ?? 0)
+
+            // "settled" checks: touching the level floor, or resting on something connected to fixed
+            if rectangleLevelBoundsCollisionObject(x: ex, y: ey + 1, width: ew, height: eh) != nil {
+                continue
+            }
+            let direction: Int32 =
+                (type == junkbotType || type == gearbotType || type == crateType || type == binType) ? 1 : 0
+            if connectsToFixedCore(
+                startEntity: entity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                direction: direction, ignoreEntities: [])
+            {
+                continue
+            }
+
+            // (debug-overlay-only logging from the original is omitted here; it has no gameplay effect)
+            if rectangleCollisionCore(
+                x: ex, y: ey, width: ew, height: eh, entities: entities,
+                filter: { other in other != entity && isNotDroplet(other) }) != nil
+            {
+                // Faithful port of the original: this returns out of the whole function (not just
+                // `continue`s to the next entity) when an entity is stuck in the ground.
+                return .undefined
+            }
+
+            let cellDownY = ey + CELL_H
+            let hits = rectangleCollisionAllCore(
+                x: ex, y: cellDownY + 1, width: ew, height: eh, entities: entities,
+                filter: { other in other != entity && isNotDroplet(other) })
+            let ground = hits.compactMap { $0.object }.min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) })
+
+            if let ground = ground, let groundY = ground.y.number {
+                entity.y = (Int32(groundY) - eh).jsValue
+            } else {
+                entity.y = cellDownY.jsValue
+            }
+            _ = entityMoved(entityValue)
+        }
+        return .undefined
     }.jsValue
 
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {

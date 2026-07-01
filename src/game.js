@@ -3645,48 +3645,8 @@ addEventListener("pointerup", () => {
 // #region Simulation
 
 // #@: simulateCrate, simulateBlock, simulateBrick, falling behavior
-const simulateGravity = () => {
-	for (const entity of entities) {
-		if (
-			!entity.fixed &&
-			!entity.grabbed &&
-			!entity.floating &&
-			entity.type !== "droplet" &&
-			entity.type !== "junkbot" &&
-			entity.type !== "climbbot" &&
-			entity.type !== "flybot" &&
-			entity.type !== "eyebot"
-		) {
-			// if not settled
-			if (
-				!rectangleLevelBoundsCollisionTest(entity.x, entity.y + 1, entity.width, entity.height) &&
-				!connectsToFixed(entity, { direction: (entity.type === "junkbot" || entity.type === "gearbot" || entity.type === "crate" || entity.type === "bin") ? 1 : 0 })
-			) {
-				// just for dinosaur test case level,
-				// where there are some blocks meant to stick inside the ceiling
-				if (entityCollisionTest(entity.x, entity.y, entity, notDroplet)) {
-					debug("GRAVITY COLLISION", `${entity.type} stuck in ground at ${entity.x}, ${entity.y}`);
-					return;
-				}
-
-				// first try a step of 18 (1 grid cell) downwards,
-				// then reign it in if there's a collision
-				const cellDownY = entity.y + 18;
-				// find highest up collision (if any)
-				const ground = entityCollisionAll(entity.x, cellDownY + 1, entity, notDroplet)
-					.sort((a, b) => a.y - b.y)[0];
-				debug("GRAVITY COLLISION", `ground: ${JSON.stringify(ground, null, "\t")}`);
-				if (ground) {
-					entity.y = ground.y - entity.height;
-					entityMoved(entity);
-				} else {
-					entity.y = cellDownY;
-					entityMoved(entity);
-				}
-			}
-		}
-	}
-};
+const simulateGravity = () =>
+	window.JunkbotWasm.simulateGravity(entities, entitiesByTopY, entitiesByBottomY, entityMoved);
 
 const hurtJunkbot = (junkbot, cause) => {
 	if (junkbot.dying || junkbot.dead || junkbot.grabbed) {
