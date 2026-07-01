@@ -5365,7 +5365,7 @@ var detectProblems = { () -> JSValue in
     }
   }
 
-  let pbEntities = playbackLevel["entities"]
+  let pbEntities = playbackLevel.object!["entities"]
   if !pbEntities.isUndefined && !pbEntities.isNull {
     let pbl = Int(pbEntities.length.number ?? 0.0)
     for i in 0..<len {
@@ -5387,7 +5387,7 @@ var detectProblems = { () -> JSValue in
             p.message = .string("\(t) desynchronized\n(ID: \(id))")
             p.worldX = entity.x
             p.worldY = entity.y
-            _ = problems.push(p)
+            _ = problems.push!(p)
           }
           break
         }
@@ -5399,7 +5399,7 @@ var detectProblems = { () -> JSValue in
         p.message = .string("\(t) not found in recording, but exists in simulation\n(ID: \(id))")
         p.worldX = entity.x
         p.worldY = entity.y
-        _ = problems.push(p)
+        _ = problems.push!(p)
       }
     }
     for j in 0..<pbl {
@@ -5419,12 +5419,12 @@ var detectProblems = { () -> JSValue in
         p.message = .string("\(t) not found in simulation, but exists in recording\n(ID: \(id))")
         p.worldX = recordedEntity.x
         p.worldY = .number((recordedEntity.y.number ?? 0.0) + 8.0)
-        _ = problems.push(p)
+        _ = problems.push!(p)
       }
     }
   }
 
-  return problems
+  return problems.jsValue
 }
 
 // #endregion
@@ -5840,16 +5840,15 @@ var getLevelSelectURL = JSObject.global.getLevelSelectURL
 var getTitleScreenURL = JSObject.global.getTitleScreenURL
 
 var initGUI = { () -> JSValue in
-  _ = JSObject.global.document.body.addEventListener(
-    "pointerdown",
-    JSClosure { args in
-      let event = args[0]
-      let button = event.target.closest(".generic-sound")
-      if !button.isUndefined && !button.isNull {
-        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("buttonClick"))
-      }
-      return .undefined
-    })
+  let bodyPointerdownClosure = JSClosure { args -> JSValue in
+    let event = args[0]
+    let button = event.target.closest(".generic-sound")
+    if !button.isUndefined && !button.isNull {
+      _ = playSound.function!.callAsFunction(this: JSObject.global, .string("buttonClick"))
+    }
+    return .undefined
+  }
+  _ = JSObject.global.document.body.addEventListener("pointerdown", bodyPointerdownClosure)
 
   _ = startGameButton.addEventListener(
     "click",
@@ -6633,7 +6632,7 @@ var showLevelLoseUI = { () -> JSValue in
     let pRes = whereLevelIsInTheGame.function!.callAsFunction(this: JSObject.global, currentLevel)
     if !pRes.isUndefined && !pRes.isNull {
       positionInfo = pRes.levelNumber
-    }.jsValue
+    }
 
     if !positionInfo.isUndefined && !positionInfo.isNull {
       heading.textContent = .string("Level \(positionInfo.number ?? 0.0) hint:")
@@ -6662,7 +6661,7 @@ var showLevelLoseUI = { () -> JSValue in
 
     _ = showMessageBox.function!.callAsFunction(this: JSObject.global, hArgsArr, hOpts)
     return .undefined
-  }
+  }.jsValue
   _ = buttons.jsValue.push(b2)
 
   let b3 = JSObject.global.Object.function!.new()
@@ -6789,11 +6788,11 @@ var showLevelWinUI = { () -> JSValue in
   b2.action = JSClosure { _ in
     if canGo {
       _ = goToNextLevel.function!.callAsFunction(this: JSObject.global)
-    }.jsValue else {
+    } else {
       _ = toggleEditing.function!.callAsFunction(this: JSObject.global)
     }
     return .undefined
-  }
+  }.jsValue
   b2.isDefault = .boolean(true)
   _ = buttons.jsValue.push(b2)
 
