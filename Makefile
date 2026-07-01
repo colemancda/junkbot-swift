@@ -1,5 +1,5 @@
-SWIFT_SDK    ?= swift-DEVELOPMENT-SNAPSHOT-2026-06-24-a_wasm
-SWIFT        := $(HOME)/Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2026-06-24-a.xctoolchain/usr/bin/swift
+SWIFT_SDK    ?= swift-6.3.2-RELEASE_wasm-embedded
+SWIFT        := swift
 BUILD_OUTPUT := .build/plugins/PackageToJS/outputs/Package
 WEB_PACKAGE  := web/Package
 
@@ -7,7 +7,7 @@ WEB_PACKAGE  := web/Package
 
 all:
 	@echo "▶ Building Swift WASM…"
-	$(SWIFT) package --build-system native \
+	$(SWIFT) package \
 	    --swift-sdk $(SWIFT_SDK) \
 	    js -c release
 	@echo "▶ Copying package output to web/Package/…"
