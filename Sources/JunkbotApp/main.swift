@@ -4,16 +4,40 @@ import JunkbotCore
 nonisolated(unsafe) let window = JSObject.global
 _ = window.console.log("Swift: module started")
 let exports = JSObject.global.Object.function!.new()
-let engine = GameEngine()
 let document = window.document.object!
 
-// Removed Renderer setup
+func rectanglesIntersect(
+    _ ax: Int32, _ ay: Int32, _ aw: Int32, _ ah: Int32,
+    _ bx: Int32, _ by: Int32, _ bw: Int32, _ bh: Int32
+) -> Bool {
+    ax + aw > bx && ax < bx + bw && ay + ah > by && ay < by + bh
+}
 
-exports.game_init =
-    JSClosure { _ in
-        engine.initialize()
-        return .undefined
-    }.jsValue
+/// Reads `window.currentLevel.bounds` directly rather than mirroring it into a Swift-side global:
+/// game.js declares `currentLevel` with `var` (not `let`) specifically so it's a real
+/// `window.currentLevel` property this can read live, instead of JS having to push a copy into Swift
+/// on every change.
+func rectangleLevelBoundsCollision(x: Int32, y: Int32, width: Int32, height: Int32) -> (x: Int32, y: Int32, width: Int32, height: Int32)? {
+    guard let currentLevel = window.currentLevel.object,
+        let bounds = currentLevel.bounds.object,
+        let bx = bounds.x.number, let by = bounds.y.number,
+        let bw = bounds.width.number, let bh = bounds.height.number
+    else { return nil }
+    let boundsX = Int32(bx), boundsY = Int32(by), boundsW = Int32(bw), boundsH = Int32(bh)
+    if x < boundsX {
+        return (x: boundsX - CELL_W, y: boundsY, width: CELL_W, height: boundsH)
+    }
+    if y < boundsY {
+        return (x: boundsX, y: boundsY - CELL_H, width: boundsW, height: CELL_H)
+    }
+    if x + width > boundsX + boundsW {
+        return (x: boundsX + boundsW, y: boundsY, width: CELL_W, height: boundsH)
+    }
+    if y + height > boundsY + boundsH {
+        return (x: boundsX, y: boundsY + boundsH, width: boundsW, height: CELL_H)
+    }
+    return nil
+}
 
 exports.rectanglesIntersect =
     JSClosure { args in
@@ -27,21 +51,21 @@ exports.rectanglesIntersect =
         let bw = Int32(args[6].number ?? 0)
         let bh = Int32(args[7].number ?? 0)
 
-        let intersects = engine.rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh)
+        let intersects = rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh)
 
         return .boolean(intersects)
     }.jsValue
 
 func rectangleLevelBoundsCollisionObject(x: Int32, y: Int32, width: Int32, height: Int32) -> JSValue? {
-    guard let entity = engine.rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height) else {
+    guard let r = rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height) else {
         return nil
     }
     let obj = JSObject.global.Object.function!.new()
     obj.type = "levelBounds".jsValue
-    obj.x = entity.x.jsValue
-    obj.y = entity.y.jsValue
-    obj.width = entity.width.jsValue
-    obj.height = entity.height.jsValue
+    obj.x = r.x.jsValue
+    obj.y = r.y.jsValue
+    obj.width = r.width.jsValue
+    obj.height = r.height.jsValue
     return obj.jsValue
 }
 
@@ -64,7 +88,7 @@ func rectangleCollision(
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
         let oh = Int32(otherObj.height.number ?? 0)
-        if engine.rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
+        if rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
             return other
         }
     }
@@ -91,7 +115,7 @@ func rectangleCollisionAll(
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
         let oh = Int32(otherObj.height.number ?? 0)
-        if engine.rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
+        if rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
             result.append(other)
         }
     }

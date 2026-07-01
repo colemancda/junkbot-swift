@@ -190,7 +190,9 @@ let wind = [];
 let laserBeams = [];
 let teleportEffects = [];
 let collectBinTime = -1;
-let currentLevel = {
+// `var` (not `let`) so this is a real `window.currentLevel` property Swift can read directly,
+// instead of JS having to push a copy of the relevant state into Swift on every change.
+var currentLevel = {
 	entities,
 	title: "Custom World",
 };
