@@ -89,8 +89,11 @@ extension GameEngine {
           let e = entityDef.split(separator: ";", omittingEmptySubsequences: false).map(String.init)
           // [0] x, [1] y, [2] type index, [3] color index, [4] starting animation name,
           // [5] starting animation frame, [6] object relation ID (switch/teleport)
-          let x = (Int32(e[0])! - 1) * spacingX
-          let y = (Int32(e[1])! - 1) * spacingY
+          // Coordinates can be fractional (e.g. "13.666666666666666"); JS handles this
+          // implicitly since all its numbers are doubles. Parse as Double and truncate to
+          // Int32 on the final multiplication, matching JS's Number(string) coercion.
+          let x = Int32((Double(e[0])! - 1) * Double(spacingX))
+          let y = Int32((Double(e[1])! - 1) * Double(spacingY))
           let typeName = types[Int(e[2])! - 1].lowercased()
           let colorName = colors[Int(e[3])! - 1].lowercased()
           let colorIndex = Int32(e[3])! - 1
