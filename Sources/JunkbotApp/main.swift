@@ -928,12 +928,12 @@ exports.simulatePipe =
     }.jsValue
 
 func findLinkedTeleportCore(teleport: JSObject, entities: JSObject) -> JSObject? {
-    let teleportID = teleport.teleportID.number
+    let teleportID = teleport.teleportID.jsString
     let length = Int(entities.length.number ?? 0)
     for i in 0..<length {
         guard let other = entities[i].object else { continue }
         guard entityType(other) == teleportType else { continue }
-        guard other.teleportID.number == teleportID else { continue }
+        guard other.teleportID.jsString == teleportID else { continue }
         guard other != teleport else { continue }
         return other
     }
@@ -1477,13 +1477,13 @@ exports.simulateJunkbot =
                 if glType == switchType {
                     let newOn = !(groundLevelEntity.on.boolean == true)
                     groundLevelEntity.on = .boolean(newOn)
-                    let switchID = groundLevelEntity.switchID
+                    let switchID = groundLevelEntity.switchID.jsString
                     let length = Int(entities.length.number ?? 0)
                     for k in 0..<length {
                         guard let other = entities[k].object else { continue }
                         if entityType(other) == switchType { continue }
                         guard other.on != .undefined, other.switchID != .undefined else { continue }
-                        guard other.switchID.number == switchID.number else { continue }
+                        guard other.switchID.jsString == switchID else { continue }
                         other.on = .boolean(!(other.on.boolean == true))
                     }
                     _ = playSound("switchClick")
