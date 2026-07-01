@@ -5980,19 +5980,19 @@ var initGUI = { () -> JSValue in
       return .undefined
     })
 
-  _ = canvas.addEventListener(
+  _ = canvas.addEventListener!(
     "dragover",
     JSClosure { args in
-      _ = args[0].preventDefault!()
+      _ = args[0].preventDefault()
       return .undefined
     })
-  _ = canvas.addEventListener(
+  _ = canvas.addEventListener!(
     "dragenter",
     JSClosure { args in
-      _ = args[0].preventDefault!()
+      _ = args[0].preventDefault()
       return .undefined
     })
-  _ = canvas.addEventListener(
+  _ = canvas.addEventListener!(
     "drop",
     JSClosure { args in
       let event = args[0]
@@ -6008,7 +6008,7 @@ var initGUI = { () -> JSValue in
     let actionCell = tr.cells[1]
     let kbd = controlCell.querySelector("kbd")
     if !kbd.isUndefined && !kbd.isNull {
-      let match = kbd.textContent.match!(
+      let match = kbd.textContent.match(
         JSObject.global.RegExp.function!.new("(Ctrl\\s*\\+\\s*)?(Shift\\s*\\+\\s*)?(\\S+)"))
       if !match.isUndefined && !match.isNull {
         let ctrlKey = match[1].isUndefined == false && match[1].isNull == false
@@ -6033,11 +6033,11 @@ var initGUI = { () -> JSValue in
             _ = canvas.dispatchEvent!(JSObject.global.KeyboardEvent.function!.new("keydown", opts))
             return .undefined
           })
-        _ = wrapContents.function!.callAsFunction(this: JSObject.global, actionCell, button)
+        _ = wrapContents(actionCell, button)
       }
-    } else if controlCell.matches!("th").boolean != true {
+    } else if controlCell.matches("th").boolean != true {
       _ = printJS.function!.callAsFunction(
-        this: JSObject.global, .string("No keyboard shortcut for"), actionCell.textContent, actionCell)
+        this: JSObject.global, JSValue.string("No keyboard shortcut for"), actionCell.textContent, actionCell)
     }
   }
   return .undefined
@@ -6054,11 +6054,11 @@ var getLevelLists = { (res: JSValue) -> JSValue in
       let parsed = JSObject.global.JSON.parse(lsVal)
       let name = (((parsed.level as JSValue) as JSValue).title as JSValue)
       if !name.isUndefined && !name.isNull {
-        _ = localLevels.push(name)
+        _ = localLevels.push!(name)
       } else {
         _ = printJS.function!.callAsFunction(
-          this: JSObject.global, .string("No name found in locally stored level"), .string(key),
-          JSObject.global.localStorage[key])
+          this: JSObject.global, JSValue.string("No name found in locally stored level"), JSValue.string(key),
+          JSObject.global.localStorage[dynamicMember: key])
       }
     }
   }
@@ -6066,7 +6066,7 @@ var getLevelLists = { (res: JSValue) -> JSValue in
   let arr = JSObject.global["Array"].function!.new()
 
   let g1 = JSObject.global.Object.function!.new()
-  g1.game = GAME_JUNKBOT
+  g1.game = .string(GAME_JUNKBOT)
   g1.levelNames = res.levelNames
   g1.levelsPerPage = .number(15.0)
   _ = arr.push(g1)
