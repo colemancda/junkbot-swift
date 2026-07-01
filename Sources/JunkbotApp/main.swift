@@ -5873,13 +5873,13 @@ var initGUI = { () -> JSValue in
     "click",
     JSClosure { _ in
       _ = stopIntro.function!.callAsFunction(this: JSObject.global)
-      _ = showTitleScreen.function!.callAsFunction(this: JSObject.global, .boolean(true))
+      _ = showTitleScreen.function!.callAsFunction(this: JSObject.global, JSValue.boolean(true))
       return .undefined
     })
   _ = resetScreenButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = showTitleScreen.function!.callAsFunction(this: JSObject.global, .boolean(false))
+      _ = showTitleScreen.function!.callAsFunction(this: JSObject.global, JSValue.boolean(false))
       return .undefined
     })
 
@@ -5895,8 +5895,8 @@ var initGUI = { () -> JSValue in
     JSClosure { args in
       let event = args[0]
       let tab = event.target.closest(".level-group-tab")
-      if !tab.isUndefined && !tab.isNull && tab.classList.contains!("selected").boolean != true {
-        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("tabSwitch"))
+      if !tab.isUndefined && !tab.isNull && tab.classList.contains("selected").boolean != true {
+        _ = playSound(.string("tabSwitch"), .undefined, .undefined)
       }
       return .undefined
     })
@@ -5907,14 +5907,17 @@ var initGUI = { () -> JSValue in
       let event = args[0]
       let a = event.target.closest("a")
       if !a.isUndefined && !a.isNull {
-        _ = playSound.function!.callAsFunction(this: JSObject.global, .string("enterLevel"))
+        _ = playSound(.string("enterLevel"), .undefined, .undefined)
       }
       return .undefined
     })
 
   _ = toggleInfoButton.addEventListener("click", toggleInfoBox)
 
-  _ = toggleFullscreenButton.addEventListener("click", toggleFullscreen)
+  _ = toggleFullscreenButton.addEventListener("click", JSClosure { _ in
+    toggleFullscreen()
+    return .undefined
+  })
   toggleFullscreenButton.ariaPressed = .boolean(false)
   _ = JSObject.global.addEventListener!(
     "fullscreenchange",
@@ -5928,10 +5931,10 @@ var initGUI = { () -> JSValue in
   _ = toggleMuteButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = toggleMute.function!.callAsFunction(this: JSObject.global)
+      _ = toggleMute()
       return .undefined
     })
-  _ = updateMuteButton.function!.callAsFunction(this: JSObject.global)
+  _ = updateMuteButton()
 
   _ = toggleEditingButton.addEventListener("click", toggleEditing)
   _ = updateEditingButton.function!.callAsFunction(this: JSObject.global)
