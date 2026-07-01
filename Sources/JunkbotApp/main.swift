@@ -6,6 +6,24 @@ _ = window.console.log("Swift: module started")
 let exports = JSObject.global.Object.function!.new()
 let document = window.document.object!
 
+let dropletType: JSString = "droplet"
+let binType: JSString = "bin"
+let junkbotType: JSString = "junkbot"
+let gearbotType: JSString = "gearbot"
+let climbbotType: JSString = "climbbot"
+let flybotType: JSString = "flybot"
+let eyebotType: JSString = "eyebot"
+let crateType: JSString = "crate"
+
+func entityType(_ e: JSObject) -> JSString? { e.type.jsString }
+func isNotDroplet(_ e: JSObject) -> Bool { entityType(e) != dropletType }
+func isNotBinOrDroplet(_ e: JSObject) -> Bool { entityType(e) != binType && isNotDroplet(e) }
+func isNotBinOrDropletOrEnemyBot(_ e: JSObject) -> Bool {
+    isNotBinOrDroplet(e) && entityType(e) != gearbotType && entityType(e) != climbbotType
+        && entityType(e) != flybotType && entityType(e) != eyebotType
+}
+func isNotDropletOrJunkbot(_ e: JSObject) -> Bool { isNotDroplet(e) && entityType(e) != junkbotType }
+
 func rectanglesIntersect(
     _ ax: Int32, _ ay: Int32, _ aw: Int32, _ ah: Int32,
     _ bx: Int32, _ by: Int32, _ bw: Int32, _ bh: Int32
@@ -142,6 +160,29 @@ func rectangleCollisionAll(
 ) -> [JSValue] {
     rectangleCollisionAllCore(x: x, y: y, width: width, height: height, entities: entities) { obj in
         filter(obj.jsValue).boolean == true
+    }
+}
+
+/// Swift-native analog of the JS `entityCollisionTest` helper: same as `rectangleCollisionCore`, but
+/// using `entity`'s own width/height and excluding `entity` itself from candidates (note: use a
+/// candidate x/y, not `entity`'s own x/y, matching the original's "make sure not to use entity.x/y!").
+func entityCollision(
+    x: Int32, y: Int32, entity: JSObject, entities: JSObject, filter: (JSObject) -> Bool
+) -> JSValue? {
+    let width = Int32(entity.width.number ?? 0)
+    let height = Int32(entity.height.number ?? 0)
+    return rectangleCollisionCore(x: x, y: y, width: width, height: height, entities: entities) { other in
+        other != entity && filter(other)
+    }
+}
+
+func entityCollisionAllSwift(
+    x: Int32, y: Int32, entity: JSObject, entities: JSObject, filter: (JSObject) -> Bool
+) -> [JSValue] {
+    let width = Int32(entity.width.number ?? 0)
+    let height = Int32(entity.height.number ?? 0)
+    return rectangleCollisionAllCore(x: x, y: y, width: width, height: height, entities: entities) { other in
+        other != entity && filter(other)
     }
 }
 
@@ -469,19 +510,6 @@ exports.simulateGravity =
             let entityMoved = args[3].function
         else { return .undefined }
 
-        let dropletType: JSString = "droplet"
-        let junkbotType: JSString = "junkbot"
-        let climbbotType: JSString = "climbbot"
-        let flybotType: JSString = "flybot"
-        let eyebotType: JSString = "eyebot"
-        let gearbotType: JSString = "gearbot"
-        let crateType: JSString = "crate"
-        let binType: JSString = "bin"
-
-        func isNotDroplet(_ e: JSObject) -> Bool {
-            e.type.jsString != dropletType
-        }
-
         let length = Int(entities.length.number ?? 0)
         for i in 0..<length {
             let entityValue = entities[i]
@@ -489,7 +517,7 @@ exports.simulateGravity =
             if entity.fixed.boolean == true { continue }
             if entity.grabbed.boolean == true { continue }
             if entity.floating.boolean == true { continue }
-            let type = entity.type.jsString
+            let type = entityType(entity)
             if type == dropletType || type == junkbotType || type == climbbotType || type == flybotType
                 || type == eyebotType
             {
@@ -580,6 +608,92 @@ exports.hurtJunkbot =
             if cause == waterCause {
                 junkbot.dyingFromWater = .boolean(true)
             }
+        }
+        return .undefined
+    }.jsValue
+
+exports.walk =
+    JSClosure { args in
+        guard let junkbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
+            let playSound = args[3].function
+        else { return .undefined }
+
+        let jx = Int32(junkbot.x.number ?? 0)
+        let jy = Int32(junkbot.y.number ?? 0)
+        let jh = Int32(junkbot.height.number ?? 0)
+        let facing = Int32(junkbot.facing.number ?? 0)
+
+        let frontX = jx + facing * CELL_W
+        let frontY = jy
+
+        // can we step up?
+        if let stepOrWall = entityCollision(
+            x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot
+        )?.object, let wallY = stepOrWall.y.number {
+            let stepUpY = Int32(wallY) - jh
+            if stepUpY - jy >= -CELL_H && stepUpY - jy < 0
+                && entityCollision(
+                    x: frontX, y: stepUpY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet) == nil
+            {
+                junkbot.x = frontX.jsValue
+                junkbot.y = stepUpY.jsValue
+                _ = entityMoved(args[0])
+                return .undefined
+            }
+        }
+
+        // is there solid ground ahead to walk on?
+        let ground = entityCollision(
+            x: frontX, y: frontY + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
+        if ground != nil,
+            entityCollision(x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet)
+                == nil
+        {
+            junkbot.x = frontX.jsValue
+            junkbot.y = frontY.jsValue
+            _ = entityMoved(args[0])
+            return .undefined
+        }
+
+        // can we step down?
+        let stepsBelow = entityCollisionAllSwift(
+            x: frontX, y: frontY + CELL_H + 1, entity: junkbot, entities: entities,
+            filter: isNotBinOrDropletOrEnemyBot)
+        if let step = stepsBelow.compactMap({ $0.object }).min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) }),
+            let stepY = step.y.number
+        {
+            let stepDownY = Int32(stepY) - jh
+            let stepDownHits = entityCollisionAllSwift(
+                x: frontX, y: stepDownY + 1, entity: junkbot, entities: entities,
+                filter: isNotBinOrDropletOrEnemyBot)
+            let stepDown = stepDownHits.compactMap { $0.object }.min(by: {
+                ($0.y.number ?? 0) < ($1.y.number ?? 0)
+            })
+            if stepDownY - jy <= CELL_H && stepDownY - jy > 0 && stepDown != nil
+                && entityCollision(
+                    x: frontX, y: stepDownY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet) == nil
+            {
+                junkbot.x = frontX.jsValue
+                junkbot.y = stepDownY.jsValue
+                _ = entityMoved(args[0])
+                return .undefined
+            }
+        }
+
+        junkbot.facing = (-facing).jsValue
+        _ = playSound("turn")
+        return .string("turned")
+    }.jsValue
+
+exports.simulateJump =
+    JSClosure { args in
+        guard let jump = args[0].object else { return .undefined }
+        let animationFrame = Int32(jump.animationFrame.number ?? 0) + 1
+        if animationFrame >= 5 {
+            jump.animationFrame = .number(0)
+            jump.active = .boolean(false)
+        } else {
+            jump.animationFrame = animationFrame.jsValue
         }
         return .undefined
     }.jsValue

@@ -3650,62 +3650,7 @@ const simulateGravity = () =>
 
 const hurtJunkbot = (junkbot, cause) => window.JunkbotWasm.hurtJunkbot(junkbot, cause, playSound);
 
-const walk = (junkbot) => {
-	const posInFront = { x: junkbot.x + junkbot.facing * 15, y: junkbot.y };
-	const stepOrWall = entityCollisionTest(posInFront.x, posInFront.y, junkbot, notBinOrDropletOrEnemyBot);
-	if (stepOrWall) {
-		// can we step up?
-		const posStepUp = { x: posInFront.x, y: stepOrWall.y - junkbot.height };
-		if (
-			posStepUp.y - junkbot.y >= -18 &&
-			posStepUp.y - junkbot.y < 0 &&
-			!entityCollisionTest(posStepUp.x, posStepUp.y, junkbot, notBinOrDroplet)
-		) {
-			debug("JUNKBOT", "STEP UP");
-			junkbot.x = posStepUp.x;
-			junkbot.y = posStepUp.y;
-			entityMoved(junkbot);
-			return;
-		}
-	}
-	// is there solid ground ahead to walk on?
-	const ground = entityCollisionTest(posInFront.x, posInFront.y + 1, junkbot, notBinOrDropletOrEnemyBot);
-	if (
-		ground &&
-		!entityCollisionTest(posInFront.x, posInFront.y, junkbot, notBinOrDroplet)
-	) {
-		debug("JUNKBOT", "WALK");
-		junkbot.x = posInFront.x;
-		junkbot.y = posInFront.y;
-		entityMoved(junkbot);
-		return;
-	}
-	let step = entityCollisionAll(posInFront.x, posInFront.y + 18 + 1, junkbot, notBinOrDropletOrEnemyBot)
-		.sort((a, b) => a.y - b.y)[0];
-	if (step) {
-		// can we step down?
-		// debug("JUNKBOT", `step: ${JSON.stringify(step, null, "\t")}`);
-		const posStepDown = { x: posInFront.x, y: step.y - junkbot.height };
-		step = entityCollisionAll(posStepDown.x, posStepDown.y + 1, junkbot, notBinOrDropletOrEnemyBot)
-			.sort((a, b) => a.y - b.y)[0];
-		if (
-			posStepDown.y - junkbot.y <= 18 &&
-			posStepDown.y - junkbot.y > 0 &&
-			step &&
-			!entityCollisionTest(posStepDown.x, posStepDown.y, junkbot, notBinOrDroplet)
-		) {
-			debug("JUNKBOT", "STEP DOWN");
-			junkbot.x = posStepDown.x;
-			junkbot.y = posStepDown.y;
-			entityMoved(junkbot);
-			return;
-		}
-	}
-	debug("JUNKBOT", "CLIFF/WALL/BOT - TURN AROUND");
-	junkbot.facing *= -1;
-	playSound("turn");
-	return "turned";
-};
+const walk = (junkbot) => window.JunkbotWasm.walk(junkbot, entities, entityMoved, playSound);
 
 const findLinkedTeleport = (teleport) => (
 	entities.find((entity) => (
@@ -4203,13 +4148,7 @@ const simulatePipe = (pipe) => {
 	}
 };
 
-const simulateJump = (jump) => {
-	jump.animationFrame += 1;
-	if (jump.animationFrame >= 5) {
-		jump.animationFrame = 0;
-		jump.active = false;
-	}
-};
+const simulateJump = (jump) => window.JunkbotWasm.simulateJump(jump);
 
 const notDropletOrJunkbot = (entity) => entity.type !== "droplet" && entity.type !== "junkbot";
 const simulateTeleport = (teleport) => {
