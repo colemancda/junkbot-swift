@@ -66,13 +66,13 @@ extension GameEngine {
   func makeCrate(x: Int32, y: Int32) -> Entity {
     Entity(
       id: getID(), type: .crate, x: x, y: y,
-      width: 2 * CELL_W, height: 2 * CELL_H)
+      width: 3 * CELL_W, height: 2 * CELL_H)
   }
 
   func makeFire(x: Int32, y: Int32, on: Bool, switchID: Int32 = -1) -> Entity {
     var e = Entity(
       id: getID(), type: .fire, x: x, y: y,
-      width: CELL_W, height: CELL_H)
+      width: 4 * CELL_W, height: CELL_H)
     e.on = on
     e.switchID = switchID
     e.fixed = true
@@ -82,7 +82,7 @@ extension GameEngine {
   func makeFan(x: Int32, y: Int32, on: Bool, switchID: Int32 = -1) -> Entity {
     var e = Entity(
       id: getID(), type: .fan, x: x, y: y,
-      width: 4 * CELL_W, height: 2 * CELL_H)
+      width: 4 * CELL_W, height: CELL_H)
     e.on = on
     e.switchID = switchID
     e.fixed = true
@@ -102,7 +102,7 @@ extension GameEngine {
   func makeTeleport(x: Int32, y: Int32, teleportID: Int32 = -1) -> Entity {
     var e = Entity(
       id: getID(), type: .teleport, x: x, y: y,
-      width: 4 * CELL_W, height: 2 * CELL_H)
+      width: 4 * CELL_W, height: CELL_H)
     e.teleportID = teleportID
     e.fixed = true
     return e
@@ -139,7 +139,7 @@ extension GameEngine {
   func makePipe(x: Int32, y: Int32) -> Entity {
     var e = Entity(
       id: getID(), type: .pipe, x: x, y: y,
-      width: 2 * CELL_W, height: 2 * CELL_H)
+      width: 2 * CELL_W, height: CELL_H)
     e.fixed = true
     e.timer = randomInt(MAX_DRIP_PERIOD - MIN_DRIP_PERIOD) + MIN_DRIP_PERIOD
     return e
