@@ -1,3 +1,5 @@
+/// A lightweight, render-only bounding box (as opposed to `Entity`, whose `Int32` coordinates are
+/// grid-aligned for gameplay purposes). Used purely as input to `sortOrderForRendering`.
 public struct RenderBox: Sendable {
   public var x, y, width, height: Double
   public init(x: Double, y: Double, width: Double, height: Double) {
@@ -8,7 +10,10 @@ public struct RenderBox: Sendable {
   }
 }
 
-/// Returns the indices of `boxes` in painter's-algorithm rendering order.
+/// Returns the indices of `boxes` in painter's-algorithm rendering order: bottom-to-top by
+/// default (so nearer/lower objects draw over farther/higher ones), then bubbled forward past
+/// anything it doesn't vertically or horizontally overlap, so unrelated boxes at the same rough
+/// height don't fight over draw order.
 public func sortOrderForRendering(_ boxes: [RenderBox]) -> [Int] {
   var order = Array(boxes.indices)
   order.sort { boxes[$0].y > boxes[$1].y }
