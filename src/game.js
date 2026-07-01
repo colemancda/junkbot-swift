@@ -3652,13 +3652,7 @@ const hurtJunkbot = (junkbot, cause) => window.JunkbotWasm.hurtJunkbot(junkbot, 
 
 const walk = (junkbot) => window.JunkbotWasm.walk(junkbot, entities, entityMoved, playSound);
 
-const findLinkedTeleport = (teleport) => (
-	entities.find((entity) => (
-		entity.type === "teleport" &&
-		entity.teleportID === teleport.teleportID &&
-		entity !== teleport
-	))
-);
+const findLinkedTeleport = (teleport) => window.JunkbotWasm.findLinkedTeleport(teleport, entities);
 
 const simulateJunkbot = (junkbot) => {
 	const aboveHead = entityCollisionTest(junkbot.x, junkbot.y - 1, junkbot, notDroplet);
@@ -4038,43 +4032,13 @@ const simulateDroplet = (droplet) =>
 
 const maxDripPeriod = 50;
 const minDripPeriod = 20;
-const simulatePipe = (pipe) => {
-	pipe.timer -= 1;
-	// @TODO: how do pipe drips work in the original game?
-	// - after X time, C% chance every frame? (maybe with a max of Y time?)
-	// - timer set to random value between X and Y?
-	// - only initial randomization, consistent interval after that, just offset from other pipes
-	if (pipe.timer === 0) {
-		entities.push(makeDroplet({
-			x: pipe.x,
-			y: pipe.y,
-		}));
-	}
-	if (pipe.timer <= 0) { // includes initial -1 for initial randomization
-		pipe.timer = Math.floor(Math.random() * (maxDripPeriod - minDripPeriod)) + minDripPeriod;
-	}
-};
+const simulatePipe = (pipe) => window.JunkbotWasm.simulatePipe(pipe, entities, getID);
 
 const simulateJump = (jump) => window.JunkbotWasm.simulateJump(jump);
 
 const notDropletOrJunkbot = (entity) => entity.type !== "droplet" && entity.type !== "junkbot";
-const simulateTeleport = (teleport) => {
-	if (teleport.timer > 0) {
-		teleport.timer -= 1;
-	}
-	const targetTeleport = findLinkedTeleport(teleport);
-	teleport.blocked =
-		!targetTeleport ||
-		rectangleCollisionTest(teleport.x + 15, teleport.y - 18 * 4, 15 * 2, 18 * 4, notDropletOrJunkbot) ||
-		rectangleCollisionTest(targetTeleport.x + 15, targetTeleport.y - 18 * 4, 15 * 2, 18 * 4, notDropletOrJunkbot);
-	if (teleport.timer > TELEPORT_COOLDOWN - TELEPORT_EFFECT_PERIOD) {
-		teleportEffects.push({
-			x: teleport.x + 15,
-			y: teleport.y, // - 18 * 4,
-			frameIndex: (teleport.timer % 3),
-		});
-	}
-};
+const simulateTeleport = (teleport) =>
+	window.JunkbotWasm.simulateTeleport(teleport, entities, teleportEffects);
 
 // #endregion
 //

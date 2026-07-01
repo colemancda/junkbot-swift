@@ -14,6 +14,10 @@ let climbbotType: JSString = "climbbot"
 let flybotType: JSString = "flybot"
 let eyebotType: JSString = "eyebot"
 let crateType: JSString = "crate"
+let teleportType: JSString = "teleport"
+
+let TELEPORT_COOLDOWN: Int32 = 50
+let TELEPORT_EFFECT_PERIOD: Int32 = 20
 
 func entityType(_ e: JSObject) -> JSString? { e.type.jsString }
 func isNotDroplet(_ e: JSObject) -> Bool { entityType(e) != dropletType }
@@ -863,6 +867,95 @@ exports.simulateDroplet =
                 _ = playSound(dripSounds[Int.random(in: 0..<3)])
                 break
             }
+        }
+        return .undefined
+    }.jsValue
+
+let maxDripPeriod: Int32 = 50
+let minDripPeriod: Int32 = 20
+
+exports.simulatePipe =
+    JSClosure { args in
+        guard let pipe = args[0].object, let entities = args[1].object, let getID = args[2].function
+        else { return .undefined }
+
+        let timer = Int32(pipe.timer.number ?? 0) - 1
+        pipe.timer = timer.jsValue
+
+        // @TODO (kept from the original): how do pipe drips actually work in the original game?
+        if timer == 0 {
+            let droplet = makeEntityBase(
+                id: getID(), type: "droplet", x: pipe.x, y: pipe.y, width: CELL_W, height: CELL_H)
+            droplet.splashing = .boolean(false)
+            droplet.animationFrame = .number(0)
+            _ = entities.push!(droplet.jsValue)
+        }
+        if timer <= 0 {  // includes initial -1 for initial randomization
+            let period = Int32.random(in: 0..<(maxDripPeriod - minDripPeriod)) + minDripPeriod
+            pipe.timer = period.jsValue
+        }
+        return .undefined
+    }.jsValue
+
+func findLinkedTeleportCore(teleport: JSObject, entities: JSObject) -> JSObject? {
+    let teleportID = teleport.teleportID.number
+    let length = Int(entities.length.number ?? 0)
+    for i in 0..<length {
+        guard let other = entities[i].object else { continue }
+        guard entityType(other) == teleportType else { continue }
+        guard other.teleportID.number == teleportID else { continue }
+        guard other != teleport else { continue }
+        return other
+    }
+    return nil
+}
+
+exports.findLinkedTeleport =
+    JSClosure { args in
+        guard let teleport = args[0].object, let entities = args[1].object else { return .undefined }
+        return findLinkedTeleportCore(teleport: teleport, entities: entities)?.jsValue ?? .undefined
+    }.jsValue
+
+exports.simulateTeleport =
+    JSClosure { args in
+        guard let teleport = args[0].object, let entities = args[1].object, let teleportEffects = args[2].object
+        else { return .undefined }
+
+        var timer = Int32(teleport.timer.number ?? 0)
+        if timer > 0 {
+            timer -= 1
+            teleport.timer = timer.jsValue
+        }
+
+        let target = findLinkedTeleportCore(teleport: teleport, entities: entities)
+        let tx = Int32(teleport.x.number ?? 0)
+        let ty = Int32(teleport.y.number ?? 0)
+
+        var blocked = true
+        if let target = target {
+            let selfBlocked =
+                rectangleCollisionCore(
+                    x: tx + CELL_W, y: ty - CELL_H * 4, width: CELL_W * 2, height: CELL_H * 4, entities: entities,
+                    filter: isNotDropletOrJunkbot) != nil
+            if selfBlocked {
+                blocked = true
+            } else {
+                let tgx = Int32(target.x.number ?? 0)
+                let tgy = Int32(target.y.number ?? 0)
+                blocked =
+                    rectangleCollisionCore(
+                        x: tgx + CELL_W, y: tgy - CELL_H * 4, width: CELL_W * 2, height: CELL_H * 4,
+                        entities: entities, filter: isNotDropletOrJunkbot) != nil
+            }
+        }
+        teleport.blocked = .boolean(blocked)
+
+        if timer > TELEPORT_COOLDOWN - TELEPORT_EFFECT_PERIOD {
+            let effect = JSObject.global.Object.function!.new()
+            effect.x = (tx + CELL_W).jsValue
+            effect.y = ty.jsValue
+            effect.frameIndex = (timer % 3).jsValue
+            _ = teleportEffects.push!(effect.jsValue)
         }
         return .undefined
     }.jsValue
