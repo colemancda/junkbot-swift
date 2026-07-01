@@ -17,17 +17,17 @@ exports.game_init =
 
 exports.rectanglesIntersect =
     JSClosure { args in
-        let ax = args[0].number ?? 0
-        let ay = args[1].number ?? 0
-        let aw = args[2].number ?? 0
-        let ah = args[3].number ?? 0
+        let ax = Int32(args[0].number ?? 0)
+        let ay = Int32(args[1].number ?? 0)
+        let aw = Int32(args[2].number ?? 0)
+        let ah = Int32(args[3].number ?? 0)
 
-        let bx = args[4].number ?? 0
-        let by = args[5].number ?? 0
-        let bw = args[6].number ?? 0
-        let bh = args[7].number ?? 0
+        let bx = Int32(args[4].number ?? 0)
+        let by = Int32(args[5].number ?? 0)
+        let bw = Int32(args[6].number ?? 0)
+        let bh = Int32(args[7].number ?? 0)
 
-        let intersects = ax + aw > bx && ax < bx + bw && ay + ah > by && ay < by + bh
+        let intersects = engine.rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh)
 
         return .boolean(intersects)
     }.jsValue
