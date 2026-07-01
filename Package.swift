@@ -6,7 +6,7 @@ let package = Package(
   platforms: [.macOS(.v14)],
   dependencies: [
     .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0"),
-    .package(url: "https://github.com/MillerTechnologyPeru/swift-lingo.git", branch: "master")
+    .package(url: "https://github.com/MillerTechnologyPeru/swift-lingo.git", branch: "master"),
   ],
   targets: [
     .target(
@@ -24,12 +24,13 @@ let package = Package(
     .executableTarget(
       name: "JunkbotApp",
       dependencies: [
+        "JunkbotCore",
         .product(name: "JavaScriptKit", package: "JavaScriptKit"),
         .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
       swiftSettings: [
         .unsafeFlags(["-wmo", "-Osize"]),
-        .swiftLanguageMode(.v5)
+        .swiftLanguageMode(.v5),
       ],
     ),
   ]
