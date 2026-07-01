@@ -598,12 +598,7 @@ const sortEntitiesForRendering = (entities) => {
 //                                                                                                 |__|_|
 // #region Collision Tests
 
-const rectanglesIntersect = (ax, ay, aw, ah, bx, by, bw, bh) => (
-	ax + aw > bx &&
-	ax < bx + bw &&
-	ay + ah > by &&
-	ay < by + bh
-);
+const rectanglesIntersect = window.JunkbotWasm.rectanglesIntersect;
 
 const rectangleLevelBoundsCollisionTest = (x, y, width, height) => {
 	const { bounds } = currentLevel;
