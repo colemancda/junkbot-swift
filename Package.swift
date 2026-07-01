@@ -28,9 +28,9 @@ let package = Package(
         .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
       swiftSettings: [
-        .enableUpcomingFeature("ApproachableConcurrency"),
-        .unsafeFlags(["-wmo", "-Osize"])
-      ]
+        .unsafeFlags(["-wmo", "-Osize"]),
+        .swiftLanguageMode(.v5)
+      ],
     ),
   ]
 )
