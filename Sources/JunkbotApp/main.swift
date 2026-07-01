@@ -5524,14 +5524,14 @@ var checkLevelEnd = { () -> JSValue in
           _ = playSound(.string(r < 0.5 ? "ouch" : "uhoh"), .undefined, .undefined)
           return .undefined
         }
-        _ = JSObject.global.setTimeout(c.object, 1000.0)
+        _ = JSObject.global.setTimeout!(c.object, 1000.0)
       }
     }
     if wol == "win" && !paused {
       paused = true
       if !testing {
         let n = JSObject.global.Date.now().number ?? 0.0
-        let timeSinceCollectBin = n - (collectBinTime.number ?? 0.0)
+        let timeSinceCollectBin = n - collectBinTime
         let levelAtWin = currentLevel
         let c = JSClosure { _ in
           let isSame = JSObject.global.Object.is(currentLevel, levelAtWin).boolean == true
@@ -5545,7 +5545,7 @@ var checkLevelEnd = { () -> JSValue in
           {
             let scoreKey = storageKeys["score"]?.function?.callAsFunction(this: JSObject.global, titleStr).string ?? ""
             let solutionKey = storageKeys["solutionRecording"]?.function?.callAsFunction(this: JSObject.global, titleStr).string ?? ""
-            let formerFewestStr = JSObject.global.localStorage[scoreKey].string ?? "NaN"
+            let formerFewestStr = JSObject.global.localStorage[dynamicMember: scoreKey].string ?? "NaN"
             let formerFewest = Double(formerFewestStr) ?? .nan
 
             let mvs = moves.number ?? 0.0
@@ -6654,14 +6654,14 @@ var showLevelLoseUI = { () -> JSValue in
     _ = hintBtns.push!(hb)
 
     let hArgsArr = JSObject.global["Array"].function!.new()
-    _ = hArgsArr.push(heading)
-    _ = hArgsArr.push(currentLevel.hint)
+    _ = hArgsArr.push!(heading)
+    _ = hArgsArr.push!(currentLevel.hint)
 
     let hOpts = JSObject.global.Object.function!.new()
-    hOpts.buttons = hintBtns
+    hOpts.buttons = hintBtns.jsValue
     hOpts.className = .string("hint-dialog")
 
-    _ = showMessageBox.function!.callAsFunction(this: JSObject.global, hArgsArr, hOpts)
+    _ = showMessageBox(hArgsArr.jsValue, hOpts.jsValue)
     return .undefined
   }.jsValue
   _ = buttons.jsValue.push(b2)
@@ -6669,7 +6669,7 @@ var showLevelLoseUI = { () -> JSValue in
   let b3 = JSObject.global.Object.function!.new()
   b3.label = .string("Try Again")
   b3.action = JSClosure { _ in
-    _ = loadFromHash.function!.callAsFunction(this: JSObject.global)
+    _ = loadFromHash()
     paused = false
     return .undefined
   }.jsValue
@@ -6678,11 +6678,11 @@ var showLevelLoseUI = { () -> JSValue in
 
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
-  _ = arr2.push(div)
-  opts.buttons = buttons
+  _ = arr2.push!(div)
+  opts.buttons = buttons.jsValue
   opts.className = .string("level-lose")
 
-  _ = nonErrorDialogs.push(showMessageBox.function!.callAsFunction(this: JSObject.global, arr2, opts))
+  nonErrorDialogs.append(showMessageBox(arr2.jsValue, opts.jsValue))
   return .undefined
 }
 
