@@ -1,5 +1,5 @@
 {
-  "originHash" : "e03ec675b9f03059c8cd48b19addf23a23dd5e0290f19d10450549108074fcbd",
+  "originHash" : "32c272d8bf8504dba6caf877c6a28d1e47216d1410c2f95b1c652a4e13e99c01",
   "pins" : [
     {
       "identity" : "javascriptkit",
@@ -25,7 +25,7 @@
       "location" : "https://github.com/MillerTechnologyPeru/swift-lingo.git",
       "state" : {
         "branch" : "master",
-        "revision" : "a03b282783e3a5e34c419ea0a6e54e1f5f033ab5"
+        "revision" : "b3503c89ef142ccc198d2f2dc52188f33f129e75"
       }
     },
     {
