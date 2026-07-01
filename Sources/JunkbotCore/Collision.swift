@@ -1,6 +1,6 @@
 extension GameEngine {
 
-  func rectanglesIntersect(
+  public func rectanglesIntersect(
     _ ax: Int32, _ ay: Int32, _ aw: Int32, _ ah: Int32,
     _ bx: Int32, _ by: Int32, _ bw: Int32, _ bh: Int32
   ) -> Bool {
