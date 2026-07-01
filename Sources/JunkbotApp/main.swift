@@ -5593,16 +5593,16 @@ var animate = JSClosure { args in
 
 _ = JSObject.global.eval!(
   #"""
-  var toggleInfoBox = function() {
+  const toggleInfoBox = () => {
   	infoBox.hidden = !infoBox.hidden;
   	toggleInfoButton.setAttribute("aria-expanded", infoBox.hidden ? "false" : "true");
   };
 
-  var playedJunkbotIntro = false;
-  var playedJunkbotUndercoverIntro = false;
-  var ruffle = window.RufflePlayer.newest();
-  var rufflePlayer;
-  var stopIntro = function() {
+  let playedJunkbotIntro = false;
+  let playedJunkbotUndercoverIntro = false;
+  const ruffle = window.RufflePlayer.newest();
+  let rufflePlayer;
+  const stopIntro = () => {
   	introContainer.hidden = true;
   	skipIntroButton.hidden = true;
   	resetScreenButton.hidden = false;
@@ -5610,14 +5610,14 @@ _ = JSObject.global.eval!(
   	rufflePlayer?.remove();
   	rufflePlayer = null;
 
-  	const { game } = parseRoute.function!(location.hash);
-  	junkbotUndercoverTitle.hidden = game != GAME_JUNKBOT_UNDERCOVER;
+  	const { game } = parseRoute(location.hash);
+  	junkbotUndercoverTitle.hidden = game !== GAME_JUNKBOT_UNDERCOVER;
   };
-  var hideTitleScreen = function() {
+  const hideTitleScreen = () => {
   	titleScreen.hidden = true;
   	stopIntro();
   };
-  var showTitleScreen = function(showIntro) {
+  const showTitleScreen = (showIntro) => {
 
   	// don't show editor UI on the title screen!
   	if (editing) {
@@ -5630,26 +5630,26 @@ _ = JSObject.global.eval!(
   	junkbotUndercoverTitle.hidden = true;
   	initLevel(resources.titleScreenLevel);
   	titleScreen.classList.add("title-screen-level-loaded");
-  	const { game } = parseRoute.function!(location.hash);
-  	if (game == GAME_JUNKBOT) {
+  	const { game } = parseRoute(location.hash);
+  	if (game === GAME_JUNKBOT) {
   		showIntro ??= !playedJunkbotIntro;
-  	} else if (game == GAME_JUNKBOT_UNDERCOVER) {
+  	} else if (game === GAME_JUNKBOT_UNDERCOVER) {
   		showIntro ??= !playedJunkbotUndercoverIntro;
   	} else {
   		showIntro = false;
   	}
   	if (showIntro) {
-  		if (game == GAME_JUNKBOT) {
+  		if (game === GAME_JUNKBOT) {
   			playedJunkbotIntro = true;
-  		} else if (game == GAME_JUNKBOT_UNDERCOVER) {
+  		} else if (game === GAME_JUNKBOT_UNDERCOVER) {
   			playedJunkbotUndercoverIntro = true;
   		}
   		replayIntroButton.hidden = false;
   		rufflePlayer = ruffle.createPlayer();
-  		rufflePlayer.classList.toggle("metal-border", game == GAME_JUNKBOT);
+  		rufflePlayer.classList.toggle("metal-border", game === GAME_JUNKBOT);
   		introContainer.appendChild(rufflePlayer);
-  		introContainer.classList.toggle("undercover-intro", game == GAME_JUNKBOT_UNDERCOVER);
-  		var swf = game == GAME_JUNKBOT_UNDERCOVER ? "flash/junkbot_undercover_intro.swf" : "flash/junkbot_intro.swf";
+  		introContainer.classList.toggle("undercover-intro", game === GAME_JUNKBOT_UNDERCOVER);
+  		const swf = game === GAME_JUNKBOT_UNDERCOVER ? "flash/junkbot_undercover_intro.swf" : "flash/junkbot_intro.swf";
   		rufflePlayer.load(swf).then(() => {
   			// Note: It may not actually be loaded!
   			// @TODO: handle failing to load the SWF somehow? more monkey-patching?
@@ -5664,16 +5664,16 @@ _ = JSObject.global.eval!(
   			// This causes a bewildering permission prompt to run xdg-open (at least for me on XFCE),
   			// We need to intercept it also to handle the timed events.
   			window.monkeyPatchedRuffleLocationAssign = (url) => {
-  				if (url == "lingo:glob.download_manager.animDone()") {
+  				if (url === "lingo:glob.download_manager.animDone()") {
   					stopIntro();
-  				} else if (url == "lingo:glob.jbxtitle_a.show()") {
+  				} else if (url === "lingo:glob.jbxtitle_a.show()") {
   					// @TODO: for Junkbot Undercover, split GAME_JUNKBOT part of title,
   					// to show it at this time
-  				} else if (url == "lingo:glob.jbxtitle_b.show()") {
+  				} else if (url === "lingo:glob.jbxtitle_b.show()") {
   					junkbotUndercoverTitle.hidden = false;
   				} else {
   					// eslint-disable-next-line no-console
-  					console.log("Prevented Ruffle's location.assign from loading", url);
+  					console.warn("Prevented Ruffle's location.assign from loading", url);
   				}
   			};
   			rufflePlayer.play();
@@ -5684,15 +5684,15 @@ _ = JSObject.global.eval!(
   			// Note: the promise doesn't reject if the Flash file is not found.
   			stopIntro();
   			// eslint-disable-next-line no-console
-  			console.log("Failed to load Flash movie with Ruffle:", error);
+  			console.error("Failed to load Flash movie with Ruffle:", error);
   		});
   	} else {
   		resetScreenButton.hidden = false;
-  		junkbotUndercoverTitle.hidden = game != GAME_JUNKBOT_UNDERCOVER;
+  		junkbotUndercoverTitle.hidden = game !== GAME_JUNKBOT_UNDERCOVER;
   	}
   };
 
-  var showLevelSelectScreen = function(game, levelGroupName) {
+  const showLevelSelectScreen = (game, levelGroupName) => {
   	// don't show editor UI on the level select screen!
   	if (editing) {
   		toggleEditing();
@@ -5701,16 +5701,16 @@ _ = JSObject.global.eval!(
 
   	levelSelectScreen.hidden = false;
 
-  	var levelNamesToShow = [];
-  	var paginated = true;
-  	var levelGroupNumber = parseInt((levelGroupName ?? "").replace(/\D/g, ""), 10);
+  	let levelNamesToShow = [];
+  	let paginated = true;
+  	let levelGroupNumber = parseInt((levelGroupName ?? "").replace(/\D/g, ""), 10);
   	if (isNaN(levelGroupNumber)) {
   		levelGroupNumber = 1;
   	}
-  	for (var list of getLevelLists(resources)) {
-  		if (gameNameToSlug(game) == gameNameToSlug(list.game)) {
+  	for (const list of getLevelLists(resources)) {
+  		if (gameNameToSlug(game) === gameNameToSlug(list.game)) {
   			levelNamesToShow = list.levelNames.slice((levelGroupNumber - 1) * list.levelsPerPage, levelGroupNumber * list.levelsPerPage);
-  			if (list.levelsPerPage == Infinity) {
+  			if (list.levelsPerPage === Infinity) {
   				paginated = false;
   			}
   			break;
@@ -5721,17 +5721,17 @@ _ = JSObject.global.eval!(
 
   	junkbotPagination.hidden = true;
   	junkbotUndercoverPagination.hidden = true;
-  	if (game == GAME_JUNKBOT) {
+  	if (game === GAME_JUNKBOT) {
   		junkbotPagination.hidden = false;
-  	} else if (game == GAME_JUNKBOT_UNDERCOVER) {
+  	} else if (game === GAME_JUNKBOT_UNDERCOVER) {
   		junkbotUndercoverPagination.hidden = false;
   	}
-  	var tabs = (game == GAME_JUNKBOT ? junkbotPagination : junkbotUndercoverPagination).querySelectorAll(".level-group-tab");
-  	for (var i = 0; i < tabs.length; i++) {
-  		var tab = tabs[i];
-  		tab.classList.toggle("selected", i == levelGroupNumber - 1);
+  	const tabs = (game === GAME_JUNKBOT ? junkbotPagination : junkbotUndercoverPagination).querySelectorAll(".level-group-tab");
+  	for (let i = 0; i < tabs.length; i++) {
+  		const tab = tabs[i];
+  		tab.classList.toggle("selected", i === levelGroupNumber - 1);
   	}
-  	if (levelNamesToShow.length == 0) {
+  	if (levelNamesToShow.length === 0) {
   		showErrorMessage(`No levels found for game "${game}" and group "${levelGroupName}"`, {
   			buttons: [
   				{
@@ -5746,45 +5746,45 @@ _ = JSObject.global.eval!(
   		return;
   	}
 
-  	var n = 0;
-  	for (let levelName of levelNamesToShow) {
+  	let n = 0;
+  	for (const levelName of levelNamesToShow) {
   		n += 1;
-  		var li = document.createElement!("li");
+  		const li = document.createElement("li");
   		li.className = "level-list-item";
-  		var a = document.createElement!("a");
+  		const a = document.createElement("a");
   		if (paginated) {
   			a.href = `#${gameNameToSlug(game)}/levels/${levelGroupToSlug(`${levelGroupNumber}`, game)}/${levelNameToSlug(levelName)}`;
   		} else {
   			a.href = `#${gameNameToSlug(game)}/levels/${levelNameToSlug(levelName)}`;
   		}
-  		var completedInMoves;
+  		let completedInMoves;
   		try {
-  			if (game != GAME_USER_CREATED) {
+  			if (game !== GAME_USER_CREATED) {
   				completedInMoves = localStorage[storageKeys.score(levelName)];
   			}
   		} catch (error) {
   			// no score tracking :/
   			// @TODO: unlock all levels if there's an error? um, once there's any locking.
   		}
-  		var completed = typeof completedInMoves != "undefined";
+  		const completed = typeof completedInMoves !== "undefined";
 
-  		var completedImg = document.createElement!("img");
+  		const completedImg = document.createElement("img");
   		completedImg.className = "level-list-item-completed-indicator";
   		completedImg.src = completed ? "images/menus/checkbox_on.png" : "images/menus/checkbox_off.png";
-  		var goldAwardImg = document.createElement!("img");
+  		const goldAwardImg = document.createElement("img");
   		goldAwardImg.src = "images/menus/check_light.png";
   		goldAwardImg.hidden = true;
   		goldAwardImg.className = "level-list-item-gold-award";
-  		var score = document.createElement!("span");
+  		const score = document.createElement("span");
   		score.className = "level-list-item-score";
   		score.textContent = completedInMoves;
-  		var title = document.createElement!("span");
+  		const title = document.createElement("span");
   		title.className = "level-list-item-title";
   		title.textContent = levelName;
-  		var ordinal = document.createElement!("span");
+  		const ordinal = document.createElement("span");
   		ordinal.className = "level-list-item-ordinal";
   		ordinal.textContent = n;
-  		if (game != GAME_USER_CREATED) {
+  		if (game !== GAME_USER_CREATED) {
   			a.append(ordinal, completedImg, goldAwardImg, title, score);
   		} else {
   			a.append(ordinal, title);
@@ -5792,13 +5792,13 @@ _ = JSObject.global.eval!(
 
   		if (completedInMoves) {
   			loadLevelByName({ game, levelName }).then((level) => {
-  				var metPar = completedInMoves <= level.par;
+  				const metPar = completedInMoves <= level.par;
   				if (metPar) {
   					goldAwardImg.hidden = false;
   				}
   			}, (error) => {
   				// eslint-disable-next-line no-console
-  				console.log("Failed to load level for score display:", error);
+  				console.error("Failed to load level for score display:", error);
   			});
   		}
 
@@ -5806,27 +5806,27 @@ _ = JSObject.global.eval!(
   		levelList.appendChild(li);
   	}
   };
-  var hideLevelSelectScreen = function() {
+  const hideLevelSelectScreen = () => {
   	levelSelectScreen.hidden = true;
   };
 
-  var getLevelSelectURL = function() {
-  	const { game, levelGroup } = parseRoute.function!(location.hash);
+  const getLevelSelectURL = () => {
+  	const { game, levelGroup } = parseRoute(location.hash);
   	return `#${gameNameToSlug(game)}/levels${levelGroup ? `/${levelGroup}` : ""}`;
   };
-  var getTitleScreenURL = function() {
-  	const { game } = parseRoute.function!(location.hash);
+  const getTitleScreenURL = () => {
+  	const { game } = parseRoute(location.hash);
   	return `#${gameNameToSlug(game)}`;
   };
 
   window.toggleInfoBox = toggleInfoBox;
-  window.stopIntro = stopIntro;
-  window.hideTitleScreen = hideTitleScreen;
-  window.showTitleScreen = showTitleScreen;
-  window.showLevelSelectScreen = showLevelSelectScreen;
-  window.hideLevelSelectScreen = hideLevelSelectScreen;
-  window.getLevelSelectURL = getLevelSelectURL;
-  window.getTitleScreenURL = getTitleScreenURL;
+    window.stopIntro = stopIntro;
+    window.hideTitleScreen = hideTitleScreen;
+    window.showTitleScreen = showTitleScreen;
+    window.showLevelSelectScreen = showLevelSelectScreen;
+    window.hideLevelSelectScreen = hideLevelSelectScreen;
+    window.getLevelSelectURL = getLevelSelectURL;
+    window.getTitleScreenURL = getTitleScreenURL;
   """#)
 
 var toggleInfoBox = JSObject.global.toggleInfoBox
