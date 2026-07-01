@@ -278,13 +278,18 @@ exports.set_viewport = JSClosure { args in
 }.jsValue
 
 exports.set_rng_seed = JSClosure { args in
-    // No easy way to set state since it was encapsulated in the struct/class directly, but let's re-init rng
-    var state = UInt32(args[0].number!)
-    engine.rng = {
-        state ^= state << 13
-        state ^= state >> 17
-        state ^= state << 5
-        return Float(state & 0x7FFF_FFFF) / Float(0x7FFF_FFFF)
+    if let js_rng = args[0].function {
+        engine.rng = {
+            return Float(js_rng().number!)
+        }
+    } else if let num = args[0].number {
+        var state = UInt32(num)
+        engine.rng = {
+            state ^= state << 13
+            state ^= state >> 17
+            state ^= state << 5
+            return Float(state & 0x7FFF_FFFF) / Float(0x7FFF_FFFF)
+        }
     }
     return .undefined
 }.jsValue
