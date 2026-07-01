@@ -193,6 +193,9 @@ exports.winOrLose =
         guard let entities = args[0].object else { return .string("") }
         let length = Int(entities.length.number ?? 0)
 
+        let junkbotType: JSString = "junkbot"
+        let binType: JSString = "bin"
+
         var anyJunkbotAlive = false
         var anyJunkbotAliveNotDying = false
         var anyBin = false
@@ -200,8 +203,8 @@ exports.winOrLose =
 
         for i in 0..<length {
             guard let e = entities[i].object else { continue }
-            let type = e.type.string ?? ""
-            if type == "junkbot" {
+            let type = e.type.jsString
+            if type == junkbotType {
                 let dead = e.dead.boolean == true
                 let dying = e.dying.boolean == true
                 if !dead {
@@ -209,7 +212,7 @@ exports.winOrLose =
                     if !dying { anyJunkbotAliveNotDying = true }
                 }
             }
-            if type == "bin" { anyBin = true }
+            if type == binType { anyBin = true }
             if e.collectingBin.boolean == true { allNotCollectingBin = false }
         }
 
@@ -243,7 +246,7 @@ exports.rebuildAccelerationStructures =
         func buildMap(_ grouping: [Int32: [Int]]) -> JSValue {
             let obj = JSObject.global.Object.function!.new()
             for (y, indices) in grouping {
-                obj[String(y)] = indices.map { elements[$0] }.jsValue
+                obj[Int(y)] = indices.map { elements[$0] }.jsValue
             }
             return obj.jsValue
         }
