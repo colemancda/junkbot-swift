@@ -3,11 +3,17 @@ extension GameEngine {
   // MARK: - Win / Lose
 
   func winOrLose() -> Int32 {
-    let hasBins = entities.contains(where: { $0.type == .bin && !$0.removeBeforeRender })
-    let hasJunkbot = entities.contains(where: { $0.type == .junkbot })
-    if !hasBins { return 1 }
-    if !hasJunkbot { return 2 }
-    if entities.first(where: { $0.type == .junkbot })?.dead == true { return 2 }
+    // Mirrors the original JS: junkbot's alive/dead state takes precedence over bin state, so
+    // a level can flip from "win" back to "lose" on a later frame if the junkbot dies after
+    // already collecting every bin (e.g. a hazard that only becomes active post-victory).
+    let aliveJunkbot = entities.contains(where: { $0.type == .junkbot && !$0.dead })
+    guard aliveJunkbot else { return 2 }  // lose
+    let someAliveNotDying = entities.contains(where: { $0.type == .junkbot && !$0.dead && !$0.dying })
+    let noBinsLeft = !entities.contains(where: { $0.type == .bin })
+    let nobodyCollecting = !entities.contains(where: { $0.collectingBin })
+    if someAliveNotDying && noBinsLeft && nobodyCollecting {
+      return 1  // win
+    }
     return 0
   }
 
