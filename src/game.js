@@ -541,16 +541,6 @@ const storageKeys = {
 const floor = (x, multiple) => Math.floor(x / multiple) * multiple;
 const round = (x, multiple) => Math.round(x / multiple) * multiple;
 
-const arrayRemove = (array, value) => {
-	if (array === entities) {
-		window.console?.warn("arrayRemove on entities array is unsafe if iterating over entities. Set flag entity.removeBeforeRender instead.");
-	}
-	const index = array.indexOf(value);
-	if (index !== -1) {
-		array.splice(index, 1);
-	}
-};
-
 
 const sortEntitiesForRendering = window.JunkbotWasm.sortEntitiesForRendering;
 
@@ -1214,53 +1204,12 @@ const routingTests = [
 
 let entitiesByTopY = {}; // y to array of entities with that y as their top
 let entitiesByBottomY = {}; // y to array of entities with that y as their bottom
-let lastKeys = new Map(); // ancillary structure for updating the by-y structures - entity to {topY, bottomY}
-
-const entityMoved = (entity) => {
-	const yKeys = lastKeys.get(entity) || {};
-	entitiesByTopY[entity.y] = entitiesByTopY[entity.y] || [];
-	entitiesByBottomY[entity.y + entity.height] = entitiesByBottomY[entity.y + entity.height] || [];
-	if (yKeys.topY) {
-		arrayRemove(entitiesByTopY[yKeys.topY], entity);
-	}
-	if (yKeys.bottomY) {
-		arrayRemove(entitiesByBottomY[yKeys.bottomY], entity);
-	}
-	yKeys.topY = entity.y;
-	yKeys.bottomY = entity.y + entity.height;
-	entitiesByTopY[yKeys.topY].push(entity);
-	entitiesByBottomY[yKeys.bottomY].push(entity);
-	lastKeys.set(entity, yKeys);
-};
+let lastKeys = new Map(); // unused now that acceleration structures are rebuilt in Swift; kept declared for the editor preview block below, which saves/restores it (and is already broken independent of this, since it also calls the removed `simulate` function)
 
 const updateAccelerationStructures = () => {
-	// add new entities to acceleration structures
-	for (const entity of entities) {
-		if (!lastKeys.has(entity)) {
-			entityMoved(entity);
-		}
-	}
-	// clean up acceleration structures
-	for (const [entity, yKeys] of lastKeys.entries()) {
-		if (entities.indexOf(entity) === -1) {
-			if (yKeys.topY) {
-				arrayRemove(entitiesByTopY[yKeys.topY], entity);
-			}
-			if (yKeys.bottomY) {
-				arrayRemove(entitiesByBottomY[yKeys.bottomY], entity);
-			}
-			lastKeys.delete(entity);
-		}
-	}
-	const cleanByYObj = (entitiesByY) => {
-		for (const y of Object.keys(entitiesByY)) {
-			if (entitiesByY[y].length === 0) {
-				delete entitiesByY[y];
-			}
-		}
-	};
-	cleanByYObj(entitiesByTopY);
-	cleanByYObj(entitiesByBottomY);
+	const result = window.JunkbotWasm.rebuildAccelerationStructures(entities);
+	entitiesByTopY = result.byTopY;
+	entitiesByBottomY = result.byBottomY;
 };
 
 // #endregion
@@ -1274,32 +1223,18 @@ const updateAccelerationStructures = () => {
 //                                                 `"""""""`
 // #region Win/Lose (#winning)
 
-const winOrLose = () => {
-	// Cases:
-	// ("while collecting" and "dying" refer to playing the animations)
-	// - Alive while collecting last bin: "" (winING, probably)
-	// - Dying while collecting last bin: "" (losING)
-	// - Dead while collecting last bin: "lose" (shouldn't happen maybe though, if collectingBin is reset)
-	// - Alive after collecting last bin: "win"
-	// - Dying after collecting last bin: (should already be "win" and paused)
-	// - Dead after collecting last bin: "lose"
-	// - Dead, bins left to collect: "lose"
-	// - Dying, bins left to collect: "" (losING)
-	// - Alive, bins left to collect: "" (normal state)
-	if (entities.some((entity) => entity.type === "junkbot" && !entity.dead)) {
-		if (
-			entities.some((entity) => entity.type === "junkbot" && !entity.dead && !entity.dying) &&
-			!entities.some((entity) => entity.type === "bin") &&
-			entities.every((entity) => !entity.collectingBin)
-		) {
-			return "win";
-		} else {
-			return "";
-		}
-	} else {
-		return "lose";
-	}
-};
+// Cases:
+// ("while collecting" and "dying" refer to playing the animations)
+// - Alive while collecting last bin: "" (winING, probably)
+// - Dying while collecting last bin: "" (losING)
+// - Dead while collecting last bin: "lose" (shouldn't happen maybe though, if collectingBin is reset)
+// - Alive after collecting last bin: "win"
+// - Dying after collecting last bin: (should already be "win" and paused)
+// - Dead after collecting last bin: "lose"
+// - Dead, bins left to collect: "lose"
+// - Dying, bins left to collect: "" (losING)
+// - Alive, bins left to collect: "" (normal state)
+const winOrLose = () => window.JunkbotWasm.winOrLose(entities);
 
 // #endregion
 //
@@ -3638,8 +3573,8 @@ const updateDrag = (mouse) => {
 		for (const brick of dragging) {
 			brick.x = floor(mouse.worldX, snapX) + brick.grabOffset.x;
 			brick.y = floor(mouse.worldY, snapY) + brick.grabOffset.y;
-			entityMoved(brick);
 		}
+		updateAccelerationStructures();
 	}
 };
 

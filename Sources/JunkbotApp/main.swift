@@ -188,6 +188,72 @@ exports.sortEntitiesForRendering =
         return .undefined
     }.jsValue
 
+exports.winOrLose =
+    JSClosure { args in
+        guard let entities = args[0].object else { return .string("") }
+        let length = Int(entities.length.number ?? 0)
+
+        var anyJunkbotAlive = false
+        var anyJunkbotAliveNotDying = false
+        var anyBin = false
+        var allNotCollectingBin = true
+
+        for i in 0..<length {
+            guard let e = entities[i].object else { continue }
+            let type = e.type.string ?? ""
+            if type == "junkbot" {
+                let dead = e.dead.boolean == true
+                let dying = e.dying.boolean == true
+                if !dead {
+                    anyJunkbotAlive = true
+                    if !dying { anyJunkbotAliveNotDying = true }
+                }
+            }
+            if type == "bin" { anyBin = true }
+            if e.collectingBin.boolean == true { allNotCollectingBin = false }
+        }
+
+        if !anyJunkbotAlive { return .string("lose") }
+        if anyJunkbotAliveNotDying && !anyBin && allNotCollectingBin {
+            return .string("win")
+        }
+        return .string("")
+    }.jsValue
+
+exports.rebuildAccelerationStructures =
+    JSClosure { args in
+        guard let entities = args[0].object else { return .undefined }
+        let length = Int(entities.length.number ?? 0)
+
+        var elements: [JSValue] = []
+        var extents: [YExtent] = []
+        elements.reserveCapacity(length)
+        extents.reserveCapacity(length)
+        for i in 0..<length {
+            let element = entities[i]
+            elements.append(element)
+            let obj = element.object
+            let y = Int32(obj?.y.number ?? 0)
+            let height = Int32(obj?.height.number ?? 0)
+            extents.append(YExtent(top: y, bottom: y + height))
+        }
+
+        let (byTop, byBottom) = groupIndicesByY(extents)
+
+        func buildMap(_ grouping: [Int32: [Int]]) -> JSValue {
+            let obj = JSObject.global.Object.function!.new()
+            for (y, indices) in grouping {
+                obj[String(y)] = indices.map { elements[$0] }.jsValue
+            }
+            return obj.jsValue
+        }
+
+        let result = JSObject.global.Object.function!.new()
+        result.byTopY = buildMap(byTop)
+        result.byBottomY = buildMap(byBottom)
+        return result.jsValue
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id
