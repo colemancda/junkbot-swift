@@ -990,7 +990,8 @@ var entityMoved = { (entity: JSValue) in
   yKeys.bottomY = .number(bottomY)
   entitiesByTopY[topY]?.append(entity)
   entitiesByBottomY[bottomY]?.append(entity)
-  _ = lastKeys.set!(entity, yKeys)
+  let setLastKey = lastKeys.set!
+  _ = setLastKey(entity, yKeys)
 }
 
 var updateAccelerationStructures = { () in
@@ -3575,7 +3576,7 @@ var connectsToFixed = { (startEntity: JSValue, options: JSValue) -> JSValue in
 var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   func makeJSArray(_ values: [JSValue] = []) -> JSObject {
     let array = JSObject.global["Array"].function!.new()
-    for value in values { _ = array.push(value) }
+    for value in values { _ = array.push!(value) }
     return array
   }
 
@@ -3683,18 +3684,18 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   let grabs = makeJSArray()
   if editing && (keys["ControlLeft"] == true || keys["ControlRight"] == true) {
     let arr = makeJSArray([brick])
-    _ = grabs.push(arr)
+    _ = grabs.push!(arr)
     return grabs.jsValue
   }
   if editing && brick.selected.boolean == true {
     let selectedArr = makeJSArray()
     for e in entities {
       if e.selected.boolean == true {
-        _ = selectedArr.push(e)
+        _ = selectedArr.push!(e)
       }
     }
     grabs.selection = selectedArr.jsValue
-    _ = grabs.push(selectedArr)
+    _ = grabs.push!(selectedArr)
     return grabs.jsValue
   }
   if brick.fixed.boolean == true
@@ -3703,7 +3704,7 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   {
     if editing {
       let arr = makeJSArray([brick])
-      _ = grabs.push(arr)
+      _ = grabs.push!(arr)
       return grabs.jsValue
     }
     return makeJSArray().jsValue
@@ -3715,17 +3716,17 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   let canGrabUpward = findAttached(brick, -1.0, &grabUpwardValues, true)
   if editing && canGrabDownward == canGrabUpward {
     let arr = makeJSArray([brick])
-    _ = grabs.push(arr)
+    _ = grabs.push!(arr)
     return grabs.jsValue
   }
   if canGrabDownward {
     let grabDownward = makeJSArray(grabDownwardValues)
-    _ = grabs.push(grabDownward)
+    _ = grabs.push!(grabDownward)
     grabs.downward = grabDownward.jsValue
   }
   if canGrabUpward {
     let grabUpward = makeJSArray(grabUpwardValues)
-    _ = grabs.push(grabUpward)
+    _ = grabs.push!(grabUpward)
     grabs.upward = grabUpward.jsValue
   }
   return grabs.jsValue
