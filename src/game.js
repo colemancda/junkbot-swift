@@ -3232,83 +3232,13 @@ const brickAt = ({ worldX, worldY }, { includeFixed = false } = {}) => {
 	}
 };
 
-const connects = (a, b, direction = 0) => (
-	(
-		(direction >= 0 && b.y === a.y + a.height) ||
-		(direction <= 0 && b.y + b.height === a.y)
-	) &&
-	a.x + a.width > b.x &&
-	a.x < b.x + b.width
-);
+const connects = (a, b, direction = 0) => window.JunkbotWasm.connects(a, b, direction);
 
-const allConnectedToFixed = ({ ignoreEntities = [] } = {}) => {
-	const connectedToFixed = [];
-	const addAnyAttached = (entity) => {
-		const entitiesToCheck = [].concat(
-			entitiesByTopY[entity.y + entity.height] || [],
-			entitiesByBottomY[entity.y] || [],
-		);
-		for (const otherEntity of entitiesToCheck) {
-			if (
-				entity.x + entity.width > otherEntity.x &&
-				entity.x < otherEntity.x + otherEntity.width &&
-				ignoreEntities.indexOf(otherEntity) === -1 &&
-				connectedToFixed.indexOf(otherEntity) === -1
-			) {
-				connectedToFixed.push(otherEntity);
-				addAnyAttached(otherEntity);
-			}
-		}
-	};
-	for (const entity of entities) {
-		if (
-			ignoreEntities.indexOf(entity) === -1 &&
-			connectedToFixed.indexOf(entity) === -1
-		) {
-			if (entity.fixed) {
-				connectedToFixed.push(entity);
-				addAnyAttached(entity);
-			}
-		}
-	}
-	return connectedToFixed;
-};
+const allConnectedToFixed = ({ ignoreEntities = [] } = {}) =>
+	window.JunkbotWasm.allConnectedToFixed(entities, entitiesByTopY, entitiesByBottomY, ignoreEntities);
 
-const connectsToFixed = (startEntity, { direction = 0, ignoreEntities = [] } = {}) => {
-	const visited = [];
-	const search = (fromEntity) => {
-		if (currentLevel.bounds) {
-			if (fromEntity.y + fromEntity.height >= currentLevel.bounds.y + currentLevel.bounds.height) {
-				// for case of non-fixed brick at bottom of level
-				// which shouldn't happen in the game, but can happen in the editor
-				return true;
-			}
-		}
-		const entitiesToCheck = [].concat(
-			(fromEntity !== startEntity || direction !== -1) && entitiesByTopY[fromEntity.y + fromEntity.height] || [],
-			(fromEntity !== startEntity || direction !== +1) && entitiesByBottomY[fromEntity.y] || [],
-		);
-		for (const otherEntity of entitiesToCheck) {
-			if (
-				!otherEntity.grabbed &&
-				ignoreEntities.indexOf(otherEntity) === -1 &&
-				visited.indexOf(otherEntity) === -1 &&
-				fromEntity.x + fromEntity.width > otherEntity.x &&
-				fromEntity.x < otherEntity.x + otherEntity.width
-			) {
-				visited.push(otherEntity);
-				if (otherEntity.fixed) {
-					return true;
-				}
-				if (search(otherEntity)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	};
-	return search(startEntity);
-};
+const connectsToFixed = (startEntity, { direction = 0, ignoreEntities = [] } = {}) =>
+	window.JunkbotWasm.connectsToFixed(startEntity, entitiesByTopY, entitiesByBottomY, direction, ignoreEntities);
 
 const possibleGrabs = ({ worldX, worldY } = mouse) => {
 	const findAttached = (brick, direction, attached, topLevel) => {

@@ -281,6 +281,120 @@ exports.rebuildAccelerationStructures =
         return result.jsValue
     }.jsValue
 
+func entitiesConnect(_ a: JSObject, _ b: JSObject, direction: Int32) -> Bool {
+    let ax = Int32(a.x.number ?? 0), ay = Int32(a.y.number ?? 0)
+    let aw = Int32(a.width.number ?? 0), ah = Int32(a.height.number ?? 0)
+    let bx = Int32(b.x.number ?? 0), by = Int32(b.y.number ?? 0)
+    let bw = Int32(b.width.number ?? 0), bh = Int32(b.height.number ?? 0)
+    return ((direction >= 0 && by == ay + ah) || (direction <= 0 && by + bh == ay))
+        && ax + aw > bx && ax < bx + bw
+}
+
+func yBucket(_ table: JSObject, _ y: Int32) -> [JSValue] {
+    guard let arr = table[Int(y)].object else { return [] }
+    let length = Int(arr.length.number ?? 0)
+    return (0..<length).map { arr[$0] }
+}
+
+func jsObjectArray(_ value: JSValue) -> [JSObject] {
+    guard let arr = value.object else { return [] }
+    let length = Int(arr.length.number ?? 0)
+    return (0..<length).compactMap { arr[$0].object }
+}
+
+exports.connects =
+    JSClosure { args in
+        guard let a = args[0].object, let b = args[1].object else { return .boolean(false) }
+        let direction = Int32(args[2].number ?? 0)
+        return .boolean(entitiesConnect(a, b, direction: direction))
+    }.jsValue
+
+exports.connectsToFixed =
+    JSClosure { args in
+        guard let startEntity = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return .boolean(false) }
+        let direction = Int32(args[3].number ?? 0)
+        let ignoreEntities = jsObjectArray(args[4])
+
+        var visited: [JSObject] = []
+
+        func search(_ fromEntity: JSObject) -> Bool {
+            let fx = Int32(fromEntity.x.number ?? 0), fy = Int32(fromEntity.y.number ?? 0)
+            let fw = Int32(fromEntity.width.number ?? 0), fh = Int32(fromEntity.height.number ?? 0)
+
+            if let currentLevel = window.currentLevel.object, let bounds = currentLevel.bounds.object,
+                let by = bounds.y.number, let bh = bounds.height.number,
+                Double(fy + fh) >= by + bh
+            {
+                return true
+            }
+
+            let sameAsStart = fromEntity == startEntity
+            let above = (!sameAsStart || direction != -1) ? yBucket(entitiesByTopY, fy + fh) : []
+            let below = (!sameAsStart || direction != 1) ? yBucket(entitiesByBottomY, fy) : []
+
+            for otherValue in above + below {
+                guard let otherEntity = otherValue.object else { continue }
+                if otherEntity.grabbed.boolean == true { continue }
+                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
+                if visited.contains(where: { $0 == otherEntity }) { continue }
+                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
+                guard fx + fw > ox && fx < ox + ow else { continue }
+                visited.append(otherEntity)
+                if otherEntity.fixed.boolean == true { return true }
+                if search(otherEntity) { return true }
+            }
+            return false
+        }
+
+        return .boolean(search(startEntity))
+    }.jsValue
+
+exports.allConnectedToFixed =
+    JSClosure { args in
+        guard let entities = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return [JSValue]().jsValue }
+        let ignoreEntities = jsObjectArray(args[3])
+
+        var connectedToFixed: [JSObject] = []
+        var connectedToFixedValues: [JSValue] = []
+
+        func addAnyAttached(_ entity: JSObject) {
+            let ex = Int32(entity.x.number ?? 0), ey = Int32(entity.y.number ?? 0)
+            let ew = Int32(entity.width.number ?? 0), eh = Int32(entity.height.number ?? 0)
+            let candidates = yBucket(entitiesByTopY, ey + eh) + yBucket(entitiesByBottomY, ey)
+            for otherValue in candidates {
+                guard let otherEntity = otherValue.object else { continue }
+                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
+                guard ex + ew > ox && ex < ox + ow else { continue }
+                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
+                if connectedToFixed.contains(where: { $0 == otherEntity }) { continue }
+                connectedToFixed.append(otherEntity)
+                connectedToFixedValues.append(otherValue)
+                addAnyAttached(otherEntity)
+            }
+        }
+
+        let length = Int(entities.length.number ?? 0)
+        for i in 0..<length {
+            let entityValue = entities[i]
+            guard let entity = entityValue.object else { continue }
+            if ignoreEntities.contains(where: { $0 == entity }) { continue }
+            if connectedToFixed.contains(where: { $0 == entity }) { continue }
+            if entity.fixed.boolean == true {
+                connectedToFixed.append(entity)
+                connectedToFixedValues.append(entityValue)
+                addAnyAttached(entity)
+            }
+        }
+
+        return connectedToFixedValues.jsValue
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id
