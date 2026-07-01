@@ -6125,18 +6125,18 @@ var initLevelDropdown = { () -> JSValue in
   option.defaultSelected = .boolean(true)
   _ = levelDropdown.append(option)
 
-  let lists = getLevelLists.function!.callAsFunction(this: JSObject.global, resources)
+  let lists = getLevelLists(resources)
   let listLen = Int(lists.length.number ?? 0.0)
 
   for i in 0..<listLen {
     let list = lists[i]
-    let game = list.game
-    let levelNames = list.levelNames
+    let game: JSValue = list.object!["game"]
+    let levelNames: JSValue = list.object!["levelNames"]
 
     let optgroup = JSObject.global.document.createElement("optgroup")
     optgroup.label = game
     optgroup.value = game
-    _ = levelDropdown.append!(optgroup)
+    _ = levelDropdown.append(optgroup)
 
     let nLen = Int(levelNames.length.number ?? 0.0)
     for j in 0..<nLen {
