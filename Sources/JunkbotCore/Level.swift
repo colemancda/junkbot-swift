@@ -28,10 +28,12 @@ public struct Level: Equatable, Sendable {
 public struct LevelBackground: Equatable, Sendable {
     public var backdrop: String
     public var decals: [LevelDecal]
+    public var backgroundDecals: [LevelDecal]
 
-    public init(backdrop: String, decals: [LevelDecal] = []) {
+    public init(backdrop: String, decals: [LevelDecal] = [], backgroundDecals: [LevelDecal] = []) {
         self.backdrop = backdrop
         self.decals = decals
+        self.backgroundDecals = backgroundDecals
     }
 }
 
