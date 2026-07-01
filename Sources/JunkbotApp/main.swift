@@ -5838,16 +5838,17 @@ var showLevelSelectScreen = JSObject.global.showLevelSelectScreen
 var hideLevelSelectScreen = JSObject.global.hideLevelSelectScreen
 var getLevelSelectURL = JSObject.global.getLevelSelectURL
 var getTitleScreenURL = JSObject.global.getTitleScreenURL
+let bodyPointerdownClosure = JSClosure { args -> JSValue in
+  let event = args[0]
+  let target = event.target.object!
+  let button = target["closest"].function!.callAsFunction(this: target, ".generic-sound")
+  if !button.isUndefined && !button.isNull {
+    _ = playSound(.string("buttonClick"), .undefined, .undefined)
+  }
+  return .undefined
+}
 
 var initGUI = { () -> JSValue in
-  let bodyPointerdownClosure = JSClosure { args -> JSValue in
-    let event = args[0]
-    let button = event.target.closest(".generic-sound")
-    if !button.isUndefined && !button.isNull {
-      _ = playSound.function!.callAsFunction(this: JSObject.global, .string("buttonClick"))
-    }
-    return .undefined
-  }
   _ = JSObject.global.document.body.addEventListener("pointerdown", bodyPointerdownClosure)
 
   _ = startGameButton.addEventListener(
@@ -5859,7 +5860,7 @@ var initGUI = { () -> JSValue in
   _ = showCreditsButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = JSObject.global.window.open!("https://github.com/1j01/janitorial-android#credits")
+      _ = JSObject.global.window.open("https://github.com/1j01/janitorial-android#credits")
       return .undefined
     })
   _ = skipIntroButton.addEventListener(
