@@ -818,6 +818,55 @@ exports.simulateScaredy =
         return .undefined
     }.jsValue
 
+exports.simulateDroplet =
+    JSClosure { args in
+        guard let droplet = args[0].object, let entitiesByTopY = args[1].object,
+            let entityMoved = args[2].function, let playSound = args[3].function
+        else { return .undefined }
+
+        if droplet.splashing.boolean == true {
+            let animationFrame = Int32(droplet.animationFrame.number ?? 0) + 1
+            droplet.animationFrame = animationFrame.jsValue
+            if animationFrame > 4 {
+                droplet.removeBeforeRender = .boolean(true)  // important not to remove while iterating
+            }
+            return .undefined
+        }
+
+        // Cosmetic sound choice only (doesn't affect gameplay), fixed 3-way set matching `numDrips`;
+        // uses Swift's own RNG rather than round-tripping to JS's Math.random().
+        let dripSounds: [JSValue] = ["drip0".jsValue, "drip1".jsValue, "drip2".jsValue]
+        let dx = Int32(droplet.x.number ?? 0)
+        let dw = Int32(droplet.width.number ?? 0)
+
+        for _ in 0..<18 {
+            let dy = Int32(droplet.y.number ?? 0)
+            let dh = Int32(droplet.height.number ?? 0)
+            let underneath = yBucket(entitiesByTopY, dy + dh)
+            droplet.y = (dy + 1).jsValue
+            _ = entityMoved(args[0])
+
+            for groundValue in underneath {
+                guard let ground = groundValue.object else { continue }
+                if ground.grabbed.boolean == true { continue }
+                let gx = Int32(ground.x.number ?? 0)
+                let gw = Int32(ground.width.number ?? 0)
+                guard dx + dw > gx && dx < gx + gw else { continue }
+                guard entityType(ground) != dropletType else { continue }
+
+                if entityType(ground) == junkbotType {
+                    hurtJunkbotCore(junkbot: ground, cause: "water", playSound: playSound)
+                }
+
+                droplet.splashing = .boolean(true)
+                droplet.animationFrame = .number(0)
+                _ = playSound(dripSounds[Int.random(in: 0..<3)])
+                break
+            }
+        }
+        return .undefined
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id

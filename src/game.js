@@ -4033,39 +4033,8 @@ const simulateClimbbot = (climbbot) => {
 	}
 };
 
-const simulateDroplet = (droplet) => {
-	if (droplet.splashing) {
-		droplet.animationFrame += 1;
-		if (droplet.animationFrame > 4) {
-			droplet.removeBeforeRender = true; // it's important not to remove entities while iterating over them
-		}
-	} else {
-		for (let i = 0; i < 18; i++) {
-			const underneath = entitiesByTopY[droplet.y + droplet.height] || [];
-			droplet.y += 1;
-			entityMoved(droplet);
-			for (const ground of underneath) {
-				if (
-					!ground.grabbed &&
-					droplet.x + droplet.width > ground.x &&
-					droplet.x < ground.x + ground.width &&
-					// ground.type !== "pipe" && // actually it should hit pipes, ref: https://youtu.be/Z_PmQhrk5Zw?t=4418
-					ground.type !== "droplet"
-				) {
-					if (ground.type === "junkbot") {
-						hurtJunkbot(ground, "water");
-					}
-
-					droplet.splashing = true;
-					droplet.animationFrame = 0;
-
-					playSound(`drip${Math.floor(Math.random() * numDrips)}`);
-					break;
-				}
-			}
-		}
-	}
-};
+const simulateDroplet = (droplet) =>
+	window.JunkbotWasm.simulateDroplet(droplet, entitiesByTopY, entityMoved, playSound);
 
 const maxDripPeriod = 50;
 const minDripPeriod = 20;
