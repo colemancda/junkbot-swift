@@ -5937,12 +5937,12 @@ var initGUI = { () -> JSValue in
   _ = updateMuteButton()
 
   _ = toggleEditingButton.addEventListener("click", toggleEditing)
-  _ = updateEditingButton.function!.callAsFunction(this: JSObject.global)
+  _ = updateEditingButton()
 
   _ = volumeSlider.addEventListener(
     "input",
     JSClosure { _ in
-      _ = setVolume.function!.callAsFunction(this: JSObject.global, volumeSlider.valueAsNumber)
+      _ = setVolume(volumeSlider.valueAsNumber)
       return .undefined
     })
   volumeSlider.valueAsNumber = mainGain.gain.value
@@ -5950,26 +5950,26 @@ var initGUI = { () -> JSValue in
   _ = zoomInButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = zoomIn.function!.callAsFunction(this: JSObject.global)
+      _ = zoomIn(.undefined)
       return .undefined
     })
   _ = zoomOutButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = zoomOut.function!.callAsFunction(this: JSObject.global)
+      _ = zoomOut(.undefined)
       return .undefined
     })
 
   _ = rewindButton.addEventListener(
     "pointerdown",
     JSClosure { _ in
-      rewindingWithButton = .boolean(true)
+      rewindingWithButton = true
       return .undefined
     })
   _ = JSObject.global.addEventListener!(
     "pointerup",
     JSClosure { _ in
-      rewindingWithButton = .boolean(false)
+      rewindingWithButton = false
       return .undefined
     })
 
