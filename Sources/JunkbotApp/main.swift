@@ -202,55 +202,55 @@ nonisolated(unsafe) let cancelAnimationFrame = window.cancelAnimationFrame.funct
 // #region Get Elements </>
 
 // Title screen elements
-var titleScreen = document.getElementById("title-screen")
-var startGameButton = document.getElementById("start-game")
-var introContainer = document.getElementById("intro-container")
-var replayIntroButton = document.getElementById("replay-intro")
-var skipIntroButton = document.getElementById("skip-intro")
-var resetScreenButton = document.getElementById("reset-screen")
-var showCreditsButton = document.getElementById("show-credits")
-var loadStatusLoaded = document.getElementById("load-status-loaded")
-var loadStatusLoading = document.getElementById("load-status-loading")
-var loadProgress = document.getElementById("load-progress")
-var junkbotUndercoverTitle = document.getElementById("junkbot-undercover-logo")
+var titleScreen = document.getElementById!("title-screen")
+var startGameButton = document.getElementById!("start-game")
+var introContainer = document.getElementById!("intro-container")
+var replayIntroButton = document.getElementById!("replay-intro")
+var skipIntroButton = document.getElementById!("skip-intro")
+var resetScreenButton = document.getElementById!("reset-screen")
+var showCreditsButton = document.getElementById!("show-credits")
+var loadStatusLoaded = document.getElementById!("load-status-loaded")
+var loadStatusLoading = document.getElementById!("load-status-loading")
+var loadProgress = document.getElementById!("load-progress")
+var junkbotUndercoverTitle = document.getElementById!("junkbot-undercover-logo")
 // Level Select screen elements
-var levelSelectScreen = document.getElementById("level-select-screen")
-var levelList = document.getElementById("level-list")
-var junkbotPagination = document.getElementById("junkbot-level-group-tabs")
-var junkbotUndercoverPagination = document.getElementById("junkbot-undercover-level-group-tabs")
-var backToTitleScreenButton = document.getElementById("back-to-title")
+var levelSelectScreen = document.getElementById!("level-select-screen")
+var levelList = document.getElementById!("level-list")
+var junkbotPagination = document.getElementById!("junkbot-level-group-tabs")
+var junkbotUndercoverPagination = document.getElementById!("junkbot-undercover-level-group-tabs")
+var backToTitleScreenButton = document.getElementById!("back-to-title")
 // Main game controls bar
-var mainControlsBar = document.getElementById("main-controls")
-var toggleInfoButton = document.getElementById("toggle-info")
-var toggleFullscreenButton = document.getElementById("toggle-fullscreen")
-var toggleMuteButton = document.getElementById("toggle-mute")
-var toggleEditingButton = document.getElementById("toggle-editing")
-var volumeSlider = document.getElementById("volume-slider")
-var zoomInButton = document.getElementById("zoom-in")
-var zoomOutButton = document.getElementById("zoom-out")
-var backToLevelSelectButton = document.getElementById("back-to-level-select")
+var mainControlsBar = document.getElementById!("main-controls")
+var toggleInfoButton = document.getElementById!("toggle-info")
+var toggleFullscreenButton = document.getElementById!("toggle-fullscreen")
+var toggleMuteButton = document.getElementById!("toggle-mute")
+var toggleEditingButton = document.getElementById!("toggle-editing")
+var volumeSlider = document.getElementById!("volume-slider")
+var zoomInButton = document.getElementById!("zoom-in")
+var zoomOutButton = document.getElementById!("zoom-out")
+var backToLevelSelectButton = document.getElementById!("back-to-level-select")
 // Info screen
-var infoBox = document.getElementById("info")
-var controlsTableRows = document.querySelectorAll("#info table tr")
+var infoBox = document.getElementById!("info")
+var controlsTableRows = document.querySelectorAll!("#info table tr")
 // Editor UI
-var editorUI = document.getElementById("editor-ui")
-var editorControlsBar = document.getElementById("editor-controls")
-var levelDropdown = document.getElementById("level-dropdown")
-var entitiesPalette = document.getElementById("entities-palette")
-var entitiesScrollContainer = document.getElementById("entities-scroll-container")
-var levelBoundsCheckbox = document.getElementById("level-bounds-checkbox")
-var levelTitleInput = document.getElementById("level-title-input")
-var levelHintInput = document.getElementById("level-hint-input")
-var levelParInput = document.getElementById("level-par-input")
-var saveButton = document.getElementById("save-world")
-var openButton = document.getElementById("open-world")
-var rewindButton = document.getElementById("rewind")
+var editorUI = document.getElementById!("editor-ui")
+var editorControlsBar = document.getElementById!("editor-controls")
+var levelDropdown = document.getElementById!("level-dropdown")
+var entitiesPalette = document.getElementById!("entities-palette")
+var entitiesScrollContainer = document.getElementById!("entities-scroll-container")
+var levelBoundsCheckbox = document.getElementById!("level-bounds-checkbox")
+var levelTitleInput = document.getElementById!("level-title-input")
+var levelHintInput = document.getElementById!("level-hint-input")
+var levelParInput = document.getElementById!("level-par-input")
+var saveButton = document.getElementById!("save-world")
+var openButton = document.getElementById!("open-world")
+var rewindButton = document.getElementById!("rewind")
 // Tests UI
-var testsUI = document.getElementById("tests-ui")
-var testsUL = document.getElementById("tests")
-var testsInfo = document.getElementById("tests-info")
-var testSpeedInput = document.getElementById("test-speed")
-// var startButton = document.getElementById("start-tests")
+var testsUI = document.getElementById!("tests-ui")
+var testsUL = document.getElementById!("tests")
+var testsInfo = document.getElementById!("tests-info")
+var testSpeedInput = document.getElementById!("test-speed")
+// var startButton = document.getElementById!("start-tests")
 
 // #endregion
 //                                                 .-'';'-.
@@ -273,17 +273,17 @@ var GAME_JANITORIAL_ANDROID = "GAME_JANITORIAL_ANDROID"
 var GAME_TEST_CASES = "GAME_TEST_CASES"
 var GAME_USER_CREATED = "GAME_USER_CREATED"
 
-var canvas = document.createElement("canvas").object!
-var ctx = canvas.getContext("2d").object!
+var canvas = document.createElement!("canvas").object!
+var ctx = canvas.getContext!("2d").object!
 
 canvas.tabIndex = 0
 canvas.style.object!.touchAction = "none"
 
-_ = document.body.object!.append(canvas)
+_ = document.body.object!.append!(canvas)
 
 let AudioContext = window.AudioContext.object ?? window.webkitAudioContext.object!
 var audioCtx = AudioContext.new()
-var mainGain = audioCtx.createGain()
+var mainGain = audioCtx.createGain!()
 _ = mainGain.connect(audioCtx.destination)
 
 var viewport: [String: Double] = ["centerX": 0, "centerY": 0, "scale": 1]
@@ -314,10 +314,10 @@ var getID = { () -> Int in
   idCounter += 1
   return idCounter
 }
-var diffPatcher = window.jsondiffpatch.object!.create([
+var diffPatcher = window.jsondiffpatch.object!.create!([
   "objectHash": JSClosure { args in
     let obj = args[0]
-    if obj.id != .undefined { return obj.id }
+    if !obj.id.isUndefined { return obj.id }
     return JSValue.string("\(obj.name.string ?? "")@\(obj.x.number ?? 0),\(obj.y.number ?? 0)")
   }.jsValue
 ])
@@ -406,36 +406,36 @@ var wrapContents = { (target: JSValue, wrapper: JSValue) -> JSValue in
 }
 
 var toggleFullscreen = { () in
-  if document.fullscreenElement == .null && !document.fullscreenElement != .undefined {
-    _ = document.exitFullscreen()
+  if !document.fullscreenElement.isNull && !document.fullscreenElement.isUndefined {
+    _ = document.exitFullscreen!()
   } else {
-    _ = document.documentElement.object!.requestFullscreen()
+    _ = document.documentElement.object!.requestFullscreen!()
   }
 }
 
 func showMessageBox(_ message: JSValue, _ optionsArgs: JSValue...) -> JSValue {
   let options = optionsArgs.first ?? .undefined
-  let messageBoxContainer = document.createElement("div").object!
+  let messageBoxContainer = document.createElement!("div").object!
   messageBoxContainer.className = "dialog-container"
-  let messageBox = document.createElement("div").object!
+  let messageBox = document.createElement!("div").object!
   messageBox.className = "dialog metal-border"
-  if options != .undefined && options.className != .undefined {
-    _ = messageBox.classList.object!.add(options.className)
+  if !options.isUndefined && !options.className.isUndefined {
+    _ = messageBox.classList.object!.add!(options.className)
   }
-  let messageContentEl = document.createElement("div").object!
+  let messageContentEl = document.createElement!("div").object!
   messageContentEl.className = "message-content"
   if message.string != nil {
     messageContentEl.textContent = message
   } else {
-    _ = messageContentEl.append(message)
+    _ = messageContentEl.append!(message)
   }
-  _ = messageBox.append(messageContentEl.jsValue)
-  let buttonGroup = document.createElement("div").object!
+  _ = messageBox.append!(messageContentEl.jsValue)
+  let buttonGroup = document.createElement!("div").object!
   buttonGroup.className = "button-group"
-  _ = messageBox.append(buttonGroup.jsValue)
+  _ = messageBox.append!(buttonGroup.jsValue)
 
   // Using a simple alert since full Promise-based dialog bridging in Swift is too complex for this naive translation right now
-  _ = window.alert(message)
+  _ = window.alert!(message)
   return messageBoxContainer.jsValue
 }
 
@@ -445,16 +445,16 @@ var closeNonErrorDialogs = { () in
 }
 
 var showPrompt = { (message: String, defaultText: String) -> String? in
-  let res = window.prompt(message, defaultText)
+  let res = window.prompt!(message, defaultText)
   return res.string
 }
 
 var showErrorMessage = { (message: String, error: JSValue) in
-  let content = document.createElement("div").object!
+  let content = document.createElement!("div").object!
   content.innerHTML = "<p style='white-space: pre-wrap;'></p>"
-  content.querySelector("p").object!.textContent = .string(message)
+  content.querySelector!("p").object!.textContent = .string(message)
 
-  _ = window.alert("\(message)\n\n\(error.string ?? "")")
+  _ = window.alert!("\(message)\n\n\(error.string ?? "")")
 }
 
 var levelNameToSlug = { (levelName: String) -> String in
@@ -494,10 +494,10 @@ var levelGroupToSlug = { (groupName: String, gameName: String) -> String? in
 var storageKeys: [String: JSValue] = [:]
 
 var floor = { (x: Double, multiple: Double) -> Double in
-  return (Math.floor(x / multiple).number ?? 0) * multiple
+  return (Math.floor!(x / multiple).number ?? 0) * multiple
 }
 var round = { (x: Double, multiple: Double) -> Double in
-  return (Math.round(x / multiple).number ?? 0) * multiple
+  return (Math.round!(x / multiple).number ?? 0) * multiple
 }
 
 var arrayRemove = { (array: inout [JSValue], value: JSValue) in
@@ -527,7 +527,7 @@ var rectanglesIntersect = {
 var rectangleLevelBoundsCollisionTest = {
   (x: Double, y: Double, width: Double, height: Double) -> JSValue? in
   let bounds = currentLevel[property: "bounds"]
-  if bounds == .undefined || bounds == .null {
+  if bounds.isUndefined || bounds.isNull {
     return nil
   }
   let bx = bounds.x.number ?? 0
@@ -694,7 +694,7 @@ var makeBrick = { (args: JSObject) -> JSValue in
       "width": .number((args.widthInStuds.number ?? 1) * 15.0),
       "height": .number(18),
       "colorName": args.colorName,
-      "fixed": args.fixed == .undefined ? .boolean(false) : args.fixed,
+      "fixed": args.fixed.isUndefined ? .boolean(false) : args.fixed,
     ]))
 }
 
@@ -707,8 +707,8 @@ var makeJunkbot = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(4.0 * 18.0),
-      "facing": args.facing == .undefined ? .number(1) : args.facing,
-      "armored": args.armored == .undefined ? .boolean(false) : args.armored,
+      "facing": args.facing.isUndefined ? .number(1) : args.facing,
+      "armored": args.armored.isUndefined ? .boolean(false) : args.armored,
       "losingShield": .boolean(false),
       "losingShieldTime": 0,
       "animationFrame": 0,
@@ -725,7 +725,7 @@ var makeGearbot = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(2.0 * 18.0),
-      "facing": args.facing == .undefined ? .number(1) : args.facing,
+      "facing": args.facing.isUndefined ? .number(1) : args.facing,
       "animationFrame": 0,
     ]))
 }
@@ -739,8 +739,8 @@ var makeClimbbot = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(2.0 * 18.0),
-      "facing": args.facing == .undefined ? .number(1) : args.facing,
-      "facingY": args.facingY == .undefined ? .number(0) : args.facingY,
+      "facing": args.facing.isUndefined ? .number(1) : args.facing,
+      "facingY": args.facingY.isUndefined ? .number(0) : args.facingY,
       "animationFrame": 0,
       "energy": 0,
     ]))
@@ -755,7 +755,7 @@ var makeFlybot = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(2.0 * 18.0),
-      "facing": args.facing == .undefined ? .number(1) : args.facing,
+      "facing": args.facing.isUndefined ? .number(1) : args.facing,
       "animationFrame": 0,
     ]))
 }
@@ -769,8 +769,8 @@ var makeEyebot = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(2.0 * 18.0),
-      "facing": args.facing == .undefined ? .number(1) : args.facing,
-      "facingY": args.facingY == .undefined ? .number(0) : args.facingY,
+      "facing": args.facing.isUndefined ? .number(1) : args.facing,
+      "facingY": args.facingY.isUndefined ? .number(0) : args.facingY,
       "animationFrame": 0,
     ]))
 }
@@ -784,8 +784,8 @@ var makeBin = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(3.0 * 18.0),
-      "facing": args.facing == .undefined ? .number(0) : args.facing,
-      "scaredy": args.scaredy == .undefined ? .boolean(false) : args.scaredy,
+      "facing": args.facing.isUndefined ? .number(0) : args.facing,
+      "scaredy": args.scaredy.isUndefined ? .boolean(false) : args.scaredy,
       "animationFrame": 0,
     ]))
 }
@@ -903,8 +903,8 @@ var makeShield = { (args: JSObject) -> JSValue in
       "y": args.y,
       "width": .number(2.0 * 15.0),
       "height": .number(1.0 * 18.0),
-      "fixed": args.fixed == .undefined ? .boolean(true) : args.fixed,
-      "used": args.used == .undefined ? .boolean(false) : args.used,
+      "fixed": args.fixed.isUndefined ? .boolean(true) : args.fixed,
+      "used": args.used.isUndefined ? .boolean(false) : args.used,
     ]))
 }
 
@@ -973,7 +973,7 @@ var entityMoved = { (entity: JSValue) in
   let bottomY = topY + (entity.height.number ?? 0)
 
   var yKeys = lastKeys.get(entity)
-  if yKeys == .undefined || yKeys == .null {
+  if yKeys.isUndefined || yKeys.isNull {
     yKeys = .object(JSObject.global.Object.function!.new())
   }
 
@@ -995,7 +995,7 @@ var entityMoved = { (entity: JSValue) in
 
 var updateAccelerationStructures = { () in
   for entity in entities {
-    if lastKeys.has(entity).boolean == false {
+    if lastKeys.has!(entity).boolean == false {
       entityMoved(entity)
     }
   }
@@ -1139,7 +1139,7 @@ var serializeLevel = { (level: JSValue) -> String in
       let colorName = entity.colorName.string ?? "red"
       let colorIndex = brickColorNames.firstIndex(of: colorName) ?? 0
       var animationName = ""
-      if entity.on != .undefined {
+      if !entity.on.isUndefined {
         animationName = entity.on.boolean == true ? "on" : "off"
       } else if entity.type.string == "eyebot" {
         animationName = "inactive"
@@ -1155,7 +1155,7 @@ var serializeLevel = { (level: JSValue) -> String in
         }
       } else if entity.type.string == "bin" && entity.scaredy.boolean == true {
         animationName = "rest"
-      } else if entity.facing != .undefined && entity.type.string != "bin" {
+      } else if !entity.facing.isUndefined && entity.type.string != "bin" {
         animationName = (entity.facing.number ?? 1) > 0 ? "walk_r" : "walk_l"
       } else if entity.type.string == "jump" {
         animationName = "dormant"
@@ -1169,10 +1169,10 @@ var serializeLevel = { (level: JSValue) -> String in
 
       let animationFrame = entity.animationFrame.number ?? 1.0
       let switchID =
-        entity.switchID != .undefined
+        !entity.switchID.isUndefined
         ? entity.switchID.string ?? String(Int(entity.switchID.number ?? 0)) : ""
       let teleportID =
-        entity.teleportID != .undefined
+        !entity.teleportID.isUndefined
         ? entity.teleportID.string ?? String(Int(entity.teleportID.number ?? 0)) : ""
       let relationID = switchID != "" ? switchID : teleportID
 
@@ -1189,7 +1189,7 @@ var serializeLevel = { (level: JSValue) -> String in
       JSValue.undefined)
   }
   let stringifyDecals = { (decals: JSValue) -> String in
-    if decals == .undefined || decals == .null { return "" }
+    if decals.isUndefined || decals.isNull { return "" }
     var res = [String]()
     for i in 0..<Int(decals.length.number ?? 0) {
       let d = decals[i]
@@ -1200,7 +1200,7 @@ var serializeLevel = { (level: JSValue) -> String in
 
   let bounds = level[property: "bounds"]
   var boundsStr = ""
-  if bounds = .undefined && !bounds != .null {
+  if !bounds.isUndefined && !bounds.isNull {
     boundsStr =
       "size=\(Int((bounds.width.number ?? 0)/15.0)),\(Int((bounds.height.number ?? 0)/18.0))"
   }
@@ -1275,7 +1275,7 @@ var resetAndInit = { (level: JSValue) in
 // @TODO: make this pure, and use initLevel in cases where loading from a file, so undos/etc. are reset
 var deserializeJSON = { (json: JSValue) in
   let state = JSObject.global.JSON.parse(json)
-  if state.version != .undefined && (state.version.number ?? 0) < 0.3 {
+  if !state.version.isUndefined && (state.version.number ?? 0) < 0.3 {
     let newLevel = JSObject.global.Object.function!.new()
     newLevel.entities = state.entities
     state.level = .object(newLevel)
@@ -1292,10 +1292,10 @@ var loadLevelFromText = { (levelData: JSValue, game: JSValue) -> JSValue in
   for i in 0..<numLines {
     let line = linesObj[i].string ?? ""
     let isCommentOrEmpty =
-      JSObject.global.RegExp.function!.new("^\\s*(#.*)?$").test(line).boolean == true
+      JSObject.global.RegExp.function!.new("^\\s*(#.*)?$").test!(line).boolean == true
     if !isCommentOrEmpty {
-      let match = JSObject.global.RegExp.function!.new("^\\[(.*)\\]$").exec(line)
-      if match == .null && !match != .undefined {
+      let match = JSObject.global.RegExp.function!.new("^\\[(.*)\\]$").exec!(line)
+      if !match.isNull && !match.isUndefined {
         sectionName = match[1].string ?? ""
       } else {
         if sections[sectionName] == nil {
@@ -1436,8 +1436,8 @@ var loadLevelFromText = { (levelData: JSValue, game: JSValue) -> JSValue in
 
               let e6 = e.count > 6 ? e[6] : ""
 
-              let brickMatch = JSObject.global.RegExp.function!.new("brick_(\\d+)").exec(typeName)
-              if brickMatch == .null && !brickMatch != .undefined {
+              let brickMatch = JSObject.global.RegExp.function!.new("brick_(\\d+)").exec!(typeName)
+              if !brickMatch.isNull && !brickMatch.isUndefined {
                 let widthInStuds = Double(brickMatch[1].string ?? "2") ?? 2.0
                 let args = JSObject.global.Object.function!.new()
                 args.x = .number(x)
@@ -1743,19 +1743,19 @@ var allResourcesLoadedPromise: JSValue = .undefined
 
 var playSound = {
   (soundName: JSValue, playbackRate: JSValue, cutOffEndFraction: JSValue) -> JSValue in
-  let rate = playbackRate == .undefined ? 1.0 : (playbackRate.number ?? 1.0)
-  let cutOff = cutOffEndFraction == .undefined ? 0.0 : (cutOffEndFraction.number ?? 0.0)
+  let rate = playbackRate.isUndefined ? 1.0 : (playbackRate.number ?? 1.0)
+  let cutOff = cutOffEndFraction.isUndefined ? 0.0 : (cutOffEndFraction.number ?? 0.0)
 
   let audioBuffer = resources.object![soundName.string ?? ""]
-  if audioBuffer == .undefined || audioBuffer == .null {
+  if audioBuffer.isUndefined || audioBuffer.isNull {
     // throw new Error(`No AudioBuffer loaded for sound '${soundName}'`);
     return .undefined
   }
   if muted || audioCtx.state.string != "running" {
     return .undefined
   }
-  let gain = audioCtx.createGain()
-  let source = audioCtx.createBufferSource()
+  let gain = audioCtx.createGain!()
+  let source = audioCtx.createBufferSource!()
   source.buffer = audioBuffer
   _ = source.connect(gain)
   _ = gain.connect(mainGain)
@@ -1805,7 +1805,7 @@ for (index, char) in fontChars.enumerated() {
 }
 
 var colorizeWhiteAlphaImage = { (image: JSValue, color: String) -> JSValue in
-  let canvas = document.createElement("canvas")
+  let canvas = document.createElement!("canvas")
   let ctx = canvas.getContext("2d")
   canvas.width = image.width
   canvas.height = image.height
@@ -1829,7 +1829,7 @@ var fontCanvases = [String: JSValue]()
 _ = hotResourceDerivations.append({ (resources: JSValue) in
   // Generate colored font sprites
   for (colorName, color) in fontColors {
-    if resources.font != .undefined {
+    if !resources.font.isUndefined {
       fontCanvases[colorName] = colorizeWhiteAlphaImage(resources.font, color)
     }
   }
@@ -1841,8 +1841,8 @@ var drawText = {
     bgColorArg: JSValue, paddingArg: JSValue
   ) -> JSValue in
   let bgColor =
-    bgColorArg == .undefined ? "rgba(0,0,0,0.5)" : (bgColorArg.string ?? "rgba(0,0,0,0.5)")
-  let padding = paddingArg == .undefined ? true : (paddingArg.boolean ?? true)
+    bgColorArg.isUndefined ? "rgba(0,0,0,0.5)" : (bgColorArg.string ?? "rgba(0,0,0,0.5)")
+  let padding = paddingArg.isUndefined ? true : (paddingArg.boolean ?? true)
   let fontImage = fontCanvases[colorName.string ?? "white"] ?? .undefined
   var x = startX.number ?? 0.0
   var y = startY.number ?? 0.0
@@ -2004,7 +2004,7 @@ var drawBin = { (ctx: JSValue, bin: JSValue) -> JSValue in
       rotation = 0
       frameIndex = 1
     } else {
-      rotation = ((Math.random().number ?? 0) - 0.5) / 4
+      rotation = ((Math.random!().number ?? 0) - 0.5) / 4
     }
     let direction = (bin.facing.number ?? 0) == 1 ? "WALK_R" : "walk_l"
     frame = resources.object!["spritesUndercoverAtlas"].object!["SCAREDY_\(direction)_\(1 + frameIndex)_s3"]
@@ -2148,7 +2148,7 @@ var drawLaserBeam = {
     var width = bounds[2].number ?? 0.0
     let height = bounds[3].number ?? 0.0
 
-    if extent == targetExtent - 1 && laserFacing == 1 && hitWhat != .undefined
+    if extent == targetExtent - 1 && laserFacing == 1 && !hitWhat.isUndefined
       && hitWhat.type.string != "bin"
     {
       // depth illusion: "go behind" things to the right
@@ -2423,7 +2423,7 @@ var drawJunkbot = { (ctx: JSValue, junkbot: JSValue) -> JSValue in
   var frameName = ""
   var offsetX = 0.0
   var offsetY = 0.0
-  if animation != .undefined {
+  if !animation.isUndefined {
     animLength = Int(animation.length.number ?? 0.0)
     let t =
       JSObject.global.Math.floor(animFrame.truncatingRemainder(dividingBy: Double(animLength)))
@@ -2466,14 +2466,14 @@ var renderSelectionHilight = {
   (widthArg: JSValue, heightArg: JSValue, depthArg: JSValue, studsOnTopArg: JSValue) -> JSValue in
   let width = widthArg.number ?? 0.0
   let height = heightArg.number ?? 0.0
-  let depth = depthArg == .undefined ? 10.0 : (depthArg.number ?? 10.0)
-  let studsOnTop = studsOnTopArg == .undefined ? false : (studsOnTopArg.boolean ?? false)
+  let depth = depthArg.isUndefined ? 10.0 : (depthArg.number ?? 10.0)
+  let studsOnTop = studsOnTopArg.isUndefined ? false : (studsOnTopArg.boolean ?? false)
 
   let key = "\(width)x\(height)x\(depth) studsOnTop=\(studsOnTop)"
   if let cached = selectionHilightCanvases[key] {
     return cached
   }
-  let canvas = document.createElement("canvas")
+  let canvas = document.createElement!("canvas")
   canvas.width = .number(width + depth + 1)
   canvas.height = .number(height + depth + 1)
   let ctx = canvas.getContext("2d")
@@ -2520,8 +2520,8 @@ var drawSelectionHilight = {
     ctx: JSValue, x: JSValue, y: JSValue, width: JSValue, height: JSValue, depthArg: JSValue,
     studsOnTopArg: JSValue
   ) -> JSValue in
-  let depth = depthArg == .undefined ? 10.0 : (depthArg.number ?? 10.0)
-  let studsOnTop = studsOnTopArg == .undefined ? false : (studsOnTopArg.boolean ?? false)
+  let depth = depthArg.isUndefined ? 10.0 : (depthArg.number ?? 10.0)
+  let studsOnTop = studsOnTopArg.isUndefined ? false : (studsOnTopArg.boolean ?? false)
   let image = renderSelectionHilight(width, height, JSValue.number(depth), JSValue.boolean(studsOnTop))
   _ = ctx.save()
   _ = ctx.translate(0, -2 - depth)
@@ -2861,7 +2861,7 @@ var saveToFile = JSObject.global.Function.function!.new(
   		deserializeJSON(editorLevelState);
   	});
   	let file = new Blob([serializeLevel(currentLevel)], { type: "text/plain" });
-  	let a = document.createElement("a");
+  	let a = document.createElement!("a");
   	let url = URL.createObjectURL(file);
   	a.href = url;
   	a.download = `${currentLevel.title}.txt`;
@@ -2905,7 +2905,7 @@ var openFromFile = JSObject.global.Function.function!.new(
 var openFromFileDialog = JSObject.global.Function.function!.new(
   "document", "openFromFile",
   """
-  	let input = document.createElement("input");
+  	let input = document.createElement!("input");
   	input.type = "file";
   	input.onchange = (event) => {
   		let file = event.target.files[0];
@@ -3140,7 +3140,7 @@ var zoomTo = { (newScale: Double, focalPointOnCanvasArg: JSValue) -> JSValue in
     let dPR = JSObject.global.window.devicePixelRatio.number ?? 1
     fpX = ((pointerEventCache[0].pageX.number ?? 0) + (pointerEventCache[1].pageX.number ?? 0)) / 2 * dPR
     fpY = ((pointerEventCache[0].pageY.number ?? 0) + (pointerEventCache[1].pageY.number ?? 0)) / 2 * dPR
-  } else if focalPointOnCanvasArg = .undefined && !focalPointOnCanvasArg != .null {
+  } else if !focalPointOnCanvasArg.isUndefined && !focalPointOnCanvasArg.isNull {
     fpX = focalPointOnCanvasArg.x.number ?? cpw / 2
     fpY = focalPointOnCanvasArg.y.number ?? cph / 2
   } else {
@@ -3228,7 +3228,7 @@ let keydownClosure = JSClosure { args -> JSValue in
     // playback saved solution recording
     let solutionRecordingKey = storageKeys["solutionRecording"]!.function!.callAsFunction(this: JSObject.global, currentLevel.title.string ?? "").string ?? ""
     let json = JSObject.global.localStorage.object![solutionRecordingKey]
-    if json = .undefined && !json != .null {
+    if !json.isUndefined && !json.isNull {
       _ = toggleEditing.jsValue.function?.callAsFunction(this: JSObject.global)
       if editing {
         _ = toggleEditing.jsValue.function?.callAsFunction(this: JSObject.global)
@@ -3314,7 +3314,7 @@ let keydownClosure = JSClosure { args -> JSValue in
   return .undefined
 }
 retainedClosures.append(keydownClosure)
-_ = JSObject.global.addEventListener("keydown", keydownClosure)
+_ = JSObject.global.addEventListener!("keydown", keydownClosure)
 
 let keyupClosure = JSClosure { args -> JSValue in
   let event = args[0]
@@ -3327,7 +3327,7 @@ let keyupClosure = JSClosure { args -> JSValue in
   return .undefined
 }
 retainedClosures.append(keyupClosure)
-_ = JSObject.global.addEventListener("keyup", keyupClosure)
+_ = JSObject.global.addEventListener!("keyup", keyupClosure)
 
 // #endregion
 //                                    ____{ ((______     ◣
@@ -3348,7 +3348,7 @@ let dropClosure = JSClosure { args -> JSValue in
   return .undefined
 }
 retainedClosures.append(dropClosure)
-_ = JSObject.global.addEventListener("drop", dropClosure)
+_ = JSObject.global.addEventListener!("drop", dropClosure)
 
 let dragoverClosure = JSClosure { args -> JSValue in
   let event = args[0]
@@ -3356,7 +3356,7 @@ let dragoverClosure = JSClosure { args -> JSValue in
   return .undefined
 }
 retainedClosures.append(dragoverClosure)
-_ = JSObject.global.addEventListener("dragover", dragoverClosure)
+_ = JSObject.global.addEventListener!("dragover", dragoverClosure)
 
 let blurClosure = JSClosure { args -> JSValue in
   // prevent stuck keys
@@ -3369,7 +3369,7 @@ let blurClosure = JSClosure { args -> JSValue in
   return .undefined
 }
 retainedClosures.append(blurClosure)
-_ = JSObject.global.addEventListener("blur", blurClosure)
+_ = JSObject.global.addEventListener!("blur", blurClosure)
 var releasePointer = { (event: JSValue) -> JSValue in
   pointerEventCache = pointerEventCache.filter { oldEvent in oldEvent.pointerId != event.pointerId }
 
@@ -3402,7 +3402,7 @@ var updateMouseWorldPosition = { () -> JSValue in
     mouse["worldX"] = worldPos.x.number ?? 0.0
     mouse["worldY"] = worldPos.y.number ?? 0.0
   }
-  if selectionBox = .undefined && !selectionBox != .null {
+  if !selectionBox.isUndefined && !selectionBox.isNull {
     selectionBox.x2 = .number(mouse["worldX"] as? Double ?? 0.0)
     selectionBox.y2 = .number(mouse["worldY"] as? Double ?? 0.0)
   }
@@ -3424,7 +3424,7 @@ var updateMouse = { (event: JSValue) -> JSValue in
 var brickAt = { (worldPos: JSValue, options: JSValue) -> JSValue in
   let worldX = worldPos.x.number ?? 0.0
   let worldY = worldPos.y.number ?? 0.0
-  let includeFixed = options == .undefined ? false : (options.includeFixed.boolean ?? false)
+  let includeFixed = options.isUndefined ? false : (options.includeFixed.boolean ?? false)
 
   for i in stride(from: entities.count - 1, through: 0, by: -1) {
     let entity = entities[i]
@@ -3440,7 +3440,7 @@ var brickAt = { (worldPos: JSValue, options: JSValue) -> JSValue in
 }
 
 var connects = { (a: JSValue, b: JSValue, directionArg: JSValue) -> JSValue in
-  let direction = directionArg == .undefined ? 0.0 : (directionArg.number ?? 0.0)
+  let direction = directionArg.isUndefined ? 0.0 : (directionArg.number ?? 0.0)
   let aX = a.x.number ?? 0.0
   let aY = a.y.number ?? 0.0
   let aWidth = a.width.number ?? 0.0
@@ -3480,9 +3480,9 @@ var allConnectedToFixed = { (options: JSValue) -> [JSValue] in
     if let bottomYArr = entitiesByBottomY[eY] { entitiesToCheck.append(contentsOf: bottomYArr) }
 
     let ignoreEntitiesJS =
-      options == .undefined
+      options.isUndefined
       ? JSObject.global["Array"].function!.new().jsValue
-      : (options.ignoreEntities == .undefined
+      : (options.ignoreEntities.isUndefined
         ? JSObject.global["Array"].function!.new().jsValue : options.ignoreEntities)
 
     for otherEntity in entitiesToCheck {
@@ -3499,9 +3499,9 @@ var allConnectedToFixed = { (options: JSValue) -> [JSValue] in
   }
   for entity in entities {
     let ignoreEntitiesJS =
-      options == .undefined
+      options.isUndefined
       ? JSObject.global["Array"].function!.new().jsValue
-      : (options.ignoreEntities == .undefined
+      : (options.ignoreEntities.isUndefined
         ? JSObject.global["Array"].function!.new().jsValue : options.ignoreEntities)
     let isIgnored = ignoreEntitiesJS.includes(entity).boolean == true
     if !isIgnored && !JSValueArrayContains(connectedToFixed, entity) {
@@ -3516,18 +3516,18 @@ var allConnectedToFixed = { (options: JSValue) -> [JSValue] in
 
 var connectsToFixed = { (startEntity: JSValue, options: JSValue) -> JSValue in
   let direction =
-    options == .undefined
-    ? 0.0 : (options.direction == .undefined ? 0.0 : (options.direction.number ?? 0.0))
+    options.isUndefined
+    ? 0.0 : (options.direction.isUndefined ? 0.0 : (options.direction.number ?? 0.0))
   let ignoreEntitiesJS =
-    options == .undefined
+    options.isUndefined
     ? JSObject.global["Array"].function!.new().jsValue
-    : (options.ignoreEntities == .undefined
+    : (options.ignoreEntities.isUndefined
       ? JSObject.global["Array"].function!.new().jsValue : options.ignoreEntities)
 
   var visited = [JSValue]()
   var search: ((JSValue) -> Bool)!
   search = { (fromEntity: JSValue) in
-    if currentLevel.bounds != .undefined {
+    if !currentLevel.bounds.isUndefined {
       let boundsY = currentLevel.bounds.y.number ?? 0.0
       let boundsH = currentLevel.bounds.height.number ?? 0.0
       if (fromEntity.y.number ?? 0.0) + (fromEntity.height.number ?? 0.0) >= boundsY + boundsH {
@@ -3580,11 +3580,11 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   }
 
   let worldX =
-    mousePos == .undefined
+    mousePos.isUndefined
     ? (mouse["worldX"] as? Double ?? 0.0)
     : (mousePos.worldX.number ?? (mouse["worldX"] as? Double ?? 0.0))
   let worldY =
-    mousePos == .undefined
+    mousePos.isUndefined
     ? (mouse["worldY"] as? Double ?? 0.0)
     : (mousePos.worldY.number ?? (mouse["worldY"] as? Double ?? 0.0))
 
@@ -3677,7 +3677,7 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
   let opts = JSObject.global.Object.function!.new()
   opts.includeFixed = .boolean(editing)
   let brick = brickAt(posObj.jsValue, opts.jsValue)
-  if brick == .undefined || brick == .null {
+  if brick.isUndefined || brick.isNull {
     return makeJSArray().jsValue
   }
   let grabs = makeJSArray()
@@ -3733,17 +3733,17 @@ var possibleGrabs = { (mousePos: JSValue) -> JSValue in
 
 var pendingGrabs: JSValue = JSObject.global["Array"].function!.new().jsValue
 var startGrab: (JSValue, JSValue) -> JSValue = { (grab: JSValue, options: JSValue) -> JSValue in
-  let grabType: JSValue = options == .undefined ? JSValue.undefined : options.grabType
-  let duringPlayback = options == .undefined ? false : (options.duringPlayback.boolean ?? false)
+  let grabType: JSValue = options.isUndefined ? JSValue.undefined : options.grabType
+  let duringPlayback = options.isUndefined ? false : (options.duringPlayback.boolean ?? false)
 
   let mWorldX =
-    (options == .undefined || options.mouse == .undefined)
+    (options.isUndefined || options.mouse.isUndefined)
     ? (mouse["worldX"] as? Double ?? 0.0) : (options.mouse.worldX.number ?? 0.0)
   let mWorldY =
-    (options == .undefined || options.mouse == .undefined)
+    (options.isUndefined || options.mouse.isUndefined)
     ? (mouse["worldY"] as? Double ?? 0.0) : (options.mouse.worldY.number ?? 0.0)
 
-  if grab == .undefined || grab == .null || (grab.array != nil && grab.length.number == 0.0) {
+  if grab.isUndefined || grab.isNull || (grab.array != nil && grab.length.number == 0.0) {
     if duringPlayback {
       desynchronized = true
     }
@@ -3872,7 +3872,7 @@ _ = JSObject.global.canvas.addEventListener("pointermove", pointermoveClosure)
 let pointerdownClosure = JSClosure { args -> JSValue in
   let event = args[0]
   if !muted {
-    _ = audioCtx.resume()
+    _ = audioCtx.resume!()
   }
   _ = JSObject.global.canvas.focus()
   _ = JSObject.global.window.getSelection().removeAllRanges()
@@ -3899,7 +3899,7 @@ let pointerdownClosure = JSClosure { args -> JSValue in
     }
 
     let grabs = possibleGrabs(JSValue.undefined)
-    if grabs.selection == .undefined {
+    if grabs.selection.isUndefined {
       for entity in entities {
         entity.selected = .undefined
       }
@@ -3938,14 +3938,14 @@ let contextmenuClosure = JSClosure { args -> JSValue in
   let opts = JSObject.global.Object.function!.new()
   opts.includeFixed = .boolean(true)
   let hoveredBrick = brickAt(pos.jsValue, opts.jsValue)
-  if hoveredBrick = .undefined && !hoveredBrick != .null {
-    if hoveredBrick.switchID == .undefined == false {
+  if !hoveredBrick.isUndefined && !hoveredBrick.isNull {
+    if hoveredBrick.switchID.isUndefined == false {
       if let newID = showPrompt("Edit switch group ID for this brick", hoveredBrick.switchID.string ?? ""), !newID.isEmpty {
         _ = undoable.jsValue.function?.callAsFunction(this: JSObject.global)
         hoveredBrick.switchID = .string(newID)
       }
     }
-    if hoveredBrick.teleportID == .undefined == false {
+    if hoveredBrick.teleportID.isUndefined == false {
       if let newID = showPrompt("Edit teleport group ID for this brick", hoveredBrick.teleportID.string ?? ""), !newID.isEmpty {
         _ = undoable.jsValue.function?.callAsFunction(this: JSObject.global)
         hoveredBrick.teleportID = .string(newID)
@@ -4052,12 +4052,12 @@ var canRelease = { () -> Bool in
 }
 
 var finishDrag = { (options: JSValue) -> JSValue in
-  let duringPlayback = options == .undefined ? false : (options.duringPlayback.boolean ?? false)
+  let duringPlayback = options.isUndefined ? false : (options.duringPlayback.boolean ?? false)
   let mWorldX =
-    (options == .undefined || options.mouse == .undefined)
+    (options.isUndefined || options.mouse.isUndefined)
     ? (mouse["worldX"] as? Double ?? 0.0) : (options.mouse.worldX.number ?? 0.0)
   let mWorldY =
-    (options == .undefined || options.mouse == .undefined)
+    (options.isUndefined || options.mouse.isUndefined)
     ? (mouse["worldY"] as? Double ?? 0.0) : (options.mouse.worldY.number ?? 0.0)
 
   if !canRelease() {
@@ -4088,7 +4088,7 @@ var finishDrag = { (options: JSValue) -> JSValue in
 let pointerupClosure2 = JSClosure { args in
   if !dragging.isEmpty {
     _ = finishDrag(JSValue.undefined)
-  } else if selectionBox = .undefined && !selectionBox != .null {
+  } else if !selectionBox.isUndefined && !selectionBox.isNull {
     let toSelect = entitiesWithinSelection(selectionBox)
     let length = toSelect.count
     for i in 0..<length {
@@ -4146,7 +4146,7 @@ var simulateGravity = { () -> JSValue in
         let sorted = groundArr.sorted { ($0.y.number ?? 0) < ($1.y.number ?? 0) }
         let ground = sorted.first
 
-        debug("GRAVITY COLLISION", ["ground: \(JSObject.global.JSON.object!.stringify(ground ?? JSValue.undefined, JSValue.null, "\t").string ?? "")"])
+        debug("GRAVITY COLLISION", ["ground: \(JSObject.global.JSON.object!.stringify!(ground ?? JSValue.undefined, JSValue.null, "\t").string ?? "")"])
         if let ground = ground {
           entity.y = .number((ground.y.number ?? 0.0) - eHeight)
           entityMoved(entity)
@@ -4347,10 +4347,10 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
     }
     return .undefined
   }
-  if junkbot.momentumX == .undefined {
+  if junkbot.momentumX.isUndefined {
     junkbot.momentumX = .number(0.0)
   }
-  if junkbot.momentumY == .undefined {
+  if junkbot.momentumY.isUndefined {
     junkbot.momentumY = .number(0.0)
   }
   var mX = junkbot.momentumX.number ?? 0.0
@@ -4467,8 +4467,8 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
         if glType == "switch" {
           groundLevelEntity.on = .boolean(groundLevelEntity.on.boolean != true)
           for entity in entities {
-            if entity.type.string = "switch" && entity.on != .undefined == false
-              && entity.switchID == .undefined == false
+            if entity.type.string != "switch" && entity.on.isUndefined == false
+              && entity.switchID.isUndefined == false
               && entity.switchID.string == groundLevelEntity.switchID.string
             {
               entity.on = .boolean(entity.on.boolean != true)
@@ -4501,7 +4501,7 @@ var simulateJunkbot = { (junkbot: JSValue) -> JSValue in
           && jX == glX + 15.0
         {
           let linkedTeleport = findLinkedTeleport(groundLevelEntity)
-          if linkedTeleport = .undefined && !linkedTeleport != .null
+          if !linkedTeleport.isUndefined && !linkedTeleport.isNull
             && linkedTeleport.blocked.boolean != true
           {
             junkbot.x = .number((linkedTeleport.x.number ?? 0.0) + 15.0)
@@ -4649,7 +4649,7 @@ var doEyebotTargeting = { (eyebot: JSValue) -> JSValue in
         (eyebot.y.number ?? 0.0) + offsetY,
         15.0, 18.0, directionX, directionY, 50, eyebotFilter)
       let hit = res["hit"] ?? .undefined
-      if hit = .undefined && !hit != .null && hit.type.string == "junkbot" {
+      if !hit.isUndefined && !hit.isNull && hit.type.string == "junkbot" {
         eyebot.facing = .number(directionX)
         eyebot.facingY = .number(directionY)
         eyebot.activeTimer = .number(110.0)
@@ -4867,14 +4867,14 @@ var simulateTeleport = { (teleport: JSValue) -> JSValue in
   let rColl1 = rectangleCollisionTest(tpX + 15.0, tpY - 18.0 * 4.0, 15.0 * 2.0, 18.0 * 4.0, notDropletOrJunkbot) != nil
 
   var rColl2 = false
-  if targetTeleport = .undefined && !targetTeleport != .null {
+  if !targetTeleport.isUndefined && !targetTeleport.isNull {
     let ttX = targetTeleport.x.number ?? 0.0
     let ttY = targetTeleport.y.number ?? 0.0
     rColl2 = rectangleCollisionTest(ttX + 15.0, ttY - 18.0 * 4.0, 15.0 * 2.0, 18.0 * 4.0, notDropletOrJunkbot) != nil
   }
 
   teleport.blocked = .boolean(
-    targetTeleport == .undefined || targetTeleport == .null || rColl1 || rColl2)
+    targetTeleport.isUndefined || targetTeleport.isNull || rColl1 || rColl2)
 
   if (teleport.timer.number ?? 0.0) > Double(TELEPORT_COOLDOWN - TELEPORT_EFFECT_PERIOD) {
     let obj = JSObject.global.Object.function!.new()
@@ -4966,7 +4966,7 @@ var handlePlayback = { () -> JSValue in
   for j in 0..<pbLen {
     let event = playbackEvents[j]
     if Int(event.t.number ?? 0.0) == frameCounter + 1 {
-      if event.levelPatch = .undefined && !event.levelPatch != .null {
+      if !event.levelPatch.isUndefined && !event.levelPatch.isNull {
         let sortFunc = JSObject.global.Function.function!.new("a", "b", "return a.id - b.id;")
         _ = playbackLevel.entities.sort(sortFunc)
         _ = diffPatcher.patch(playbackLevel, event.levelPatch)
@@ -5006,7 +5006,7 @@ var handlePlayback = { () -> JSValue in
       let eType = event.type.string ?? ""
       if eType == "pickup" {
         let grabs = possibleGrabs(playbackMouse.jsValue)
-        if (grabs = .undefined && !grabs != .null) && dragging.isEmpty {
+        if (!grabs.isUndefined && !grabs.isNull) && dragging.isEmpty {
           let opts = JSObject.global.Object.function!.new()
           opts.duringPlayback = .boolean(true)
           opts.mouse = playbackMouse.jsValue
@@ -5089,7 +5089,7 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
         _ = simulateDroplet(entity)
       } else if type == "bin" && entity.scaredy.boolean == true {
         _ = simulateScaredy(entity)
-      } else if entity.animationFrame != .undefined {
+      } else if !entity.animationFrame.isUndefined {
         entity.animationFrame = .number((entity.animationFrame.number ?? 0.0) + 1.0)
       }
     }
@@ -5111,7 +5111,7 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
   let newLen = entities.count
   for i in 0..<newLen {
     let entity = entities[i]
-    if entity.floating != .undefined {
+    if !entity.floating.isUndefined {
       entity.wasFloating = entity.floating
       _ = JSObject.global.Reflect.deleteProperty(entity, "floating")
     }
@@ -5204,7 +5204,7 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
             }
           }
         }
-        if collision != .undefined { break }
+        if !collision.isUndefined { break }
         extent += 1.0
       }
 
@@ -5264,28 +5264,28 @@ var detectProblems = { () -> JSValue in
     let entity = entities[i]
     if !isNum(entity.x) || !isNum(entity.y) {
       let p = JSObject.global.Object.function!.new()
-      let str = JSObject.global.JSON.object!.stringify(entity, JSValue.null, "\t").string ?? ""
+      let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("Invalid position (x/y) for entity \(str)\n")
       _ = problems.push(p)
       continue
     }
     if (entity.x.number ?? 0.0).truncatingRemainder(dividingBy: 15.0) != 0.0 {
       let p = JSObject.global.Object.function!.new()
-      let str = JSObject.global.JSON.object!.stringify(entity, JSValue.null, "\t").string ?? ""
+      let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("x position not aligned to grid for entity \(str)\n")
       _ = problems.push(p)
       continue
     }
     if !isNum(entity.width) || !isNum(entity.height) {
       let p = JSObject.global.Object.function!.new()
-      let str = JSObject.global.JSON.object!.stringify(entity, JSValue.null, "\t").string ?? ""
+      let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("Invalid size (width/height) for entity \(str)\n")
       _ = problems.push(p)
       continue
     }
     if entity.type.string == "brick" && !isNum(entity.widthInStuds) {
       let p = JSObject.global.Object.function!.new()
-      let str = JSObject.global.JSON.object!.stringify(entity, JSValue.null, "\t").string ?? ""
+      let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("Invalid widthInStuds for entity \(str)\n")
       _ = problems.push(p)
       continue
@@ -5294,7 +5294,7 @@ var detectProblems = { () -> JSValue in
       && (entity.width.number ?? 0.0) != 15.0 * (entity.widthInStuds.number ?? 0.0)
     {
       let p = JSObject.global.Object.function!.new()
-      let str = JSObject.global.JSON.object!.stringify(entity, JSValue.null, "\t").string ?? ""
+      let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("width doesn't match widthInStuds * 15 for entity \(str)\n")
       _ = problems.push(p)
       continue
@@ -5312,13 +5312,13 @@ var detectProblems = { () -> JSValue in
           if !isSame {
             let repE = reportedCollisions.get(entity) ?? .undefined
             var hasRepE = false
-            if repE = .undefined && !repE != .null {
+            if !repE.isUndefined && !repE.isNull {
               hasRepE = (repE.indexOf(otherEntity).number ?? -1.0) != -1.0
             }
 
             let repOE = reportedCollisions.get(otherEntity) ?? .undefined
             var hasRepOE = false
-            if repOE = .undefined && !repOE != .null {
+            if !repOE.isUndefined && !repOE.isNull {
               hasRepOE = (repOE.indexOf(entity).number ?? -1.0) != -1.0
             }
 
@@ -5342,14 +5342,14 @@ var detectProblems = { () -> JSValue in
                 p.worldY = .number(worldY)
                 _ = problems.push(p)
 
-                if reportedCollisions.has(entity).boolean == true {
+                if reportedCollisions.has!(entity).boolean == true {
                   _ = (reportedCollisions.get(entity) ?? .undefined).push(otherEntity)
                 } else {
                   let arr = JSObject.global["Array"].function!.new()
                   _ = arr.push(otherEntity)
                   _ = reportedCollisions.set(entity, arr)
                 }
-                if reportedCollisions.has(otherEntity).boolean == true {
+                if reportedCollisions.has!(otherEntity).boolean == true {
                   _ = (reportedCollisions.get(otherEntity) ?? .undefined).push(entity)
                 } else {
                   let arr = JSObject.global["Array"].function!.new()
@@ -5365,7 +5365,7 @@ var detectProblems = { () -> JSValue in
   }
 
   let pbEntities = playbackLevel["entities"]
-  if pbEntities = .undefined && !pbEntities != .null {
+  if !pbEntities.isUndefined && !pbEntities.isNull {
     let pbl = Int(pbEntities.length.number ?? 0.0)
     for i in 0..<len {
       let entity = entities[i]
@@ -5438,7 +5438,7 @@ var detectProblems = { () -> JSValue in
 
 var rafid = JSValue.undefined
 let errClosure = JSClosure { args in
-  _ = JSObject.global.cancelAnimationFrame(rafid)
+  _ = JSObject.global.cancelAnimationFrame!(rafid)
   return .undefined
 }
 _ = JSObject.global.window.addEventListener("error", errClosure)
@@ -5491,7 +5491,7 @@ var controlViewport = { () -> JSValue in
   }
 
   let cbounds = currentLevel[property: "bounds"]
-  if cbounds = .undefined && !cbounds != .null {
+  if !cbounds.isUndefined && !cbounds.isNull {
     let cbY = cbounds.y.number ?? 0.0
     let cbH = cbounds.height.number ?? 0.0
     let cbX = cbounds.x.number ?? 0.0
@@ -5540,7 +5540,7 @@ var checkLevelEnd = { () -> JSValue in
           let titleStr = currentLevel.title.string ?? ""
           if titleStr != ""
             && parseRoute.function?.callAsFunction(this: JSObject.global, JSObject.global.location.hash).game
-              .string != GAME_USER_CREATED.string
+              .string != GAME_USER_CREATED
           {
             let scoreKey = storageKeys["score"]?.function?.callAsFunction(this: JSObject.global, titleStr).string ?? ""
             let solutionKey = storageKeys["solutionRecording"]?.function?.callAsFunction(this: JSObject.global, titleStr).string ?? ""
@@ -5591,7 +5591,7 @@ var animate = JSClosure { args in
 //                      ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // #region GUI (Graphical User Interface)
 
-_ = JSObject.global.eval(
+_ = JSObject.global.eval!(
   #"""
   var toggleInfoBox = function() {
   	infoBox.hidden = !infoBox.hidden;
@@ -5749,9 +5749,9 @@ _ = JSObject.global.eval(
   	var n = 0;
   	for (let levelName of levelNamesToShow) {
   		n += 1;
-  		var li = document.createElement("li");
+  		var li = document.createElement!("li");
   		li.className = "level-list-item";
-  		var a = document.createElement("a");
+  		var a = document.createElement!("a");
   		if (paginated) {
   			a.href = `#${gameNameToSlug(game)}/levels/${levelGroupToSlug(`${levelGroupNumber}`, game)}/${levelNameToSlug(levelName)}`;
   		} else {
@@ -5768,20 +5768,20 @@ _ = JSObject.global.eval(
   		}
   		var completed = typeof completedInMoves != "undefined";
 
-  		var completedImg = document.createElement("img");
+  		var completedImg = document.createElement!("img");
   		completedImg.className = "level-list-item-completed-indicator";
   		completedImg.src = completed ? "images/menus/checkbox_on.png" : "images/menus/checkbox_off.png";
-  		var goldAwardImg = document.createElement("img");
+  		var goldAwardImg = document.createElement!("img");
   		goldAwardImg.src = "images/menus/check_light.png";
   		goldAwardImg.hidden = true;
   		goldAwardImg.className = "level-list-item-gold-award";
-  		var score = document.createElement("span");
+  		var score = document.createElement!("span");
   		score.className = "level-list-item-score";
   		score.textContent = completedInMoves;
-  		var title = document.createElement("span");
+  		var title = document.createElement!("span");
   		title.className = "level-list-item-title";
   		title.textContent = levelName;
-  		var ordinal = document.createElement("span");
+  		var ordinal = document.createElement!("span");
   		ordinal.className = "level-list-item-ordinal";
   		ordinal.textContent = n;
   		if (game != GAME_USER_CREATED) {
@@ -5844,7 +5844,7 @@ var initGUI = { () -> JSValue in
     JSClosure { args in
       let event = args[0]
       let button = event.target.closest(".generic-sound")
-      if button = .undefined && !button != .null {
+      if !button.isUndefined && !button.isNull {
         _ = playSound.function!.callAsFunction(this: JSObject.global, .string("buttonClick"))
       }
       return .undefined
@@ -5853,39 +5853,39 @@ var initGUI = { () -> JSValue in
   _ = startGameButton.addEventListener(
     "click",
     JSClosure { _ in
-      JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSObject.global)
+      JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
   _ = showCreditsButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = JSObject.global.window.open("https://github.com/1j01/janitorial-android#credits")
+      _ = JSObject.global.window.open!("https://github.com/1j01/janitorial-android#credits")
       return .undefined
     })
   _ = skipIntroButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = stopIntro.callAsFunction(this: JSObject.global)
+      _ = stopIntro.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
   _ = replayIntroButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = stopIntro.callAsFunction(this: JSObject.global)
-      _ = showTitleScreen.callAsFunction(this: JSObject.global, .boolean(true))
+      _ = stopIntro.function!.callAsFunction(this: JSObject.global)
+      _ = showTitleScreen.function!.callAsFunction(this: JSObject.global, .boolean(true))
       return .undefined
     })
   _ = resetScreenButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = showTitleScreen.callAsFunction(this: JSObject.global, .boolean(false))
+      _ = showTitleScreen.function!.callAsFunction(this: JSObject.global, .boolean(false))
       return .undefined
     })
 
   _ = backToTitleScreenButton.addEventListener(
     "click",
     JSClosure { _ in
-      JSObject.global.location.hash = getTitleScreenURL.callAsFunction(this: JSObject.global)
+      JSObject.global.location.hash = getTitleScreenURL.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
 
@@ -5894,7 +5894,7 @@ var initGUI = { () -> JSValue in
     JSClosure { args in
       let event = args[0]
       let tab = event.target.closest(".level-group-tab")
-      if tab = .undefined && !tab != .null && tab.classList.contains("selected").boolean != true {
+      if !tab.isUndefined && !tab.isNull && tab.classList.contains!("selected").boolean != true {
         _ = playSound.function!.callAsFunction(this: JSObject.global, .string("tabSwitch"))
       }
       return .undefined
@@ -5905,7 +5905,7 @@ var initGUI = { () -> JSValue in
     JSClosure { args in
       let event = args[0]
       let a = event.target.closest("a")
-      if a = .undefined && !a != .null {
+      if !a.isUndefined && !a.isNull {
         _ = playSound.function!.callAsFunction(this: JSObject.global, .string("enterLevel"))
       }
       return .undefined
@@ -5915,30 +5915,30 @@ var initGUI = { () -> JSValue in
 
   _ = toggleFullscreenButton.addEventListener("click", toggleFullscreen)
   toggleFullscreenButton.ariaPressed = .boolean(false)
-  _ = JSObject.global.addEventListener(
+  _ = JSObject.global.addEventListener!(
     "fullscreenchange",
     JSClosure { _ in
       toggleFullscreenButton.ariaPressed = .boolean(
-        JSObject.global.document.fullscreenElement != .undefined
-          && JSObject.global.document.fullscreenElement != .null)
+        !JSObject.global.document.fullscreenElement.isUndefined
+          && !JSObject.global.document.fullscreenElement.isNull)
       return .undefined
     })
 
   _ = toggleMuteButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = toggleMute.callAsFunction(this: JSObject.global)
+      _ = toggleMute.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
-  _ = updateMuteButton.callAsFunction(this: JSObject.global)
+  _ = updateMuteButton.function!.callAsFunction(this: JSObject.global)
 
   _ = toggleEditingButton.addEventListener("click", toggleEditing)
-  _ = updateEditingButton.callAsFunction(this: JSObject.global)
+  _ = updateEditingButton.function!.callAsFunction(this: JSObject.global)
 
   _ = volumeSlider.addEventListener(
     "input",
     JSClosure { _ in
-      _ = setVolume.callAsFunction(this: JSObject.global, volumeSlider.valueAsNumber)
+      _ = setVolume.function!.callAsFunction(this: JSObject.global, volumeSlider.valueAsNumber)
       return .undefined
     })
   volumeSlider.valueAsNumber = mainGain.gain.value
@@ -5946,13 +5946,13 @@ var initGUI = { () -> JSValue in
   _ = zoomInButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = zoomIn.callAsFunction(this: JSObject.global)
+      _ = zoomIn.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
   _ = zoomOutButton.addEventListener(
     "click",
     JSClosure { _ in
-      _ = zoomOut.callAsFunction(this: JSObject.global)
+      _ = zoomOut.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
 
@@ -5962,7 +5962,7 @@ var initGUI = { () -> JSValue in
       rewindingWithButton = .boolean(true)
       return .undefined
     })
-  _ = JSObject.global.addEventListener(
+  _ = JSObject.global.addEventListener!(
     "pointerup",
     JSClosure { _ in
       rewindingWithButton = .boolean(false)
@@ -5972,20 +5972,20 @@ var initGUI = { () -> JSValue in
   _ = backToLevelSelectButton.addEventListener(
     "click",
     JSClosure { _ in
-      JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSObject.global)
+      JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
       return .undefined
     })
 
   _ = canvas.addEventListener(
     "dragover",
     JSClosure { args in
-      _ = args[0].preventDefault()
+      _ = args[0].preventDefault!()
       return .undefined
     })
   _ = canvas.addEventListener(
     "dragenter",
     JSClosure { args in
-      _ = args[0].preventDefault()
+      _ = args[0].preventDefault!()
       return .undefined
     })
   _ = canvas.addEventListener(
@@ -6003,10 +6003,10 @@ var initGUI = { () -> JSValue in
     let controlCell = tr.cells[0]
     let actionCell = tr.cells[1]
     let kbd = controlCell.querySelector("kbd")
-    if kbd = .undefined && !kbd != .null {
-      let match = kbd.textContent.match(
+    if !kbd.isUndefined && !kbd.isNull {
+      let match = kbd.textContent.match!(
         JSObject.global.RegExp.function!.new("(Ctrl\\s*\\+\\s*)?(Shift\\s*\\+\\s*)?(\\S+)"))
-      if match = .undefined && !match != .null {
+      if !match.isUndefined && !match.isNull {
         let ctrlKey = match[1].isUndefined == false && match[1].isNull == false
         let shiftKey = match[2].isUndefined == false && match[2].isNull == false
         var key = match[3].string ?? ""
@@ -6026,12 +6026,12 @@ var initGUI = { () -> JSValue in
             opts.ctrlKey = .boolean(ctrlKey)
             opts.shiftKey = .boolean(shiftKey)
             opts.bubbles = .boolean(true)
-            _ = canvas.dispatchEvent(JSObject.global.KeyboardEvent.function!.new("keydown", opts))
+            _ = canvas.dispatchEvent!(JSObject.global.KeyboardEvent.function!.new("keydown", opts))
             return .undefined
           })
-        _ = wrapContents.callAsFunction(this: JSObject.global, actionCell, button)
+        _ = wrapContents.function!.callAsFunction(this: JSObject.global, actionCell, button)
       }
-    } else if controlCell.matches("th").boolean != true {
+    } else if controlCell.matches!("th").boolean != true {
       _ = printJS.function!.callAsFunction(
         this: JSObject.global, .string("No keyboard shortcut for"), actionCell.textContent, actionCell)
     }
@@ -6048,8 +6048,8 @@ var getLevelLists = { (res: JSValue) -> JSValue in
     if key.hasPrefix("levelPrefix") {
       let lsVal = JSObject.global.localStorage[dynamicMember: key].string ?? "{}"
       let parsed = JSObject.global.JSON.parse(lsVal)
-      let name = parsed["level"].title
-      if name != .undefined && name != .null {
+      let name = (((parsed.level as JSValue) as JSValue).title as JSValue)
+      if !name.isUndefined && !name.isNull {
         _ = localLevels.push(name)
       } else {
         _ = printJS.function!.callAsFunction(
@@ -6076,7 +6076,7 @@ var getLevelLists = { (res: JSValue) -> JSValue in
   let g3 = JSObject.global.Object.function!.new()
   g3.game = GAME_TEST_CASES
   let mapJS = JSObject.global.Function.function!.new("test", "return test.name;")
-  g3.levelNames = tests.map(mapJS)
+  g3.levelNames = tests.map!(mapJS)
   g3.levelsPerPage = .number(Double.infinity)
   _ = arr.push(g3)
 
@@ -6120,9 +6120,9 @@ var initLevelDropdown = { () -> JSValue in
   option.textContent = .string("Custom World")
   option.value = .string("custom-world")
   option.defaultSelected = .boolean(true)
-  _ = levelDropdown.append(option)
+  _ = levelDropdown.append!(option)
 
-  let lists = getLevelLists.callAsFunction(this: JSObject.global, resources)
+  let lists = getLevelLists.function!.callAsFunction(this: JSObject.global, resources)
   let listLen = Int(lists.length.number ?? 0.0)
 
   for i in 0..<listLen {
@@ -6133,15 +6133,15 @@ var initLevelDropdown = { () -> JSValue in
     let optgroup = JSObject.global.document.createElement("optgroup")
     optgroup.label = game
     optgroup.value = game
-    _ = levelDropdown.append(optgroup)
+    _ = levelDropdown.append!(optgroup)
 
     let nLen = Int(levelNames.length.number ?? 0.0)
     for j in 0..<nLen {
       let levelName = levelNames[j]
       let op = JSObject.global.document.createElement("option")
       op.textContent = levelName
-      op.value = levelNameToSlug.callAsFunction(this: JSObject.global, levelName)
-      _ = optgroup.append(op)
+      op.value = levelNameToSlug.function!.callAsFunction(this: JSObject.global, levelName)
+      _ = optgroup.append!(op)
     }
   }
   levelDropdown.onchange = JSClosure { _ in
@@ -6168,7 +6168,7 @@ var initEditorUI = { () -> JSValue in
   editorUI.hidden = .boolean(!editing)
   editorControlsBar.hidden = .boolean(!editing)
 
-  _ = initLevelDropdown.callAsFunction(this: JSObject.global)
+  _ = initLevelDropdown.function!.callAsFunction(this: JSObject.global)
 
   var hilitButton = JSValue.undefined
   var makeInsertEntityButton = JSClosure { args in
@@ -6179,7 +6179,7 @@ var initEditorUI = { () -> JSValue in
     }
     let button = JSObject.global.document.createElement("button")
     let buttonCanvas = JSObject.global.document.createElement("canvas")
-    let buttonCtx = buttonCanvas.getContext("2d")
+    let buttonCtx = buttonCanvas.getContext!("2d")
 
     button.style.object!.margin = .string("0")
     button.style.object!.padding = .string("1px 6px")
@@ -6195,25 +6195,25 @@ var initEditorUI = { () -> JSValue in
         let len = Int(entities.length.number ?? 0.0)
         for i in 0..<len {
           let entity = entities[i]
-          _ = JSObject.global.Reflect.deleteProperty(entity, "selected")
-          _ = JSObject.global.Reflect.deleteProperty(entity, "grabbed")
-          _ = JSObject.global.Reflect.deleteProperty(entity, "grabOffset")
+          _ = JSObject.global.Reflect.deleteProperty!(entity, "selected")
+          _ = JSObject.global.Reflect.deleteProperty!(entity, "grabbed")
+          _ = JSObject.global.Reflect.deleteProperty!(entity, "grabOffset")
         }
-        let entity = getEntityCopy.callAsFunction(this: JSObject.global)
+        let entity = getEntityCopy.function!.callAsFunction(this: JSObject.global)
 
         let arr = JSObject.global["Array"].function!.new()
         _ = arr.push(entity)
-        _ = pasteEntities.callAsFunction(this: JSObject.global, arr)
+        _ = pasteEntities.function!.callAsFunction(this: JSObject.global, arr)
 
         editorUI.style.object!.cursor = .string(
           "url(\"images/cursors/cursor-insert.png\") 0 0, default")
-        if hilitButton = .undefined && !hilitButton != .null {
+        if !hilitButton.isUndefined && !hilitButton.isNull {
           hilitButton.style.object!.borderColor = .string("transparent")
         }
         button.style.object!.borderColor = .string("yellow")
         hilitButton = button
         _ = playSound.function!.callAsFunction(this: JSObject.global, .string("insert"))
-        _ = canvas.focus()
+        _ = canvas.focus!()
         return .undefined
       })
 
@@ -6224,26 +6224,26 @@ var initEditorUI = { () -> JSValue in
         return .undefined
       })
 
-    let previewEntity = getEntityCopy.callAsFunction(this: JSObject.global)
+    let previewEntity = getEntityCopy.function!.callAsFunction(this: JSObject.global)
     previewEntity.isPreviewEntity = .boolean(true)
     buttonCanvas.width = .number((previewEntity.width.number ?? 0.0) + 15.0)
     buttonCanvas.height = .number((previewEntity.height.number ?? 0.0) + 36.0)
 
     let drawPreview = JSClosure { _ in
-      _ = buttonCtx.clearRect(0.0, 0.0, buttonCanvas.width, buttonCanvas.height)
-      _ = buttonCtx.save()
-      _ = buttonCtx.translate(0.0, 28.0)
+      _ = buttonCtx.clearRect!(0.0, 0.0, buttonCanvas.width, buttonCanvas.height)
+      _ = buttonCtx.save!()
+      _ = buttonCtx.translate!(0.0, 28.0)
 
       let prevShowDebug = showDebug
       showDebug = false
-      _ = drawEntity.callAsFunction(this: JSObject.global, buttonCtx, previewEntity)
+      _ = drawEntity.function!.callAsFunction(this: JSObject.global, buttonCtx, previewEntity)
 
       let type = previewEntity.type.string ?? ""
       if type == "fan" {
         let arr = JSObject.global["Array"].function!.new()
         _ = arr.push(3.0)
         _ = arr.push(3.0)
-        _ = drawWind.callAsFunction(this: JSObject.global, buttonCtx, previewEntity, arr)
+        _ = drawWind.function!.callAsFunction(this: JSObject.global, buttonCtx, previewEntity, arr)
       }
       if type == "laser" {
         let arr = JSObject.global["Array"].function!.new()
@@ -6264,11 +6264,11 @@ var initEditorUI = { () -> JSValue in
         }
       }
       showDebug = prevShowDebug
-      _ = buttonCtx.restore()
+      _ = buttonCtx.restore!()
       return .undefined
     }
 
-    _ = drawPreview.callAsFunction(this: JSObject.global)
+    _ = drawPreview.function!.callAsFunction(this: JSObject.global)
 
     var previewAnimIntervalID = JSValue.undefined
     _ = button.addEventListener(
@@ -6282,11 +6282,11 @@ var initEditorUI = { () -> JSValue in
           previewEntity.timer = .number(Double(TELEPORT_COOLDOWN))
         }
 
-        previewAnimIntervalID = JSObject.global.setInterval(
+        previewAnimIntervalID = JSObject.global.setInterval!(
           JSClosure { _ in
             // Mute logic omitted to save space since it uses local captures not available
-            _ = simulate.callAsFunction(this: JSObject.global, JSObject.global["Array"].function!.new())  // mock
-            _ = drawPreview.callAsFunction(this: JSObject.global)
+            _ = simulate.function!.callAsFunction(this: JSObject.global, JSObject.global["Array"].function!.new())  // mock
+            _ = drawPreview.function!.callAsFunction(this: JSObject.global)
             return .undefined
           }, 1000.0 / targetFPS)
         return .undefined
@@ -6295,7 +6295,7 @@ var initEditorUI = { () -> JSValue in
     _ = button.addEventListener(
       "mouseleave",
       JSClosure { _ in
-        _ = JSObject.global.clearInterval(previewAnimIntervalID)
+        _ = JSObject.global.clearInterval!(previewAnimIntervalID)
         let type = previewEntity.type.string ?? ""
         if type == "jump" {
           previewEntity.active = .boolean(false)
@@ -6304,12 +6304,12 @@ var initEditorUI = { () -> JSValue in
         if type == "teleport" {
           previewEntity.timer = .number(0.0)
         }
-        _ = drawPreview.callAsFunction(this: JSObject.global)
+        _ = drawPreview.function!.callAsFunction(this: JSObject.global)
         return .undefined
       })
 
-    _ = button.append(buttonCanvas)
-    _ = entitiesScrollContainer.append(button)
+    _ = button.append!(buttonCanvas)
+    _ = entitiesScrollContainer.append!(button)
     return .undefined
   }
 
@@ -6536,7 +6536,7 @@ var initEditorUI = { () -> JSValue in
 
   levelTitleInput.onchange = JSClosure { _ in
     currentLevel.title = levelTitleInput.value
-    _ = save.callAsFunction(this: JSObject.global)
+    _ = save.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }
 
@@ -6574,20 +6574,20 @@ var initEditorUI = { () -> JSValue in
     return .undefined
   }
 
-  _ = updateEditorUIForLevelChange.callAsFunction(this: JSObject.global, currentLevel)
+  _ = updateEditorUIForLevelChange.function!.callAsFunction(this: JSObject.global, currentLevel)
 
-  let qsa = editorControlsBar.querySelectorAll("button")
+  let qsa = editorControlsBar.querySelectorAll!("button")
   let qsaLen = Int(qsa.length.number ?? 0.0)
   for i in 0..<qsaLen {
     let button = qsa[i]
     _ = button.addEventListener(
       "click",
       JSClosure { _ in
-        let ariaKeyShortcuts = button.getAttribute("aria-keyshortcuts")
+        let ariaKeyShortcuts = button.getAttribute!("aria-keyshortcuts")
         let match = JSValue.undefined  // Skipping complex UI shortcuts logic since it uses regex that I already wrote for the other part, let's keep it simple for now
         // I'll just mock this for now to avoid the RegEx complexity.
-        if ariaKeyShortcuts = .undefined && !ariaKeyShortcuts != .null {
-          _ = JSObject.global.console.log("Button shortcut", ariaKeyShortcuts)
+        if !ariaKeyShortcuts.isUndefined && !ariaKeyShortcuts.isNull {
+          _ = JSObject.global.console.log!("Button shortcut", ariaKeyShortcuts)
         } else {
           _ = showErrorMessage.callAsFunction(
             this: JSObject.global, .string("Oops! Something went wrong. Please report this bug."))
@@ -6599,7 +6599,7 @@ var initEditorUI = { () -> JSValue in
 }
 
 var showLevelLoseUI = { () -> JSValue in
-  let messages = JSObject.global["Array"].function!.new()
+  let messages = JSObject.global["Array"].function!.new().jsValue
   _ = messages.push("I knew that was going to happen.")
   _ = messages.push("I hate mondays.")
   _ = messages.push("Why me?")
@@ -6618,7 +6618,7 @@ var showLevelLoseUI = { () -> JSValue in
   let b1 = JSObject.global.Object.function!.new()
   b1.label = .string("Select Level")
   b1.action = JSClosure { _ in
-    JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSObject.global)
+    JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }
   _ = buttons.push(b1)
@@ -6629,12 +6629,12 @@ var showLevelLoseUI = { () -> JSValue in
     let heading = JSObject.global.document.createElement("div")
     var positionInfo = JSValue.undefined
 
-    let pRes = whereLevelIsInTheGame.callAsFunction(this: JSObject.global, currentLevel)
-    if pRes = .undefined && !pRes != .null {
+    let pRes = whereLevelIsInTheGame.function!.callAsFunction(this: JSObject.global, currentLevel)
+    if !pRes.isUndefined && !pRes.isNull {
       positionInfo = pRes.levelNumber
     }
 
-    if positionInfo = .undefined && !positionInfo != .null {
+    if !positionInfo.isUndefined && !positionInfo.isNull {
       heading.textContent = .string("Level \(positionInfo.number ?? 0.0) hint:")
     } else {
       heading.textContent = .string("Hint:")
@@ -6644,7 +6644,7 @@ var showLevelLoseUI = { () -> JSValue in
     let hb = JSObject.global.Object.function!.new()
     hb.label = .string("OK")
     hb.action = JSClosure { _ in
-      _ = loadFromHash.callAsFunction(this: JSObject.global)
+      _ = loadFromHash.function!.callAsFunction(this: JSObject.global)
       paused = false
       return .undefined
     }
@@ -6659,7 +6659,7 @@ var showLevelLoseUI = { () -> JSValue in
     hOpts.buttons = hintBtns
     hOpts.className = .string("hint-dialog")
 
-    _ = showMessageBox.callAsFunction(this: JSObject.global, hArgsArr, hOpts)
+    _ = showMessageBox.function!.callAsFunction(this: JSObject.global, hArgsArr, hOpts)
     return .undefined
   }
   _ = buttons.push(b2)
@@ -6667,7 +6667,7 @@ var showLevelLoseUI = { () -> JSValue in
   let b3 = JSObject.global.Object.function!.new()
   b3.label = .string("Try Again")
   b3.action = JSClosure { _ in
-    _ = loadFromHash.callAsFunction(this: JSObject.global)
+    _ = loadFromHash.function!.callAsFunction(this: JSObject.global)
     paused = false
     return .undefined
   }
@@ -6680,7 +6680,7 @@ var showLevelLoseUI = { () -> JSValue in
   opts.buttons = buttons
   opts.className = .string("level-lose")
 
-  _ = nonErrorDialogs.push(showMessageBox.callAsFunction(this: JSObject.global, arr2, opts))
+  _ = nonErrorDialogs.push(showMessageBox.function!.callAsFunction(this: JSObject.global, arr2, opts))
   return .undefined
 }
 
@@ -6697,7 +6697,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
   let b1 = JSObject.global.Object.function!.new()
   b1.label = .string("Select Level")
   b1.action = JSClosure { _ in
-    JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSObject.global)
+    JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }
   _ = buttons.push(b1)
@@ -6718,17 +6718,17 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
   opts.buttons = buttons
   opts.className = .string("game-win")
 
-  _ = nonErrorDialogs.push(showMessageBox.callAsFunction(this: JSObject.global, arr2, opts))
+  _ = nonErrorDialogs.push(showMessageBox.function!.callAsFunction(this: JSObject.global, arr2, opts))
   return .undefined
 }
 
 var canGoToNextLevel = { () -> JSValue in
   let pr = parseRoute.function!(JSObject.global.location.hash)
-  let game = pr["game"].string ?? ""
-  let levelSlug = pr["levelSlug"].string ?? ""
+  let game = (pr.game as JSValue).string ?? ""
+  let levelSlug = (pr.levelSlug as JSValue).string ?? ""
 
-  if game != "" && levelSlug != "" && game != GAME_USER_CREATED.string
-    && game != GAME_TEST_CASES.string
+  if game != "" && levelSlug != "" && game != GAME_USER_CREATED
+    && game != GAME_TEST_CASES
   {
     return .boolean(true)
   }
@@ -6736,26 +6736,26 @@ var canGoToNextLevel = { () -> JSValue in
 }
 
 var goToNextLevel = { () -> JSValue in
-  if canGoToNextLevel.callAsFunction(this: JSObject.global).boolean == true {
-    let lists = getLevelLists.callAsFunction(this: JSObject.global, resources)
+  if canGoToNextLevel.function!.callAsFunction(this: JSObject.global).boolean == true {
+    let lists = getLevelLists.function!.callAsFunction(this: JSObject.global, resources)
     let listLen = Int(lists.length.number ?? 0.0)
 
     for i in 0..<listLen {
       let list = lists[i]
       let mapJS = JSObject.global.Function.function!.new(
         "levelName", "return levelNameToSlug(levelName);")
-      let mapped = list.levelNames.map(mapJS)
-      let currSlug = levelNameToSlug.callAsFunction(this: JSObject.global, currentLevel.title)
+      let mapped = list.levelNames.map!(mapJS)
+      let currSlug = levelNameToSlug.function!.callAsFunction(this: JSObject.global, currentLevel.title)
       let index = mapped.indexOf(currSlug).number ?? -1.0
 
       if index != -1.0 {
         let nextLevelName = list.levelNames[Int(index + 1.0)]
-        if nextLevelName = .undefined && !nextLevelName != .null {
-          let gSlug = gameNameToSlug.callAsFunction(this: JSObject.global, list.game).string ?? ""
-          let lSlug = levelNameToSlug.callAsFunction(this: JSObject.global, nextLevelName).string ?? ""
+        if !nextLevelName.isUndefined && !nextLevelName.isNull {
+          let gSlug = gameNameToSlug.function!.callAsFunction(this: JSObject.global, list.game).string ?? ""
+          let lSlug = levelNameToSlug.function!.callAsFunction(this: JSObject.global, nextLevelName).string ?? ""
           JSObject.global.location.hash = .string("#\(gSlug)/levels/\(lSlug)")
         } else {
-          _ = showGameWinUI.callAsFunction(this: JSObject.global, list.game)
+          _ = showGameWinUI.function!.callAsFunction(this: JSObject.global, list.game)
         }
         return .undefined
       }
@@ -6763,7 +6763,7 @@ var goToNextLevel = { () -> JSValue in
     _ = showErrorMessage.callAsFunction(
       this: JSObject.global, .string("Don't know how to go to next level from here."))
   } else {
-    _ = showErrorMessage.callAsFunction(this: JSObject.global, .string("Can't go to next level."))
+    _ = showErrorMessage.function!.callAsFunction(this: JSObject.global, .string("Can't go to next level."))
   }
   return .undefined
 }
@@ -6777,19 +6777,19 @@ var showLevelWinUI = { () -> JSValue in
   let b1 = JSObject.global.Object.function!.new()
   b1.label = .string("Select Level")
   b1.action = JSClosure { _ in
-    JSObject.global.location.hash = getLevelSelectURL.callAsFunction(this: JSObject.global)
+    JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }
   _ = buttons.push(b1)
 
   let b2 = JSObject.global.Object.function!.new()
-  let canGo = canGoToNextLevel.callAsFunction(this: JSObject.global).boolean == true
+  let canGo = canGoToNextLevel.function!.callAsFunction(this: JSObject.global).boolean == true
   b2.label = .string(canGo ? "Next Level" : "Edit Level")
   b2.action = JSClosure { _ in
     if canGo {
-      _ = goToNextLevel.callAsFunction(this: JSObject.global)
+      _ = goToNextLevel.function!.callAsFunction(this: JSObject.global)
     } else {
-      _ = toggleEditing.callAsFunction(this: JSObject.global)
+      _ = toggleEditing.function!.callAsFunction(this: JSObject.global)
     }
     return .undefined
   }
@@ -6802,7 +6802,7 @@ var showLevelWinUI = { () -> JSValue in
   opts.buttons = buttons
   opts.className = .string("level-win")
 
-  _ = nonErrorDialogs.push(showMessageBox.callAsFunction(this: JSObject.global, arr2, opts))
+  _ = nonErrorDialogs.push(showMessageBox.function!.callAsFunction(this: JSObject.global, arr2, opts))
   return .undefined
 }
 
@@ -6810,8 +6810,8 @@ var testRouting = { () -> JSValue in
   let rLen = Int(Double(routingTests.count))
   for i in 0..<rLen {
     let rt = routingTests[i]
-    let hash = rt["hash"]
-    let expected = rt["expected"]
+    let hash = (rt.hash as JSValue)
+    let expected = (rt.expected as JSValue)
     let actual = parseRoute.function!(hash)
 
     let keys = JSObject.global.Object.keys(expected)
@@ -6819,7 +6819,7 @@ var testRouting = { () -> JSValue in
     let mismatched = JSObject.global["Array"].function!.new()
     for j in 0..<keysLen {
       let key = keys[j].string ?? ""
-      if actual[key].string != expected[key].string {
+      if actual.object![key].string != expected.object![key].string {
         _ = mismatched.push(keys[j])
       }
     }
@@ -6861,34 +6861,34 @@ func loadFromHashAsync() async {
   var loadingFrom = canonicalHash
 
   let pr = parseRoute.function!(JSObject.global.location.hash)
-  let screen = pr["screen"].string ?? ""
-  let levelSlug = pr["levelSlug"].string ?? ""
-  let levelGroup = pr["levelGroup"]
-  let game = pr["game"].string ?? ""
-  let wantsEdit = pr["wantsEdit"].boolean == true
+  let screen = (pr.screen as JSValue).string ?? ""
+  let levelSlug = (pr.levelSlug as JSValue).string ?? ""
+  let levelGroup = (pr.levelGroup as JSValue)
+  let game = (pr.game as JSValue).string ?? ""
+  let wantsEdit = (pr.wantsEdit as JSValue).boolean == true
   let canonicalHashPr = pr.canonicalHash.string ?? ""
 
   if canonicalHash != canonicalHashPr {
-    _ = JSObject.global.history.replaceState(JSValue.null, JSValue.null, canonicalHashPr)
+    _ = JSObject.global.history.replaceState!(JSValue.null, JSValue.null, canonicalHashPr)
     loadingFrom = canonicalHashPr
   }
 
-  let toShowTestRunner = (game == GAME_TEST_CASES.string && levelSlug == "")
+  let toShowTestRunner = (game == GAME_TEST_CASES && levelSlug == "")
   if !toShowTestRunner {
-    _ = stopTests.callAsFunction(this: JSObject.global)
+    _ = stopTests.function!.callAsFunction(this: JSObject.global)
   }
 
   if infoBox.hidden.boolean == false {
-    _ = toggleInfoBox.callAsFunction(this: JSObject.global)
+    _ = toggleInfoBox.function!.callAsFunction(this: JSObject.global)
   }
 
   if screen == SCREEN_LEVEL.string || screen == SCREEN_LEVEL_SELECT.string {
-    if allResourcesLoadedPromise == .undefined || allResourcesLoadedPromise == .null {
+    if allResourcesLoadedPromise.isUndefined || allResourcesLoadedPromise.isNull {
       // Since loadResources is now a Swift async function:
       let loadP = try! await loadResources(resourcePathsByID: allResourcePaths)
-      allResourcesLoadedPromise = deriveHotResources.callAsFunction(this: JSObject.global, loadP)
+      allResourcesLoadedPromise = deriveHotResources.function!.callAsFunction(this: JSObject.global, loadP)
     }
-    if hotResourcesLoadedPromise == .undefined || hotResourcesLoadedPromise == .null {
+    if hotResourcesLoadedPromise.isUndefined || hotResourcesLoadedPromise.isNull {
       hotResourcesLoadedPromise = allResourcesLoadedPromise
     }
     resources = try! await JSPromise(from: allResourcesLoadedPromise)!.value
@@ -6896,24 +6896,24 @@ func loadFromHashAsync() async {
     if JSObject.global.location.hash.string != loadingFrom { return }
 
     if screen == SCREEN_LEVEL_SELECT.string {
-      _ = hideTitleScreen.callAsFunction(this: JSObject.global)
+      _ = hideTitleScreen.function!.callAsFunction(this: JSObject.global)
       closeNonErrorDialogs()
-      _ = showLevelSelectScreen.callAsFunction(this: JSObject.global, game, levelGroup)
+      _ = showLevelSelectScreen.function!.callAsFunction(this: JSObject.global, game, levelGroup)
       return
     }
 
     if toShowTestRunner {
-      _ = runTests.callAsFunction(this: JSObject.global)
+      _ = runTests.function!.callAsFunction(this: JSObject.global)
       closeNonErrorDialogs()
-      _ = hideTitleScreen.callAsFunction(this: JSObject.global)
+      _ = hideTitleScreen.function!.callAsFunction(this: JSObject.global)
       _ = hideLevelSelectScreen.function!.callAsFunction(this: JSObject.global)
     } else {
-      if levelSlug != "" && game == GAME_USER_CREATED.string {
+      if levelSlug != "" && game == GAME_USER_CREATED {
         do {
           let lsVal = JSObject.global.localStorage[dynamicMember: "level_" + levelSlug].string ?? ""
           if lsVal == "" { throw JSError(value: .string("Level does not exist.")) }
-          _ = deserializeJSON.callAsFunction(this: JSObject.global, .string(lsVal))
-          _ = initLevel.callAsFunction(this: JSObject.global, currentLevel)
+          _ = deserializeJSON.function!.callAsFunction(this: JSObject.global, .string(lsVal))
+          _ = initLevel.function!.callAsFunction(this: JSObject.global, currentLevel)
           // ... not fully translated this block ...
         } catch {}
       } else if levelSlug != "" {
@@ -6921,38 +6921,38 @@ func loadFromHashAsync() async {
           let levelArgs = JSObject.global.Object.function!.new()
           levelArgs.levelName = .string(levelSlug)
           levelArgs.game = .string(game)
-          let level = try await JSPromise(from: loadLevelByName.callAsFunction(this: JSObject.global, levelArgs))!.value
+          let level = try await JSPromise(from: loadLevelByName.function!.callAsFunction(this: JSObject.global, levelArgs))!.value
           if JSObject.global.location.hash.string != loadingFrom { return }
-          _ = initLevel.callAsFunction(this: JSObject.global, level)
-          editorLevelState = serializeToJSON.callAsFunction(this: JSObject.global, currentLevel)
+          _ = initLevel.function!.callAsFunction(this: JSObject.global, level)
+          editorLevelState = serializeToJSON.function!.callAsFunction(this: JSObject.global, currentLevel)
         } catch {
-          _ = showErrorMessage.callAsFunction(this: JSObject.global, .string("Failed to load level"), (error as! JSError).value)
+          _ = showErrorMessage.function!.callAsFunction(this: JSObject.global, .string("Failed to load level"), (error as! JSError).value)
           JSObject.global.location.hash = .string("#junkbot/levels")
           return
         }
       } else {
-        if !wantsEdit || game != GAME_USER_CREATED.string {
-          _ = showErrorMessage.callAsFunction(this: JSObject.global, .string("No level specified."))
+        if !wantsEdit || game != GAME_USER_CREATED {
+          _ = showErrorMessage.function!.callAsFunction(this: JSObject.global, .string("No level specified."))
           JSObject.global.location.hash = .string("#junkbot/levels")
           return
         }
-        _ = initLevel.callAsFunction(this: JSObject.global, resources.levelEditorDefaultLevel)
-        editorLevelState = serializeToJSON.callAsFunction(this: JSObject.global, currentLevel)
+        _ = initLevel.function!.callAsFunction(this: JSObject.global, resources.levelEditorDefaultLevel)
+        editorLevelState = serializeToJSON.function!.callAsFunction(this: JSObject.global, currentLevel)
       }
 
       paused = true
-      _ = hideTitleScreen.callAsFunction(this: JSObject.global)
+      _ = hideTitleScreen.function!.callAsFunction(this: JSObject.global)
       _ = hideLevelSelectScreen.function!.callAsFunction(this: JSObject.global)
       closeNonErrorDialogs()
 
       if wantsEdit != editing {
-        _ = toggleEditing.callAsFunction(this: JSObject.global)
+        _ = toggleEditing.function!.callAsFunction(this: JSObject.global)
       }
       if editing {
         paused = true
       } else {
-        let levelLocation = whereLevelIsInTheGame.callAsFunction(this: JSObject.global, currentLevel, game)
-        if levelLocation = .undefined && !levelLocation != .null {
+        let levelLocation = whereLevelIsInTheGame.function!.callAsFunction(this: JSObject.global, currentLevel, game)
+        if !levelLocation.isUndefined && !levelLocation.isNull {
           let levelInfoContent = JSObject.global.document.createElement("div")
           levelInfoContent.innerHTML = .string("<h1>Toast</h1>") // simplified
           let opts = JSObject.global.Object.function!.new()
@@ -6961,12 +6961,12 @@ func loadFromHashAsync() async {
           
           let arr = JSObject.global["Array"].function!.new()
           arr.append(levelInfoContent)
-          let toast = showMessageBox.callAsFunction(this: JSObject.global, arr, opts)
+          let toast = showMessageBox.function!.callAsFunction(this: JSObject.global, arr, opts)
           nonErrorDialogs.append(toast)
           
-          _ = JSObject.global.setTimeout(JSClosure { _ in
+          _ = JSObject.global.setTimeout!(JSClosure { _ in
             Task {
-              _ = try? await JSPromise(from: toast.close(true))?.value
+              _ = try? await JSPromise(from: toast.close!(true))?.value
               paused = editing
             }
             return .undefined
@@ -7017,7 +7017,7 @@ var main = JSClosure { _ in
   return .undefined
 }
 
-_ = main.callAsFunction(this: JSObject.global)
+_ = main.function!.callAsFunction(this: JSObject.global)
 
 // #endregion
 //     _______________
@@ -7137,17 +7137,17 @@ if let ready = window.onWasmReady.function { _ = ready() }
     let res = try await JSPromise(from: fetch(path))!.value
     let text = try await JSPromise(from: res.object!["text"].function!.callAsFunction(this: res.object!))!.value
     let trimFunc = text.object!["trim"].function!
-    let trimmed = trimFunc.callAsFunction(this: text.object!)
+    let trimmed = trimFunc.function!.callAsFunction(this: text.object!)
     let regex = JSObject.global.RegExp.function!.new("\\r?\\n", "g")
     let splitFunc = trimmed.object!["split"].function!
-    let lines = splitFunc.callAsFunction(this: trimmed.object!, regex)
+    let lines = splitFunc.function!.callAsFunction(this: trimmed.object!, regex)
     let mapFunc = JSClosure { args in 
         let argTrim = args[0].object!["trim"].function!
-        return argTrim.callAsFunction(this: args[0].object!)
+        return argTrim.function!.callAsFunction(this: args[0].object!)
     }
     
     let arrayMap = lines.object!["map"].function!
-    return arrayMap.callAsFunction(this: lines.object!, mapFunc)
+    return arrayMap.function!.callAsFunction(this: lines.object!, mapFunc)
 }
 
 struct JSValueError: Error {
@@ -7155,17 +7155,17 @@ struct JSValueError: Error {
 }
 
 @MainActor func loadResourceAsync(path: String) async throws -> JSValue {
-    if JSObject.global.RegExp.function!.new("spritesheets/.*\\.json$", "i").test(path).boolean == true {
+    if JSObject.global.RegExp.function!.new("spritesheets/.*\\.json$", "i").test!(path).boolean == true {
         return try await loadAtlasJSONAsync(path: path)
-    } else if JSObject.global.RegExp.function!.new("\\.json$", "i").test(path).boolean == true {
+    } else if JSObject.global.RegExp.function!.new("\\.json$", "i").test!(path).boolean == true {
         return try await loadJSONAsync(path: path)
-    } else if JSObject.global.RegExp.function!.new("level\\.listing\\.txt$", "i").test(path).boolean == true {
+    } else if JSObject.global.RegExp.function!.new("level\\.listing\\.txt$", "i").test!(path).boolean == true {
         return try await loadLevelListingAsync(path: path)
-    } else if JSObject.global.RegExp.function!.new("levels/.*\\.txt$", "i").test(path).boolean == true {
+    } else if JSObject.global.RegExp.function!.new("levels/.*\\.txt$", "i").test!(path).boolean == true {
         return try await loadLevelFromTextFileAsync(path: path, game: .undefined)
-    } else if JSObject.global.RegExp.function!.new("\\.(ogg|mp3|wav)$", "i").test(path).boolean == true {
+    } else if JSObject.global.RegExp.function!.new("\\.(ogg|mp3|wav)$", "i").test!(path).boolean == true {
         return try await loadSoundAsync(path: path, audioCtx: audioCtx)
-    } else if JSObject.global.RegExp.function!.new("\\.(png|jpe?g|gif)$", "i").test(path).boolean == true {
+    } else if JSObject.global.RegExp.function!.new("\\.(png|jpe?g|gif)$", "i").test!(path).boolean == true {
         // loadImage in main.swift is synchronous and returns a promise natively. Let's await it.
         let p = loadImage(path)
         return try await JSPromise(from: p)!.value
@@ -7218,7 +7218,7 @@ struct JSValueError: Error {
                 let progressBrick = JSObject.global.document.createElement("div")
                 _ = progressBrick.classList.add("load-progress-brick")
                 progressBricks.append(progressBrick)
-                _ = loadProgress.appendChild(progressBrick)
+                _ = loadProgress.appendChild!(progressBrick)
             }
         }
         return resultObj.jsValue
@@ -7241,7 +7241,7 @@ struct JSValueError: Error {
         let levelNames = listObj.levelNames
         
         let includesFunc = games.includes.function!
-        if includesFunc.callAsFunction(this: games.object!, gameVal).boolean == true {
+        if includesFunc.function!.callAsFunction(this: games.object!, gameVal).boolean == true {
             let namesLen = Int(levelNames.length.number ?? 0)
             for j in 0..<namesLen {
                 let levelName = levelNames[j]
@@ -7251,13 +7251,13 @@ struct JSValueError: Error {
                 levelArgs.levelName = levelName
                 
                 // loadLevelByName is a JS Promise returning func in main.swift. Wait, no, it's a JS string function.
-                let p = loadLevelByName.callAsFunction(this: JSObject.global, levelArgs)
+                let p = loadLevelByName.function!.callAsFunction(this: JSObject.global, levelArgs)
                 _ = promises.push(p)
             }
         }
     }
     
-    return try await JSPromise(from: JSObject.global.Promise.all.function(promises))!.value
+    return try await JSPromise(from: JSObject.global.Promise.all.function!(promises))!.value
 }
 
 @MainActor func gatherStatisticsAsync(games: JSValue) async throws -> JSValue {
@@ -7277,7 +7277,7 @@ struct JSValueError: Error {
             let entityType = entity.type
             
             let indexOfFunc = recordedTypesInThisLevel.indexOf.function!
-            if indexOfFunc.callAsFunction(this: recordedTypesInThisLevel, entityType).number == -1.0 {
+            if indexOfFunc.function!.callAsFunction(this: recordedTypesInThisLevel, entityType).number == -1.0 {
                 _ = recordedTypesInThisLevel.push(entityType)
                 let prevLevels = levelsPerEntityType[dynamicMember: entityType.string ?? ""].number ?? 0.0
                 levelsPerEntityType[dynamicMember: entityType.string ?? ""] = .number(prevLevels + 1.0)
