@@ -29,7 +29,7 @@ let package = Package(
         .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
       ],
       swiftSettings: [
-        .unsafeFlags(["-wmo", "-Osize"]),
+        .unsafeFlags(["-wmo", "-Osize"], .when(platforms: [.wasi])),
         .swiftLanguageMode(.v5),
       ],
     ),
