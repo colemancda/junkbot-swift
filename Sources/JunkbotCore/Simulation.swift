@@ -116,7 +116,15 @@ extension GameEngine {
       filter: isNotBinOrDropletOrEnemyBot)
     if let stepDown = stepsBelow.min(by: { $0.entity.y < $1.entity.y }) {
       let posStepDownY = stepDown.entity.y - junkbot.height
+      // Re-query for solid ground directly below the landing position, matching the original JS
+      // (the first query only finds *a* step ahead; this confirms ground actually exists where
+      // junkbot would land, so it won't step down into an unsupported/fatal spot).
+      let landingGround = entityCollisionAll(
+        entityX: posInFrontX, entityY: posStepDownY + 1, entityIndex: junkbotIndex,
+        filter: isNotBinOrDropletOrEnemyBot
+      ).min(by: { $0.entity.y < $1.entity.y })
       if posStepDownY - junkbot.y <= CELL_H && posStepDownY - junkbot.y > 0
+        && landingGround != nil
         && entityCollisionTest(
           entityX: posInFrontX, entityY: posStepDownY, entityIndex: junkbotIndex,
           filter: isNotBinOrDroplet) == nil
