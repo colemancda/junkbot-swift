@@ -1951,6 +1951,7 @@ var drawTeleportConnection = { (ctx: JSValue, teleportA: JSValue, teleportB: JSV
   ctx.stroke()
   ctx.lineWidth = 30
   ctx.stroke()
+  return .undefined
 }
 
 var drawDecal = { (ctx: JSValue, x: JSValue, y: JSValue, name: JSValue, game: JSValue) -> JSValue in
@@ -7181,52 +7182,39 @@ struct JSValueError: Error {
     let length = Int(entries.length.number ?? 0)
     var silenceErrors = false
     
-    // We do them concurrently with a throwing task group
-    let results = try await withThrowingTaskGroup(of: (String, JSValue, JSValue?).self) { group in
-        for i in 0..<length {
-            let entry = entries[i]
-            let id = entry[0].string!
-            let path = entry[1].string!
-            
-            group.addTask {
-                var resource: JSValue = .undefined
-                var errObj: JSValue? = nil
-                do {
-                    resource = try await loadResourceAsync(path: path)
-                } catch {
-                    errObj = (error as? JSValueError)?.message.jsValue ?? .string(String(describing: error))
-                }
-                return (id, resource, errObj)
-            }
+    let resultObj = JSObject.global.Object.function!.new()
+    for i in 0..<length {
+        let entry = entries[i]
+        let id = entry[0].string!
+        let path = entry[1].string!
+        var resource: JSValue = .undefined
+        var errObj: JSValue? = nil
+        do {
+            resource = try await loadResourceAsync(path: path)
+        } catch {
+            errObj = (error as? JSValueError)?.message.jsValue ?? .string(String(describing: error))
         }
-        
-        let resultObj = JSObject.global.Object.function!.new()
-        for try await (id, resource, errObj) in group {
-            if let err = errObj {
-                let pathStr = resourcePathsByID[dynamicMember: id].string!
-                if !silenceErrors {
-                    if JSObject.global.location.protocol.string == "file:" {
-                        showErrorMessage("This page must be served by a web server...", err)
-                        silenceErrors = true
-                    } else {
-                        showErrorMessage("Failed to load resource '\(pathStr)'", err)
-                    }
+        if let err = errObj {
+            let pathStr = resourcePathsByID[dynamicMember: id].string!
+            if !silenceErrors {
+                if JSObject.global.location.protocol.string == "file:" {
+                    showErrorMessage("This page must be served by a web server...", err)
+                    silenceErrors = true
+                } else {
+                    showErrorMessage("Failed to load resource '\(pathStr)'", err)
                 }
             }
-            
-            resultObj[dynamicMember: id] = resource
-            
-            loadedResources += 1
-            if (loadedResources / totalResources * Double(numProgressBricks)) > Double(progressBricks.count) {
-                let progressBrick = JSObject.global.document.createElement("div")
-                _ = progressBrick.classList.add("load-progress-brick")
-                progressBricks.append(progressBrick)
-                _ = loadProgress.appendChild(progressBrick)
-            }
         }
-        return resultObj.jsValue
+        resultObj[dynamicMember: id] = resource
+        loadedResources += 1
+        if (loadedResources / totalResources * Double(numProgressBricks)) > Double(progressBricks.count) {
+            let progressBrick = JSObject.global.document.createElement("div")
+            _ = progressBrick.classList.add("load-progress-brick")
+            progressBricks.append(progressBrick)
+            _ = loadProgress.appendChild(progressBrick)
+        }
     }
-    return results
+    return resultObj.jsValue
 }
 
 
@@ -7277,7 +7265,7 @@ struct JSValueError: Error {
         let entsLen = Int(entities.length.number ?? 0)
         for j in 0..<entsLen {
             let entity = entities[j]
-            let entityType = entity.type
+            let entityType: JSValue = entity.type
             
             let indexOfFunc = recordedTypesInThisLevel.indexOf.function!
             if indexOfFunc.callAsFunction(this: recordedTypesInThisLevel, entityType).number == -1.0 {
