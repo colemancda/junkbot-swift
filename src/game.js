@@ -568,48 +568,12 @@ const rectanglesIntersect = window.JunkbotWasm.rectanglesIntersect;
 
 const rectangleLevelBoundsCollisionTest = window.JunkbotWasm.rectangleLevelBoundsCollisionTest;
 
-const rectangleCollisionTest = (x, y, width, height, filter) => {
-	const boundsHit = rectangleLevelBoundsCollisionTest(x, y, width, height);
-	if (boundsHit && filter(boundsHit)) {
-		return boundsHit;
-	}
-	for (const otherEntity of entities) {
-		if (
-			!otherEntity.grabbed &&
-			filter(otherEntity) &&
-			rectanglesIntersect(
-				x,
-				y,
-				width,
-				height,
-				otherEntity.x,
-				otherEntity.y,
-				otherEntity.width,
-				otherEntity.height,
-			)
-		) {
-			return otherEntity;
-		}
-	}
-	return null;
-};
-const rectangleCollisionAll = (x, y, width, height, filter) => {
-	const boundsHit = rectangleLevelBoundsCollisionTest(x, y, width, height);
-	return ((boundsHit && filter(boundsHit)) ? [boundsHit] : []).concat(entities.filter((otherEntity) => (
-		!otherEntity.grabbed &&
-		filter(otherEntity) &&
-		rectanglesIntersect(
-			x,
-			y,
-			width,
-			height,
-			otherEntity.x,
-			otherEntity.y,
-			otherEntity.width,
-			otherEntity.height,
-		)
-	)));
-};
+const rectangleCollisionTest = (x, y, width, height, filter) =>
+	window.JunkbotWasm.rectangleCollisionTest(x, y, width, height, filter, entities);
+
+const rectangleCollisionAll = (x, y, width, height, filter) =>
+	window.JunkbotWasm.rectangleCollisionAll(x, y, width, height, filter, entities);
+
 const entityCollisionTest = (entityX, entityY, entity, filter) => (
 	// Note: make sure not to use entity.x/y!
 	rectangleCollisionTest(
@@ -630,22 +594,19 @@ const entityCollisionAll = (entityX, entityY, entity, filter) => (
 		(otherEntity) => otherEntity !== entity && filter(otherEntity)
 	)
 );
-const raycast = ({ startX, startY, width, height, directionX, directionY, maxSteps, entityFilter }) => {
-	let steps = 0;
-	let x = startX;
-	let y = startY;
-	while (steps < maxSteps) {
-		x += 15 * directionX;
-		y += 18 * directionY;
-		debugWorldSpaceRect(x, y, width, height);
-		const hit = rectangleCollisionTest(x, y, width, height, entityFilter);
-		if (hit) {
-			return { steps, hit };
-		}
-		steps += 1;
-	}
-	return { steps, hit: null };
-};
+const raycast = ({ startX, startY, width, height, directionX, directionY, maxSteps, entityFilter }) =>
+	window.JunkbotWasm.raycast(
+		startX,
+		startY,
+		width,
+		height,
+		directionX,
+		directionY,
+		maxSteps,
+		entityFilter,
+		entities,
+		debugWorldSpaceRect,
+	);
 
 const entitiesWithinSelection = (selectionBox) => {
 	const minX = Math.min(selectionBox.x1, selectionBox.x2);
