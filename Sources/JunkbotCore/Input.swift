@@ -1,5 +1,15 @@
+/// Native-only drag-and-drop input handling, driving `GameEngine.mouseDown`/`mouseMove`/`mouseUp`.
+///
+/// This is a simpler, self-contained alternative to the JS-bridge grab logic in `main.swift`
+/// (`possibleGrabsCore`/`entitiesConnect`/etc. in `JunkbotApp`, which the browser build actually
+/// uses): it only ever grabs a brick together with whatever's directly stacked above it
+/// (`attachedAbove`), rather than JS's fuller up/down-direction, sandwich-detection logic. Used
+/// by any host embedding `GameEngine` directly (see `GameEngine.mouseDown`/`mouseMove`/`mouseUp`),
+/// not by the WASM/browser bridge.
 extension GameEngine {
 
+  /// Indices of every grabbable (not `fixed`, not already `grabbed`, not an enemy/junkbot/droplet)
+  /// entity whose bounds contain the given world position.
   func possibleGrabsAt(worldX: Int32, worldY: Int32) -> [Int] {
     var result: [Int] = []
     for i in 0..<entities.count {
@@ -18,6 +28,8 @@ extension GameEngine {
     return result
   }
 
+  /// Indices of every grabbable entity transitively stacked directly on top of `startIndex`
+  /// (excluding `startIndex` itself), so dragging one brick carries the tower above it along.
   func attachedAbove(startIndex: Int) -> [Int] {
     var result: [Int] = []
     var frontier: [Int] = [startIndex]
@@ -45,6 +57,9 @@ extension GameEngine {
     return result
   }
 
+  /// Begins dragging `entityIndex` together with `attachedAbove(startIndex:)`, recording each
+  /// dragged entity's offset from the grab point so their relative layout is preserved as the
+  /// group moves. No-op if `entityIndex` is already `grabbed`.
   func startDrag(entityIndex: Int, worldX: Int32, worldY: Int32) {
     guard !entities[entityIndex].grabbed else { return }
     draggingIndices = [entityIndex] + attachedAbove(startIndex: entityIndex)
@@ -57,6 +72,8 @@ extension GameEngine {
     playSound(.blockPickUp)
   }
 
+  /// Moves the entire `draggingIndices` group to follow the pointer, snapped to the grid and
+  /// preserving each entity's offset from the drag anchor (`draggingIndices[0]`).
   func updateDrag(worldX: Int32, worldY: Int32) {
     guard !draggingIndices.isEmpty else { return }
     let baseIdx = draggingIndices[0]
@@ -72,6 +89,10 @@ extension GameEngine {
     }
   }
 
+  /// Ends the current drag: clears `grabbed` on every dragged entity, refreshes their
+  /// acceleration-structure entries, and plays a drop (if the final position doesn't collide with
+  /// anything solid) or reject (if it does) sound. Does not undo the move on collision — that's
+  /// `canRelease()`'s job to check *before* calling this.
   func finishDrag() {
     guard !draggingIndices.isEmpty else { return }
     var canPlace = true
@@ -95,8 +116,10 @@ extension GameEngine {
     draggingIndices.removeAll(keepingCapacity: true)
   }
 
-  // Matches original game: placeable when dragged bricks connect to fixed on
-  // exactly one vertical side (ceiling XOR floor), with no collision.
+  /// Whether the currently-dragged group could be released at its present position: no collision
+  /// with anything solid, and connected to something fixed (a brick or the level floor) on
+  /// exactly one vertical side — ceiling *or* floor, not both (would be over-constrained) and not
+  /// neither (would float unsupported). Matches the original game's placement rule.
   public func canRelease() -> Bool {
     guard !draggingIndices.isEmpty else { return false }
 
@@ -136,6 +159,7 @@ extension GameEngine {
     return connectsCeiling != connectsFloor
   }
 
+  /// Rounds `value` to the nearest multiple of `grid`, rounding up on exact ties.
   func snapToGrid(_ value: Int32, _ grid: Int32) -> Int32 {
     let r = value % grid
     if r == 0 { return value }
