@@ -190,6 +190,28 @@ func entityCollisionAllSwift(
     }
 }
 
+/// Swift-native analog of the JS `raycast` helper (skips the debug-overlay-only `onStep` callback the
+/// JS-facing `exports.raycast` below supports; no gameplay effect).
+func raycastCore(
+    startX: Int32, startY: Int32, width: Int32, height: Int32,
+    directionX: Int32, directionY: Int32, maxSteps: Int32,
+    entities: JSObject, filter: (JSObject) -> Bool
+) -> (steps: Int32, hit: JSValue?) {
+    var x = startX
+    var y = startY
+    var steps: Int32 = 0
+    while steps < maxSteps {
+        x += CELL_W * directionX
+        y += CELL_H * directionY
+        if let hit = rectangleCollisionCore(x: x, y: y, width: width, height: height, entities: entities, filter: filter)
+        {
+            return (steps, hit)
+        }
+        steps += 1
+    }
+    return (steps, nil)
+}
+
 exports.rectangleLevelBoundsCollisionTest =
     JSClosure { args in
         let x = Int32(args[0].number ?? 0)
@@ -956,6 +978,179 @@ exports.simulateTeleport =
             effect.y = ty.jsValue
             effect.frameIndex = (timer % 3).jsValue
             _ = teleportEffects.push!(effect.jsValue)
+        }
+        return .undefined
+    }.jsValue
+
+exports.simulateClimbbot =
+    JSClosure { args in
+        guard let climbbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
+            let playSound = args[3].function
+        else { return .undefined }
+
+        let animationFrame = Int32(climbbot.animationFrame.number ?? 0) + 1
+        if animationFrame > 6 {
+            climbbot.animationFrame = .number(0)
+
+            let cx = Int32(climbbot.x.number ?? 0)
+            let cy = Int32(climbbot.y.number ?? 0)
+            let facing = Int32(climbbot.facing.number ?? 0)
+            let facingY = Int32(climbbot.facingY.number ?? 0)
+
+            let asideX = cx + facing * CELL_W
+            let asideY = cy
+            let groundAsideX = cx + facing * CELL_W
+            let groundAsideY = cy + 1
+            let behindX = cx + facing * -CELL_W
+            let behindY = cy
+            let aheadX = facingY == 0 ? asideX : cx
+            let aheadY = facingY == 0 ? asideY : cy + facingY * CELL_H
+            let belowX = cx
+            let belowY = cy + CELL_H
+
+            let aside = entityCollision(x: asideX, y: asideY, entity: climbbot, entities: entities, filter: isNotDroplet)
+            let groundAside = entityCollision(
+                x: groundAsideX, y: groundAsideY, entity: climbbot, entities: entities, filter: isNotBinOrDroplet)
+            let ahead = entityCollision(x: aheadX, y: aheadY, entity: climbbot, entities: entities, filter: isNotDroplet)
+            let behindHorizontally = entityCollision(
+                x: behindX, y: behindY, entity: climbbot, entities: entities, filter: isNotDroplet)
+            let below = entityCollision(x: belowX, y: belowY, entity: climbbot, entities: entities, filter: isNotDroplet)
+
+            if let aheadObj = ahead?.object, entityType(aheadObj) == junkbotType {
+                hurtJunkbotCore(junkbot: aheadObj, cause: "bot", playSound: playSound)
+            }
+
+            if facingY == -1 {
+                if aside == nil && groundAside != nil {
+                    climbbot.facingY = .number(0)
+                    climbbot.x = asideX.jsValue
+                    climbbot.y = asideY.jsValue
+                } else if Int32(climbbot.energy.number ?? 0) > 0 && ahead == nil {
+                    climbbot.energy = (Int32(climbbot.energy.number ?? 0) - 1).jsValue
+                    climbbot.x = aheadX.jsValue
+                    climbbot.y = aheadY.jsValue
+                    _ = entityMoved(args[0])
+                } else {
+                    climbbot.facingY = .number(1)
+                }
+            } else if facingY == 1 {
+                if below != nil {
+                    if aside != nil && behindHorizontally != nil {
+                        climbbot.facingY = .number(-1)
+                        climbbot.energy = .number(3)
+                    } else {
+                        climbbot.facingY = .number(0)
+                        if aside != nil {
+                            if behindHorizontally == nil {
+                                climbbot.facing = (-facing).jsValue
+                                climbbot.x = behindX.jsValue
+                                climbbot.y = behindY.jsValue
+                                _ = entityMoved(args[0])
+                            }
+                        } else {
+                            climbbot.x = asideX.jsValue
+                            climbbot.y = asideY.jsValue
+                            _ = entityMoved(args[0])
+                        }
+                    }
+                } else {
+                    climbbot.x = belowX.jsValue
+                    climbbot.y = belowY.jsValue
+                    _ = entityMoved(args[0])
+                }
+            } else {
+                if below != nil {
+                    if aside != nil {
+                        climbbot.facingY = .number(-1)
+                        climbbot.energy = .number(3)
+                    } else {
+                        climbbot.x = asideX.jsValue
+                        climbbot.y = asideY.jsValue
+                        _ = entityMoved(args[0])
+                    }
+                } else {
+                    if aside != nil {
+                        climbbot.facingY = .number(1)
+                    } else {
+                        climbbot.facingY = .number(1)
+                        climbbot.x = belowX.jsValue
+                        climbbot.y = belowY.jsValue
+                        _ = entityMoved(args[0])
+                    }
+                }
+            }
+        } else {
+            climbbot.animationFrame = animationFrame.jsValue
+        }
+
+        // may not be necessary, but it "feels right" to reset this
+        if Int32(climbbot.facingY.number ?? 0) != -1 {
+            climbbot.energy = .number(0)
+        }
+        return .undefined
+    }.jsValue
+
+exports.doEyebotTargeting =
+    JSClosure { args in
+        guard let eyebot = args[0].object, let entities = args[1].object else { return .undefined }
+
+        let ex = Int32(eyebot.x.number ?? 0)
+        let ey = Int32(eyebot.y.number ?? 0)
+
+        let directions: [(Int32, Int32)] = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for (dirX, dirY) in directions {
+            let offsets: [(Int32, Int32)]
+            if dirY != 0 {
+                offsets = [(0, 0), (CELL_W, 0)]
+            } else {
+                offsets = [(0, 0), (0, CELL_H)]
+            }
+            for (offX, offY) in offsets {
+                let (_, hit) = raycastCore(
+                    startX: ex + offX, startY: ey + offY, width: CELL_W, height: CELL_H,
+                    directionX: dirX, directionY: dirY, maxSteps: 50, entities: entities,
+                    filter: { other in other != eyebot && isNotDroplet(other) })
+                if let hitObj = hit?.object, entityType(hitObj) == junkbotType {
+                    eyebot.facing = dirX.jsValue
+                    eyebot.facingY = dirY.jsValue
+                    eyebot.activeTimer = .number(110)
+                }
+            }
+        }
+        return .undefined
+    }.jsValue
+
+exports.doEyebotMovement =
+    JSClosure { args in
+        guard let eyebot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
+            let playSound = args[3].function
+        else { return .undefined }
+
+        let activeTimer = Int32(eyebot.activeTimer.number ?? 0) - 1
+        eyebot.activeTimer = activeTimer.jsValue
+        let animationFrame = Int32(eyebot.animationFrame.number ?? 0) + 1
+        eyebot.animationFrame = animationFrame.jsValue
+
+        let period: Int32 = activeTimer > 0 ? 1 : 2
+        guard animationFrame % period == 0 else { return .undefined }
+
+        let facing = Int32(eyebot.facing.number ?? 0)
+        let facingY = Int32(eyebot.facingY.number ?? 0)
+        let aheadX = Int32(eyebot.x.number ?? 0) + facing * CELL_W
+        let aheadY = Int32(eyebot.y.number ?? 0) + facingY * CELL_H
+
+        if let ahead = entityCollision(
+            x: aheadX, y: aheadY, entity: eyebot, entities: entities, filter: isNotDroplet
+        )?.object {
+            if entityType(ahead) == junkbotType {
+                hurtJunkbotCore(junkbot: ahead, cause: "bot", playSound: playSound)
+            }
+            eyebot.facing = (-facing).jsValue
+            eyebot.facingY = (-facingY).jsValue
+        } else {
+            eyebot.x = aheadX.jsValue
+            eyebot.y = aheadY.jsValue
+            _ = entityMoved(args[0])
         }
         return .undefined
     }.jsValue
