@@ -41,22 +41,30 @@ extension Level {
         if let bgEntries = sections["background"] {
             var backdrop = ""
             var decals: [LevelDecal] = []
+            var backgroundDecals: [LevelDecal] = []
+            func parseDecalList(_ value: String) -> [LevelDecal] {
+                var result: [LevelDecal] = []
+                for entry in value.split(separator: ",") {
+                    let f = entry.split(separator: ";").map(String.init)
+                    if f.count >= 3, let x = Double(f[0]), let y = Double(f[1]) {
+                        result.append(LevelDecal(x: x, y: y, name: f[2]))
+                    }
+                }
+                return result
+            }
             for (key, value) in bgEntries {
                 switch key.lowercased() {
                 case "backdrop":
                     backdrop = value
                 case "decals":
-                    for entry in value.split(separator: ",") {
-                        let f = entry.split(separator: ";").map(String.init)
-                        if f.count >= 3, let x = Double(f[0]), let y = Double(f[1]) {
-                            decals.append(LevelDecal(x: x, y: y, name: f[2]))
-                        }
-                    }
+                    decals.append(contentsOf: parseDecalList(value))
+                case "bgdecals":
+                    backgroundDecals.append(contentsOf: parseDecalList(value))
                 default: break
                 }
             }
             if !backdrop.isEmpty {
-                background = LevelBackground(backdrop: backdrop, decals: decals)
+                background = LevelBackground(backdrop: backdrop, decals: decals, backgroundDecals: backgroundDecals)
             }
         }
 
