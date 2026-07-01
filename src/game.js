@@ -632,226 +632,56 @@ const entitiesWithinSelection = (selectionBox) => {
 //
 // #region Entity Factories
 
-const makeBrick = ({ x, y, widthInStuds, colorName, fixed = false }) => {
-	return {
-		id: getID(),
-		type: "brick",
-		x,
-		y,
-		widthInStuds,
-		width: widthInStuds * 15,
-		height: 18,
-		colorName,
-		fixed,
-	};
-};
-const makeJunkbot = ({ x, y, facing = 1, armored = false }) => {
-	return {
-		id: getID(),
-		type: "junkbot",
-		x,
-		y,
-		width: 2 * 15,
-		height: 4 * 18,
-		facing,
-		armored,
-		losingShield: false,
-		losingShieldTime: 0,
-		animationFrame: 0,
-		headLoaded: false,
-	};
-};
-const makeGearbot = ({ x, y, facing = 1 }) => {
-	return {
-		id: getID(),
-		type: "gearbot",
-		x,
-		y,
-		width: 2 * 15,
-		height: 2 * 18,
-		facing,
-		animationFrame: 0,
-	};
-};
-const makeClimbbot = ({ x, y, facing = 1, facingY = 0 }) => {
-	return {
-		id: getID(),
-		type: "climbbot",
-		x,
-		y,
-		width: 2 * 15,
-		height: 2 * 18,
-		facing,
-		facingY,
-		animationFrame: 0,
-		energy: 0,
-	};
-};
-const makeFlybot = ({ x, y, facing = 1 }) => {
-	return {
-		id: getID(),
-		type: "flybot",
-		x,
-		y,
-		width: 2 * 15,
-		height: 2 * 18,
-		facing,
-		animationFrame: 0,
-	};
-};
-const makeEyebot = ({ x, y, facing = 1, facingY = 0 }) => {
-	return {
-		id: getID(),
-		type: "eyebot",
-		x,
-		y,
-		width: 2 * 15,
-		height: 2 * 18,
-		facing,
-		facingY,
-		animationFrame: 0,
-	};
-};
-const makeBin = ({ x, y, facing = 0, scaredy = false }) => {
-	return {
-		id: getID(),
-		type: "bin",
-		x,
-		y,
-		width: 2 * 15,
-		height: 3 * 18,
-		facing,
-		scaredy,
-		animationFrame: 0,
-	};
-};
-const makeCrate = ({ x, y }) => {
-	return {
-		id: getID(),
-		type: "crate",
-		x,
-		y,
-		width: 3 * 15,
-		height: 2 * 18,
-	};
-};
-const makeFire = ({ x, y, on, switchID }) => {
-	return {
-		id: getID(),
-		type: "fire",
-		x,
-		y,
-		width: 4 * 15,
-		height: 1 * 18,
-		on,
-		switchID,
-		animationFrame: 0,
-		fixed: true,
-	};
-};
-const makeFan = ({ x, y, on, switchID }) => {
-	return {
-		id: getID(),
-		type: "fan",
-		x,
-		y,
-		width: 4 * 15,
-		height: 1 * 18,
-		on,
-		switchID,
-		animationFrame: 0,
-		fixed: true,
-	};
-};
-const makeLaser = ({ x, y, on, switchID, facing }) => {
-	return {
-		id: getID(),
-		type: "laser",
-		x,
-		y,
-		width: 2 * 15,
-		height: 1 * 18,
-		on,
-		switchID,
-		animationFrame: 0,
-		facing,
-		fixed: true,
-	};
-};
-const makeSwitch = ({ x, y, on, switchID }) => {
-	return {
-		id: getID(),
-		type: "switch",
-		x,
-		y,
-		width: 2 * 15,
-		height: 1 * 18,
-		on,
-		switchID,
-		fixed: true,
-	};
-};
-const makeTeleport = ({ x, y, teleportID }) => {
-	return {
-		id: getID(),
-		type: "teleport",
-		x,
-		y,
-		width: 4 * 15,
-		height: 1 * 18,
-		teleportID,
-		fixed: true,
-		timer: 0,
-	};
-};
-const makeJump = ({ x, y, fixed }) => {
-	return {
-		id: getID(),
-		type: "jump",
-		x,
-		y,
-		width: 2 * 15,
-		height: 1 * 18,
-		animationFrame: 0,
-		fixed,
-	};
-};
-const makeShield = ({ x, y, used = false, fixed = true }) => {
-	return {
-		id: getID(),
-		type: "shield",
-		x,
-		y,
-		width: 2 * 15,
-		height: 1 * 18,
-		fixed,
-		used,
-	};
-};
-const makePipe = ({ x, y }) => {
-	return {
-		id: getID(),
-		type: "pipe",
-		x,
-		y,
-		width: 2 * 15,
-		height: 1 * 18,
-		timer: -1,
-		fixed: true,
-	};
-};
-const makeDroplet = ({ x, y }) => {
-	return {
-		id: getID(),
-		type: "droplet",
-		x,
-		y,
-		width: 2 * 15,
-		height: 1 * 18,
-		splashing: false,
-		animationFrame: 0,
-	};
-};
+const makeBrick = ({ x, y, widthInStuds, colorName, fixed = false }) =>
+	window.JunkbotWasm.makeBrick(getID(), x, y, widthInStuds, colorName, fixed);
+
+const makeJunkbot = ({ x, y, facing = 1, armored = false }) =>
+	window.JunkbotWasm.makeJunkbot(getID(), x, y, facing, armored);
+
+const makeGearbot = ({ x, y, facing = 1 }) =>
+	window.JunkbotWasm.makeGearbot(getID(), x, y, facing);
+
+const makeClimbbot = ({ x, y, facing = 1, facingY = 0 }) =>
+	window.JunkbotWasm.makeClimbbot(getID(), x, y, facing, facingY);
+
+const makeFlybot = ({ x, y, facing = 1 }) =>
+	window.JunkbotWasm.makeFlybot(getID(), x, y, facing);
+
+const makeEyebot = ({ x, y, facing = 1, facingY = 0 }) =>
+	window.JunkbotWasm.makeEyebot(getID(), x, y, facing, facingY);
+
+const makeBin = ({ x, y, facing = 0, scaredy = false }) =>
+	window.JunkbotWasm.makeBin(getID(), x, y, facing, scaredy);
+
+const makeCrate = ({ x, y }) =>
+	window.JunkbotWasm.makeCrate(getID(), x, y);
+
+const makeFire = ({ x, y, on, switchID }) =>
+	window.JunkbotWasm.makeFire(getID(), x, y, on, switchID);
+
+const makeFan = ({ x, y, on, switchID }) =>
+	window.JunkbotWasm.makeFan(getID(), x, y, on, switchID);
+
+const makeLaser = ({ x, y, on, switchID, facing }) =>
+	window.JunkbotWasm.makeLaser(getID(), x, y, on, switchID, facing);
+
+const makeSwitch = ({ x, y, on, switchID }) =>
+	window.JunkbotWasm.makeSwitch(getID(), x, y, on, switchID);
+
+const makeTeleport = ({ x, y, teleportID }) =>
+	window.JunkbotWasm.makeTeleport(getID(), x, y, teleportID);
+
+const makeJump = ({ x, y, fixed }) =>
+	window.JunkbotWasm.makeJump(getID(), x, y, fixed);
+
+const makeShield = ({ x, y, used = false, fixed = true }) =>
+	window.JunkbotWasm.makeShield(getID(), x, y, used, fixed);
+
+const makePipe = ({ x, y }) =>
+	window.JunkbotWasm.makePipe(getID(), x, y);
+
+const makeDroplet = ({ x, y }) =>
+	window.JunkbotWasm.makeDroplet(getID(), x, y);
 
 // #endregion
 //

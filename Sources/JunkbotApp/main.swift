@@ -188,6 +188,265 @@ exports.sortEntitiesForRendering =
         return .undefined
     }.jsValue
 
+func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
+    let obj = JSObject.global.Object.function!.new()
+    obj.id = id
+    obj.type = type.jsValue
+    obj.x = x
+    obj.y = y
+    obj.width = width.jsValue
+    obj.height = height.jsValue
+    return obj
+}
+
+exports.makeBrick =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let widthInStuds = args[3]
+        let colorName = args[4]
+        let fixed = args[5]
+
+        let obj = makeEntityBase(
+            id: id, type: "brick", x: x, y: y,
+            width: Int32(widthInStuds.number ?? 0) * CELL_W, height: CELL_H)
+        obj.widthInStuds = widthInStuds
+        obj.colorName = colorName
+        obj.fixed = fixed
+        return obj.jsValue
+    }.jsValue
+
+exports.makeJunkbot =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let facing = args[3]
+        let armored = args[4]
+
+        let obj = makeEntityBase(id: id, type: "junkbot", x: x, y: y, width: 2 * CELL_W, height: 4 * CELL_H)
+        obj.facing = facing
+        obj.armored = armored
+        obj.losingShield = .boolean(false)
+        obj.losingShieldTime = .number(0)
+        obj.animationFrame = .number(0)
+        obj.headLoaded = .boolean(false)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeGearbot =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let facing = args[3]
+
+        let obj = makeEntityBase(id: id, type: "gearbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+        obj.facing = facing
+        obj.animationFrame = .number(0)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeClimbbot =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let facing = args[3]
+        let facingY = args[4]
+
+        let obj = makeEntityBase(id: id, type: "climbbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+        obj.facing = facing
+        obj.facingY = facingY
+        obj.animationFrame = .number(0)
+        obj.energy = .number(0)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeFlybot =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let facing = args[3]
+
+        let obj = makeEntityBase(id: id, type: "flybot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+        obj.facing = facing
+        obj.animationFrame = .number(0)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeEyebot =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let facing = args[3]
+        let facingY = args[4]
+
+        let obj = makeEntityBase(id: id, type: "eyebot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+        obj.facing = facing
+        obj.facingY = facingY
+        obj.animationFrame = .number(0)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeBin =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let facing = args[3]
+        let scaredy = args[4]
+
+        let obj = makeEntityBase(id: id, type: "bin", x: x, y: y, width: 2 * CELL_W, height: 3 * CELL_H)
+        obj.facing = facing
+        obj.scaredy = scaredy
+        obj.animationFrame = .number(0)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeCrate =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+
+        let obj = makeEntityBase(id: id, type: "crate", x: x, y: y, width: 3 * CELL_W, height: 2 * CELL_H)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeFire =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let on = args[3]
+        let switchID = args[4]
+
+        let obj = makeEntityBase(id: id, type: "fire", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
+        obj.on = on
+        obj.switchID = switchID
+        obj.animationFrame = .number(0)
+        obj.fixed = .boolean(true)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeFan =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let on = args[3]
+        let switchID = args[4]
+
+        let obj = makeEntityBase(id: id, type: "fan", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
+        obj.on = on
+        obj.switchID = switchID
+        obj.animationFrame = .number(0)
+        obj.fixed = .boolean(true)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeLaser =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let on = args[3]
+        let switchID = args[4]
+        let facing = args[5]
+
+        let obj = makeEntityBase(id: id, type: "laser", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
+        obj.on = on
+        obj.switchID = switchID
+        obj.animationFrame = .number(0)
+        obj.facing = facing
+        obj.fixed = .boolean(true)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeSwitch =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let on = args[3]
+        let switchID = args[4]
+
+        let obj = makeEntityBase(id: id, type: "switch", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
+        obj.on = on
+        obj.switchID = switchID
+        obj.fixed = .boolean(true)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeTeleport =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let teleportID = args[3]
+
+        let obj = makeEntityBase(id: id, type: "teleport", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
+        obj.teleportID = teleportID
+        obj.fixed = .boolean(true)
+        obj.timer = .number(0)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeJump =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let fixed = args[3]
+
+        let obj = makeEntityBase(id: id, type: "jump", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
+        obj.animationFrame = .number(0)
+        obj.fixed = fixed
+        return obj.jsValue
+    }.jsValue
+
+exports.makeShield =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+        let used = args[3]
+        let fixed = args[4]
+
+        let obj = makeEntityBase(id: id, type: "shield", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
+        obj.fixed = fixed
+        obj.used = used
+        return obj.jsValue
+    }.jsValue
+
+exports.makePipe =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+
+        let obj = makeEntityBase(id: id, type: "pipe", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
+        obj.timer = .number(-1)
+        obj.fixed = .boolean(true)
+        return obj.jsValue
+    }.jsValue
+
+exports.makeDroplet =
+    JSClosure { args in
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+
+        let obj = makeEntityBase(id: id, type: "droplet", x: x, y: y, width: CELL_W, height: CELL_H)
+        obj.splashing = .boolean(false)
+        obj.animationFrame = .number(0)
+        return obj.jsValue
+    }.jsValue
+
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")
 
