@@ -3892,27 +3892,8 @@ const simulateJunkbot = (junkbot) => {
 	}
 };
 
-const simulateGearbot = (gearbot) => {
-	gearbot.animationFrame += 1;
-	if (gearbot.animationFrame > 2) {
-		gearbot.animationFrame = 0;
-		const aheadPos = { x: gearbot.x + gearbot.facing * 15, y: gearbot.y };
-		const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, gearbot, notDroplet);
-		const groundAhead = rectangleCollisionTest(gearbot.x + ((gearbot.facing === -1) ? -15 : gearbot.width), gearbot.y + 1, 15, gearbot.height, notDroplet);
-		if (ahead) {
-			if (ahead.type === "junkbot" && !ahead.dying && !ahead.dead) {
-				hurtJunkbot(ahead, "bot");
-			}
-			gearbot.facing *= -1;
-		} else if (groundAhead) {
-			gearbot.x = aheadPos.x;
-			gearbot.y = aheadPos.y;
-			entityMoved(gearbot);
-		} else {
-			gearbot.facing *= -1;
-		}
-	}
-};
+const simulateGearbot = (gearbot) =>
+	window.JunkbotWasm.simulateGearbot(gearbot, entities, entityMoved, playSound);
 
 // #@: simulateBin
 const simulateScaredy = (bin) => {

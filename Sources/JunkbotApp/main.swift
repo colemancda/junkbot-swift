@@ -700,6 +700,50 @@ exports.simulateJump =
         return .undefined
     }.jsValue
 
+exports.simulateGearbot =
+    JSClosure { args in
+        guard let gearbot = args[0].object, let entities = args[1].object,
+            let entityMoved = args[2].function, let playSound = args[3].function
+        else { return .undefined }
+
+        let animationFrame = Int32(gearbot.animationFrame.number ?? 0) + 1
+        guard animationFrame > 2 else {
+            gearbot.animationFrame = animationFrame.jsValue
+            return .undefined
+        }
+        gearbot.animationFrame = .number(0)
+
+        let gx = Int32(gearbot.x.number ?? 0)
+        let gy = Int32(gearbot.y.number ?? 0)
+        let gw = Int32(gearbot.width.number ?? 0)
+        let gh = Int32(gearbot.height.number ?? 0)
+        let facing = Int32(gearbot.facing.number ?? 0)
+
+        let aheadX = gx + facing * CELL_W
+        let aheadY = gy
+        let ahead = entityCollision(
+            x: aheadX, y: aheadY, entity: gearbot, entities: entities, filter: isNotDroplet
+        )?.object
+
+        let groundAheadX = facing == -1 ? gx - CELL_W : gx + gw
+        let groundAhead = rectangleCollisionCore(
+            x: groundAheadX, y: gy + 1, width: CELL_W, height: gh, entities: entities, filter: isNotDroplet)
+
+        if let ahead = ahead {
+            if entityType(ahead) == junkbotType, ahead.dying.boolean != true, ahead.dead.boolean != true {
+                hurtJunkbotCore(junkbot: ahead, cause: "bot", playSound: playSound)
+            }
+            gearbot.facing = (-facing).jsValue
+        } else if groundAhead != nil {
+            gearbot.x = aheadX.jsValue
+            gearbot.y = aheadY.jsValue
+            _ = entityMoved(args[0])
+        } else {
+            gearbot.facing = (-facing).jsValue
+        }
+        return .undefined
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id
