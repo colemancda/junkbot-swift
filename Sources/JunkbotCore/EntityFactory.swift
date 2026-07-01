@@ -1,3 +1,8 @@
+/// One `make*` constructor per `EntityType` (see its cases for what each type represents),
+/// filling in that type's fixed dimensions and assigning a fresh ID via `GameEngine.getID()`.
+/// These build a value to be appended to `entities` — they don't insert it themselves — so
+/// callers control ordering (see the `add*` methods on `GameEngine`, and `simulatePipe`/
+/// `simulateJunkbot`'s teleport handling for in-simulation entity creation).
 extension GameEngine {
 
   func makeBrick(x: Int32, y: Int32, widthInStuds: Int32, colorIndex: Int32, fixed: Bool) -> Entity
