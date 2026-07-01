@@ -3,6 +3,10 @@ import Foundation
 
 extension Level {
 
+    /// Parses a level file's raw INI-style text (`[info]`/`[playfield]`/`[background]`/
+    /// `[partslist]` sections) into a structured `Level`. Inverse of `Level.text`
+    /// (`LevelSerialize.swift`); malformed or unrecognized entries are silently skipped rather
+    /// than throwing, matching the original JS parser's tolerance of odd data.
     public init(text: String) {
         // Parse the INI-style text into sections of key=value pairs.
         var sections: [String: [(String, String)]] = [:]
