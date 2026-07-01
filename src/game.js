@@ -4323,24 +4323,8 @@ const simulateTeleport = (teleport) => {
 
 // Helps to detect desynchronization between playback and recording.
 // There's also a separate detection in the problem detection code.
-const findMisplacedEntities = (withinEntities, compareToEntities) => {
-	return withinEntities.filter((entity) => {
-		for (const compareToEntity of compareToEntities) {
-			if (
-				entity.type === compareToEntity.type &&
-				(
-					(entity.grabbed &&
-						compareToEntity.grabbed) ||
-					(entity.x === compareToEntity.x &&
-						entity.y === compareToEntity.y)
-				)
-			) {
-				return false;
-			}
-		}
-		return true;
-	});
-};
+const findMisplacedEntities = (withinEntities, compareToEntities) =>
+	window.JunkbotWasm.findMisplacedEntities(withinEntities, compareToEntities);
 
 let pausedForRewind = false;
 const rewindRate = 2;

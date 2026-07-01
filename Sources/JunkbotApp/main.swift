@@ -395,6 +395,39 @@ exports.allConnectedToFixed =
         return connectedToFixedValues.jsValue
     }.jsValue
 
+exports.findMisplacedEntities =
+    JSClosure { args in
+        guard let within = args[0].object, let compareTo = args[1].object else { return [JSValue]().jsValue }
+
+        let compareLength = Int(compareTo.length.number ?? 0)
+        let compareEntities = (0..<compareLength).compactMap { compareTo[$0].object }
+
+        let withinLength = Int(within.length.number ?? 0)
+        var result: [JSValue] = []
+        for i in 0..<withinLength {
+            let entityValue = within[i]
+            guard let entity = entityValue.object else { continue }
+            let entityType = entity.type.jsString
+            let entityGrabbed = entity.grabbed.boolean == true
+            let ex = entity.x.number, ey = entity.y.number
+
+            var misplaced = true
+            for compareToEntity in compareEntities {
+                guard entityType == compareToEntity.type.jsString else { continue }
+                if entityGrabbed && compareToEntity.grabbed.boolean == true {
+                    misplaced = false
+                    break
+                }
+                if ex == compareToEntity.x.number && ey == compareToEntity.y.number {
+                    misplaced = false
+                    break
+                }
+            }
+            if misplaced { result.append(entityValue) }
+        }
+        return result.jsValue
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id
