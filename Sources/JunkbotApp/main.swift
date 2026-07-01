@@ -6621,7 +6621,7 @@ var showLevelLoseUI = { () -> JSValue in
     JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }.jsValue
-  _ = buttons.push(b1)
+  _ = buttons.jsValue.push(b1)
 
   let b2 = JSObject.global.Object.function!.new()
   b2.label = .string("Get Hint")
@@ -6662,7 +6662,7 @@ var showLevelLoseUI = { () -> JSValue in
     _ = showMessageBox.function!.callAsFunction(this: JSObject.global, hArgsArr, hOpts)
     return .undefined
   }
-  _ = buttons.push(b2)
+  _ = buttons.jsValue.push(b2)
 
   let b3 = JSObject.global.Object.function!.new()
   b3.label = .string("Try Again")
@@ -6672,7 +6672,7 @@ var showLevelLoseUI = { () -> JSValue in
     return .undefined
   }.jsValue
   b3.isDefault = .boolean(true)
-  _ = buttons.push(b3)
+  _ = buttons.jsValue.push(b3)
 
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
@@ -6700,7 +6700,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
     JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }.jsValue
-  _ = buttons.push(b1)
+  _ = buttons.jsValue.push(b1)
 
   if game.string == GAME_JUNKBOT.string {
     let b2 = JSObject.global.Object.function!.new()
@@ -6709,7 +6709,7 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
       JSObject.global.location.hash = .string("#junkbot2")
       return .undefined
     }.jsValue
-    _ = buttons.push(b2)
+    _ = buttons.jsValue.push(b2)
   }
 
   let opts = JSObject.global.Object.function!.new()
@@ -6780,7 +6780,7 @@ var showLevelWinUI = { () -> JSValue in
     JSObject.global.location.hash = getLevelSelectURL.function!.callAsFunction(this: JSObject.global)
     return .undefined
   }.jsValue
-  _ = buttons.push(b1)
+  _ = buttons.jsValue.push(b1)
 
   let b2 = JSObject.global.Object.function!.new()
   let canGo = canGoToNextLevel.function!.callAsFunction(this: JSObject.global).boolean == true
@@ -6794,7 +6794,7 @@ var showLevelWinUI = { () -> JSValue in
     return .undefined
   }
   b2.isDefault = .boolean(true)
-  _ = buttons.push(b2)
+  _ = buttons.jsValue.push(b2)
 
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
@@ -6820,7 +6820,7 @@ var testRouting = { () -> JSValue in
     for j in 0..<keysLen {
       let key = keys[j].string ?? ""
       if actual.object![key].string != expected.object![key].string {
-        _ = mismatched.push(keys[j])
+        _ = mismatched.jsValue.push(keys[j])
       }
     }
 
@@ -7017,7 +7017,7 @@ var main = JSClosure { _ in
   return .undefined
 }
 
-_ = main.function!.callAsFunction(this: JSObject.global)
+Task { await mainAsync() }
 
 // #endregion
 //     _______________
