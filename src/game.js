@@ -4177,7 +4177,7 @@ const entityTypes = [
 	"crate", "fire", "fan", "switch", "pipe", "shield", "teleport",
 	"laser", "jump", "droplet", "levelBounds", "unknown"
 ];
-const brickColorNames = ["red", "blue", "green", "yellow", "gray"];
+const engineBrickColorNames = ["red", "blue", "green", "yellow", "gray"]; // GameEngine's Entity.colorIndex convention (distinct from the editor palette's `brickColorNames`)
 
 
 window.sync_entity_1 = (i, id, typeIndex, x, y, width, height) => {
@@ -4196,7 +4196,7 @@ window.sync_entity_2 = (i, facing, facingY, animationFrame, widthInStuds, colorI
 	e.facingY = facingY;
 	e.animationFrame = animationFrame;
 	e.widthInStuds = widthInStuds;
-	e.colorName = brickColorNames[colorIndex] || "red";
+	e.colorName = engineBrickColorNames[colorIndex] || "red";
 	e.switchID = switchID;
 };
 
