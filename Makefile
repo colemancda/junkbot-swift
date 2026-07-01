@@ -1,4 +1,4 @@
-SWIFT_SDK    ?= swift-DEVELOPMENT-SNAPSHOT-2026-06-24-a_wasm-embedded
+SWIFT_SDK    ?= swift-DEVELOPMENT-SNAPSHOT-2026-06-24-a_wasm
 SWIFT        := $(HOME)/Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2026-06-24-a.xctoolchain/usr/bin/swift
 BUILD_OUTPUT := .build/plugins/PackageToJS/outputs/Package
 WEB_PACKAGE  := web/Package
@@ -6,7 +6,7 @@ WEB_PACKAGE  := web/Package
 .PHONY: all clean serve
 
 all:
-	@echo "▶ Building Swift Embedded WASM…"
+	@echo "▶ Building Swift WASM…"
 	$(SWIFT) package --build-system native \
 	    --swift-sdk $(SWIFT_SDK) \
 	    js -c release
