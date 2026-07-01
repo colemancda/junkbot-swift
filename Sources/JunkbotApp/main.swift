@@ -5567,7 +5567,7 @@ var checkLevelEnd = { () -> JSValue in
         }
         let cbD = resources.collectBin.duration.number ?? 0.0
         let cb2D = resources.collectBin2.duration.number ?? 0.0
-        _ = JSObject.global.setTimeout(c.object, max(cbD, cb2D) * 1000.0 - timeSinceCollectBin)
+        _ = JSObject.global.setTimeout!(c.object, max(cbD, cb2D) * 1000.0 - timeSinceCollectBin)
       }
     }
   }
@@ -6717,10 +6717,10 @@ var showGameWinUI = { (game: JSValue) -> JSValue in
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
   _ = arr2.push!(win)
-  opts.buttons = buttons
+  opts.buttons = buttons.jsValue
   opts.className = .string("game-win")
 
-  _ = nonErrorDialogs.push(showMessageBox.function!.callAsFunction(this: JSObject.global, arr2, opts))
+  nonErrorDialogs.append(showMessageBox(arr2.jsValue, opts.jsValue))
   return .undefined
 }
 
@@ -6738,34 +6738,33 @@ var canGoToNextLevel = { () -> JSValue in
 }
 
 var goToNextLevel = { () -> JSValue in
-  if canGoToNextLevel.function!.callAsFunction(this: JSObject.global).boolean == true {
-    let lists = getLevelLists.function!.callAsFunction(this: JSObject.global, resources)
+  if canGoToNextLevel().boolean == true {
+    let lists = getLevelLists(resources)
     let listLen = Int(lists.length.number ?? 0.0)
 
     for i in 0..<listLen {
       let list = lists[i]
       let mapJS = JSObject.global.Function.function!.new(
         "levelName", "return levelNameToSlug(levelName);")
-      let mapped = list.levelNames.map!(mapJS)
-      let currSlug = levelNameToSlug.function!.callAsFunction(this: JSObject.global, currentLevel.title)
+      let mapped = list.levelNames.map(mapJS)
+      let currSlug = JSValue.string(levelNameToSlug(currentLevel.title.string ?? ""))
       let index = mapped.indexOf(currSlug).number ?? -1.0
 
       if index != -1.0 {
         let nextLevelName = list.levelNames[Int(index + 1.0)]
         if !nextLevelName.isUndefined && !nextLevelName.isNull {
-          let gSlug = gameNameToSlug.function!.callAsFunction(this: JSObject.global, list.game).string ?? ""
-          let lSlug = levelNameToSlug.function!.callAsFunction(this: JSObject.global, nextLevelName).string ?? ""
+          let gSlug = gameNameToSlug(list.game.string ?? "")
+          let lSlug = levelNameToSlug(nextLevelName.string ?? "")
           JSObject.global.location.hash = .string("#\(gSlug)/levels/\(lSlug)")
         } else {
-          _ = showGameWinUI.function!.callAsFunction(this: JSObject.global, list.game)
+          _ = showGameWinUI(list.game)
         }
         return .undefined
       }
     }
-    _ = showErrorMessage.callAsFunction(
-      this: JSObject.global, .string("Don't know how to go to next level from here."))
+    showErrorMessage("Don't know how to go to next level from here.", .undefined)
   } else {
-    _ = showErrorMessage.function!.callAsFunction(this: JSObject.global, .string("Can't go to next level."))
+    showErrorMessage("Can't go to next level.", .undefined)
   }
   return .undefined
 }
@@ -6785,13 +6784,13 @@ var showLevelWinUI = { () -> JSValue in
   _ = buttons.jsValue.push(b1)
 
   let b2 = JSObject.global.Object.function!.new()
-  let canGo = canGoToNextLevel.function!.callAsFunction(this: JSObject.global).boolean == true
+  let canGo = canGoToNextLevel().boolean == true
   b2.label = .string(canGo ? "Next Level" : "Edit Level")
   b2.action = JSClosure { _ in
     if canGo {
-      _ = goToNextLevel.function!.callAsFunction(this: JSObject.global)
+      _ = goToNextLevel()
     } else {
-      _ = toggleEditing.function!.callAsFunction(this: JSObject.global)
+      _ = toggleEditing.jsValue.function!()
     }
     return .undefined
   }.jsValue
@@ -6800,11 +6799,11 @@ var showLevelWinUI = { () -> JSValue in
 
   let opts = JSObject.global.Object.function!.new()
   let arr2 = JSObject.global["Array"].function!.new()
-  _ = arr2.push(h1)
-  opts.buttons = buttons
+  _ = arr2.jsValue.push(h1)
+  opts.buttons = buttons.jsValue
   opts.className = .string("level-win")
 
-  _ = nonErrorDialogs.push(showMessageBox.function!.callAsFunction(this: JSObject.global, arr2, opts))
+  nonErrorDialogs.append(showMessageBox(arr2.jsValue, opts.jsValue))
   return .undefined
 }
 
@@ -6831,11 +6830,11 @@ var testRouting = { () -> JSValue in
       var errStr = "Routing test failed for hash \(hash.string ?? "")\n"
       for j in 0..<mLen {
         let key = mismatched[j].string ?? ""
-        let exp = JSObject.global.JSON.stringify(expected[key]).string ?? ""
-        let act = JSObject.global.JSON.stringify(actual[key]).string ?? ""
+        let exp = JSObject.global.JSON.stringify(expected.object![key]).string ?? ""
+        let act = JSObject.global.JSON.stringify(actual.object![key]).string ?? ""
         errStr += "\"\(key)\": expected \(exp) but got \(act)\n"
       }
-      _ = printJS.function!.callAsFunction(this: JSObject.global, .string(errStr))
+      _ = printJS.function!.callAsFunction(this: JSObject.global, JSValue.string(errStr))
     }
   }
   return .undefined
@@ -6871,13 +6870,13 @@ func loadFromHashAsync() async {
   let canonicalHashPr = pr.canonicalHash.string ?? ""
 
   if canonicalHash != canonicalHashPr {
-    _ = JSObject.global.history.replaceState!(JSValue.null, JSValue.null, canonicalHashPr)
+    _ = JSObject.global.history.replaceState(JSValue.null, JSValue.null, canonicalHashPr)
     loadingFrom = canonicalHashPr
   }
 
   let toShowTestRunner = (game == GAME_TEST_CASES && levelSlug == "")
   if !toShowTestRunner {
-    _ = stopTests.function!.callAsFunction(this: JSObject.global)
+    _ = stopTests()
   }
 
   if infoBox.hidden.boolean == false {
@@ -6948,7 +6947,7 @@ func loadFromHashAsync() async {
       closeNonErrorDialogs()
 
       if wantsEdit != editing {
-        _ = toggleEditing.function!.callAsFunction(this: JSObject.global)
+        _ = toggleEditing.jsValue.function!()
       }
       if editing {
         paused = true
