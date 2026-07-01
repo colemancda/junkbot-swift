@@ -3,6 +3,11 @@ import Foundation
 
 extension GameEngine {
 
+  /// Parses level text directly into this engine's live `entities`/`levelBounds`, bypassing the
+  /// `Level`/`LevelPart` intermediate model (`Level.init(text:)` in `LevelParse.swift`). This is a
+  /// native Swift port of `loadLevelFromText` (src/game.js), letting levels be loaded and
+  /// simulated without a browser/JS runtime — see `JunkbotCoreTests`, which is currently its only
+  /// caller. Not reachable from the WASM/embedded build (gated behind `canImport(Foundation)`).
   public func loadLevel(fromText text: String) {
     resetLevel()
 
