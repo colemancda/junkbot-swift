@@ -744,6 +744,37 @@ exports.simulateGearbot =
         return .undefined
     }.jsValue
 
+exports.simulateFlybot =
+    JSClosure { args in
+        guard let flybot = args[0].object, let entities = args[1].object,
+            let entityMoved = args[2].function, let playSound = args[3].function
+        else { return .undefined }
+
+        let animationFrame = Int32(flybot.animationFrame.number ?? 0) + 1
+        flybot.animationFrame = animationFrame.jsValue
+        guard animationFrame % 2 == 0 else { return .undefined }
+
+        let fx = Int32(flybot.x.number ?? 0)
+        let fy = Int32(flybot.y.number ?? 0)
+        let facing = Int32(flybot.facing.number ?? 0)
+        let aheadX = fx + facing * CELL_W
+        let aheadY = fy
+
+        if let ahead = entityCollision(
+            x: aheadX, y: aheadY, entity: flybot, entities: entities, filter: isNotDroplet
+        )?.object {
+            if entityType(ahead) == junkbotType {
+                hurtJunkbotCore(junkbot: ahead, cause: "bot", playSound: playSound)
+            }
+            flybot.facing = (-facing).jsValue
+        } else {
+            flybot.x = aheadX.jsValue
+            flybot.y = aheadY.jsValue
+            _ = entityMoved(args[0])
+        }
+        return .undefined
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id

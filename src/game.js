@@ -3922,27 +3922,8 @@ const simulateScaredy = (bin) => {
 	}
 };
 
-const simulateFlybot = (flybot) => {
-	// Could merge with eyebot movement:
-	// doEyebotMovement(flybot);
-	// return;
-
-	flybot.animationFrame += 1;
-	if (flybot.animationFrame % 2 === 0) {
-		const aheadPos = { x: flybot.x + flybot.facing * 15, y: flybot.y };
-		const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, flybot, (otherEntity) => otherEntity.type !== "droplet");
-		if (ahead) {
-			if (ahead.type === "junkbot") {
-				hurtJunkbot(ahead, "bot");
-			}
-			flybot.facing *= -1;
-		} else {
-			flybot.x = aheadPos.x;
-			flybot.y = aheadPos.y;
-			entityMoved(flybot);
-		}
-	}
-};
+const simulateFlybot = (flybot) =>
+	window.JunkbotWasm.simulateFlybot(flybot, entities, entityMoved, playSound);
 
 // #@: simulateEyebot
 const doEyebotTargeting = (eyebot) => {
