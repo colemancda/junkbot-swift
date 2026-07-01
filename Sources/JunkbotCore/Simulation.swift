@@ -338,10 +338,14 @@ extension GameEngine {
         }
       }
 
-      let savedAnimFrame = junkbot.animationFrame
       let turnedAround = walk(junkbotIndex: index)
-      junkbot = entities[index]
-      junkbot.animationFrame = savedAnimFrame
+      // walk() mutates entities[index] directly (x/y/facing only); merge those back into
+      // our local `junkbot` copy instead of re-fetching wholesale, which would discard the
+      // headLoaded/losingShieldTime/animationFrame updates already made above in this call.
+      let walked = entities[index]
+      junkbot.x = walked.x
+      junkbot.y = walked.y
+      junkbot.facing = walked.facing
 
       let groundY = junkbot.y + junkbot.height
       for i in 0..<entities.count {
@@ -365,6 +369,11 @@ extension GameEngine {
             playSound(.switchClick)
             playSound(entities[i].on ? .switchOn : .switchOff)
           case .fire where ground.on:
+            // hurtJunkbot reads/writes entities[index] directly; flush the in-progress local
+            // `junkbot` (headLoaded/losingShieldTime/animationFrame updates from earlier in this
+            // call) first, or hurtJunkbot would operate on the stale pre-call snapshot and we'd
+            // discard this tick's updates when re-fetching afterward.
+            entities[index] = junkbot
             hurtJunkbot(index: index, cause: 1)
             junkbot = entities[index]
           case .shield where !ground.used && (junkbot.losingShield || !junkbot.armored):
