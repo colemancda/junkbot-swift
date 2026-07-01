@@ -7,7 +7,7 @@ extension GameEngine {
     ax + aw > bx && ax < bx + bw && ay + ah > by && ay < by + bh
   }
 
-  func rectangleLevelBoundsCollision(x: Int32, y: Int32, width: Int32, height: Int32) -> Entity? {
+  public func rectangleLevelBoundsCollision(x: Int32, y: Int32, width: Int32, height: Int32) -> Entity? {
     guard let bounds = levelBounds else { return nil }
     var e = Entity(id: -1, type: .levelBounds, x: 0, y: 0, width: 0, height: 0)
     e.fixed = true
