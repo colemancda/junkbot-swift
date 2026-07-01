@@ -1698,6 +1698,70 @@ parts=${parts.join(",")}
 
 `;
 };
+
+window.initSwiftEngine = (level) => {
+	if (!window.JunkbotWasm) return;
+	
+	window.JunkbotWasm.begin_load_level(level.bounds.x, level.bounds.y, level.bounds.w, level.bounds.h);
+	
+	for (const e of level.entities) {
+		const f = e.facing ?? 1;
+		const fy = e.facingY ?? 1;
+		switch(e.type) {
+			case "brick":
+				window.JunkbotWasm.add_brick(e.x, e.y, e.widthInStuds, brickColorNames.indexOf(e.colorName), e.fixed ? 1 : 0);
+				break;
+			case "junkbot":
+				window.JunkbotWasm.add_junkbot(e.x, e.y, f, e.armored ? 1 : 0);
+				break;
+			case "gearbot":
+				window.JunkbotWasm.add_gearbot(e.x, e.y, f);
+				break;
+			case "climbbot":
+				window.JunkbotWasm.add_climbbot(e.x, e.y, f, fy);
+				break;
+			case "flybot":
+				window.JunkbotWasm.add_flybot(e.x, e.y, f);
+				break;
+			case "eyebot":
+				window.JunkbotWasm.add_eyebot(e.x, e.y, f, fy);
+				break;
+			case "bin":
+				window.JunkbotWasm.add_bin(e.x, e.y, f, e.scaredy ? 1 : 0);
+				break;
+			case "crate":
+				window.JunkbotWasm.add_crate(e.x, e.y);
+				break;
+			case "fire":
+				window.JunkbotWasm.add_fire(e.x, e.y, e.on ? 1 : 0, e.switchID ?? 0);
+				break;
+			case "fan":
+				window.JunkbotWasm.add_fan(e.x, e.y, e.on ? 1 : 0, e.switchID ?? 0);
+				break;
+			case "switch":
+				window.JunkbotWasm.add_switch(e.x, e.y, e.on ? 1 : 0, e.switchID ?? 0);
+				break;
+			case "pipe":
+				window.JunkbotWasm.add_pipe(e.x, e.y);
+				break;
+			case "shield":
+				window.JunkbotWasm.add_shield(e.x, e.y, e.used ? 1 : 0, e.fixed ? 1 : 0);
+				break;
+			case "teleport":
+				window.JunkbotWasm.add_teleport(e.x, e.y, e.teleportID ?? 0);
+				break;
+			case "laser":
+				window.JunkbotWasm.add_laser(e.x, e.y, f, e.on ? 1 : 0, e.switchID ?? 0);
+				break;
+			case "jump":
+				window.JunkbotWasm.add_jump(e.x, e.y, e.fixed ? 1 : 0);
+				break;
+		}
+	}
+	
+	window.JunkbotWasm.finish_load_level();
+};
+
 const resetAndInit = (level) => {
 	currentLevel = level;
 	entities = currentLevel.entities; // shortcut
@@ -1736,6 +1800,7 @@ const resetAndInit = (level) => {
 			entity.id = getID();
 		}
 	}
+	initSwiftEngine(level);
 	winLoseState = winOrLose(); // in case there's no bins, don't say OH YEAH; and in case there's no junkbots, don't consider it a lose
 	updateEditorUIForLevelChange(currentLevel);
 };
@@ -5519,6 +5584,204 @@ const checkLevelEnd = () => {
 		}
 	}
 };
+
+window.JunkbotRenderer = {
+	js_set_alpha: (alpha) => {
+		ctx.globalAlpha = alpha;
+	},
+	js_draw_wind_column: (x, y, extent, flags) => {
+		const fan = { x: x - 15, y, width: 30, on: true, animationFrame: flags };
+		drawWind(ctx, fan, [extent]);
+	},
+	js_draw_laser_beam: (x, y, facing, extent, a, b) => {
+		const laserBrick = { x, y, facing, on: true };
+		drawLaserBeam(ctx, laserBrick, extent, null);
+	},
+	js_draw_teleport_effect: (x, y, frameIndex) => {
+		drawTeleportEffect(ctx, { x, y, frameIndex });
+	},
+	js_draw_brick: (x, y, colorIndex, widthInStuds, fixed) => {
+        // colorNames are roughly index mapped in the original JS:
+        const colors = ["red", "blue", "green", "yellow", "gray"];
+		const colorName = colors[colorIndex] || "red";
+		drawBrick(ctx, { x, y, colorName, widthInStuds, fixed: !!fixed });
+	},
+	js_draw_junkbot: (x, y, facing, animationFrame, flags) => {
+		const armored = !!(flags & 1);
+		const dead = !!(flags & 2);
+		const dyingFromWater = !!(flags & 4);
+		const collectingBin = !!(flags & 8);
+		const dying = !dyingFromWater && !dead && !!(flags & 16); // wait, dying wasn't in flags? Oh wait, in Swift: flags |= 4 if dyingFromWater, wait, dying is flags & 16? Let's check swift.
+		const losingShield = !!(flags & 32);
+		const gettingShield = !!(flags & 64);
+		drawJunkbot(ctx, { x, y, height: 18, facing, animationFrame, armored, dead, dyingFromWater, dying, collectingBin, losingShield, gettingShield });
+	},
+	js_draw_gearbot: (x, y, facing, animationFrame) => {
+		drawGearbot(ctx, { x, y, height: 18, facing, animationFrame });
+	},
+	js_draw_climbbot: (x, y, facing, facingY, animationFrame) => {
+		drawClimbbot(ctx, { x, y, height: 18, facing, facingY, animationFrame });
+	},
+	js_draw_flybot: (x, y, facing, animationFrame) => {
+		drawFlybot(ctx, { x, y, height: 18, facing, animationFrame });
+	},
+	js_draw_eyebot: (x, y, facing, facingY, animationFrame, activeTimer) => {
+		drawEyebot(ctx, { x, y, height: 18, facing, facingY, animationFrame, activeTimer });
+	},
+	js_draw_bin: (x, y, facing, scaredy, animationFrame) => {
+		drawBin(ctx, { x, y, height: 18, facing, scaredy: !!scaredy, animationFrame });
+	},
+	js_draw_crate: (x, y) => {
+		drawCrate(ctx, { x, y, height: 18 });
+	},
+	js_draw_fire: (x, y, on, animationFrame) => {
+		drawFire(ctx, { x, y, height: 18, on: !!on, animationFrame });
+	},
+	js_draw_fan: (x, y, on, animationFrame) => {
+		drawFan(ctx, { x, y, height: 18, on: !!on, animationFrame });
+	},
+	js_draw_switch: (x, y, on, animationFrame) => {
+		drawSwitch(ctx, { x, y, height: 18, on: !!on, animationFrame });
+	},
+	js_draw_pipe: (x, y, animationFrame) => {
+		drawPipe(ctx, { x, y, height: 18, animationFrame });
+	},
+	js_draw_shield: (x, y, used, fixed) => {
+		drawShield(ctx, { x, y, height: 18, used: !!used, fixed: !!fixed });
+	},
+	js_draw_jump: (x, y, active, animationFrame, fixed) => {
+		drawJump(ctx, { x, y, height: 18, active: !!active, animationFrame, fixed: !!fixed });
+	},
+	js_draw_teleport: (x, y, animationFrame, blocked) => {
+		drawTeleport(ctx, { x, y, height: 18, animationFrame, blocked: !!blocked });
+	},
+	js_draw_laser: (x, y, facing, on) => {
+		drawLaser(ctx, { x, y, height: 18, facing, on: !!on });
+	},
+	js_draw_droplet: (x, y, splashing, animationFrame) => {
+		drawDroplet(ctx, { x, y, height: 18, splashing: !!splashing, animationFrame });
+	}
+};
+
+
+window.sync_entities_start = (count) => {
+	while (entities.length < count) {
+		entities.push({});
+	}
+	entities.length = count;
+};
+
+const entityTypes = [
+	"brick", "junkbot", "gearbot", "climbbot", "flybot", "eyebot", "bin",
+	"crate", "fire", "fan", "switch", "pipe", "shield", "teleport",
+	"laser", "jump", "droplet", "levelBounds", "unknown"
+];
+const brickColorNames = ["red", "blue", "green", "yellow", "gray"];
+
+
+window.sync_entity_1 = (i, id, typeIndex, x, y, width, height) => {
+	const e = entities[i];
+	e.id = id;
+	e.type = entityTypes[typeIndex] || "unknown";
+	e.x = x;
+	e.y = y;
+	e.width = width;
+	e.height = height;
+};
+
+window.sync_entity_2 = (i, facing, facingY, animationFrame, widthInStuds, colorIndex, switchID) => {
+	const e = entities[i];
+	e.facing = facing;
+	e.facingY = facingY;
+	e.animationFrame = animationFrame;
+	e.widthInStuds = widthInStuds;
+	e.colorName = brickColorNames[colorIndex] || "red";
+	e.switchID = switchID;
+};
+
+window.sync_entity_3 = (i, teleportID, timer, activeTimer, flags) => {
+	const e = entities[i];
+	e.teleportID = teleportID;
+	e.timer = timer;
+	e.activeTimer = activeTimer;
+
+	e.grabbed = !!(flags & (1 << 0));
+	e.fixed = !!(flags & (1 << 1));
+	e.floating = !!(flags & (1 << 2));
+	e.wasFloating = !!(flags & (1 << 3));
+	e.removeBeforeRender = !!(flags & (1 << 4));
+	e.armored = !!(flags & (1 << 5));
+	e.losingShield = !!(flags & (1 << 6));
+	e.gettingShield = !!(flags & (1 << 7));
+	e.dying = !!(flags & (1 << 8));
+	e.dyingFromWater = !!(flags & (1 << 9));
+	e.dead = !!(flags & (1 << 10));
+	e.collectingBin = !!(flags & (1 << 11));
+	e.headLoaded = !!(flags & (1 << 12));
+	e.scaredy = !!(flags & (1 << 13));
+	e.on = !!(flags & (1 << 14));
+	e.used = !!(flags & (1 << 15));
+	e.blocked = !!(flags & (1 << 16));
+	e.active = !!(flags & (1 << 17));
+	e.splashing = !!(flags & (1 << 18));
+};
+
+window.sync_wind_start = (count) => {
+	while (wind.length < count) {
+		wind.push({ extents: [] });
+	}
+	wind.length = count;
+};
+
+window.sync_wind_1 = (i, fanEntityIndex, numExtents, e0, e1, e2) => {
+	const w = wind[i];
+	w.fan = entities[fanEntityIndex] || {};
+	w.extents = [e0, e1, e2];
+    w.numExtents = numExtents; // Temp store
+};
+
+window.sync_wind_2 = (i, e3, e4, e5, e6, e7) => {
+	const w = wind[i];
+    w.extents.push(e3, e4, e5, e6, e7);
+    w.extents.length = w.numExtents;
+};
+
+
+window.sync_lasers_start = (count) => {
+	while (wind.length < count) {
+		wind.push({ extents: [] });
+	}
+	wind.length = count;
+};
+
+window.sync_lasers_start = (count) => {
+	while (laserBeams.length < count) {
+		laserBeams.push({});
+	}
+	laserBeams.length = count;
+};
+
+window.sync_lasers = (i, laserEntityIndex, extent, hitEntityIndex) => {
+	const l = laserBeams[i];
+	l.laserBrick = entities[laserEntityIndex] || {};
+	l.extent = extent;
+	l.hitWhat = hitEntityIndex >= 0 ? entities[hitEntityIndex] : null;
+};
+
+window.sync_teleport_effects_start = (count) => {
+	while (teleportEffects.length < count) {
+		teleportEffects.push({});
+	}
+	teleportEffects.length = count;
+};
+
+window.sync_teleport_effects = (i, x, y, frameIndex) => {
+	const t = teleportEffects[i];
+	t.x = x;
+	t.y = y;
+	t.frameIndex = frameIndex;
+};
+
 const animate = () => {
 	rafid = requestAnimationFrame(animate);
 
@@ -5540,7 +5803,7 @@ const animate = () => {
 		debug("TIME SINCE LAST SIMULATE", timeSinceLastSimulate);
 		if (timeSinceLastSimulate >= 1000 / targetFPS) {
 			debug("REMAINDER MILLISECONDS", timeSinceLastSimulate - 1000 / targetFPS);
-			simulate(entities);
+			if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { simulate(entities); } }
 			smoothedFrameTime += (timeSinceLastSimulate - smoothedFrameTime) / fpsSmoothing;
 			lastSimulateTime = now;
 		}
@@ -6663,7 +6926,7 @@ const runTests = async () => {
 			await new Promise((resolve) => {
 				requestAnimationFrame(resolve); // accounts for one time step, with `++` above and `- 1` below (assuming animation loop is running)
 				for (let i = 0; i < testSpeedInput.valueAsNumber - 1; i++) {
-					simulate(entities);
+					if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { simulate(entities); } }
 					timeStep += 1;
 					if (checkTestEnd()) {
 						break;
