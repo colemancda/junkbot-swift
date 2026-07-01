@@ -17,6 +17,11 @@ let crateType: JSString = "crate"
 let teleportType: JSString = "teleport"
 let fanType: JSString = "fan"
 let laserType: JSString = "laser"
+let levelBoundsType: JSString = "levelBounds"
+let switchType: JSString = "switch"
+let fireType: JSString = "fire"
+let shieldType: JSString = "shield"
+let jumpType: JSString = "jump"
 
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
@@ -1255,6 +1260,288 @@ exports.simulateFansAndLasers =
             }
         }
         return .undefined
+    }.jsValue
+
+/// Returns whether a bin was collected (JS sets `collectBinTime = Date.now()` on that event; since
+/// that's a plain scalar global, not an object, the JS wrapper does that itself based on this return
+/// value rather than Swift reaching for a `window` global to mutate).
+exports.simulateJunkbot =
+    JSClosure { args in
+        guard let junkbot = args[0].object, let entities = args[1].object,
+            let entitiesByTopY = args[2].object, let entitiesByBottomY = args[3].object,
+            let entityMoved = args[4].function, let playSound = args[5].function
+        else { return .boolean(false) }
+
+        func jx() -> Int32 { Int32(junkbot.x.number ?? 0) }
+        func jy() -> Int32 { Int32(junkbot.y.number ?? 0) }
+        let jw = Int32(junkbot.width.number ?? 0)
+        let jh = Int32(junkbot.height.number ?? 0)
+
+        // head-loaded tracking
+        var headLoaded = false
+        if let aboveHead = entityCollision(x: jx(), y: jy() - 1, entity: junkbot, entities: entities, filter: isNotDroplet)?.object {
+            if junkbot.floating.boolean == true {
+                headLoaded = true
+            } else {
+                let notFixed = aboveHead.fixed.boolean != true
+                let notConnected = !connectsToFixedCore(
+                    startEntity: aboveHead, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                    direction: 0, ignoreEntities: [junkbot])
+                let notLevelBounds = entityType(aboveHead) != levelBoundsType
+                let notFlybot = entityType(aboveHead) != flybotType
+                let notEyebot = entityType(aboveHead) != eyebotType
+                headLoaded = notFixed && notConnected && notLevelBounds && notFlybot && notEyebot
+            }
+        }
+        if junkbot.headLoaded.boolean == true && !headLoaded {
+            junkbot.headLoaded = .boolean(false)
+        } else if headLoaded && junkbot.headLoaded.boolean != true && junkbot.grabbed.boolean != true {
+            junkbot.headLoaded = .boolean(true)
+            _ = playSound("headBonk")
+        }
+
+        if junkbot.losingShield.boolean == true {
+            let losingShieldTime = Int32(junkbot.losingShieldTime.number ?? 0) + 1
+            junkbot.losingShieldTime = losingShieldTime.jsValue
+            if losingShieldTime > 36 {  // already compared to reference video
+                junkbot.armored = .boolean(false)
+                junkbot.losingShield = .boolean(false)
+                junkbot.losingShieldTime = .number(0)  // important for next damage event
+                _ = playSound("losePowerup")
+            }
+        }
+
+        var animationFrame = Int32(junkbot.animationFrame.number ?? 0) + 1
+        junkbot.animationFrame = animationFrame.jsValue
+
+        if junkbot.collectingBin.boolean == true {
+            if animationFrame >= 17 {
+                junkbot.collectingBin = .boolean(false)
+                junkbot.animationFrame = .number(0)
+                animationFrame = 0
+            } else {
+                return .boolean(false)
+            }
+        }
+
+        if junkbot.dying.boolean == true {
+            if animationFrame >= 10 {
+                junkbot.animationFrame = .number(0)
+                junkbot.dead = .boolean(true)
+            }
+            return .boolean(false)
+        }
+
+        if junkbot.gettingShield.boolean == true {
+            if animationFrame >= 11 {
+                junkbot.gettingShield = .boolean(false)
+                junkbot.armored = .boolean(true)
+            } else {
+                return .boolean(false)
+            }
+        }
+
+        if entityCollision(x: jx(), y: jy(), entity: junkbot, entities: entities, filter: isNotDroplet) != nil {
+            return .boolean(false)
+        }
+
+        if junkbot.floating.boolean == true {
+            let aboveX = jx()
+            let aboveY = jy() - CELL_H
+            if entityCollision(x: aboveX, y: aboveY, entity: junkbot, entities: entities, filter: isNotDroplet) == nil {
+                junkbot.x = aboveX.jsValue
+                junkbot.y = aboveY.jsValue
+                _ = entityMoved(args[0])
+            }
+            return .boolean(false)
+        }
+
+        var momentumX = Int32(junkbot.momentumX.number ?? 0)
+        var momentumY = Int32(junkbot.momentumY.number ?? 0)
+        momentumX = min(5, max(-5, momentumX))
+        momentumY = min(5, max(-5, momentumY))
+        junkbot.momentumX = momentumX.jsValue
+        junkbot.momentumY = momentumY.jsValue
+
+        let inAir =
+            entityCollision(x: jx(), y: jy() + 1, entity: junkbot, entities: entities, filter: isNotDroplet) == nil
+        let unaligned = jx() % CELL_W != 0
+        let jumpStarting = momentumY < -2
+
+        if inAir || jumpStarting || unaligned {
+            let dirX: Int32 = momentumY < -2 ? 0 : (momentumX > 0 ? 1 : (momentumX < 0 ? -1 : 0))
+            let dirY: Int32 = momentumY > 0 ? 1 : (momentumY < 0 ? -1 : 0)
+            let newX = jx() + dirX * CELL_W
+            let newY = jy() + dirY * CELL_H
+
+            if entityCollision(x: newX, y: newY, entity: junkbot, entities: entities, filter: isNotDroplet) != nil {
+                if entityCollision(x: jx(), y: newY, entity: junkbot, entities: entities, filter: isNotDroplet) == nil
+                {
+                    momentumX = 0
+                    junkbot.momentumX = .number(0)
+                    junkbot.y = newY.jsValue
+                } else if entityCollision(
+                    x: newX, y: jy(), entity: junkbot, entities: entities, filter: isNotDroplet) == nil
+                {
+                    momentumY = 0
+                    junkbot.momentumY = .number(0)
+                    junkbot.x = newX.jsValue
+                } else {
+                    momentumX = 0
+                    momentumY = 0
+                    junkbot.momentumX = .number(0)
+                    junkbot.momentumY = .number(0)
+                }
+                _ = playSound("headBonk")
+            } else {
+                junkbot.x = newX.jsValue
+                junkbot.y = newY.jsValue
+                momentumX -= dirX
+                junkbot.momentumX = momentumX.jsValue
+            }
+            momentumY += 1
+            junkbot.momentumY = momentumY.jsValue
+            if momentumY < 5 {
+                junkbot.animationFrame = .number(9)  // stick leg closer to the camera out backwards
+            }
+            if momentumY == 5 {
+                _ = playSound("fall")
+            }
+
+            let jumpBrick = entityCollision(
+                x: jx(), y: jy() + 1, entity: junkbot, entities: entities,
+                filter: { entityType($0) == jumpType }
+            )?.object
+            let facing = Int32(junkbot.facing.number ?? 0)
+            let ahead = entityCollision(
+                x: jx() + facing * CELL_W, y: jy(), entity: junkbot, entities: entities, filter: isNotDroplet)
+
+            if let jumpBrick = jumpBrick {
+                let jbx = Int32(jumpBrick.x.number ?? 0)
+                let jbw = Int32(jumpBrick.width.number ?? 0)
+                if jbx <= jx() && jbx + jbw >= jx() + jw && ahead == nil {
+                    // prevent getting stuck bouncing up against a wall; must be after momentumY += 1
+                    if jumpBrick.active.boolean != true {
+                        junkbot.animationFrame = .number(0)
+                        junkbot.momentumY = .number(-3)
+                        junkbot.momentumX = (facing * 5).jsValue
+                        _ = playSound("jump")
+                        jumpBrick.active = .boolean(true)
+                        jumpBrick.animationFrame = .number(0)
+                    }
+                }
+            }
+            _ = entityMoved(args[0])
+            return .boolean(false)
+        }
+
+        if animationFrame % 5 == 4 {
+            let facing = Int32(junkbot.facing.number ?? 0)
+            let frontX = jx() + facing * CELL_W
+            let frontY = jy()
+
+            let cratesInFront = rectangleCollisionAllCore(
+                x: frontX, y: frontY, width: jw, height: jh + 1, entities: entities,
+                filter: { other in
+                    guard entityType(other) == crateType else { return false }
+                    let ox = Int32(other.x.number ?? 0)
+                    let ow = Int32(other.width.number ?? 0)
+                    return ox + ow <= jx() || jx() + jw <= ox
+                }
+            ).compactMap { $0.object }
+
+            let canPushCrates = cratesInFront.allSatisfy { crate in
+                let cx = Int32(crate.x.number ?? 0)
+                let cy = Int32(crate.y.number ?? 0)
+                return entityCollision(
+                    x: cx + facing * CELL_W, y: cy, entity: crate, entities: entities, filter: isNotDroplet) == nil
+            }
+            if canPushCrates {
+                for crate in cratesInFront {
+                    let cx = Int32(crate.x.number ?? 0)
+                    crate.x = (cx + facing * CELL_W).jsValue
+                }
+            }
+
+            let turnedAround = walkCore(
+                junkbot: junkbot, entities: entities, entityMoved: entityMoved, playSound: playSound)
+
+            let groundLevelEntities = yBucket(entitiesByTopY, jy() + jh)
+            for groundLevelValue in groundLevelEntities {
+                guard let groundLevelEntity = groundLevelValue.object else { continue }
+                let gx = Int32(groundLevelEntity.x.number ?? 0)
+                let gw = Int32(groundLevelEntity.width.number ?? 0)
+                guard gx <= jx() && gx + gw >= jx() + jw && !turnedAround else { continue }
+
+                let glType = entityType(groundLevelEntity)
+                if glType == switchType {
+                    let newOn = !(groundLevelEntity.on.boolean == true)
+                    groundLevelEntity.on = .boolean(newOn)
+                    let switchID = groundLevelEntity.switchID
+                    let length = Int(entities.length.number ?? 0)
+                    for k in 0..<length {
+                        guard let other = entities[k].object else { continue }
+                        if entityType(other) == switchType { continue }
+                        guard other.on != .undefined, other.switchID != .undefined else { continue }
+                        guard other.switchID.number == switchID.number else { continue }
+                        other.on = .boolean(!(other.on.boolean == true))
+                    }
+                    _ = playSound("switchClick")
+                    _ = playSound(newOn ? "switchOn" : "switchOff")
+                } else if glType == fireType && groundLevelEntity.on.boolean == true {
+                    hurtJunkbotCore(junkbot: junkbot, cause: "fire", playSound: playSound)
+                } else if glType == shieldType && groundLevelEntity.used.boolean != true
+                    && (junkbot.losingShield.boolean == true || junkbot.armored.boolean != true)
+                {
+                    junkbot.animationFrame = .number(0)
+                    junkbot.gettingShield = .boolean(true)
+                    junkbot.losingShield = .boolean(false)
+                    junkbot.losingShieldTime = .number(0)  // important for next damage event
+                    groundLevelEntity.used = .boolean(true)
+                    _ = playSound("getShield")
+                    _ = playSound("getPowerup")
+                } else if glType == jumpType {
+                    if groundLevelEntity.active.boolean != true {
+                        junkbot.animationFrame = .number(0)
+                        junkbot.momentumY = .number(-3)
+                        junkbot.momentumX = (facing * 5).jsValue
+                        _ = playSound("jump")
+                        groundLevelEntity.active = .boolean(true)
+                        groundLevelEntity.animationFrame = .number(0)
+                    }
+                } else if glType == teleportType && Int32(groundLevelEntity.timer.number ?? -1) == 0
+                    && jx() == gx + CELL_W
+                {
+                    if let linkedTeleport = findLinkedTeleportCore(teleport: groundLevelEntity, entities: entities),
+                        linkedTeleport.blocked.boolean != true
+                    {
+                        let ltx = Int32(linkedTeleport.x.number ?? 0)
+                        let lty = Int32(linkedTeleport.y.number ?? 0)
+                        junkbot.x = (ltx + CELL_W).jsValue
+                        junkbot.y = (lty - jh).jsValue
+                        linkedTeleport.timer = TELEPORT_COOLDOWN.jsValue
+                        groundLevelEntity.timer = TELEPORT_COOLDOWN.jsValue
+                        _ = entityMoved(args[0])
+                        _ = playSound("teleport")
+                    }
+                }
+            }
+        }
+
+        let facingFinal = Int32(junkbot.facing.number ?? 0)
+        var collectedBin = false
+        if let bin = entityCollision(
+            x: jx() + facingFinal * CELL_W, y: jy(), entity: junkbot, entities: entities,
+            filter: { entityType($0) == binType }
+        )?.object {
+            junkbot.animationFrame = .number(0)
+            junkbot.collectingBin = .boolean(true)
+            bin.removeBeforeRender = .boolean(true)  // important not to remove entities while iterating
+            _ = playSound("collectBin")
+            _ = playSound("collectBin2")
+            collectedBin = true
+        }
+        return .boolean(collectedBin)
     }.jsValue
 
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
