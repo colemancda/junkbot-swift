@@ -3,11 +3,17 @@ extension GameEngine {
   // MARK: - Win / Lose
 
   func winOrLose() -> Int32 {
-    let hasBins = entities.contains(where: { $0.type == .bin && !$0.removeBeforeRender })
-    let hasJunkbot = entities.contains(where: { $0.type == .junkbot })
-    if !hasBins { return 1 }
-    if !hasJunkbot { return 2 }
-    if entities.first(where: { $0.type == .junkbot })?.dead == true { return 2 }
+    // Mirrors the original JS: junkbot's alive/dead state takes precedence over bin state, so
+    // a level can flip from "win" back to "lose" on a later frame if the junkbot dies after
+    // already collecting every bin (e.g. a hazard that only becomes active post-victory).
+    let aliveJunkbot = entities.contains(where: { $0.type == .junkbot && !$0.dead })
+    guard aliveJunkbot else { return 2 }  // lose
+    let someAliveNotDying = entities.contains(where: { $0.type == .junkbot && !$0.dead && !$0.dying })
+    let noBinsLeft = !entities.contains(where: { $0.type == .bin })
+    let nobodyCollecting = !entities.contains(where: { $0.collectingBin })
+    if someAliveNotDying && noBinsLeft && nobodyCollecting {
+      return 1  // win
+    }
     return 0
   }
 
@@ -116,7 +122,15 @@ extension GameEngine {
       filter: isNotBinOrDropletOrEnemyBot)
     if let stepDown = stepsBelow.min(by: { $0.entity.y < $1.entity.y }) {
       let posStepDownY = stepDown.entity.y - junkbot.height
+      // Re-query for solid ground directly below the landing position, matching the original JS
+      // (the first query only finds *a* step ahead; this confirms ground actually exists where
+      // junkbot would land, so it won't step down into an unsupported/fatal spot).
+      let landingGround = entityCollisionAll(
+        entityX: posInFrontX, entityY: posStepDownY + 1, entityIndex: junkbotIndex,
+        filter: isNotBinOrDropletOrEnemyBot
+      ).min(by: { $0.entity.y < $1.entity.y })
       if posStepDownY - junkbot.y <= CELL_H && posStepDownY - junkbot.y > 0
+        && landingGround != nil
         && entityCollisionTest(
           entityX: posInFrontX, entityY: posStepDownY, entityIndex: junkbotIndex,
           filter: isNotBinOrDroplet) == nil
@@ -330,10 +344,14 @@ extension GameEngine {
         }
       }
 
-      let savedAnimFrame = junkbot.animationFrame
       let turnedAround = walk(junkbotIndex: index)
-      junkbot = entities[index]
-      junkbot.animationFrame = savedAnimFrame
+      // walk() mutates entities[index] directly (x/y/facing only); merge those back into
+      // our local `junkbot` copy instead of re-fetching wholesale, which would discard the
+      // headLoaded/losingShieldTime/animationFrame updates already made above in this call.
+      let walked = entities[index]
+      junkbot.x = walked.x
+      junkbot.y = walked.y
+      junkbot.facing = walked.facing
 
       let groundY = junkbot.y + junkbot.height
       for i in 0..<entities.count {
@@ -357,6 +375,11 @@ extension GameEngine {
             playSound(.switchClick)
             playSound(entities[i].on ? .switchOn : .switchOff)
           case .fire where ground.on:
+            // hurtJunkbot reads/writes entities[index] directly; flush the in-progress local
+            // `junkbot` (headLoaded/losingShieldTime/animationFrame updates from earlier in this
+            // call) first, or hurtJunkbot would operate on the stale pre-call snapshot and we'd
+            // discard this tick's updates when re-fetching afterward.
+            entities[index] = junkbot
             hurtJunkbot(index: index, cause: 1)
             junkbot = entities[index]
           case .shield where !ground.used && (junkbot.losingShield || !junkbot.armored):

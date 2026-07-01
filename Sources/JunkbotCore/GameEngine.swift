@@ -90,6 +90,32 @@ public final class GameEngine: @unchecked Sendable {
     levelPar = Int.max
   }
 
+  public func loadLevelState(entities newEntities: [Entity], levelBounds newLevelBounds: LevelBounds?, nextID: Int32) {
+    resetLevel()
+    entities = newEntities
+    levelBounds = newLevelBounds
+    idCounter = max(nextID, maxEntityID(in: newEntities))
+    rebuildAccelerationStructures()
+    winLoseState = winOrLose()
+  }
+
+  public func replaceLiveState(entities newEntities: [Entity], levelBounds newLevelBounds: LevelBounds?, nextID: Int32) {
+    entities = newEntities
+    levelBounds = newLevelBounds
+    idCounter = max(nextID, idCounter, maxEntityID(in: newEntities))
+    rebuildAccelerationStructures()
+  }
+
+  private func maxEntityID(in entities: [Entity]) -> Int32 {
+    var result: Int32 = 0
+    for entity in entities {
+      if entity.id > result {
+        result = entity.id
+      }
+    }
+    return result
+  }
+
   // MARK: - Public API
 
   public func initialize() {

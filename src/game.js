@@ -205,6 +205,7 @@ let moves = 0; // your score (lower is better); only picking up bricks counts, n
 let frameCounter = 0; // for precise recording/playback
 let desynchronized = false;
 let idCounter = 0;
+const useSwiftGameEngine = true;
 const getID = () => {
 	idCounter += 1;
 	return idCounter;
@@ -567,8 +568,6 @@ const sortEntitiesForRendering = window.JunkbotWasm.sortEntitiesForRendering;
 
 const rectanglesIntersect = window.JunkbotWasm.rectanglesIntersect;
 
-const rectangleLevelBoundsCollisionTest = window.JunkbotWasm.rectangleLevelBoundsCollisionTest;
-
 const rectangleCollisionTest = (x, y, width, height, filter) =>
 	window.JunkbotWasm.rectangleCollisionTest(x, y, width, height, filter, entities);
 
@@ -585,29 +584,6 @@ const entityCollisionTest = (entityX, entityY, entity, filter) => (
 		(otherEntity) => otherEntity !== entity && filter(otherEntity)
 	)
 );
-const entityCollisionAll = (entityX, entityY, entity, filter) => (
-	// Note: make sure not to use entity.x/y!
-	rectangleCollisionAll(
-		entityX,
-		entityY,
-		entity.width,
-		entity.height,
-		(otherEntity) => otherEntity !== entity && filter(otherEntity)
-	)
-);
-const raycast = ({ startX, startY, width, height, directionX, directionY, maxSteps, entityFilter }) =>
-	window.JunkbotWasm.raycast(
-		startX,
-		startY,
-		width,
-		height,
-		directionX,
-		directionY,
-		maxSteps,
-		entityFilter,
-		entities,
-		debugWorldSpaceRect,
-	);
 
 const entitiesWithinSelection = (selectionBox) => {
 	const minX = Math.min(selectionBox.x1, selectionBox.x2);
@@ -1441,6 +1417,7 @@ const resetAndInit = (level) => {
 			entity.id = getID();
 		}
 	}
+	window.JunkbotWasm.engineLoadLevel(currentLevel, idCounter);
 	winLoseState = winOrLose(); // in case there's no bins, don't say OH YEAH; and in case there's no junkbots, don't consider it a lose
 	updateEditorUIForLevelChange(currentLevel);
 };
@@ -1576,6 +1553,23 @@ const loadLevelFromText = (levelData, game) => {
 	if (!sections.partslist) {
 		throw new SyntaxError("No [partslist] section found.");
 	}
+	// The level text format's object relation ID (field [6], e.g. "switch1") is an arbitrary string,
+	// but GameEngine.Entity.switchID/teleportID are Int32. Map each distinct relation-ID string to a
+	// unique per-level integer here (shared between switch/fan/fire/laser and teleport relations,
+	// since those are only ever compared within their own kind, never against each other).
+	const relationIDsByRawID = new Map();
+	let nextRelationID = 1;  // start at 1, not 0: some code (e.g. serializeLevel) treats switchID/teleportID
+	// truthily (`entity.switchID || ...`), where 0 would be indistinguishable from unset
+	const relationID = (rawID) => {
+		if (!rawID) {
+			return -1;
+		}
+		if (!relationIDsByRawID.has(rawID)) {
+			relationIDsByRawID.set(rawID, nextRelationID);
+			nextRelationID += 1;
+		}
+		return relationIDsByRawID.get(rawID);
+	};
 	for (const [key, value] of sections.partslist) {
 		if (key === "types") {
 			types = types.concat(value.toLowerCase().split(","));
@@ -1625,19 +1619,19 @@ const loadLevelFromText = (levelData, game) => {
 				} else if (typeName === "haz_slickcrate") {
 					entities.push(makeCrate({ x, y: y - 18 }));
 				} else if (typeName === "haz_slickfire") {
-					entities.push(makeFire({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6] }));
+					entities.push(makeFire({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]) }));
 				} else if (typeName === "haz_slickfan") {
-					entities.push(makeFan({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6] }));
+					entities.push(makeFan({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]) }));
 				} else if (typeName === "haz_slicklaser_l") {
 					// entity name is confusing in regard to direction, haz_slicklaser_l points right in the game
-					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6], facing: 1 }));
+					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]), facing: 1 }));
 				} else if (typeName === "haz_slicklaser_r") {
 					// entity name is confusing in regard to direction, haz_slicklaser_r points left in the game
-					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6], facing: -1 }));
+					entities.push(makeLaser({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]), facing: -1 }));
 				} else if (typeName === "haz_slickswitch") {
-					entities.push(makeSwitch({ x, y, on: animationName === "on" || animationName === "none", switchID: e[6] }));
+					entities.push(makeSwitch({ x, y, on: animationName === "on" || animationName === "none", switchID: relationID(e[6]) }));
 				} else if (typeName === "haz_slickteleport") {
-					entities.push(makeTeleport({ x, y, teleportID: e[6] }));
+					entities.push(makeTeleport({ x, y, teleportID: relationID(e[6]) }));
 				} else if (typeName === "haz_slickjump") {
 					entities.push(makeJump({ x, y, fixed: true }));
 				} else if (typeName === "brick_slickjump") {
@@ -3511,19 +3505,6 @@ canvas.addEventListener("contextmenu", async (event) => {
 const notDroplet = (entity) => (
 	entity.type !== "droplet"
 );
-// i.e. space generally free for junkbot walking
-const notBinOrDroplet = (entity) => (
-	entity.type !== "bin" &&
-	entity.type !== "droplet"
-);
-// i.e. ground to walk on
-const notBinOrDropletOrEnemyBot = (entity) => (
-	notBinOrDroplet(entity) &&
-	entity.type !== "gearbot" &&
-	entity.type !== "climbbot" &&
-	entity.type !== "flybot" &&
-	entity.type !== "eyebot"
-);
 
 const updateDrag = (mouse) => {
 	if (isFinite(mouse.worldX) && isFinite(mouse.worldY)) {
@@ -3644,53 +3625,11 @@ addEventListener("pointerup", () => {
 //
 // #region Simulation
 
-// #@: simulateCrate, simulateBlock, simulateBrick, falling behavior
-const simulateGravity = () =>
-	window.JunkbotWasm.simulateGravity(entities, entitiesByTopY, entitiesByBottomY, entityMoved);
-
-const hurtJunkbot = (junkbot, cause) => window.JunkbotWasm.hurtJunkbot(junkbot, cause, playSound);
-
-const walk = (junkbot) => window.JunkbotWasm.walk(junkbot, entities, entityMoved, playSound);
-
-const findLinkedTeleport = (teleport) => window.JunkbotWasm.findLinkedTeleport(teleport, entities);
-
-const simulateJunkbot = (junkbot) => {
-	const collectedBin = window.JunkbotWasm.simulateJunkbot(junkbot, entities, entitiesByTopY, entitiesByBottomY, entityMoved, playSound);
-	if (collectedBin) {
-		collectBinTime = Date.now();
-	}
-};
-
-const simulateGearbot = (gearbot) =>
-	window.JunkbotWasm.simulateGearbot(gearbot, entities, entityMoved, playSound);
-
-// #@: simulateBin
-const simulateScaredy = (bin) => window.JunkbotWasm.simulateScaredy(bin, entities, entityMoved);
-
-const simulateFlybot = (flybot) =>
-	window.JunkbotWasm.simulateFlybot(flybot, entities, entityMoved, playSound);
-
-// #@: simulateEyebot
-const doEyebotTargeting = (eyebot) => window.JunkbotWasm.doEyebotTargeting(eyebot, entities);
-
-const doEyebotMovement = (eyebot) =>
-	window.JunkbotWasm.doEyebotMovement(eyebot, entities, entityMoved, playSound);
-
-const simulateClimbbot = (climbbot) =>
-	window.JunkbotWasm.simulateClimbbot(climbbot, entities, entityMoved, playSound);
-
-const simulateDroplet = (droplet) =>
-	window.JunkbotWasm.simulateDroplet(droplet, entitiesByTopY, entityMoved, playSound);
-
-const maxDripPeriod = 50;
-const minDripPeriod = 20;
-const simulatePipe = (pipe) => window.JunkbotWasm.simulatePipe(pipe, entities, getID);
-
-const simulateJump = (jump) => window.JunkbotWasm.simulateJump(jump);
-
-const notDropletOrJunkbot = (entity) => entity.type !== "droplet" && entity.type !== "junkbot";
-const simulateTeleport = (teleport) =>
-	window.JunkbotWasm.simulateTeleport(teleport, entities, teleportEffects);
+// All per-entity simulation (gravity, junkbot/gearbot/climbbot/flybot/eyebot AI, scaredy bins,
+// droplets, pipes, jump blocks, teleports, hurtJunkbot/walk/findLinkedTeleport helpers) now lives
+// entirely in Swift's GameEngine (Sources/JunkbotCore/Simulation.swift), run once per frame via
+// `simulate()` below calling `window.JunkbotWasm.engineTick(...)`. The JS-bridge duplicates that used
+// to wrap each of these individually have been removed.
 
 // #endregion
 //
@@ -3832,77 +3771,14 @@ const handlePlayback = () => {
 // #region Simulate! (simulation main)
 
 const simulate = (entities) => {
-	frameCounter += 1;
-
-	updateAccelerationStructures();
-
-	// sort for gravity
-	entities.sort((a, b) => b.y - a.y);
-
-	simulateGravity();
-
-	teleportEffects.length = 0;
-
-	for (const entity of entities) {
-		if (!entity.grabbed) {
-			if (entity.type === "junkbot") {
-				simulateJunkbot(entity);
-			} else if (entity.type === "gearbot") {
-				simulateGearbot(entity);
-			} else if (entity.type === "climbbot") {
-				simulateClimbbot(entity);
-			} else if (entity.type === "flybot") {
-				simulateFlybot(entity);
-			} else if (entity.type === "eyebot") {
-				doEyebotMovement(entity);
-			} else if (entity.type === "jump") {
-				simulateJump(entity);
-			} else if (entity.type === "teleport") {
-				simulateTeleport(entity);
-			} else if (entity.type === "pipe") {
-				simulatePipe(entity);
-			} else if (entity.type === "droplet") {
-				simulateDroplet(entity);
-			} else if (entity.type === "bin" && entity.scaredy) {
-				simulateScaredy(entity);
-			} else if ("animationFrame" in entity) {
-				entity.animationFrame += 1;
-			}
-		}
+	// Simulation runs entirely in Swift's GameEngine (via engineTick). The former JS-side
+	// per-entity dispatch fallback has been removed; GameEngine is the single source of truth.
+	const levelForSimulation = entities === currentLevel.entities ? currentLevel : { ...currentLevel, entities };
+	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter);
+	frameCounter = result.frameCounter;
+	if (result.collectedBin) {
+		collectBinTime = Date.now();
 	}
-	// Remove entities with flag removeBeforeRender.
-	// It's important not to remove entities while iterating over them,
-	// as this can lead to entities not being simulated in a frame,
-	// which can lead to entities offset from each other, which is problematic e.g. for "Ally" test level.
-	{
-		let iOut = 0;
-		for (let i = 0; i < entities.length; i++) {
-			if (!entities[i].removeBeforeRender) {
-				entities[iOut] = entities[i];
-				iOut += 1;
-			}
-		}
-		entities.length = iOut;
-	}
-
-	for (const entity of entities) {
-		if ("floating" in entity) {
-			entity.wasFloating = entity.floating;
-			delete entity.floating;
-		}
-
-		// eyebot targeting is done separately from movement, so that it can support
-		// a flybot continuously blocking an eyebot's line of sight ("Ally" test case)
-		if (entity.type === "eyebot") {
-			doEyebotTargeting(entity);
-		}
-	}
-	// wind and laser beams
-	window.JunkbotWasm.simulateFansAndLasers(entities, wind, laserBeams, playSound);
-	for (const entity of entities) {
-		delete entity.wasFloating;
-	}
-
 	// sort for consistency for level delta patching
 	entities.sort((a, b) => a.id - b.id);
 	playthroughEvents.push({

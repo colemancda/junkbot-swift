@@ -5,6 +5,435 @@ nonisolated(unsafe) let window = JSObject.global
 _ = window.console.log("Swift: module started")
 let exports = JSObject.global.Object.function!.new()
 let document = window.document.object!
+let gameEngine = GameEngine()
+
+extension GameEngine {
+    func rectanglesIntersectExport(_ args: [JSValue]) -> JSValue {
+        let ax = Int32(args[0].number ?? 0)
+        let ay = Int32(args[1].number ?? 0)
+        let aw = Int32(args[2].number ?? 0)
+        let ah = Int32(args[3].number ?? 0)
+
+        let bx = Int32(args[4].number ?? 0)
+        let by = Int32(args[5].number ?? 0)
+        let bw = Int32(args[6].number ?? 0)
+        let bh = Int32(args[7].number ?? 0)
+
+        return .boolean(rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh))
+    }
+
+    func rectangleLevelBoundsCollisionTestExport(_ args: [JSValue]) -> JSValue {
+        let x = Int32(args[0].number ?? 0)
+        let y = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        return rectangleLevelBoundsCollisionObject(x: x, y: y, width: width, height: height) ?? .undefined
+    }
+
+    func rectangleCollisionTestExport(_ args: [JSValue]) -> JSValue {
+        let x = Int32(args[0].number ?? 0)
+        let y = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        guard let filter = args[4].function, let entities = args[5].object else { return .null }
+
+        return rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
+            ?? .null
+    }
+
+    func rectangleCollisionAllExport(_ args: [JSValue]) -> JSValue {
+        let x = Int32(args[0].number ?? 0)
+        let y = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        guard let filter = args[4].function, let entities = args[5].object else { return [JSValue]().jsValue }
+
+        return rectangleCollisionAll(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
+            .jsValue
+    }
+
+    func raycastExport(_ args: [JSValue]) -> JSValue {
+        let startX = Int32(args[0].number ?? 0)
+        let startY = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        let directionX = Int32(args[4].number ?? 0)
+        let directionY = Int32(args[5].number ?? 0)
+        let maxSteps = Int32(args[6].number ?? 0)
+        guard let filter = args[7].function, let entities = args[8].object else { return .undefined }
+        let onStep = args[9].function
+
+        var x = startX
+        var y = startY
+        var steps: Int32 = 0
+        let result = JSObject.global.Object.function!.new()
+        while steps < maxSteps {
+            x += CELL_W * directionX
+            y += CELL_H * directionY
+            _ = onStep?(x, y, width, height)
+            if let hit = rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities) {
+                result.steps = Double(steps).jsValue
+                result.hit = hit
+                return result.jsValue
+            }
+            steps += 1
+        }
+        result.steps = Double(steps).jsValue
+        result.hit = .null
+        return result.jsValue
+    }
+
+    func sortEntitiesForRenderingExport(_ args: [JSValue]) -> JSValue {
+        guard let array = args[0].object else { return .undefined }
+        let length = Int(array.length.number ?? 0)
+        guard length > 1 else { return .undefined }
+
+        let elements = (0..<length).map { array[$0] }
+        let boxes = elements.map { element -> RenderBox in
+            let obj = element.object!
+            return RenderBox(
+                x: obj.x.number ?? 0,
+                y: obj.y.number ?? 0,
+                width: obj.width.number ?? 0,
+                height: obj.height.number ?? 0
+            )
+        }
+
+        let order = sortOrderForRendering(boxes)
+        for i in 0..<length {
+            array[i] = elements[order[i]]
+        }
+
+        return .undefined
+    }
+
+    func winOrLoseExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object else { return .string("") }
+        let length = Int(entities.length.number ?? 0)
+
+        var anyJunkbotAlive = false
+        var anyJunkbotAliveNotDying = false
+        var anyBin = false
+        var allNotCollectingBin = true
+
+        for i in 0..<length {
+            guard let e = entities[i].object else { continue }
+            let type = e.type.jsString
+            if type == junkbotType {
+                let dead = e.dead.boolean == true
+                let dying = e.dying.boolean == true
+                if !dead {
+                    anyJunkbotAlive = true
+                    if !dying { anyJunkbotAliveNotDying = true }
+                }
+            }
+            if type == binType { anyBin = true }
+            if e.collectingBin.boolean == true { allNotCollectingBin = false }
+        }
+
+        if !anyJunkbotAlive { return .string("lose") }
+        if anyJunkbotAliveNotDying && !anyBin && allNotCollectingBin {
+            return .string("win")
+        }
+        return .string("")
+    }
+
+    func rebuildAccelerationStructuresExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object else { return .undefined }
+        let length = Int(entities.length.number ?? 0)
+
+        var elements: [JSValue] = []
+        var extents: [YExtent] = []
+        elements.reserveCapacity(length)
+        extents.reserveCapacity(length)
+        for i in 0..<length {
+            let element = entities[i]
+            elements.append(element)
+            let obj = element.object
+            let y = Int32(obj?.y.number ?? 0)
+            let height = Int32(obj?.height.number ?? 0)
+            extents.append(YExtent(top: y, bottom: y + height))
+        }
+
+        let (byTop, byBottom) = groupIndicesByY(extents)
+
+        func buildMap(_ grouping: [Int32: [Int]]) -> JSValue {
+            let obj = JSObject.global.Object.function!.new()
+            for (y, indices) in grouping {
+                obj[Int(y)] = indices.map { elements[$0] }.jsValue
+            }
+            return obj.jsValue
+        }
+
+        let result = JSObject.global.Object.function!.new()
+        result.byTopY = buildMap(byTop)
+        result.byBottomY = buildMap(byBottom)
+        return result.jsValue
+    }
+
+    func connectsExport(_ args: [JSValue]) -> JSValue {
+        guard let a = args[0].object, let b = args[1].object else { return .boolean(false) }
+        let direction = Int32(args[2].number ?? 0)
+        return .boolean(entitiesConnect(a, b, direction: direction))
+    }
+
+    func connectsToFixedExport(_ args: [JSValue]) -> JSValue {
+        guard let startEntity = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return .boolean(false) }
+        let direction = Int32(args[3].number ?? 0)
+        let ignoreEntities = jsObjectArray(args[4])
+
+        return .boolean(
+            connectsToFixedCore(
+                startEntity: startEntity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                direction: direction, ignoreEntities: ignoreEntities))
+    }
+
+    func allConnectedToFixedExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return [JSValue]().jsValue }
+        let ignoreEntities = jsObjectArray(args[3])
+
+        var connectedToFixed: [JSObject] = []
+        var connectedToFixedValues: [JSValue] = []
+
+        func addAnyAttached(_ entity: JSObject) {
+            let ex = Int32(entity.x.number ?? 0), ey = Int32(entity.y.number ?? 0)
+            let ew = Int32(entity.width.number ?? 0), eh = Int32(entity.height.number ?? 0)
+            let candidates = yBucket(entitiesByTopY, ey + eh) + yBucket(entitiesByBottomY, ey)
+            for otherValue in candidates {
+                guard let otherEntity = otherValue.object else { continue }
+                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
+                guard ex + ew > ox && ex < ox + ow else { continue }
+                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
+                if connectedToFixed.contains(where: { $0 == otherEntity }) { continue }
+                connectedToFixed.append(otherEntity)
+                connectedToFixedValues.append(otherValue)
+                addAnyAttached(otherEntity)
+            }
+        }
+
+        let length = Int(entities.length.number ?? 0)
+        for i in 0..<length {
+            let entityValue = entities[i]
+            guard let entity = entityValue.object else { continue }
+            if ignoreEntities.contains(where: { $0 == entity }) { continue }
+            if connectedToFixed.contains(where: { $0 == entity }) { continue }
+            if entity.fixed.boolean == true {
+                connectedToFixed.append(entity)
+                connectedToFixedValues.append(entityValue)
+                addAnyAttached(entity)
+            }
+        }
+
+        return connectedToFixedValues.jsValue
+    }
+
+    func makeEntityExport(_ kind: JSString, _ args: [JSValue]) -> JSValue {
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+
+        if kind == "brick" {
+            let widthInStuds = args[3]
+            let colorName = args[4]
+            let fixed = args[5]
+            let obj = makeEntityBase(
+                id: id, type: "brick", x: x, y: y,
+                width: Int32(widthInStuds.number ?? 0) * CELL_W, height: CELL_H)
+            obj.widthInStuds = widthInStuds
+            obj.colorName = colorName
+            obj.fixed = fixed
+            return obj.jsValue
+        }
+        if kind == junkbotType {
+            let obj = makeEntityBase(id: id, type: "junkbot", x: x, y: y, width: 2 * CELL_W, height: 4 * CELL_H)
+            obj.facing = args[3]
+            obj.armored = args[4]
+            obj.losingShield = .boolean(false)
+            obj.losingShieldTime = .number(0)
+            obj.animationFrame = .number(0)
+            obj.headLoaded = .boolean(false)
+            return obj.jsValue
+        }
+        if kind == gearbotType {
+            let obj = makeEntityBase(id: id, type: "gearbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == climbbotType {
+            let obj = makeEntityBase(id: id, type: "climbbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.facingY = args[4]
+            obj.animationFrame = .number(0)
+            obj.energy = .number(0)
+            return obj.jsValue
+        }
+        if kind == flybotType {
+            let obj = makeEntityBase(id: id, type: "flybot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == eyebotType {
+            let obj = makeEntityBase(id: id, type: "eyebot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.facingY = args[4]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == binType {
+            let obj = makeEntityBase(id: id, type: "bin", x: x, y: y, width: 2 * CELL_W, height: 3 * CELL_H)
+            obj.facing = args[3]
+            obj.scaredy = args[4]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == crateType {
+            return makeEntityBase(id: id, type: "crate", x: x, y: y, width: 3 * CELL_W, height: 2 * CELL_H).jsValue
+        }
+        if kind == fireType {
+            let obj = makeEntityBase(id: id, type: "fire", x: x, y: y, width: 4 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.animationFrame = .number(0)
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == fanType {
+            let obj = makeEntityBase(id: id, type: "fan", x: x, y: y, width: 4 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.animationFrame = .number(0)
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == laserType {
+            let obj = makeEntityBase(id: id, type: "laser", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.animationFrame = .number(0)
+            obj.facing = args[5]
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == switchType {
+            let obj = makeEntityBase(id: id, type: "switch", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == teleportType {
+            let obj = makeEntityBase(id: id, type: "teleport", x: x, y: y, width: 4 * CELL_W, height: CELL_H)
+            obj.teleportID = args[3]
+            obj.fixed = .boolean(true)
+            obj.timer = .number(0)
+            return obj.jsValue
+        }
+        if kind == jumpType {
+            let obj = makeEntityBase(id: id, type: "jump", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.animationFrame = .number(0)
+            obj.fixed = args[3]
+            return obj.jsValue
+        }
+        if kind == shieldType {
+            let obj = makeEntityBase(id: id, type: "shield", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.fixed = args[4]
+            obj.used = args[3]
+            return obj.jsValue
+        }
+        if kind == "pipe" {
+            let obj = makeEntityBase(id: id, type: "pipe", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.timer = .number(-1)
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == dropletType {
+            let obj = makeEntityBase(id: id, type: "droplet", x: x, y: y, width: CELL_W, height: CELL_H)
+            obj.splashing = .boolean(false)
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        return .undefined
+    }
+
+    func findMisplacedEntitiesExport(_ args: [JSValue]) -> JSValue {
+        guard let within = args[0].object, let compareTo = args[1].object else { return [JSValue]().jsValue }
+
+        let compareLength = Int(compareTo.length.number ?? 0)
+        let compareEntities = (0..<compareLength).compactMap { compareTo[$0].object }
+
+        let withinLength = Int(within.length.number ?? 0)
+        var result: [JSValue] = []
+        for i in 0..<withinLength {
+            let entityValue = within[i]
+            guard let entity = entityValue.object else { continue }
+            let entityType = entity.type.jsString
+            let entityGrabbed = entity.grabbed.boolean == true
+            let ex = entity.x.number, ey = entity.y.number
+
+            var misplaced = true
+            for compareToEntity in compareEntities {
+                guard entityType == compareToEntity.type.jsString else { continue }
+                if entityGrabbed && compareToEntity.grabbed.boolean == true {
+                    misplaced = false
+                    break
+                }
+                if ex == compareToEntity.x.number && ey == compareToEntity.y.number {
+                    misplaced = false
+                    break
+                }
+            }
+            if misplaced { result.append(entityValue) }
+        }
+        return result.jsValue
+    }
+
+    func engineLoadLevelExport(_ args: [JSValue]) -> JSValue {
+        guard let level = args[0].object else { return .undefined }
+
+        let nextID = Int32(args[1].number ?? 0)
+        let state = engineLevelState(from: level)
+        loadLevelState(entities: state.entities, levelBounds: state.bounds, nextID: nextID)
+        return .undefined
+    }
+
+    func engineTickExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
+            let teleportEffects = args[3].object, let level = args[4].object, let playSound = args[6].function
+        else { return .undefined }
+        let nextID = Int32(args[5].number ?? 0)
+        frameCounter = Int32(args[7].number ?? Double(frameCounter))
+
+        var collectedBin = false
+        onPlaySound = { id in
+            if id == 6 { collectedBin = true }
+            guard let soundName = engineSoundName(id) else { return }
+            _ = playSound(soundName)
+        }
+
+        let state = engineLevelState(from: level)
+        replaceLiveState(entities: state.entities, levelBounds: state.bounds, nextID: nextID)
+        tick()
+        syncEngineEntities(to: entities)
+        syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
+
+        let result = JSObject.global.Object.function!.new()
+        result.frameCounter = frameCounter.jsValue
+        result.collectedBin = collectedBin.jsValue
+        return result.jsValue
+    }
+
+    // hurtJunkbotExport, walkExport, simulateJumpExport, findLinkedTeleportExport removed: dead code,
+    // never wired to any `exports.*` (GameEngine.simulateJunkbot/walk/hurtJunkbot/findLinkedTeleportIndex
+    // are what actually run, via engineTick).
+}
 
 let dropletType: JSString = "droplet"
 let binType: JSString = "bin"
@@ -26,21 +455,95 @@ let jumpType: JSString = "jump"
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
 
-func entityType(_ e: JSObject) -> JSString? { e.type.jsString }
-func isNotDroplet(_ e: JSObject) -> Bool { entityType(e) != dropletType }
-func isNotBinOrDroplet(_ e: JSObject) -> Bool { entityType(e) != binType && isNotDroplet(e) }
-func isNotBinOrDropletOrEnemyBot(_ e: JSObject) -> Bool {
-    isNotBinOrDroplet(e) && entityType(e) != gearbotType && entityType(e) != climbbotType
-        && entityType(e) != flybotType && entityType(e) != eyebotType
+func engineEntityType(_ jsType: JSString?) -> EntityType {
+    if jsType == "brick" { return .brick }
+    if jsType == junkbotType { return .junkbot }
+    if jsType == gearbotType { return .gearbot }
+    if jsType == climbbotType { return .climbbot }
+    if jsType == flybotType { return .flybot }
+    if jsType == eyebotType { return .eyebot }
+    if jsType == binType { return .bin }
+    if jsType == crateType { return .crate }
+    if jsType == fireType { return .fire }
+    if jsType == fanType { return .fan }
+    if jsType == switchType { return .switch }
+    if jsType == "pipe" { return .pipe }
+    if jsType == shieldType { return .shield }
+    if jsType == teleportType { return .teleport }
+    if jsType == laserType { return .laser }
+    if jsType == jumpType { return .jump }
+    if jsType == dropletType { return .droplet }
+    return .unknown
 }
-func isNotDropletOrJunkbot(_ e: JSObject) -> Bool { isNotDroplet(e) && entityType(e) != junkbotType }
 
-func rectanglesIntersect(
-    _ ax: Int32, _ ay: Int32, _ aw: Int32, _ ah: Int32,
-    _ bx: Int32, _ by: Int32, _ bw: Int32, _ bh: Int32
-) -> Bool {
-    ax + aw > bx && ax < bx + bw && ay + ah > by && ay < by + bh
+func engineEntityTypeName(_ type: EntityType) -> JSValue {
+    switch type {
+    case .brick: return "brick".jsValue
+    case .junkbot: return "junkbot".jsValue
+    case .gearbot: return "gearbot".jsValue
+    case .climbbot: return "climbbot".jsValue
+    case .flybot: return "flybot".jsValue
+    case .eyebot: return "eyebot".jsValue
+    case .bin: return "bin".jsValue
+    case .crate: return "crate".jsValue
+    case .fire: return "fire".jsValue
+    case .fan: return "fan".jsValue
+    case .switch: return "switch".jsValue
+    case .pipe: return "pipe".jsValue
+    case .shield: return "shield".jsValue
+    case .teleport: return "teleport".jsValue
+    case .laser: return "laser".jsValue
+    case .jump: return "jump".jsValue
+    case .droplet: return "droplet".jsValue
+    case .levelBounds: return "levelBounds".jsValue
+    case .unknown: return "unknown".jsValue
+    }
 }
+
+func engineSoundName(_ id: Int32) -> JSValue? {
+    switch id {
+    case 0: return "turn".jsValue
+    case 1: return "blockPickUp".jsValue
+    case 2: return "blockDrop".jsValue
+    case 3: return "blockClick".jsValue
+    case 4: return "fall".jsValue
+    case 5: return "headBonk".jsValue
+    case 6: return "collectBin".jsValue
+    case 7: return "collectBin2".jsValue
+    case 8: return "switchClick".jsValue
+    case 9: return "switchOn".jsValue
+    case 10: return "switchOff".jsValue
+    case 11: return "deathByFire".jsValue
+    case 12: return "deathByWater".jsValue
+    case 13: return "deathByLaser".jsValue
+    case 14: return "deathByBot".jsValue
+    case 15: return "getShield".jsValue
+    case 16: return "getPowerup".jsValue
+    case 17: return "losePowerup".jsValue
+    case 18: return "teleport".jsValue
+    case 22: return "jump".jsValue
+    case 23: return "fan".jsValue
+    case 24: return "drip0".jsValue
+    case 25: return "drip1".jsValue
+    case 26: return "drip2".jsValue
+    case 27: return "undo".jsValue
+    default: return nil
+    }
+}
+
+func deleteJSProperty(_ object: JSObject, _ property: String) {
+    _ = window.Reflect.deleteProperty(object, property)
+}
+
+func int32Property(_ object: JSObject, _ name: String, default defaultValue: Int32 = 0) -> Int32 {
+    Int32(object[name].number ?? Double(defaultValue))
+}
+
+func boolProperty(_ object: JSObject, _ name: String) -> Bool {
+    object[name].boolean == true
+}
+
+func entityType(_ e: JSObject) -> JSString? { e.type.jsString }
 
 /// Reads `window.currentLevel.bounds` directly rather than mirroring it into a Swift-side global:
 /// game.js declares `currentLevel` with `var` (not `let`) specifically so it's a real
@@ -69,23 +572,22 @@ func rectangleLevelBoundsCollision(x: Int32, y: Int32, width: Int32, height: Int
 }
 
 exports.rectanglesIntersect =
-    JSClosure { args in
-        let ax = Int32(args[0].number ?? 0)
-        let ay = Int32(args[1].number ?? 0)
-        let aw = Int32(args[2].number ?? 0)
-        let ah = Int32(args[3].number ?? 0)
+    JSClosure { args in gameEngine.rectanglesIntersectExport(args) }.jsValue
 
-        let bx = Int32(args[4].number ?? 0)
-        let by = Int32(args[5].number ?? 0)
-        let bw = Int32(args[6].number ?? 0)
-        let bh = Int32(args[7].number ?? 0)
-
-        let intersects = rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh)
-
-        return .boolean(intersects)
-    }.jsValue
+func levelBoundsObject(from entity: Entity) -> JSValue {
+    let obj = JSObject.global.Object.function!.new()
+    obj.type = "levelBounds".jsValue
+    obj.x = entity.x.jsValue
+    obj.y = entity.y.jsValue
+    obj.width = entity.width.jsValue
+    obj.height = entity.height.jsValue
+    return obj.jsValue
+}
 
 func rectangleLevelBoundsCollisionObject(x: Int32, y: Int32, width: Int32, height: Int32) -> JSValue? {
+    if let bounds = gameEngine.rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height) {
+        return levelBoundsObject(from: bounds)
+    }
     guard let r = rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height) else {
         return nil
     }
@@ -121,7 +623,7 @@ func rectangleCollisionCore(
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
         let oh = Int32(otherObj.height.number ?? 0)
-        if rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
+        if gameEngine.rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
             return other
         }
     }
@@ -149,7 +651,7 @@ func rectangleCollisionAllCore(
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
         let oh = Int32(otherObj.height.number ?? 0)
-        if rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
+        if gameEngine.rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
             result.append(other)
         }
     }
@@ -174,209 +676,27 @@ func rectangleCollisionAll(
     }
 }
 
-/// Swift-native analog of the JS `entityCollisionTest` helper: same as `rectangleCollisionCore`, but
-/// using `entity`'s own width/height and excluding `entity` itself from candidates (note: use a
-/// candidate x/y, not `entity`'s own x/y, matching the original's "make sure not to use entity.x/y!").
-func entityCollision(
-    x: Int32, y: Int32, entity: JSObject, entities: JSObject, filter: (JSObject) -> Bool
-) -> JSValue? {
-    let width = Int32(entity.width.number ?? 0)
-    let height = Int32(entity.height.number ?? 0)
-    return rectangleCollisionCore(x: x, y: y, width: width, height: height, entities: entities) { other in
-        other != entity && filter(other)
-    }
-}
-
-func entityCollisionAllSwift(
-    x: Int32, y: Int32, entity: JSObject, entities: JSObject, filter: (JSObject) -> Bool
-) -> [JSValue] {
-    let width = Int32(entity.width.number ?? 0)
-    let height = Int32(entity.height.number ?? 0)
-    return rectangleCollisionAllCore(x: x, y: y, width: width, height: height, entities: entities) { other in
-        other != entity && filter(other)
-    }
-}
-
-/// Swift-native analog of the JS `raycast` helper (skips the debug-overlay-only `onStep` callback the
-/// JS-facing `exports.raycast` below supports; no gameplay effect).
-func raycastCore(
-    startX: Int32, startY: Int32, width: Int32, height: Int32,
-    directionX: Int32, directionY: Int32, maxSteps: Int32,
-    entities: JSObject, filter: (JSObject) -> Bool
-) -> (steps: Int32, hit: JSValue?) {
-    var x = startX
-    var y = startY
-    var steps: Int32 = 0
-    while steps < maxSteps {
-        x += CELL_W * directionX
-        y += CELL_H * directionY
-        if let hit = rectangleCollisionCore(x: x, y: y, width: width, height: height, entities: entities, filter: filter)
-        {
-            return (steps, hit)
-        }
-        steps += 1
-    }
-    return (steps, nil)
-}
 
 exports.rectangleLevelBoundsCollisionTest =
-    JSClosure { args in
-        let x = Int32(args[0].number ?? 0)
-        let y = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        return rectangleLevelBoundsCollisionObject(x: x, y: y, width: width, height: height) ?? .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.rectangleLevelBoundsCollisionTestExport(args) }.jsValue
 
 exports.rectangleCollisionTest =
-    JSClosure { args in
-        let x = Int32(args[0].number ?? 0)
-        let y = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        guard let filter = args[4].function, let entities = args[5].object else { return .null }
-
-        return rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
-            ?? .null
-    }.jsValue
+    JSClosure { args in gameEngine.rectangleCollisionTestExport(args) }.jsValue
 
 exports.rectangleCollisionAll =
-    JSClosure { args in
-        let x = Int32(args[0].number ?? 0)
-        let y = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        guard let filter = args[4].function, let entities = args[5].object else { return [JSValue]().jsValue }
-
-        return rectangleCollisionAll(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
-            .jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.rectangleCollisionAllExport(args) }.jsValue
 
 exports.raycast =
-    JSClosure { args in
-        let startX = Int32(args[0].number ?? 0)
-        let startY = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        let directionX = Int32(args[4].number ?? 0)
-        let directionY = Int32(args[5].number ?? 0)
-        let maxSteps = Int32(args[6].number ?? 0)
-        guard let filter = args[7].function, let entities = args[8].object else { return .undefined }
-        let onStep = args[9].function
-
-        var x = startX
-        var y = startY
-        var steps: Int32 = 0
-        let result = JSObject.global.Object.function!.new()
-        while steps < maxSteps {
-            x += CELL_W * directionX
-            y += CELL_H * directionY
-            _ = onStep?(x, y, width, height)
-            if let hit = rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities) {
-                result.steps = Double(steps).jsValue
-                result.hit = hit
-                return result.jsValue
-            }
-            steps += 1
-        }
-        result.steps = Double(steps).jsValue
-        result.hit = .null
-        return result.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.raycastExport(args) }.jsValue
 
 exports.sortEntitiesForRendering =
-    JSClosure { args in
-        guard let array = args[0].object else { return .undefined }
-        let length = Int(array.length.number ?? 0)
-        guard length > 1 else { return .undefined }
-
-        let elements = (0..<length).map { array[$0] }
-        let boxes = elements.map { element -> RenderBox in
-            let obj = element.object!
-            return RenderBox(
-                x: obj.x.number ?? 0,
-                y: obj.y.number ?? 0,
-                width: obj.width.number ?? 0,
-                height: obj.height.number ?? 0
-            )
-        }
-
-        let order = sortOrderForRendering(boxes)
-        for i in 0..<length {
-            array[i] = elements[order[i]]
-        }
-
-        return .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.sortEntitiesForRenderingExport(args) }.jsValue
 
 exports.winOrLose =
-    JSClosure { args in
-        guard let entities = args[0].object else { return .string("") }
-        let length = Int(entities.length.number ?? 0)
-
-        let junkbotType: JSString = "junkbot"
-        let binType: JSString = "bin"
-
-        var anyJunkbotAlive = false
-        var anyJunkbotAliveNotDying = false
-        var anyBin = false
-        var allNotCollectingBin = true
-
-        for i in 0..<length {
-            guard let e = entities[i].object else { continue }
-            let type = e.type.jsString
-            if type == junkbotType {
-                let dead = e.dead.boolean == true
-                let dying = e.dying.boolean == true
-                if !dead {
-                    anyJunkbotAlive = true
-                    if !dying { anyJunkbotAliveNotDying = true }
-                }
-            }
-            if type == binType { anyBin = true }
-            if e.collectingBin.boolean == true { allNotCollectingBin = false }
-        }
-
-        if !anyJunkbotAlive { return .string("lose") }
-        if anyJunkbotAliveNotDying && !anyBin && allNotCollectingBin {
-            return .string("win")
-        }
-        return .string("")
-    }.jsValue
+    JSClosure { args in gameEngine.winOrLoseExport(args) }.jsValue
 
 exports.rebuildAccelerationStructures =
-    JSClosure { args in
-        guard let entities = args[0].object else { return .undefined }
-        let length = Int(entities.length.number ?? 0)
-
-        var elements: [JSValue] = []
-        var extents: [YExtent] = []
-        elements.reserveCapacity(length)
-        extents.reserveCapacity(length)
-        for i in 0..<length {
-            let element = entities[i]
-            elements.append(element)
-            let obj = element.object
-            let y = Int32(obj?.y.number ?? 0)
-            let height = Int32(obj?.height.number ?? 0)
-            extents.append(YExtent(top: y, bottom: y + height))
-        }
-
-        let (byTop, byBottom) = groupIndicesByY(extents)
-
-        func buildMap(_ grouping: [Int32: [Int]]) -> JSValue {
-            let obj = JSObject.global.Object.function!.new()
-            for (y, indices) in grouping {
-                obj[Int(y)] = indices.map { elements[$0] }.jsValue
-            }
-            return obj.jsValue
-        }
-
-        let result = JSObject.global.Object.function!.new()
-        result.byTopY = buildMap(byTop)
-        result.byBottomY = buildMap(byBottom)
-        return result.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.rebuildAccelerationStructuresExport(args) }.jsValue
 
 func entitiesConnect(_ a: JSObject, _ b: JSObject, direction: Int32) -> Bool {
     let ax = Int32(a.x.number ?? 0), ay = Int32(a.y.number ?? 0)
@@ -400,11 +720,7 @@ func jsObjectArray(_ value: JSValue) -> [JSObject] {
 }
 
 exports.connects =
-    JSClosure { args in
-        guard let a = args[0].object, let b = args[1].object else { return .boolean(false) }
-        let direction = Int32(args[2].number ?? 0)
-        return .boolean(entitiesConnect(a, b, direction: direction))
-    }.jsValue
+    JSClosure { args in gameEngine.connectsExport(args) }.jsValue
 
 func connectsToFixedCore(
     startEntity: JSObject, entitiesByTopY: JSObject, entitiesByBottomY: JSObject,
@@ -445,1104 +761,13 @@ func connectsToFixedCore(
 }
 
 exports.connectsToFixed =
-    JSClosure { args in
-        guard let startEntity = args[0].object,
-            let entitiesByTopY = args[1].object,
-            let entitiesByBottomY = args[2].object
-        else { return .boolean(false) }
-        let direction = Int32(args[3].number ?? 0)
-        let ignoreEntities = jsObjectArray(args[4])
-
-        return .boolean(
-            connectsToFixedCore(
-                startEntity: startEntity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
-                direction: direction, ignoreEntities: ignoreEntities))
-    }.jsValue
+    JSClosure { args in gameEngine.connectsToFixedExport(args) }.jsValue
 
 exports.allConnectedToFixed =
-    JSClosure { args in
-        guard let entities = args[0].object,
-            let entitiesByTopY = args[1].object,
-            let entitiesByBottomY = args[2].object
-        else { return [JSValue]().jsValue }
-        let ignoreEntities = jsObjectArray(args[3])
-
-        var connectedToFixed: [JSObject] = []
-        var connectedToFixedValues: [JSValue] = []
-
-        func addAnyAttached(_ entity: JSObject) {
-            let ex = Int32(entity.x.number ?? 0), ey = Int32(entity.y.number ?? 0)
-            let ew = Int32(entity.width.number ?? 0), eh = Int32(entity.height.number ?? 0)
-            let candidates = yBucket(entitiesByTopY, ey + eh) + yBucket(entitiesByBottomY, ey)
-            for otherValue in candidates {
-                guard let otherEntity = otherValue.object else { continue }
-                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
-                guard ex + ew > ox && ex < ox + ow else { continue }
-                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
-                if connectedToFixed.contains(where: { $0 == otherEntity }) { continue }
-                connectedToFixed.append(otherEntity)
-                connectedToFixedValues.append(otherValue)
-                addAnyAttached(otherEntity)
-            }
-        }
-
-        let length = Int(entities.length.number ?? 0)
-        for i in 0..<length {
-            let entityValue = entities[i]
-            guard let entity = entityValue.object else { continue }
-            if ignoreEntities.contains(where: { $0 == entity }) { continue }
-            if connectedToFixed.contains(where: { $0 == entity }) { continue }
-            if entity.fixed.boolean == true {
-                connectedToFixed.append(entity)
-                connectedToFixedValues.append(entityValue)
-                addAnyAttached(entity)
-            }
-        }
-
-        return connectedToFixedValues.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.allConnectedToFixedExport(args) }.jsValue
 
 exports.findMisplacedEntities =
-    JSClosure { args in
-        guard let within = args[0].object, let compareTo = args[1].object else { return [JSValue]().jsValue }
-
-        let compareLength = Int(compareTo.length.number ?? 0)
-        let compareEntities = (0..<compareLength).compactMap { compareTo[$0].object }
-
-        let withinLength = Int(within.length.number ?? 0)
-        var result: [JSValue] = []
-        for i in 0..<withinLength {
-            let entityValue = within[i]
-            guard let entity = entityValue.object else { continue }
-            let entityType = entity.type.jsString
-            let entityGrabbed = entity.grabbed.boolean == true
-            let ex = entity.x.number, ey = entity.y.number
-
-            var misplaced = true
-            for compareToEntity in compareEntities {
-                guard entityType == compareToEntity.type.jsString else { continue }
-                if entityGrabbed && compareToEntity.grabbed.boolean == true {
-                    misplaced = false
-                    break
-                }
-                if ex == compareToEntity.x.number && ey == compareToEntity.y.number {
-                    misplaced = false
-                    break
-                }
-            }
-            if misplaced { result.append(entityValue) }
-        }
-        return result.jsValue
-    }.jsValue
-
-exports.simulateGravity =
-    JSClosure { args in
-        guard let entities = args[0].object,
-            let entitiesByTopY = args[1].object,
-            let entitiesByBottomY = args[2].object,
-            let entityMoved = args[3].function
-        else { return .undefined }
-
-        let length = Int(entities.length.number ?? 0)
-        for i in 0..<length {
-            let entityValue = entities[i]
-            guard let entity = entityValue.object else { continue }
-            if entity.fixed.boolean == true { continue }
-            if entity.grabbed.boolean == true { continue }
-            if entity.floating.boolean == true { continue }
-            let type = entityType(entity)
-            if type == dropletType || type == junkbotType || type == climbbotType || type == flybotType
-                || type == eyebotType
-            {
-                continue
-            }
-
-            let ex = Int32(entity.x.number ?? 0)
-            let ey = Int32(entity.y.number ?? 0)
-            let ew = Int32(entity.width.number ?? 0)
-            let eh = Int32(entity.height.number ?? 0)
-
-            // "settled" checks: touching the level floor, or resting on something connected to fixed
-            if rectangleLevelBoundsCollisionObject(x: ex, y: ey + 1, width: ew, height: eh) != nil {
-                continue
-            }
-            let direction: Int32 =
-                (type == junkbotType || type == gearbotType || type == crateType || type == binType) ? 1 : 0
-            if connectsToFixedCore(
-                startEntity: entity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
-                direction: direction, ignoreEntities: [])
-            {
-                continue
-            }
-
-            // (debug-overlay-only logging from the original is omitted here; it has no gameplay effect)
-            if rectangleCollisionCore(
-                x: ex, y: ey, width: ew, height: eh, entities: entities,
-                filter: { other in other != entity && isNotDroplet(other) }) != nil
-            {
-                // Faithful port of the original: this returns out of the whole function (not just
-                // `continue`s to the next entity) when an entity is stuck in the ground.
-                return .undefined
-            }
-
-            let cellDownY = ey + CELL_H
-            let hits = rectangleCollisionAllCore(
-                x: ex, y: cellDownY + 1, width: ew, height: eh, entities: entities,
-                filter: { other in other != entity && isNotDroplet(other) })
-            let ground = hits.compactMap { $0.object }.min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) })
-
-            if let ground = ground, let groundY = ground.y.number {
-                entity.y = (Int32(groundY) - eh).jsValue
-            } else {
-                entity.y = cellDownY.jsValue
-            }
-            _ = entityMoved(entityValue)
-        }
-        return .undefined
-    }.jsValue
-
-let fireCause: JSString = "fire"
-let waterCause: JSString = "water"
-let laserCause: JSString = "laser"
-
-func hurtJunkbotCore(junkbot: JSObject, cause: JSString?, playSound: JSObject) {
-    if junkbot.dying.boolean == true || junkbot.dead.boolean == true || junkbot.grabbed.boolean == true {
-        return
-    }
-
-    // Play sound even if shielded, but not if losing shield because then it would repeat and
-    // sound ugly. This has to be before junkbot.losingShield is set, so it can play the first time.
-    if junkbot.losingShield.boolean != true {
-        if cause == fireCause {
-            _ = playSound("deathByFire")
-        } else if cause == waterCause {
-            _ = playSound("deathByWater")
-        } else if cause == laserCause {
-            _ = playSound("deathByLaser")
-        } else {
-            _ = playSound("deathByBot")
-        }
-    }
-
-    if junkbot.armored.boolean == true {
-        if junkbot.losingShield.boolean != true {
-            junkbot.losingShield = .boolean(true)
-            // don't reset junkbot.losingShieldTime to 0 - it wouldn't make sense for multiple
-            // hits to extend the shield (it should be reset elsewhere)
-        }
-    } else {
-        junkbot.animationFrame = .number(0)
-        junkbot.collectingBin = .boolean(false)
-        junkbot.dying = .boolean(true)
-        if cause == waterCause {
-            junkbot.dyingFromWater = .boolean(true)
-        }
-    }
-}
-
-exports.hurtJunkbot =
-    JSClosure { args in
-        guard let junkbot = args[0].object, let playSound = args[2].function else { return .undefined }
-        hurtJunkbotCore(junkbot: junkbot, cause: args[1].jsString, playSound: playSound)
-        return .undefined
-    }.jsValue
-
-/// Returns whether the junkbot turned around (hit a cliff/wall/bot), matching the JS
-/// `walk()`'s `=== "turned"` contract.
-func walkCore(junkbot: JSObject, entities: JSObject, entityMoved: JSObject, playSound: JSObject) -> Bool {
-    let jx = Int32(junkbot.x.number ?? 0)
-    let jy = Int32(junkbot.y.number ?? 0)
-    let jh = Int32(junkbot.height.number ?? 0)
-    let facing = Int32(junkbot.facing.number ?? 0)
-
-    let frontX = jx + facing * CELL_W
-    let frontY = jy
-
-    // can we step up?
-    if let stepOrWall = entityCollision(
-        x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot
-    )?.object, let wallY = stepOrWall.y.number {
-        let stepUpY = Int32(wallY) - jh
-        if stepUpY - jy >= -CELL_H && stepUpY - jy < 0
-            && entityCollision(x: frontX, y: stepUpY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet)
-                == nil
-        {
-            junkbot.x = frontX.jsValue
-            junkbot.y = stepUpY.jsValue
-            _ = entityMoved(junkbot.jsValue)
-            return false
-        }
-    }
-
-    // is there solid ground ahead to walk on?
-    let ground = entityCollision(
-        x: frontX, y: frontY + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
-    if ground != nil,
-        entityCollision(x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet) == nil
-    {
-        junkbot.x = frontX.jsValue
-        junkbot.y = frontY.jsValue
-        _ = entityMoved(junkbot.jsValue)
-        return false
-    }
-
-    // can we step down?
-    let stepsBelow = entityCollisionAllSwift(
-        x: frontX, y: frontY + CELL_H + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
-    if let step = stepsBelow.compactMap({ $0.object }).min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) }),
-        let stepY = step.y.number
-    {
-        let stepDownY = Int32(stepY) - jh
-        let stepDownHits = entityCollisionAllSwift(
-            x: frontX, y: stepDownY + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
-        let stepDown = stepDownHits.compactMap { $0.object }.min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) })
-        if stepDownY - jy <= CELL_H && stepDownY - jy > 0 && stepDown != nil
-            && entityCollision(x: frontX, y: stepDownY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet)
-                == nil
-        {
-            junkbot.x = frontX.jsValue
-            junkbot.y = stepDownY.jsValue
-            _ = entityMoved(junkbot.jsValue)
-            return false
-        }
-    }
-
-    junkbot.facing = (-facing).jsValue
-    _ = playSound("turn")
-    return true
-}
-
-exports.walk =
-    JSClosure { args in
-        guard let junkbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
-            let playSound = args[3].function
-        else { return .undefined }
-        let turned = walkCore(junkbot: junkbot, entities: entities, entityMoved: entityMoved, playSound: playSound)
-        return turned ? .string("turned") : .undefined
-    }.jsValue
-
-exports.simulateJump =
-    JSClosure { args in
-        guard let jump = args[0].object else { return .undefined }
-        let animationFrame = Int32(jump.animationFrame.number ?? 0) + 1
-        if animationFrame >= 5 {
-            jump.animationFrame = .number(0)
-            jump.active = .boolean(false)
-        } else {
-            jump.animationFrame = animationFrame.jsValue
-        }
-        return .undefined
-    }.jsValue
-
-exports.simulateGearbot =
-    JSClosure { args in
-        guard let gearbot = args[0].object, let entities = args[1].object,
-            let entityMoved = args[2].function, let playSound = args[3].function
-        else { return .undefined }
-
-        let animationFrame = Int32(gearbot.animationFrame.number ?? 0) + 1
-        guard animationFrame > 2 else {
-            gearbot.animationFrame = animationFrame.jsValue
-            return .undefined
-        }
-        gearbot.animationFrame = .number(0)
-
-        let gx = Int32(gearbot.x.number ?? 0)
-        let gy = Int32(gearbot.y.number ?? 0)
-        let gw = Int32(gearbot.width.number ?? 0)
-        let gh = Int32(gearbot.height.number ?? 0)
-        let facing = Int32(gearbot.facing.number ?? 0)
-
-        let aheadX = gx + facing * CELL_W
-        let aheadY = gy
-        let ahead = entityCollision(
-            x: aheadX, y: aheadY, entity: gearbot, entities: entities, filter: isNotDroplet
-        )?.object
-
-        let groundAheadX = facing == -1 ? gx - CELL_W : gx + gw
-        let groundAhead = rectangleCollisionCore(
-            x: groundAheadX, y: gy + 1, width: CELL_W, height: gh, entities: entities, filter: isNotDroplet)
-
-        if let ahead = ahead {
-            if entityType(ahead) == junkbotType, ahead.dying.boolean != true, ahead.dead.boolean != true {
-                hurtJunkbotCore(junkbot: ahead, cause: "bot", playSound: playSound)
-            }
-            gearbot.facing = (-facing).jsValue
-        } else if groundAhead != nil {
-            gearbot.x = aheadX.jsValue
-            gearbot.y = aheadY.jsValue
-            _ = entityMoved(args[0])
-        } else {
-            gearbot.facing = (-facing).jsValue
-        }
-        return .undefined
-    }.jsValue
-
-exports.simulateFlybot =
-    JSClosure { args in
-        guard let flybot = args[0].object, let entities = args[1].object,
-            let entityMoved = args[2].function, let playSound = args[3].function
-        else { return .undefined }
-
-        let animationFrame = Int32(flybot.animationFrame.number ?? 0) + 1
-        flybot.animationFrame = animationFrame.jsValue
-        guard animationFrame % 2 == 0 else { return .undefined }
-
-        let fx = Int32(flybot.x.number ?? 0)
-        let fy = Int32(flybot.y.number ?? 0)
-        let facing = Int32(flybot.facing.number ?? 0)
-        let aheadX = fx + facing * CELL_W
-        let aheadY = fy
-
-        if let ahead = entityCollision(
-            x: aheadX, y: aheadY, entity: flybot, entities: entities, filter: isNotDroplet
-        )?.object {
-            if entityType(ahead) == junkbotType {
-                hurtJunkbotCore(junkbot: ahead, cause: "bot", playSound: playSound)
-            }
-            flybot.facing = (-facing).jsValue
-        } else {
-            flybot.x = aheadX.jsValue
-            flybot.y = aheadY.jsValue
-            _ = entityMoved(args[0])
-        }
-        return .undefined
-    }.jsValue
-
-exports.simulateScaredy =
-    JSClosure { args in
-        guard let bin = args[0].object, let entities = args[1].object, let entityMoved = args[2].function
-        else { return .undefined }
-
-        let animationFrame = Int32(bin.animationFrame.number ?? 0) + 1
-        guard animationFrame > 2 else {
-            bin.animationFrame = animationFrame.jsValue
-            return .undefined
-        }
-        bin.animationFrame = .number(0)
-
-        let bx = Int32(bin.x.number ?? 0)
-        let by = Int32(bin.y.number ?? 0)
-        let bw = Int32(bin.width.number ?? 0)
-        let bh = Int32(bin.height.number ?? 0)
-        let searchDist: Int32 = CELL_W * 4  // AKA scare distance
-
-        // (debug-overlay-only visualization from the original is omitted here; no gameplay effect)
-        let junkbot = rectangleCollisionCore(
-            x: bx - searchDist, y: by, width: bw + searchDist * 2, height: bh, entities: entities,
-            filter: { entityType($0) == junkbotType }
-        )?.object
-
-        if let junkbot = junkbot {
-            let jx = Int32(junkbot.x.number ?? 0)
-            let facing: Int32 = jx > bx ? -1 : 1
-            bin.facing = facing.jsValue
-            let aheadX = bx + facing * CELL_W
-            let aheadY = by
-            if entityCollision(x: aheadX, y: aheadY, entity: bin, entities: entities, filter: isNotDroplet) != nil {
-                bin.facing = .number(0)
-            } else {
-                bin.x = aheadX.jsValue
-                bin.y = aheadY.jsValue
-                _ = entityMoved(args[0])
-            }
-        } else {
-            bin.facing = .number(0)
-        }
-        return .undefined
-    }.jsValue
-
-exports.simulateDroplet =
-    JSClosure { args in
-        guard let droplet = args[0].object, let entitiesByTopY = args[1].object,
-            let entityMoved = args[2].function, let playSound = args[3].function
-        else { return .undefined }
-
-        if droplet.splashing.boolean == true {
-            let animationFrame = Int32(droplet.animationFrame.number ?? 0) + 1
-            droplet.animationFrame = animationFrame.jsValue
-            if animationFrame > 4 {
-                droplet.removeBeforeRender = .boolean(true)  // important not to remove while iterating
-            }
-            return .undefined
-        }
-
-        // Cosmetic sound choice only (doesn't affect gameplay), fixed 3-way set matching `numDrips`;
-        // uses Swift's own RNG rather than round-tripping to JS's Math.random().
-        let dripSounds: [JSValue] = ["drip0".jsValue, "drip1".jsValue, "drip2".jsValue]
-        let dx = Int32(droplet.x.number ?? 0)
-        let dw = Int32(droplet.width.number ?? 0)
-
-        for _ in 0..<18 {
-            let dy = Int32(droplet.y.number ?? 0)
-            let dh = Int32(droplet.height.number ?? 0)
-            let underneath = yBucket(entitiesByTopY, dy + dh)
-            droplet.y = (dy + 1).jsValue
-            _ = entityMoved(args[0])
-
-            for groundValue in underneath {
-                guard let ground = groundValue.object else { continue }
-                if ground.grabbed.boolean == true { continue }
-                let gx = Int32(ground.x.number ?? 0)
-                let gw = Int32(ground.width.number ?? 0)
-                guard dx + dw > gx && dx < gx + gw else { continue }
-                guard entityType(ground) != dropletType else { continue }
-
-                if entityType(ground) == junkbotType {
-                    hurtJunkbotCore(junkbot: ground, cause: "water", playSound: playSound)
-                }
-
-                droplet.splashing = .boolean(true)
-                droplet.animationFrame = .number(0)
-                _ = playSound(dripSounds[Int.random(in: 0..<3)])
-                break
-            }
-        }
-        return .undefined
-    }.jsValue
-
-let maxDripPeriod: Int32 = 50
-let minDripPeriod: Int32 = 20
-
-exports.simulatePipe =
-    JSClosure { args in
-        guard let pipe = args[0].object, let entities = args[1].object, let getID = args[2].function
-        else { return .undefined }
-
-        let timer = Int32(pipe.timer.number ?? 0) - 1
-        pipe.timer = timer.jsValue
-
-        // @TODO (kept from the original): how do pipe drips actually work in the original game?
-        if timer == 0 {
-            let droplet = makeEntityBase(
-                id: getID(), type: "droplet", x: pipe.x, y: pipe.y, width: CELL_W, height: CELL_H)
-            droplet.splashing = .boolean(false)
-            droplet.animationFrame = .number(0)
-            _ = entities.push!(droplet.jsValue)
-        }
-        if timer <= 0 {  // includes initial -1 for initial randomization
-            let period = Int32.random(in: 0..<(maxDripPeriod - minDripPeriod)) + minDripPeriod
-            pipe.timer = period.jsValue
-        }
-        return .undefined
-    }.jsValue
-
-func findLinkedTeleportCore(teleport: JSObject, entities: JSObject) -> JSObject? {
-    let teleportID = teleport.teleportID.jsString
-    let length = Int(entities.length.number ?? 0)
-    for i in 0..<length {
-        guard let other = entities[i].object else { continue }
-        guard entityType(other) == teleportType else { continue }
-        guard other.teleportID.jsString == teleportID else { continue }
-        guard other != teleport else { continue }
-        return other
-    }
-    return nil
-}
-
-exports.findLinkedTeleport =
-    JSClosure { args in
-        guard let teleport = args[0].object, let entities = args[1].object else { return .undefined }
-        return findLinkedTeleportCore(teleport: teleport, entities: entities)?.jsValue ?? .undefined
-    }.jsValue
-
-exports.simulateTeleport =
-    JSClosure { args in
-        guard let teleport = args[0].object, let entities = args[1].object, let teleportEffects = args[2].object
-        else { return .undefined }
-
-        var timer = Int32(teleport.timer.number ?? 0)
-        if timer > 0 {
-            timer -= 1
-            teleport.timer = timer.jsValue
-        }
-
-        let target = findLinkedTeleportCore(teleport: teleport, entities: entities)
-        let tx = Int32(teleport.x.number ?? 0)
-        let ty = Int32(teleport.y.number ?? 0)
-
-        var blocked = true
-        if let target = target {
-            let selfBlocked =
-                rectangleCollisionCore(
-                    x: tx + CELL_W, y: ty - CELL_H * 4, width: CELL_W * 2, height: CELL_H * 4, entities: entities,
-                    filter: isNotDropletOrJunkbot) != nil
-            if selfBlocked {
-                blocked = true
-            } else {
-                let tgx = Int32(target.x.number ?? 0)
-                let tgy = Int32(target.y.number ?? 0)
-                blocked =
-                    rectangleCollisionCore(
-                        x: tgx + CELL_W, y: tgy - CELL_H * 4, width: CELL_W * 2, height: CELL_H * 4,
-                        entities: entities, filter: isNotDropletOrJunkbot) != nil
-            }
-        }
-        teleport.blocked = .boolean(blocked)
-
-        if timer > TELEPORT_COOLDOWN - TELEPORT_EFFECT_PERIOD {
-            let effect = JSObject.global.Object.function!.new()
-            effect.x = (tx + CELL_W).jsValue
-            effect.y = ty.jsValue
-            effect.frameIndex = (timer % 3).jsValue
-            _ = teleportEffects.push!(effect.jsValue)
-        }
-        return .undefined
-    }.jsValue
-
-exports.simulateClimbbot =
-    JSClosure { args in
-        guard let climbbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
-            let playSound = args[3].function
-        else { return .undefined }
-
-        let animationFrame = Int32(climbbot.animationFrame.number ?? 0) + 1
-        if animationFrame > 6 {
-            climbbot.animationFrame = .number(0)
-
-            let cx = Int32(climbbot.x.number ?? 0)
-            let cy = Int32(climbbot.y.number ?? 0)
-            let facing = Int32(climbbot.facing.number ?? 0)
-            let facingY = Int32(climbbot.facingY.number ?? 0)
-
-            let asideX = cx + facing * CELL_W
-            let asideY = cy
-            let groundAsideX = cx + facing * CELL_W
-            let groundAsideY = cy + 1
-            let behindX = cx + facing * -CELL_W
-            let behindY = cy
-            let aheadX = facingY == 0 ? asideX : cx
-            let aheadY = facingY == 0 ? asideY : cy + facingY * CELL_H
-            let belowX = cx
-            let belowY = cy + CELL_H
-
-            let aside = entityCollision(x: asideX, y: asideY, entity: climbbot, entities: entities, filter: isNotDroplet)
-            let groundAside = entityCollision(
-                x: groundAsideX, y: groundAsideY, entity: climbbot, entities: entities, filter: isNotBinOrDroplet)
-            let ahead = entityCollision(x: aheadX, y: aheadY, entity: climbbot, entities: entities, filter: isNotDroplet)
-            let behindHorizontally = entityCollision(
-                x: behindX, y: behindY, entity: climbbot, entities: entities, filter: isNotDroplet)
-            let below = entityCollision(x: belowX, y: belowY, entity: climbbot, entities: entities, filter: isNotDroplet)
-
-            if let aheadObj = ahead?.object, entityType(aheadObj) == junkbotType {
-                hurtJunkbotCore(junkbot: aheadObj, cause: "bot", playSound: playSound)
-            }
-
-            if facingY == -1 {
-                if aside == nil && groundAside != nil {
-                    climbbot.facingY = .number(0)
-                    climbbot.x = asideX.jsValue
-                    climbbot.y = asideY.jsValue
-                } else if Int32(climbbot.energy.number ?? 0) > 0 && ahead == nil {
-                    climbbot.energy = (Int32(climbbot.energy.number ?? 0) - 1).jsValue
-                    climbbot.x = aheadX.jsValue
-                    climbbot.y = aheadY.jsValue
-                    _ = entityMoved(args[0])
-                } else {
-                    climbbot.facingY = .number(1)
-                }
-            } else if facingY == 1 {
-                if below != nil {
-                    if aside != nil && behindHorizontally != nil {
-                        climbbot.facingY = .number(-1)
-                        climbbot.energy = .number(3)
-                    } else {
-                        climbbot.facingY = .number(0)
-                        if aside != nil {
-                            if behindHorizontally == nil {
-                                climbbot.facing = (-facing).jsValue
-                                climbbot.x = behindX.jsValue
-                                climbbot.y = behindY.jsValue
-                                _ = entityMoved(args[0])
-                            }
-                        } else {
-                            climbbot.x = asideX.jsValue
-                            climbbot.y = asideY.jsValue
-                            _ = entityMoved(args[0])
-                        }
-                    }
-                } else {
-                    climbbot.x = belowX.jsValue
-                    climbbot.y = belowY.jsValue
-                    _ = entityMoved(args[0])
-                }
-            } else {
-                if below != nil {
-                    if aside != nil {
-                        climbbot.facingY = .number(-1)
-                        climbbot.energy = .number(3)
-                    } else {
-                        climbbot.x = asideX.jsValue
-                        climbbot.y = asideY.jsValue
-                        _ = entityMoved(args[0])
-                    }
-                } else {
-                    if aside != nil {
-                        climbbot.facingY = .number(1)
-                    } else {
-                        climbbot.facingY = .number(1)
-                        climbbot.x = belowX.jsValue
-                        climbbot.y = belowY.jsValue
-                        _ = entityMoved(args[0])
-                    }
-                }
-            }
-        } else {
-            climbbot.animationFrame = animationFrame.jsValue
-        }
-
-        // may not be necessary, but it "feels right" to reset this
-        if Int32(climbbot.facingY.number ?? 0) != -1 {
-            climbbot.energy = .number(0)
-        }
-        return .undefined
-    }.jsValue
-
-exports.doEyebotTargeting =
-    JSClosure { args in
-        guard let eyebot = args[0].object, let entities = args[1].object else { return .undefined }
-
-        let ex = Int32(eyebot.x.number ?? 0)
-        let ey = Int32(eyebot.y.number ?? 0)
-
-        let directions: [(Int32, Int32)] = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        for (dirX, dirY) in directions {
-            let offsets: [(Int32, Int32)]
-            if dirY != 0 {
-                offsets = [(0, 0), (CELL_W, 0)]
-            } else {
-                offsets = [(0, 0), (0, CELL_H)]
-            }
-            for (offX, offY) in offsets {
-                let (_, hit) = raycastCore(
-                    startX: ex + offX, startY: ey + offY, width: CELL_W, height: CELL_H,
-                    directionX: dirX, directionY: dirY, maxSteps: 50, entities: entities,
-                    filter: { other in other != eyebot && isNotDroplet(other) })
-                if let hitObj = hit?.object, entityType(hitObj) == junkbotType {
-                    eyebot.facing = dirX.jsValue
-                    eyebot.facingY = dirY.jsValue
-                    eyebot.activeTimer = .number(110)
-                }
-            }
-        }
-        return .undefined
-    }.jsValue
-
-exports.doEyebotMovement =
-    JSClosure { args in
-        guard let eyebot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
-            let playSound = args[3].function
-        else { return .undefined }
-
-        let activeTimer = Int32(eyebot.activeTimer.number ?? 0) - 1
-        eyebot.activeTimer = activeTimer.jsValue
-        let animationFrame = Int32(eyebot.animationFrame.number ?? 0) + 1
-        eyebot.animationFrame = animationFrame.jsValue
-
-        let period: Int32 = activeTimer > 0 ? 1 : 2
-        guard animationFrame % period == 0 else { return .undefined }
-
-        let facing = Int32(eyebot.facing.number ?? 0)
-        let facingY = Int32(eyebot.facingY.number ?? 0)
-        let aheadX = Int32(eyebot.x.number ?? 0) + facing * CELL_W
-        let aheadY = Int32(eyebot.y.number ?? 0) + facingY * CELL_H
-
-        if let ahead = entityCollision(
-            x: aheadX, y: aheadY, entity: eyebot, entities: entities, filter: isNotDroplet
-        )?.object {
-            if entityType(ahead) == junkbotType {
-                hurtJunkbotCore(junkbot: ahead, cause: "bot", playSound: playSound)
-            }
-            eyebot.facing = (-facing).jsValue
-            eyebot.facingY = (-facingY).jsValue
-        } else {
-            eyebot.x = aheadX.jsValue
-            eyebot.y = aheadY.jsValue
-            _ = entityMoved(args[0])
-        }
-        return .undefined
-    }.jsValue
-
-exports.simulateFansAndLasers =
-    JSClosure { args in
-        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
-            let playSound = args[3].function
-        else { return .undefined }
-
-        wind.length = .number(0)
-        laserBeams.length = .number(0)
-
-        let length = Int(entities.length.number ?? 0)
-        for i in 0..<length {
-            let entityValue = entities[i]
-            guard let entity = entityValue.object else { continue }
-            let type = entityType(entity)
-
-            if type == fanType && entity.on.boolean == true {
-                let fx = Int32(entity.x.number ?? 0)
-                let fy = Int32(entity.y.number ?? 0)
-                let fw = Int32(entity.width.number ?? 0)
-
-                var extents: [JSValue] = []
-                var x = fx + CELL_W
-                while x < fx + fw - CELL_W {
-                    var extent: Int32 = 0
-                    var y = fy - CELL_H
-                    while y > -200 {
-                        var collision = false
-                        for j in 0..<length {
-                            guard let other = entities[j].object else { continue }
-                            if other.grabbed.boolean == true { continue }
-                            let ox = Int32(other.x.number ?? 0)
-                            let oy = Int32(other.y.number ?? 0)
-                            let ow = Int32(other.width.number ?? 0)
-                            let oh = Int32(other.height.number ?? 0)
-                            guard rectanglesIntersect(x, y, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
-                            if entityType(other) == junkbotType {
-                                if other.wasFloating.boolean != true {
-                                    _ = playSound("fan")
-                                }
-                                other.floating = .boolean(true)
-                            } else if entityType(other) != dropletType {
-                                collision = true
-                                break
-                            }
-                        }
-                        if collision { break }
-                        extent += 1
-                        y -= CELL_H
-                    }
-                    extents.append(extent.jsValue)
-                    x += CELL_W
-                }
-                let windEntry = JSObject.global.Object.function!.new()
-                windEntry.fan = entityValue
-                windEntry.extents = extents.jsValue
-                _ = wind.push!(windEntry.jsValue)
-            }
-
-            if type == laserType && entity.on.boolean == true {
-                let lx = Int32(entity.x.number ?? 0)
-                let ly = Int32(entity.y.number ?? 0)
-                let lw = Int32(entity.width.number ?? 0)
-                let facing = Int32(entity.facing.number ?? 0)
-
-                var extent: Int32 = 0
-                var hitEntity: JSValue?
-                while extent < 200 {
-                    let x = lx + (facing == 1 ? lw : -CELL_W) + CELL_W * extent * facing
-                    for j in 0..<length {
-                        let otherValue = entities[j]
-                        guard let other = otherValue.object else { continue }
-                        if other.grabbed.boolean == true { continue }
-                        let ox = Int32(other.x.number ?? 0)
-                        let oy = Int32(other.y.number ?? 0)
-                        let ow = Int32(other.width.number ?? 0)
-                        let oh = Int32(other.height.number ?? 0)
-                        guard rectanglesIntersect(x, ly, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
-                        if entityType(other) == junkbotType {
-                            hurtJunkbotCore(junkbot: other, cause: "laser", playSound: playSound)
-                        }
-                        if entityType(other) != dropletType {
-                            hitEntity = otherValue
-                            break
-                        }
-                    }
-                    if hitEntity != nil { break }
-                    extent += 1
-                }
-
-                let beam = JSObject.global.Object.function!.new()
-                beam.laserBrick = entityValue
-                beam.extent = extent.jsValue
-                beam.hitWhat = hitEntity ?? .undefined
-                _ = laserBeams.push!(beam.jsValue)
-            }
-        }
-        return .undefined
-    }.jsValue
-
-/// Returns whether a bin was collected (JS sets `collectBinTime = Date.now()` on that event; since
-/// that's a plain scalar global, not an object, the JS wrapper does that itself based on this return
-/// value rather than Swift reaching for a `window` global to mutate).
-exports.simulateJunkbot =
-    JSClosure { args in
-        guard let junkbot = args[0].object, let entities = args[1].object,
-            let entitiesByTopY = args[2].object, let entitiesByBottomY = args[3].object,
-            let entityMoved = args[4].function, let playSound = args[5].function
-        else { return .boolean(false) }
-
-        func jx() -> Int32 { Int32(junkbot.x.number ?? 0) }
-        func jy() -> Int32 { Int32(junkbot.y.number ?? 0) }
-        let jw = Int32(junkbot.width.number ?? 0)
-        let jh = Int32(junkbot.height.number ?? 0)
-
-        // head-loaded tracking
-        var headLoaded = false
-        if let aboveHead = entityCollision(x: jx(), y: jy() - 1, entity: junkbot, entities: entities, filter: isNotDroplet)?.object {
-            if junkbot.floating.boolean == true {
-                headLoaded = true
-            } else {
-                let notFixed = aboveHead.fixed.boolean != true
-                let notConnected = !connectsToFixedCore(
-                    startEntity: aboveHead, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
-                    direction: 0, ignoreEntities: [junkbot])
-                let notLevelBounds = entityType(aboveHead) != levelBoundsType
-                let notFlybot = entityType(aboveHead) != flybotType
-                let notEyebot = entityType(aboveHead) != eyebotType
-                headLoaded = notFixed && notConnected && notLevelBounds && notFlybot && notEyebot
-            }
-        }
-        if junkbot.headLoaded.boolean == true && !headLoaded {
-            junkbot.headLoaded = .boolean(false)
-        } else if headLoaded && junkbot.headLoaded.boolean != true && junkbot.grabbed.boolean != true {
-            junkbot.headLoaded = .boolean(true)
-            _ = playSound("headBonk")
-        }
-
-        if junkbot.losingShield.boolean == true {
-            let losingShieldTime = Int32(junkbot.losingShieldTime.number ?? 0) + 1
-            junkbot.losingShieldTime = losingShieldTime.jsValue
-            if losingShieldTime > 36 {  // already compared to reference video
-                junkbot.armored = .boolean(false)
-                junkbot.losingShield = .boolean(false)
-                junkbot.losingShieldTime = .number(0)  // important for next damage event
-                _ = playSound("losePowerup")
-            }
-        }
-
-        var animationFrame = Int32(junkbot.animationFrame.number ?? 0) + 1
-        junkbot.animationFrame = animationFrame.jsValue
-
-        if junkbot.collectingBin.boolean == true {
-            if animationFrame >= 17 {
-                junkbot.collectingBin = .boolean(false)
-                junkbot.animationFrame = .number(0)
-                animationFrame = 0
-            } else {
-                return .boolean(false)
-            }
-        }
-
-        if junkbot.dying.boolean == true {
-            if animationFrame >= 10 {
-                junkbot.animationFrame = .number(0)
-                junkbot.dead = .boolean(true)
-            }
-            return .boolean(false)
-        }
-
-        if junkbot.gettingShield.boolean == true {
-            if animationFrame >= 11 {
-                junkbot.gettingShield = .boolean(false)
-                junkbot.armored = .boolean(true)
-            } else {
-                return .boolean(false)
-            }
-        }
-
-        if entityCollision(x: jx(), y: jy(), entity: junkbot, entities: entities, filter: isNotDroplet) != nil {
-            return .boolean(false)
-        }
-
-        if junkbot.floating.boolean == true {
-            let aboveX = jx()
-            let aboveY = jy() - CELL_H
-            if entityCollision(x: aboveX, y: aboveY, entity: junkbot, entities: entities, filter: isNotDroplet) == nil {
-                junkbot.x = aboveX.jsValue
-                junkbot.y = aboveY.jsValue
-                _ = entityMoved(args[0])
-            }
-            return .boolean(false)
-        }
-
-        var momentumX = Int32(junkbot.momentumX.number ?? 0)
-        var momentumY = Int32(junkbot.momentumY.number ?? 0)
-        momentumX = min(5, max(-5, momentumX))
-        momentumY = min(5, max(-5, momentumY))
-        junkbot.momentumX = momentumX.jsValue
-        junkbot.momentumY = momentumY.jsValue
-
-        let inAir =
-            entityCollision(x: jx(), y: jy() + 1, entity: junkbot, entities: entities, filter: isNotDroplet) == nil
-        let unaligned = jx() % CELL_W != 0
-        let jumpStarting = momentumY < -2
-
-        if inAir || jumpStarting || unaligned {
-            let dirX: Int32 = momentumY < -2 ? 0 : (momentumX > 0 ? 1 : (momentumX < 0 ? -1 : 0))
-            let dirY: Int32 = momentumY > 0 ? 1 : (momentumY < 0 ? -1 : 0)
-            let newX = jx() + dirX * CELL_W
-            let newY = jy() + dirY * CELL_H
-
-            if entityCollision(x: newX, y: newY, entity: junkbot, entities: entities, filter: isNotDroplet) != nil {
-                if entityCollision(x: jx(), y: newY, entity: junkbot, entities: entities, filter: isNotDroplet) == nil
-                {
-                    momentumX = 0
-                    junkbot.momentumX = .number(0)
-                    junkbot.y = newY.jsValue
-                } else if entityCollision(
-                    x: newX, y: jy(), entity: junkbot, entities: entities, filter: isNotDroplet) == nil
-                {
-                    momentumY = 0
-                    junkbot.momentumY = .number(0)
-                    junkbot.x = newX.jsValue
-                } else {
-                    momentumX = 0
-                    momentumY = 0
-                    junkbot.momentumX = .number(0)
-                    junkbot.momentumY = .number(0)
-                }
-                _ = playSound("headBonk")
-            } else {
-                junkbot.x = newX.jsValue
-                junkbot.y = newY.jsValue
-                momentumX -= dirX
-                junkbot.momentumX = momentumX.jsValue
-            }
-            momentumY += 1
-            junkbot.momentumY = momentumY.jsValue
-            if momentumY < 5 {
-                junkbot.animationFrame = .number(9)  // stick leg closer to the camera out backwards
-            }
-            if momentumY == 5 {
-                _ = playSound("fall")
-            }
-
-            let jumpBrick = entityCollision(
-                x: jx(), y: jy() + 1, entity: junkbot, entities: entities,
-                filter: { entityType($0) == jumpType }
-            )?.object
-            let facing = Int32(junkbot.facing.number ?? 0)
-            let ahead = entityCollision(
-                x: jx() + facing * CELL_W, y: jy(), entity: junkbot, entities: entities, filter: isNotDroplet)
-
-            if let jumpBrick = jumpBrick {
-                let jbx = Int32(jumpBrick.x.number ?? 0)
-                let jbw = Int32(jumpBrick.width.number ?? 0)
-                if jbx <= jx() && jbx + jbw >= jx() + jw && ahead == nil {
-                    // prevent getting stuck bouncing up against a wall; must be after momentumY += 1
-                    if jumpBrick.active.boolean != true {
-                        junkbot.animationFrame = .number(0)
-                        junkbot.momentumY = .number(-3)
-                        junkbot.momentumX = (facing * 5).jsValue
-                        _ = playSound("jump")
-                        jumpBrick.active = .boolean(true)
-                        jumpBrick.animationFrame = .number(0)
-                    }
-                }
-            }
-            _ = entityMoved(args[0])
-            return .boolean(false)
-        }
-
-        if animationFrame % 5 == 4 {
-            let facing = Int32(junkbot.facing.number ?? 0)
-            let frontX = jx() + facing * CELL_W
-            let frontY = jy()
-
-            let cratesInFront = rectangleCollisionAllCore(
-                x: frontX, y: frontY, width: jw, height: jh + 1, entities: entities,
-                filter: { other in
-                    guard entityType(other) == crateType else { return false }
-                    let ox = Int32(other.x.number ?? 0)
-                    let ow = Int32(other.width.number ?? 0)
-                    return ox + ow <= jx() || jx() + jw <= ox
-                }
-            ).compactMap { $0.object }
-
-            let canPushCrates = cratesInFront.allSatisfy { crate in
-                let cx = Int32(crate.x.number ?? 0)
-                let cy = Int32(crate.y.number ?? 0)
-                return entityCollision(
-                    x: cx + facing * CELL_W, y: cy, entity: crate, entities: entities, filter: isNotDroplet) == nil
-            }
-            if canPushCrates {
-                for crate in cratesInFront {
-                    let cx = Int32(crate.x.number ?? 0)
-                    crate.x = (cx + facing * CELL_W).jsValue
-                }
-            }
-
-            let turnedAround = walkCore(
-                junkbot: junkbot, entities: entities, entityMoved: entityMoved, playSound: playSound)
-
-            let groundLevelEntities = yBucket(entitiesByTopY, jy() + jh)
-            for groundLevelValue in groundLevelEntities {
-                guard let groundLevelEntity = groundLevelValue.object else { continue }
-                let gx = Int32(groundLevelEntity.x.number ?? 0)
-                let gw = Int32(groundLevelEntity.width.number ?? 0)
-                guard gx <= jx() && gx + gw >= jx() + jw && !turnedAround else { continue }
-
-                let glType = entityType(groundLevelEntity)
-                if glType == switchType {
-                    let newOn = !(groundLevelEntity.on.boolean == true)
-                    groundLevelEntity.on = .boolean(newOn)
-                    let switchID = groundLevelEntity.switchID.jsString
-                    let length = Int(entities.length.number ?? 0)
-                    for k in 0..<length {
-                        guard let other = entities[k].object else { continue }
-                        if entityType(other) == switchType { continue }
-                        guard other.on != .undefined, other.switchID != .undefined else { continue }
-                        guard other.switchID.jsString == switchID else { continue }
-                        other.on = .boolean(!(other.on.boolean == true))
-                    }
-                    _ = playSound("switchClick")
-                    _ = playSound(newOn ? "switchOn" : "switchOff")
-                } else if glType == fireType && groundLevelEntity.on.boolean == true {
-                    hurtJunkbotCore(junkbot: junkbot, cause: "fire", playSound: playSound)
-                } else if glType == shieldType && groundLevelEntity.used.boolean != true
-                    && (junkbot.losingShield.boolean == true || junkbot.armored.boolean != true)
-                {
-                    junkbot.animationFrame = .number(0)
-                    junkbot.gettingShield = .boolean(true)
-                    junkbot.losingShield = .boolean(false)
-                    junkbot.losingShieldTime = .number(0)  // important for next damage event
-                    groundLevelEntity.used = .boolean(true)
-                    _ = playSound("getShield")
-                    _ = playSound("getPowerup")
-                } else if glType == jumpType {
-                    if groundLevelEntity.active.boolean != true {
-                        junkbot.animationFrame = .number(0)
-                        junkbot.momentumY = .number(-3)
-                        junkbot.momentumX = (facing * 5).jsValue
-                        _ = playSound("jump")
-                        groundLevelEntity.active = .boolean(true)
-                        groundLevelEntity.animationFrame = .number(0)
-                    }
-                } else if glType == teleportType && Int32(groundLevelEntity.timer.number ?? -1) == 0
-                    && jx() == gx + CELL_W
-                {
-                    if let linkedTeleport = findLinkedTeleportCore(teleport: groundLevelEntity, entities: entities),
-                        linkedTeleport.blocked.boolean != true
-                    {
-                        let ltx = Int32(linkedTeleport.x.number ?? 0)
-                        let lty = Int32(linkedTeleport.y.number ?? 0)
-                        junkbot.x = (ltx + CELL_W).jsValue
-                        junkbot.y = (lty - jh).jsValue
-                        linkedTeleport.timer = TELEPORT_COOLDOWN.jsValue
-                        groundLevelEntity.timer = TELEPORT_COOLDOWN.jsValue
-                        _ = entityMoved(args[0])
-                        _ = playSound("teleport")
-                    }
-                }
-            }
-        }
-
-        let facingFinal = Int32(junkbot.facing.number ?? 0)
-        var collectedBin = false
-        if let bin = entityCollision(
-            x: jx() + facingFinal * CELL_W, y: jy(), entity: junkbot, entities: entities,
-            filter: { entityType($0) == binType }
-        )?.object {
-            junkbot.animationFrame = .number(0)
-            junkbot.collectingBin = .boolean(true)
-            bin.removeBeforeRender = .boolean(true)  // important not to remove entities while iterating
-            _ = playSound("collectBin")
-            _ = playSound("collectBin2")
-            collectedBin = true
-        }
-        return .boolean(collectedBin)
-    }.jsValue
+    JSClosure { args in gameEngine.findMisplacedEntitiesExport(args) }.jsValue
 
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
@@ -1556,252 +781,285 @@ func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: In
 }
 
 exports.makeBrick =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let widthInStuds = args[3]
-        let colorName = args[4]
-        let fixed = args[5]
-
-        let obj = makeEntityBase(
-            id: id, type: "brick", x: x, y: y,
-            width: Int32(widthInStuds.number ?? 0) * CELL_W, height: CELL_H)
-        obj.widthInStuds = widthInStuds
-        obj.colorName = colorName
-        obj.fixed = fixed
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport("brick", args) }.jsValue
 
 exports.makeJunkbot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let armored = args[4]
-
-        let obj = makeEntityBase(id: id, type: "junkbot", x: x, y: y, width: 2 * CELL_W, height: 4 * CELL_H)
-        obj.facing = facing
-        obj.armored = armored
-        obj.losingShield = .boolean(false)
-        obj.losingShieldTime = .number(0)
-        obj.animationFrame = .number(0)
-        obj.headLoaded = .boolean(false)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(junkbotType, args) }.jsValue
 
 exports.makeGearbot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-
-        let obj = makeEntityBase(id: id, type: "gearbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(gearbotType, args) }.jsValue
 
 exports.makeClimbbot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let facingY = args[4]
-
-        let obj = makeEntityBase(id: id, type: "climbbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.facingY = facingY
-        obj.animationFrame = .number(0)
-        obj.energy = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(climbbotType, args) }.jsValue
 
 exports.makeFlybot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-
-        let obj = makeEntityBase(id: id, type: "flybot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(flybotType, args) }.jsValue
 
 exports.makeEyebot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let facingY = args[4]
-
-        let obj = makeEntityBase(id: id, type: "eyebot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.facingY = facingY
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(eyebotType, args) }.jsValue
 
 exports.makeBin =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let scaredy = args[4]
-
-        let obj = makeEntityBase(id: id, type: "bin", x: x, y: y, width: 2 * CELL_W, height: 3 * CELL_H)
-        obj.facing = facing
-        obj.scaredy = scaredy
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(binType, args) }.jsValue
 
 exports.makeCrate =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-
-        let obj = makeEntityBase(id: id, type: "crate", x: x, y: y, width: 3 * CELL_W, height: 2 * CELL_H)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(crateType, args) }.jsValue
 
 exports.makeFire =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-
-        let obj = makeEntityBase(id: id, type: "fire", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.animationFrame = .number(0)
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(fireType, args) }.jsValue
 
 exports.makeFan =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-
-        let obj = makeEntityBase(id: id, type: "fan", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.animationFrame = .number(0)
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(fanType, args) }.jsValue
 
 exports.makeLaser =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-        let facing = args[5]
-
-        let obj = makeEntityBase(id: id, type: "laser", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.animationFrame = .number(0)
-        obj.facing = facing
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(laserType, args) }.jsValue
 
 exports.makeSwitch =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-
-        let obj = makeEntityBase(id: id, type: "switch", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(switchType, args) }.jsValue
 
 exports.makeTeleport =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let teleportID = args[3]
-
-        let obj = makeEntityBase(id: id, type: "teleport", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
-        obj.teleportID = teleportID
-        obj.fixed = .boolean(true)
-        obj.timer = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(teleportType, args) }.jsValue
 
 exports.makeJump =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let fixed = args[3]
-
-        let obj = makeEntityBase(id: id, type: "jump", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.animationFrame = .number(0)
-        obj.fixed = fixed
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(jumpType, args) }.jsValue
 
 exports.makeShield =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let used = args[3]
-        let fixed = args[4]
-
-        let obj = makeEntityBase(id: id, type: "shield", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.fixed = fixed
-        obj.used = used
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(shieldType, args) }.jsValue
 
 exports.makePipe =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-
-        let obj = makeEntityBase(id: id, type: "pipe", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.timer = .number(-1)
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport("pipe", args) }.jsValue
 
 exports.makeDroplet =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
+    JSClosure { args in gameEngine.makeEntityExport(dropletType, args) }.jsValue
 
-        let obj = makeEntityBase(id: id, type: "droplet", x: x, y: y, width: CELL_W, height: CELL_H)
-        obj.splashing = .boolean(false)
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+func engineEntity(from object: JSObject) -> Entity {
+    var entity = Entity(
+        id: int32Property(object, "id"),
+        type: engineEntityType(entityType(object)),
+        x: int32Property(object, "x"),
+        y: int32Property(object, "y"),
+        width: int32Property(object, "width"),
+        height: int32Property(object, "height"))
+
+    entity.grabbed = boolProperty(object, "grabbed")
+    entity.fixed = boolProperty(object, "fixed")
+    entity.floating = boolProperty(object, "floating")
+    entity.wasFloating = boolProperty(object, "wasFloating")
+    entity.removeBeforeRender = boolProperty(object, "removeBeforeRender")
+    entity.facing = int32Property(object, "facing", default: 1)
+    entity.facingY = int32Property(object, "facingY")
+    entity.animationFrame = int32Property(object, "animationFrame")
+    entity.widthInStuds = int32Property(object, "widthInStuds", default: max(1, int32Property(object, "width") / CELL_W))
+    entity.armored = boolProperty(object, "armored")
+    entity.losingShield = boolProperty(object, "losingShield")
+    entity.losingShieldTime = int32Property(object, "losingShieldTime")
+    entity.gettingShield = boolProperty(object, "gettingShield")
+    entity.dying = boolProperty(object, "dying")
+    entity.dyingFromWater = boolProperty(object, "dyingFromWater")
+    entity.dead = boolProperty(object, "dead")
+    entity.collectingBin = boolProperty(object, "collectingBin")
+    entity.headLoaded = boolProperty(object, "headLoaded")
+    entity.momentumX = int32Property(object, "momentumX")
+    entity.momentumY = int32Property(object, "momentumY")
+    entity.scaredy = boolProperty(object, "scaredy")
+    entity.on = boolProperty(object, "on")
+    entity.used = boolProperty(object, "used")
+    entity.switchID = int32Property(object, "switchID", default: -1)
+    entity.teleportID = int32Property(object, "teleportID", default: -1)
+    entity.timer = int32Property(object, "timer")
+    entity.blocked = boolProperty(object, "blocked")
+    entity.energy = int32Property(object, "energy")
+    entity.active = boolProperty(object, "active")
+    entity.activeTimer = int32Property(object, "activeTimer")
+    entity.splashing = boolProperty(object, "splashing")
+
+    if let grabOffset = object.grabOffset.object {
+        entity.grabOffsetX = int32Property(grabOffset, "x")
+        entity.grabOffsetY = int32Property(grabOffset, "y")
+    }
+    return entity
+}
+
+func existingEntityObject(id: Int32, in values: [JSValue]) -> JSValue? {
+    for value in values {
+        if Int32(value.object?.id.number ?? -1) == id {
+            return value
+        }
+    }
+    return nil
+}
+
+func syncEntity(_ entity: Entity, to object: JSObject) {
+    object.id = entity.id.jsValue
+    object.type = engineEntityTypeName(entity.type)
+    object.x = entity.x.jsValue
+    object.y = entity.y.jsValue
+    object.width = entity.width.jsValue
+    object.height = entity.height.jsValue
+    object.fixed = entity.fixed.jsValue
+    object.facing = entity.facing.jsValue
+    object.facingY = entity.facingY.jsValue
+    object.animationFrame = entity.animationFrame.jsValue
+
+    if entity.type == .brick {
+        object.widthInStuds = entity.widthInStuds.jsValue
+    }
+    if entity.type == .junkbot {
+        object.armored = entity.armored.jsValue
+        object.losingShield = entity.losingShield.jsValue
+        object.losingShieldTime = entity.losingShieldTime.jsValue
+        object.gettingShield = entity.gettingShield.jsValue
+        object.dying = entity.dying.jsValue
+        object.dyingFromWater = entity.dyingFromWater.jsValue
+        object.dead = entity.dead.jsValue
+        object.collectingBin = entity.collectingBin.jsValue
+        object.headLoaded = entity.headLoaded.jsValue
+        object.momentumX = entity.momentumX.jsValue
+        object.momentumY = entity.momentumY.jsValue
+    }
+    if entity.type == .bin {
+        object.scaredy = entity.scaredy.jsValue
+    }
+    if entity.type == .fire || entity.type == .fan || entity.type == .laser || entity.type == .switch {
+        object.on = entity.on.jsValue
+        object.switchID = entity.switchID.jsValue
+    }
+    if entity.type == .shield {
+        object.used = entity.used.jsValue
+    }
+    if entity.type == .teleport {
+        object.teleportID = entity.teleportID.jsValue
+        object.timer = entity.timer.jsValue
+        object.blocked = entity.blocked.jsValue
+    }
+    if entity.type == .pipe {
+        object.timer = entity.timer.jsValue
+    }
+    if entity.type == .jump {
+        object.active = entity.active.jsValue
+    }
+    if entity.type == .climbbot {
+        object.energy = entity.energy.jsValue
+    }
+    if entity.type == .eyebot {
+        object.activeTimer = entity.activeTimer.jsValue
+    }
+    if entity.type == .droplet {
+        object.splashing = entity.splashing.jsValue
+    }
+
+    if entity.grabbed {
+        object.grabbed = .boolean(true)
+        let offset = object.grabOffset.object ?? JSObject.global.Object.function!.new()
+        offset.x = entity.grabOffsetX.jsValue
+        offset.y = entity.grabOffsetY.jsValue
+        object.grabOffset = offset.jsValue
+    }
+    if entity.floating {
+        object.floating = .boolean(true)
+    } else {
+        deleteJSProperty(object, "floating")
+    }
+    if entity.wasFloating {
+        object.wasFloating = .boolean(true)
+    } else {
+        deleteJSProperty(object, "wasFloating")
+    }
+    if entity.removeBeforeRender {
+        object.removeBeforeRender = .boolean(true)
+    } else {
+        deleteJSProperty(object, "removeBeforeRender")
+    }
+}
+
+func syncEngineEntities(to entitiesArray: JSObject) {
+    let previousLength = Int(entitiesArray.length.number ?? 0)
+    let previousValues = (0..<previousLength).map { entitiesArray[$0] }
+    var outputIndex = 0
+    for entity in gameEngine.entities {
+        let value = existingEntityObject(id: entity.id, in: previousValues) ?? JSObject.global.Object.function!.new().jsValue
+        if let object = value.object {
+            syncEntity(entity, to: object)
+            entitiesArray[outputIndex] = object.jsValue
+            outputIndex += 1
+        }
+    }
+    entitiesArray.length = outputIndex.jsValue
+}
+
+func syncEngineEffects(entities: JSObject, wind: JSObject, laserBeams: JSObject, teleportEffects: JSObject) {
+    wind.length = .number(0)
+    let entityValues = (0..<Int(entities.length.number ?? 0)).map { entities[$0] }
+    for effect in gameEngine.wind {
+        guard effect.fanEntityIndex >= 0, effect.fanEntityIndex < gameEngine.entities.count else { continue }
+        let fanID = gameEngine.entities[effect.fanEntityIndex].id
+        guard let fan = existingEntityObject(id: fanID, in: entityValues) else { continue }
+        let entry = JSObject.global.Object.function!.new()
+        entry.fan = fan
+        var extents: [JSValue] = []
+        for i in 0..<effect.numExtents {
+            extents.append(effect.extent(at: i).jsValue)
+        }
+        entry.extents = extents.jsValue
+        _ = wind.push!(entry.jsValue)
+    }
+
+    laserBeams.length = .number(0)
+    for beam in gameEngine.laserBeams {
+        guard beam.laserEntityIndex >= 0, beam.laserEntityIndex < gameEngine.entities.count else { continue }
+        let laserID = gameEngine.entities[beam.laserEntityIndex].id
+        guard let laser = existingEntityObject(id: laserID, in: entityValues) else { continue }
+        let entry = JSObject.global.Object.function!.new()
+        entry.laserBrick = laser
+        entry.extent = beam.extent.jsValue
+        if beam.hitEntityIndex >= 0, beam.hitEntityIndex < gameEngine.entities.count {
+            let hitID = gameEngine.entities[beam.hitEntityIndex].id
+            entry.hitWhat = existingEntityObject(id: hitID, in: entityValues) ?? .undefined
+        } else {
+            entry.hitWhat = .undefined
+        }
+        _ = laserBeams.push!(entry.jsValue)
+    }
+
+    teleportEffects.length = .number(0)
+    for effect in gameEngine.teleportEffects {
+        let entry = JSObject.global.Object.function!.new()
+        entry.x = effect.x.jsValue
+        entry.y = effect.y.jsValue
+        entry.frameIndex = effect.frameIndex.jsValue
+        _ = teleportEffects.push!(entry.jsValue)
+    }
+}
+
+func engineLevelState(from level: JSObject) -> (entities: [Entity], bounds: LevelBounds?) {
+    guard let entities = level.entities.object else { return ([], nil) }
+
+    var nativeEntities: [Entity] = []
+    let length = Int(entities.length.number ?? 0)
+    nativeEntities.reserveCapacity(length)
+    for i in 0..<length {
+        guard let object = entities[i].object else { continue }
+        nativeEntities.append(engineEntity(from: object))
+    }
+
+    let bounds: LevelBounds?
+    if let levelBounds = level.bounds.object {
+        bounds = LevelBounds(
+            x: int32Property(levelBounds, "x"),
+            y: int32Property(levelBounds, "y"),
+            width: int32Property(levelBounds, "width"),
+            height: int32Property(levelBounds, "height"))
+    } else {
+        bounds = nil
+    }
+
+    return (nativeEntities, bounds)
+}
+
+exports.engineLoadLevel =
+    JSClosure { args in gameEngine.engineLoadLevelExport(args) }.jsValue
+
+exports.engineTick =
+    JSClosure { args in gameEngine.engineTickExport(args) }.jsValue
 
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")
