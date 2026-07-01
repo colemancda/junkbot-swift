@@ -775,6 +775,49 @@ exports.simulateFlybot =
         return .undefined
     }.jsValue
 
+exports.simulateScaredy =
+    JSClosure { args in
+        guard let bin = args[0].object, let entities = args[1].object, let entityMoved = args[2].function
+        else { return .undefined }
+
+        let animationFrame = Int32(bin.animationFrame.number ?? 0) + 1
+        guard animationFrame > 2 else {
+            bin.animationFrame = animationFrame.jsValue
+            return .undefined
+        }
+        bin.animationFrame = .number(0)
+
+        let bx = Int32(bin.x.number ?? 0)
+        let by = Int32(bin.y.number ?? 0)
+        let bw = Int32(bin.width.number ?? 0)
+        let bh = Int32(bin.height.number ?? 0)
+        let searchDist: Int32 = CELL_W * 4  // AKA scare distance
+
+        // (debug-overlay-only visualization from the original is omitted here; no gameplay effect)
+        let junkbot = rectangleCollisionCore(
+            x: bx - searchDist, y: by, width: bw + searchDist * 2, height: bh, entities: entities,
+            filter: { entityType($0) == junkbotType }
+        )?.object
+
+        if let junkbot = junkbot {
+            let jx = Int32(junkbot.x.number ?? 0)
+            let facing: Int32 = jx > bx ? -1 : 1
+            bin.facing = facing.jsValue
+            let aheadX = bx + facing * CELL_W
+            let aheadY = by
+            if entityCollision(x: aheadX, y: aheadY, entity: bin, entities: entities, filter: isNotDroplet) != nil {
+                bin.facing = .number(0)
+            } else {
+                bin.x = aheadX.jsValue
+                bin.y = aheadY.jsValue
+                _ = entityMoved(args[0])
+            }
+        } else {
+            bin.facing = .number(0)
+        }
+        return .undefined
+    }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id

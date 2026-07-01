@@ -3896,31 +3896,7 @@ const simulateGearbot = (gearbot) =>
 	window.JunkbotWasm.simulateGearbot(gearbot, entities, entityMoved, playSound);
 
 // #@: simulateBin
-const simulateScaredy = (bin) => {
-	bin.animationFrame += 1;
-	if (bin.animationFrame > 2) {
-		bin.animationFrame = 0;
-		const searchDist = 15 * 4; // AKA scare distance
-		// @TODO: don't become scared through walls
-		const searchRect = [bin.x - searchDist, bin.y, bin.width + searchDist * 2, bin.height];
-		debugWorldSpaceRect(...searchRect);
-		const junkbot = rectangleCollisionTest(...searchRect, (otherEntity) => otherEntity.type === "junkbot");
-		if (junkbot) {
-			bin.facing = junkbot.x > bin.x ? -1 : 1;
-			const aheadPos = { x: bin.x + bin.facing * 15, y: bin.y };
-			const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, bin, notDroplet);
-			if (ahead) {
-				bin.facing = 0;
-			} else {
-				bin.x = aheadPos.x;
-				bin.y = aheadPos.y;
-				entityMoved(bin);
-			}
-		} else {
-			bin.facing = 0;
-		}
-	}
-};
+const simulateScaredy = (bin) => window.JunkbotWasm.simulateScaredy(bin, entities, entityMoved);
 
 const simulateFlybot = (flybot) =>
 	window.JunkbotWasm.simulateFlybot(flybot, entities, entityMoved, playSound);
