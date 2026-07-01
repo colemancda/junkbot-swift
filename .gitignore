@@ -30,6 +30,9 @@ playground.xcworkspace
 .swiftpm
 .build/
 *.wasm
+*.o
+*.dia
+*.d
 
 # CocoaPods
 #
