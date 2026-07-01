@@ -51,6 +51,31 @@ exports.rectangleLevelBoundsCollisionTest =
         return .undefined
     }.jsValue
 
+exports.sortEntitiesForRendering =
+    JSClosure { args in
+        guard let array = args[0].object else { return .undefined }
+        let length = Int(array.length.number ?? 0)
+        guard length > 1 else { return .undefined }
+
+        let elements = (0..<length).map { array[$0] }
+        let boxes = elements.map { element -> RenderBox in
+            let obj = element.object!
+            return RenderBox(
+                x: obj.x.number ?? 0,
+                y: obj.y.number ?? 0,
+                width: obj.width.number ?? 0,
+                height: obj.height.number ?? 0
+            )
+        }
+
+        let order = sortOrderForRendering(boxes)
+        for i in 0..<length {
+            array[i] = elements[order[i]]
+        }
+
+        return .undefined
+    }.jsValue
+
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")
 
