@@ -1,9 +1,29 @@
 import Foundation
-import XCTest
+import Testing
 
 @testable import JunkbotCore
 
-final class LevelTests: XCTestCase {
+enum Expectation: Sendable {
+  case win, lose, draw
+}
+
+struct LevelCase: Sendable, CustomTestStringConvertible {
+  let name: String
+  let expect: Expectation
+  /// See the comment on `LevelTests.levelOutcome` for why some levels are marked known-failing.
+  let knownFailing: Bool
+
+  init(_ name: String, _ expect: Expectation, knownFailing: Bool = false) {
+    self.name = name
+    self.expect = expect
+    self.knownFailing = knownFailing
+  }
+
+  var testDescription: String { name }
+}
+
+@Suite("Level simulation")
+struct LevelTests {
 
   /// Repo root, resolved from this file's own path (Tests/JunkbotCoreTests/LevelTests.swift),
   /// so tests can load `levels/test-cases/*.txt` without a resource bundle.
@@ -14,38 +34,72 @@ final class LevelTests: XCTestCase {
       .deletingLastPathComponent()
   }
 
-  func loadTestCase(_ name: String) throws -> String {
-    let url = Self.repoRoot.appendingPathComponent("levels/test-cases/\(name).txt")
+  static func loadTestCase(_ name: String) throws -> String {
+    let url = repoRoot.appendingPathComponent("levels/test-cases/\(name).txt")
     return try String(contentsOf: url, encoding: .utf8)
   }
 
-  /// Runs `runLevel`, expecting it to currently fail with "both won and lost".
-  ///
-  /// KNOWN BUG: after `winOrLose()` was fixed to match the original JS's precedence (junkbot
-  /// alive/dead takes priority over bins remaining, so a win can flip back to a loss on a later
-  /// frame - needed to make "You'll Be Shocked!" pass), these 9 levels started reproducibly
-  /// winning and then dying to a hazard afterward, including one literally named "Once You Win,
-  /// You Won" whose whole premise is that winning is permanent. Confirmed via the browser build
-  /// (same GameEngine.swift) that this is a real simulation discrepancy from the original, not a
-  /// test-harness or level-parser artifact - most likely junkbot's post-win AI wandering into a
-  /// hazard it shouldn't. Tracked for follow-up; remove this wrapper once fixed.
-  func expectKnownPostWinFailure(_ name: String, expect: Expectation, maxSteps: Int = 1000) throws {
-    try XCTExpectFailure("Known bug: junkbot wins then later dies in \"\(name)\" (see comment on expectKnownPostWinFailure)") {
-      try runLevel(name, expect: expect, maxSteps: maxSteps)
-    }
-  }
-
-  enum Expectation {
-    case win, lose, draw
-  }
+  static let allLevels: [LevelCase] = [
+    LevelCase("Tippy Toast", .win),
+    LevelCase("Tight Squeeze Stairs", .win),
+    LevelCase("Shallow Steps", .win),
+    LevelCase("Don't Skate The Crate", .win),
+    LevelCase("Twixt Crates", .win),
+    // KNOWN BUG: after winOrLose() was fixed to match the original JS's precedence (junkbot
+    // alive/dead takes priority over bins remaining, so a win can flip back to a loss on a later
+    // frame - needed to make "You'll Be Shocked!" pass), these 9 levels started reproducibly
+    // winning and then dying to a hazard afterward, including one literally named "Once You Win,
+    // You Won" whose whole premise is that winning is permanent. Confirmed via the browser build
+    // (same GameEngine.swift) that this is a real simulation discrepancy from the original, not a
+    // test-harness or level-parser artifact - most likely junkbot's post-win AI wandering into a
+    // hazard it shouldn't. Tracked for follow-up; remove `knownFailing: true` once fixed.
+    LevelCase("Armor Farmer", .win, knownFailing: true),
+    LevelCase("Armor Harmer", .lose),
+    LevelCase("Out of the Frying Pan And Into The Fire (Murder)", .draw),
+    LevelCase("Out of the Frying Pan And Into The Fire (Vengeance)", .lose),
+    LevelCase("Once You Win, You Won", .win, knownFailing: true),
+    LevelCase("You'll Be Shocked!", .lose),
+    LevelCase("All-Off Offal", .win),
+    LevelCase("Switch Off At Edge Case", .win, knownFailing: true),
+    LevelCase("Scared Off", .lose),
+    LevelCase("Scared Off II Junkbot's Jowls", .win),
+    LevelCase("Jump Stair Case", .win),
+    LevelCase("Jump Around (bricks in place)", .win),
+    LevelCase("Jump Around (bricks out of place)", .draw),
+    LevelCase("Perpetual Motion Machine (Test)", .win),
+    LevelCase("Jump Up Just To Edge", .win, knownFailing: true),
+    LevelCase("Collide With Bins In Midair", .win),
+    LevelCase("Don't Get Stuck On Jump", .win),
+    LevelCase("Bounce Against Wall", .win),
+    LevelCase("Turning Shouldn't Jump", .win, knownFailing: true),
+    LevelCase("Portable Boost (Test)", .win),
+    LevelCase("Blocked Teleport", .lose),
+    LevelCase("Lasers Not Blocked By Water", .lose),
+    LevelCase("Lasers Blocked By Gearbots", .win, knownFailing: true),
+    LevelCase("Don't Step Up Onto Gearbot", .win),
+    LevelCase("Don't Walk Over Gearbot", .win),
+    LevelCase("Don't Step Down Onto Gearbot", .win),
+    LevelCase("Step Down Onto Falling Crate", .win),
+    LevelCase("Don't Walk Over Bins", .win, knownFailing: true),
+    LevelCase("Don't Step Down Onto Bins", .win, knownFailing: true),
+    LevelCase("Death From Below", .lose),
+    LevelCase("Flying Death", .lose),
+    LevelCase("Turn Away from Climbbot I", .win),
+    LevelCase("Turn Away from Climbbot II", .win, knownFailing: true),
+    LevelCase("Crate Fall Onto Offset Blocks", .win),
+    LevelCase("Gearbot Fall Onto Offset Blocks", .lose),
+    LevelCase("Climbbot Fall Onto Offset Blocks", .lose),
+    LevelCase("Hunter-Killer Climbbot (Fall Onto Offset Blocks)", .lose),
+    LevelCase("Ally", .win),
+  ]
 
   /// Runs a level for the full `maxSteps`, mirroring runTests()' per-test loop in src/game.js:
   /// `won`/`lost` are OR'd across every step rather than stopping at the first non-zero result,
   /// since winOrLose() is not sticky (a level can flip from "win" back to "lose" on a later
   /// frame, e.g. a hazard that only becomes active post-victory).
-  func runLevel(_ name: String, expect: Expectation, maxSteps: Int = 1000) throws {
+  func runLevel(_ testCase: LevelCase, maxSteps: Int = 1000) throws {
     let engine = GameEngine()
-    engine.loadLevel(fromText: try loadTestCase(name))
+    engine.loadLevel(fromText: try Self.loadTestCase(testCase.name))
 
     var won = false
     var lost = false
@@ -57,188 +111,27 @@ final class LevelTests: XCTestCase {
     }
 
     if won && lost {
-      XCTFail("\"\(name)\" both won and lost (at different times) - this should never happen!")
+      Issue.record("\"\(testCase.name)\" both won and lost (at different times) - this should never happen!")
       return
     }
-    switch expect {
+    switch testCase.expect {
     case .win:
-      XCTAssertTrue(won, "Expected \"\(name)\" to win within \(maxSteps) steps, but \(lost ? "lost instead" : "neither won nor lost")")
+      #expect(won, "Expected \"\(testCase.name)\" to win within \(maxSteps) steps, but \(lost ? "lost instead" : "neither won nor lost")")
     case .lose:
-      XCTAssertTrue(lost, "Expected \"\(name)\" to lose within \(maxSteps) steps, but \(won ? "won instead" : "neither won nor lost")")
+      #expect(lost, "Expected \"\(testCase.name)\" to lose within \(maxSteps) steps, but \(won ? "won instead" : "neither won nor lost")")
     case .draw:
-      XCTAssertTrue(!won && !lost, "Expected \"\(name)\" to draw (neither win nor lose), but \(won ? "won instead" : "lost instead")")
+      #expect(!won && !lost, "Expected \"\(testCase.name)\" to draw (neither win nor lose), but \(won ? "won instead" : "lost instead")")
     }
   }
 
-  func testTippyToast() throws {
-    try runLevel("Tippy Toast", expect: .win)
-  }
-
-  func testTightSqueezeStairs() throws {
-    try runLevel("Tight Squeeze Stairs", expect: .win)
-  }
-
-  func testShallowSteps() throws {
-    try runLevel("Shallow Steps", expect: .win)
-  }
-
-  func testDontSkateTheCrate() throws {
-    try runLevel("Don't Skate The Crate", expect: .win)
-  }
-
-  func testTwixtCrates() throws {
-    try runLevel("Twixt Crates", expect: .win)
-  }
-
-  func testArmorFarmer() throws {
-    try expectKnownPostWinFailure("Armor Farmer", expect: .win)
-  }
-
-  func testArmorHarmer() throws {
-    try runLevel("Armor Harmer", expect: .lose)
-  }
-
-  func testOutOfTheFryingPanAndIntoTheFireMurder() throws {
-    try runLevel("Out of the Frying Pan And Into The Fire (Murder)", expect: .draw)
-  }
-
-  func testOutOfTheFryingPanAndIntoTheFireVengeance() throws {
-    try runLevel("Out of the Frying Pan And Into The Fire (Vengeance)", expect: .lose)
-  }
-
-  func testOnceYouWinYouWon() throws {
-    try expectKnownPostWinFailure("Once You Win, You Won", expect: .win)
-  }
-
-  func testYoullBeShocked() throws {
-    try runLevel("You'll Be Shocked!", expect: .lose)
-  }
-
-  func testAllOffOffal() throws {
-    try runLevel("All-Off Offal", expect: .win)
-  }
-
-  func testSwitchOffAtEdgeCase() throws {
-    try expectKnownPostWinFailure("Switch Off At Edge Case", expect: .win)
-  }
-
-  func testScaredOff() throws {
-    try runLevel("Scared Off", expect: .lose)
-  }
-
-  func testScaredOffIIJunkbotsJowls() throws {
-    try runLevel("Scared Off II Junkbot's Jowls", expect: .win)
-  }
-
-  func testJumpStairCase() throws {
-    try runLevel("Jump Stair Case", expect: .win)
-  }
-
-  func testJumpAroundBricksInPlace() throws {
-    try runLevel("Jump Around (bricks in place)", expect: .win)
-  }
-
-  func testJumpAroundBricksOutOfPlace() throws {
-    try runLevel("Jump Around (bricks out of place)", expect: .draw)
-  }
-
-  func testPerpetualMotionMachine() throws {
-    try runLevel("Perpetual Motion Machine (Test)", expect: .win)
-  }
-
-  func testJumpUpJustToEdge() throws {
-    try expectKnownPostWinFailure("Jump Up Just To Edge", expect: .win)
-  }
-
-  func testCollideWithBinsInMidair() throws {
-    try runLevel("Collide With Bins In Midair", expect: .win)
-  }
-
-  func testDontGetStuckOnJump() throws {
-    try runLevel("Don't Get Stuck On Jump", expect: .win)
-  }
-
-  func testBounceAgainstWall() throws {
-    try runLevel("Bounce Against Wall", expect: .win)
-  }
-
-  func testTurningShouldntJump() throws {
-    try expectKnownPostWinFailure("Turning Shouldn't Jump", expect: .win)
-  }
-
-  func testPortableBoost() throws {
-    try runLevel("Portable Boost (Test)", expect: .win)
-  }
-
-  func testBlockedTeleport() throws {
-    try runLevel("Blocked Teleport", expect: .lose)
-  }
-
-  func testLasersNotBlockedByWater() throws {
-    try runLevel("Lasers Not Blocked By Water", expect: .lose)
-  }
-
-  func testLasersBlockedByGearbots() throws {
-    try expectKnownPostWinFailure("Lasers Blocked By Gearbots", expect: .win)
-  }
-
-  func testDontStepUpOntoGearbot() throws {
-    try runLevel("Don't Step Up Onto Gearbot", expect: .win)
-  }
-
-  func testDontWalkOverGearbot() throws {
-    try runLevel("Don't Walk Over Gearbot", expect: .win)
-  }
-
-  func testDontStepDownOntoGearbot() throws {
-    try runLevel("Don't Step Down Onto Gearbot", expect: .win)
-  }
-
-  func testStepDownOntoFallingCrate() throws {
-    try runLevel("Step Down Onto Falling Crate", expect: .win)
-  }
-
-  func testDontWalkOverBins() throws {
-    try expectKnownPostWinFailure("Don't Walk Over Bins", expect: .win)
-  }
-
-  func testDontStepDownOntoBins() throws {
-    try expectKnownPostWinFailure("Don't Step Down Onto Bins", expect: .win)
-  }
-
-  func testDeathFromBelow() throws {
-    try runLevel("Death From Below", expect: .lose)
-  }
-
-  func testFlyingDeath() throws {
-    try runLevel("Flying Death", expect: .lose)
-  }
-
-  func testTurnAwayFromClimbbotI() throws {
-    try runLevel("Turn Away from Climbbot I", expect: .win)
-  }
-
-  func testTurnAwayFromClimbbotII() throws {
-    try expectKnownPostWinFailure("Turn Away from Climbbot II", expect: .win)
-  }
-
-  func testCrateFallOntoOffsetBlocks() throws {
-    try runLevel("Crate Fall Onto Offset Blocks", expect: .win)
-  }
-
-  func testGearbotFallOntoOffsetBlocks() throws {
-    try runLevel("Gearbot Fall Onto Offset Blocks", expect: .lose)
-  }
-
-  func testClimbbotFallOntoOffsetBlocks() throws {
-    try runLevel("Climbbot Fall Onto Offset Blocks", expect: .lose)
-  }
-
-  func testHunterKillerClimbbotFallOntoOffsetBlocks() throws {
-    try runLevel("Hunter-Killer Climbbot (Fall Onto Offset Blocks)", expect: .lose)
-  }
-
-  func testAlly() throws {
-    try runLevel("Ally", expect: .win)
+  @Test("Level outcome matches expectation", arguments: allLevels)
+  func levelOutcome(_ testCase: LevelCase) throws {
+    if testCase.knownFailing {
+      withKnownIssue("Known bug: junkbot wins then later dies in \"\(testCase.name)\" (see comment on LevelTests.allLevels)") {
+        try runLevel(testCase)
+      }
+    } else {
+      try runLevel(testCase)
+    }
   }
 }
