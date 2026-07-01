@@ -4909,7 +4909,7 @@ var findMisplacedEntities = { (withinEntities: JSValue, compareToEntities: JSVal
       }
     }
     if !foundMatch {
-      _ = result.push(entity)
+      _ = result.push!(entity)
     }
   }
   return result.jsValue
@@ -4980,7 +4980,7 @@ var handlePlayback = { () -> JSValue in
         }
 
         let entitiesJS = JSObject.global["Array"].function!.new()
-        for e in entities { _ = entitiesJS.push(e) }
+        for e in entities { _ = entitiesJS.push!(e) }
 
         let misplacedInSimulation = findMisplacedEntities(entitiesJS.jsValue, playbackLevel.entities)
         let misplacedInRecording = findMisplacedEntities(playbackLevel.entities, entitiesJS.jsValue)
@@ -5166,7 +5166,7 @@ var simulate = { (entitiesArg: JSValue) -> JSValue in
           extent += 1.0
           y -= 18.0
         }
-        _ = extents.push(extent)
+        _ = extents.push!(extent)
         x += 15.0
       }
       let fanObj = JSObject.global.Object.function!.new()
@@ -5267,14 +5267,14 @@ var detectProblems = { () -> JSValue in
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("Invalid position (x/y) for entity \(str)\n")
-      _ = problems.push(p)
+      _ = problems.push!(p)
       continue
     }
     if (entity.x.number ?? 0.0).truncatingRemainder(dividingBy: 15.0) != 0.0 {
       let p = JSObject.global.Object.function!.new()
       let str = JSObject.global.JSON.object!.stringify!(entity, JSValue.null, "\t").string ?? ""
       p.message = .string("x position not aligned to grid for entity \(str)\n")
-      _ = problems.push(p)
+      _ = problems.push!(p)
       continue
     }
     if !isNum(entity.width) || !isNum(entity.height) {
