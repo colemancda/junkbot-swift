@@ -3648,41 +3648,7 @@ addEventListener("pointerup", () => {
 const simulateGravity = () =>
 	window.JunkbotWasm.simulateGravity(entities, entitiesByTopY, entitiesByBottomY, entityMoved);
 
-const hurtJunkbot = (junkbot, cause) => {
-	if (junkbot.dying || junkbot.dead || junkbot.grabbed) {
-		return;
-	}
-	// Play sound even if shielded,
-	// but not if losing shield because then it would repeat and sound ugly.
-	// This has to be before junkbot.losingShield is set, so it can play the first time.
-	if (!junkbot.losingShield) {
-		// @TODO: rename sound effects, as they're not just for death
-		if (cause === "fire") {
-			playSound("deathByFire");
-		} else if (cause === "water") {
-			playSound("deathByWater");
-		} else if (cause === "laser") {
-			playSound("deathByLaser");
-		} else {
-			playSound("deathByBot");
-		}
-	}
-	if (junkbot.armored) {
-		if (!junkbot.losingShield) {
-			junkbot.losingShield = true;
-			// don't reset junkbot.losingShieldTime to 0
-			// it wouldn't make sense for multiple hits to extend the shield
-			// (it should be reset elsewhere)
-		}
-	} else {
-		junkbot.animationFrame = 0;
-		junkbot.collectingBin = false;
-		junkbot.dying = true;
-		if (cause === "water") {
-			junkbot.dyingFromWater = true;
-		}
-	}
-};
+const hurtJunkbot = (junkbot, cause) => window.JunkbotWasm.hurtJunkbot(junkbot, cause, playSound);
 
 const walk = (junkbot) => {
 	const posInFront = { x: junkbot.x + junkbot.facing * 15, y: junkbot.y };
