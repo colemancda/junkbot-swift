@@ -6069,28 +6069,27 @@ var getLevelLists = { (res: JSValue) -> JSValue in
   g1.game = .string(GAME_JUNKBOT)
   g1.levelNames = res.levelNames
   g1.levelsPerPage = .number(15.0)
-  _ = arr.push(g1)
+  _ = arr.push!(g1)
 
   let g2 = JSObject.global.Object.function!.new()
-  g2.game = GAME_JUNKBOT_UNDERCOVER
+  g2.game = .string(GAME_JUNKBOT_UNDERCOVER)
   g2.levelNames = res.levelNamesUndercover
   g2.levelsPerPage = .number(15.0)
-  _ = arr.push(g2)
+  _ = arr.push!(g2)
 
   let g3 = JSObject.global.Object.function!.new()
-  g3.game = GAME_TEST_CASES
-  let mapJS = JSObject.global.Function.function!.new("test", "return test.name;")
-  g3.levelNames = tests.map!(mapJS)
+  g3.game = .string(GAME_TEST_CASES)
+  g3.levelNames = JSValue.array(tests.map { $0.name })
   g3.levelsPerPage = .number(Double.infinity)
-  _ = arr.push(g3)
+  _ = arr.push!(g3)
 
   let g4 = JSObject.global.Object.function!.new()
-  g4.game = GAME_USER_CREATED
-  g4.levelNames = localLevels
+  g4.game = .string(GAME_USER_CREATED)
+  g4.levelNames = localLevels.jsValue
   g4.levelsPerPage = .number(Double.infinity)
-  _ = arr.push(g4)
+  _ = arr.push!(g4)
 
-  return arr
+  return arr.jsValue
 }
 
 var whereLevelIsInTheGame = { (level: JSValue, game: JSValue) -> JSValue in
@@ -6124,7 +6123,7 @@ var initLevelDropdown = { () -> JSValue in
   option.textContent = .string("Custom World")
   option.value = .string("custom-world")
   option.defaultSelected = .boolean(true)
-  _ = levelDropdown.append!(option)
+  _ = levelDropdown.append(option)
 
   let lists = getLevelLists.function!.callAsFunction(this: JSObject.global, resources)
   let listLen = Int(lists.length.number ?? 0.0)
