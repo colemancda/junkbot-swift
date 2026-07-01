@@ -15,6 +15,8 @@ let flybotType: JSString = "flybot"
 let eyebotType: JSString = "eyebot"
 let crateType: JSString = "crate"
 let teleportType: JSString = "teleport"
+let fanType: JSString = "fan"
+let laserType: JSString = "laser"
 
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
@@ -640,77 +642,78 @@ exports.hurtJunkbot =
         return .undefined
     }.jsValue
 
+/// Returns whether the junkbot turned around (hit a cliff/wall/bot), matching the JS
+/// `walk()`'s `=== "turned"` contract.
+func walkCore(junkbot: JSObject, entities: JSObject, entityMoved: JSObject, playSound: JSObject) -> Bool {
+    let jx = Int32(junkbot.x.number ?? 0)
+    let jy = Int32(junkbot.y.number ?? 0)
+    let jh = Int32(junkbot.height.number ?? 0)
+    let facing = Int32(junkbot.facing.number ?? 0)
+
+    let frontX = jx + facing * CELL_W
+    let frontY = jy
+
+    // can we step up?
+    if let stepOrWall = entityCollision(
+        x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot
+    )?.object, let wallY = stepOrWall.y.number {
+        let stepUpY = Int32(wallY) - jh
+        if stepUpY - jy >= -CELL_H && stepUpY - jy < 0
+            && entityCollision(x: frontX, y: stepUpY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet)
+                == nil
+        {
+            junkbot.x = frontX.jsValue
+            junkbot.y = stepUpY.jsValue
+            _ = entityMoved(junkbot.jsValue)
+            return false
+        }
+    }
+
+    // is there solid ground ahead to walk on?
+    let ground = entityCollision(
+        x: frontX, y: frontY + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
+    if ground != nil,
+        entityCollision(x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet) == nil
+    {
+        junkbot.x = frontX.jsValue
+        junkbot.y = frontY.jsValue
+        _ = entityMoved(junkbot.jsValue)
+        return false
+    }
+
+    // can we step down?
+    let stepsBelow = entityCollisionAllSwift(
+        x: frontX, y: frontY + CELL_H + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
+    if let step = stepsBelow.compactMap({ $0.object }).min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) }),
+        let stepY = step.y.number
+    {
+        let stepDownY = Int32(stepY) - jh
+        let stepDownHits = entityCollisionAllSwift(
+            x: frontX, y: stepDownY + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
+        let stepDown = stepDownHits.compactMap { $0.object }.min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) })
+        if stepDownY - jy <= CELL_H && stepDownY - jy > 0 && stepDown != nil
+            && entityCollision(x: frontX, y: stepDownY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet)
+                == nil
+        {
+            junkbot.x = frontX.jsValue
+            junkbot.y = stepDownY.jsValue
+            _ = entityMoved(junkbot.jsValue)
+            return false
+        }
+    }
+
+    junkbot.facing = (-facing).jsValue
+    _ = playSound("turn")
+    return true
+}
+
 exports.walk =
     JSClosure { args in
         guard let junkbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
             let playSound = args[3].function
         else { return .undefined }
-
-        let jx = Int32(junkbot.x.number ?? 0)
-        let jy = Int32(junkbot.y.number ?? 0)
-        let jh = Int32(junkbot.height.number ?? 0)
-        let facing = Int32(junkbot.facing.number ?? 0)
-
-        let frontX = jx + facing * CELL_W
-        let frontY = jy
-
-        // can we step up?
-        if let stepOrWall = entityCollision(
-            x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot
-        )?.object, let wallY = stepOrWall.y.number {
-            let stepUpY = Int32(wallY) - jh
-            if stepUpY - jy >= -CELL_H && stepUpY - jy < 0
-                && entityCollision(
-                    x: frontX, y: stepUpY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet) == nil
-            {
-                junkbot.x = frontX.jsValue
-                junkbot.y = stepUpY.jsValue
-                _ = entityMoved(args[0])
-                return .undefined
-            }
-        }
-
-        // is there solid ground ahead to walk on?
-        let ground = entityCollision(
-            x: frontX, y: frontY + 1, entity: junkbot, entities: entities, filter: isNotBinOrDropletOrEnemyBot)
-        if ground != nil,
-            entityCollision(x: frontX, y: frontY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet)
-                == nil
-        {
-            junkbot.x = frontX.jsValue
-            junkbot.y = frontY.jsValue
-            _ = entityMoved(args[0])
-            return .undefined
-        }
-
-        // can we step down?
-        let stepsBelow = entityCollisionAllSwift(
-            x: frontX, y: frontY + CELL_H + 1, entity: junkbot, entities: entities,
-            filter: isNotBinOrDropletOrEnemyBot)
-        if let step = stepsBelow.compactMap({ $0.object }).min(by: { ($0.y.number ?? 0) < ($1.y.number ?? 0) }),
-            let stepY = step.y.number
-        {
-            let stepDownY = Int32(stepY) - jh
-            let stepDownHits = entityCollisionAllSwift(
-                x: frontX, y: stepDownY + 1, entity: junkbot, entities: entities,
-                filter: isNotBinOrDropletOrEnemyBot)
-            let stepDown = stepDownHits.compactMap { $0.object }.min(by: {
-                ($0.y.number ?? 0) < ($1.y.number ?? 0)
-            })
-            if stepDownY - jy <= CELL_H && stepDownY - jy > 0 && stepDown != nil
-                && entityCollision(
-                    x: frontX, y: stepDownY, entity: junkbot, entities: entities, filter: isNotBinOrDroplet) == nil
-            {
-                junkbot.x = frontX.jsValue
-                junkbot.y = stepDownY.jsValue
-                _ = entityMoved(args[0])
-                return .undefined
-            }
-        }
-
-        junkbot.facing = (-facing).jsValue
-        _ = playSound("turn")
-        return .string("turned")
+        let turned = walkCore(junkbot: junkbot, entities: entities, entityMoved: entityMoved, playSound: playSound)
+        return turned ? .string("turned") : .undefined
     }.jsValue
 
 exports.simulateJump =
@@ -1151,6 +1154,105 @@ exports.doEyebotMovement =
             eyebot.x = aheadX.jsValue
             eyebot.y = aheadY.jsValue
             _ = entityMoved(args[0])
+        }
+        return .undefined
+    }.jsValue
+
+exports.simulateFansAndLasers =
+    JSClosure { args in
+        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
+            let playSound = args[3].function
+        else { return .undefined }
+
+        wind.length = .number(0)
+        laserBeams.length = .number(0)
+
+        let length = Int(entities.length.number ?? 0)
+        for i in 0..<length {
+            let entityValue = entities[i]
+            guard let entity = entityValue.object else { continue }
+            let type = entityType(entity)
+
+            if type == fanType && entity.on.boolean == true {
+                let fx = Int32(entity.x.number ?? 0)
+                let fy = Int32(entity.y.number ?? 0)
+                let fw = Int32(entity.width.number ?? 0)
+
+                var extents: [JSValue] = []
+                var x = fx + CELL_W
+                while x < fx + fw - CELL_W {
+                    var extent: Int32 = 0
+                    var y = fy - CELL_H
+                    while y > -200 {
+                        var collision = false
+                        for j in 0..<length {
+                            guard let other = entities[j].object else { continue }
+                            if other.grabbed.boolean == true { continue }
+                            let ox = Int32(other.x.number ?? 0)
+                            let oy = Int32(other.y.number ?? 0)
+                            let ow = Int32(other.width.number ?? 0)
+                            let oh = Int32(other.height.number ?? 0)
+                            guard rectanglesIntersect(x, y, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
+                            if entityType(other) == junkbotType {
+                                if other.wasFloating.boolean != true {
+                                    _ = playSound("fan")
+                                }
+                                other.floating = .boolean(true)
+                            } else if entityType(other) != dropletType {
+                                collision = true
+                                break
+                            }
+                        }
+                        if collision { break }
+                        extent += 1
+                        y -= CELL_H
+                    }
+                    extents.append(extent.jsValue)
+                    x += CELL_W
+                }
+                let windEntry = JSObject.global.Object.function!.new()
+                windEntry.fan = entityValue
+                windEntry.extents = extents.jsValue
+                _ = wind.push!(windEntry.jsValue)
+            }
+
+            if type == laserType && entity.on.boolean == true {
+                let lx = Int32(entity.x.number ?? 0)
+                let ly = Int32(entity.y.number ?? 0)
+                let lw = Int32(entity.width.number ?? 0)
+                let facing = Int32(entity.facing.number ?? 0)
+
+                var extent: Int32 = 0
+                var hitEntity: JSValue?
+                while extent < 200 {
+                    let x = lx + (facing == 1 ? lw : -CELL_W) + CELL_W * extent * facing
+                    for j in 0..<length {
+                        let otherValue = entities[j]
+                        guard let other = otherValue.object else { continue }
+                        if other.grabbed.boolean == true { continue }
+                        let ox = Int32(other.x.number ?? 0)
+                        let oy = Int32(other.y.number ?? 0)
+                        let ow = Int32(other.width.number ?? 0)
+                        let oh = Int32(other.height.number ?? 0)
+                        guard rectanglesIntersect(x, ly, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
+                        if entityType(other) == junkbotType {
+                            hurtJunkbotCore(junkbot: other, cause: "laser", playSound: playSound)
+                        }
+                        if entityType(other) != dropletType {
+                            hitEntity = otherValue
+                            break
+                        }
+                    }
+                    if hitEntity != nil { break }
+                    extent += 1
+                }
+
+                let beam = JSObject.global.Object.function!.new()
+                beam.laserBrick = entityValue
+                beam.extent = extent.jsValue
+                beam.hitWhat = hitEntity ?? .undefined
+                _ = laserBeams.push!(beam.jsValue)
+            }
         }
         return .undefined
     }.jsValue
