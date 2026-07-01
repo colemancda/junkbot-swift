@@ -3572,8 +3572,8 @@ const updateDrag = (mouse) => {
 		for (const brick of dragging) {
 			brick.x = floor(mouse.worldX, snapX) + brick.grabOffset.x;
 			brick.y = floor(mouse.worldY, snapY) + brick.grabOffset.y;
+			entityMoved(brick);
 		}
-		updateAccelerationStructures();
 	}
 };
 
@@ -3687,6 +3687,1118 @@ addEventListener("pointerup", () => {
 // #region Simulation
 
 // #@: simulateCrate, simulateBlock, simulateBrick, falling behavior
+const simulateGravity = () => {
+	for (const entity of entities) {
+		if (
+			!entity.fixed &&
+			!entity.grabbed &&
+			!entity.floating &&
+			entity.type !== "droplet" &&
+			entity.type !== "junkbot" &&
+			entity.type !== "climbbot" &&
+			entity.type !== "flybot" &&
+			entity.type !== "eyebot"
+		) {
+			// if not settled
+			if (
+				!rectangleLevelBoundsCollisionTest(entity.x, entity.y + 1, entity.width, entity.height) &&
+				!connectsToFixed(entity, { direction: (entity.type === "junkbot" || entity.type === "gearbot" || entity.type === "crate" || entity.type === "bin") ? 1 : 0 })
+			) {
+				// just for dinosaur test case level,
+				// where there are some blocks meant to stick inside the ceiling
+				if (entityCollisionTest(entity.x, entity.y, entity, notDroplet)) {
+					debug("GRAVITY COLLISION", `${entity.type} stuck in ground at ${entity.x}, ${entity.y}`);
+					return;
+				}
+
+				// first try a step of 18 (1 grid cell) downwards,
+				// then reign it in if there's a collision
+				const cellDownY = entity.y + 18;
+				// find highest up collision (if any)
+				const ground = entityCollisionAll(entity.x, cellDownY + 1, entity, notDroplet)
+					.sort((a, b) => a.y - b.y)[0];
+				debug("GRAVITY COLLISION", `ground: ${JSON.stringify(ground, null, "\t")}`);
+				if (ground) {
+					entity.y = ground.y - entity.height;
+					entityMoved(entity);
+				} else {
+					entity.y = cellDownY;
+					entityMoved(entity);
+				}
+			}
+		}
+	}
+};
+
+const hurtJunkbot = (junkbot, cause) => {
+	if (junkbot.dying || junkbot.dead || junkbot.grabbed) {
+		return;
+	}
+	// Play sound even if shielded,
+	// but not if losing shield because then it would repeat and sound ugly.
+	// This has to be before junkbot.losingShield is set, so it can play the first time.
+	if (!junkbot.losingShield) {
+		// @TODO: rename sound effects, as they're not just for death
+		if (cause === "fire") {
+			playSound("deathByFire");
+		} else if (cause === "water") {
+			playSound("deathByWater");
+		} else if (cause === "laser") {
+			playSound("deathByLaser");
+		} else {
+			playSound("deathByBot");
+		}
+	}
+	if (junkbot.armored) {
+		if (!junkbot.losingShield) {
+			junkbot.losingShield = true;
+			// don't reset junkbot.losingShieldTime to 0
+			// it wouldn't make sense for multiple hits to extend the shield
+			// (it should be reset elsewhere)
+		}
+	} else {
+		junkbot.animationFrame = 0;
+		junkbot.collectingBin = false;
+		junkbot.dying = true;
+		if (cause === "water") {
+			junkbot.dyingFromWater = true;
+		}
+	}
+};
+
+const walk = (junkbot) => {
+	const posInFront = { x: junkbot.x + junkbot.facing * 15, y: junkbot.y };
+	const stepOrWall = entityCollisionTest(posInFront.x, posInFront.y, junkbot, notBinOrDropletOrEnemyBot);
+	if (stepOrWall) {
+		// can we step up?
+		const posStepUp = { x: posInFront.x, y: stepOrWall.y - junkbot.height };
+		if (
+			posStepUp.y - junkbot.y >= -18 &&
+			posStepUp.y - junkbot.y < 0 &&
+			!entityCollisionTest(posStepUp.x, posStepUp.y, junkbot, notBinOrDroplet)
+		) {
+			debug("JUNKBOT", "STEP UP");
+			junkbot.x = posStepUp.x;
+			junkbot.y = posStepUp.y;
+			entityMoved(junkbot);
+			return;
+		}
+	}
+	// is there solid ground ahead to walk on?
+	const ground = entityCollisionTest(posInFront.x, posInFront.y + 1, junkbot, notBinOrDropletOrEnemyBot);
+	if (
+		ground &&
+		!entityCollisionTest(posInFront.x, posInFront.y, junkbot, notBinOrDroplet)
+	) {
+		debug("JUNKBOT", "WALK");
+		junkbot.x = posInFront.x;
+		junkbot.y = posInFront.y;
+		entityMoved(junkbot);
+		return;
+	}
+	let step = entityCollisionAll(posInFront.x, posInFront.y + 18 + 1, junkbot, notBinOrDropletOrEnemyBot)
+		.sort((a, b) => a.y - b.y)[0];
+	if (step) {
+		// can we step down?
+		// debug("JUNKBOT", `step: ${JSON.stringify(step, null, "\t")}`);
+		const posStepDown = { x: posInFront.x, y: step.y - junkbot.height };
+		step = entityCollisionAll(posStepDown.x, posStepDown.y + 1, junkbot, notBinOrDropletOrEnemyBot)
+			.sort((a, b) => a.y - b.y)[0];
+		if (
+			posStepDown.y - junkbot.y <= 18 &&
+			posStepDown.y - junkbot.y > 0 &&
+			step &&
+			!entityCollisionTest(posStepDown.x, posStepDown.y, junkbot, notBinOrDroplet)
+		) {
+			debug("JUNKBOT", "STEP DOWN");
+			junkbot.x = posStepDown.x;
+			junkbot.y = posStepDown.y;
+			entityMoved(junkbot);
+			return;
+		}
+	}
+	debug("JUNKBOT", "CLIFF/WALL/BOT - TURN AROUND");
+	junkbot.facing *= -1;
+	playSound("turn");
+	return "turned";
+};
+
+const findLinkedTeleport = (teleport) => (
+	entities.find((entity) => (
+		entity.type === "teleport" &&
+		entity.teleportID === teleport.teleportID &&
+		entity !== teleport
+	))
+);
+
+const simulateJunkbot = (junkbot) => {
+	const aboveHead = entityCollisionTest(junkbot.x, junkbot.y - 1, junkbot, notDroplet);
+	const headLoaded = aboveHead && (
+		junkbot.floating || (
+			!aboveHead.fixed &&
+			!connectsToFixed(aboveHead, { ignoreEntities: [junkbot] }) &&
+			aboveHead.type !== "levelBounds" &&
+			aboveHead.type !== "flybot" &&
+			aboveHead.type !== "eyebot"
+		)
+	);
+	if (junkbot.headLoaded && !headLoaded) {
+		junkbot.headLoaded = false;
+	} else if (headLoaded && !junkbot.headLoaded && !junkbot.grabbed) {
+		junkbot.headLoaded = true;
+		playSound("headBonk");
+	}
+	if (junkbot.losingShield) {
+		junkbot.losingShieldTime += 1;
+		if (junkbot.losingShieldTime > 36) { // already compared to reference video
+			junkbot.armored = false;
+			junkbot.losingShield = false;
+			junkbot.losingShieldTime = 0; // important for next damage event
+			playSound("losePowerup");
+		}
+	}
+	junkbot.animationFrame += 1;
+	if (junkbot.collectingBin) {
+		if (junkbot.animationFrame >= 17) {
+			junkbot.collectingBin = false;
+			junkbot.animationFrame = 0;
+		} else {
+			return;
+		}
+	}
+	if (junkbot.dying) {
+		if (junkbot.animationFrame >= 10) {
+			junkbot.animationFrame = 0;
+			junkbot.dead = true;
+		}
+		return;
+	}
+	if (junkbot.gettingShield) {
+		if (junkbot.animationFrame >= 11) {
+			junkbot.gettingShield = false;
+			junkbot.armored = true;
+		} else {
+			return;
+		}
+	}
+	const inside = entityCollisionTest(junkbot.x, junkbot.y, junkbot, notDroplet);
+	if (inside) {
+		debug("JUNKBOT", "STUCK IN WALL");
+		return;
+	}
+	if (junkbot.floating) {
+		const abovePos = { x: junkbot.x, y: junkbot.y - 18 };
+		const aboveHead = entityCollisionTest(abovePos.x, abovePos.y, junkbot, notDroplet);
+		if (aboveHead) {
+			debug("JUNKBOT", "FLOATING - CAN'T GO UP");
+		} else {
+			debug("JUNKBOT", "FLOATING - GO UP");
+			junkbot.x = abovePos.x;
+			junkbot.y = abovePos.y;
+			entityMoved(junkbot);
+		}
+		return;
+	}
+	if (junkbot.momentumX === undefined) {
+		junkbot.momentumX = 0;
+	}
+	if (junkbot.momentumY === undefined) {
+		junkbot.momentumY = 0;
+	}
+	junkbot.momentumX = Math.min(5, Math.max(-5, junkbot.momentumX));
+	junkbot.momentumY = Math.min(5, Math.max(-5, junkbot.momentumY));
+	const inAir = !entityCollisionTest(junkbot.x, junkbot.y + 1, junkbot, notDroplet);
+	const unaligned = junkbot.x % 15 !== 0;
+	const jumpStarting = junkbot.momentumY < -2;
+	if (inAir || jumpStarting || unaligned) {
+		if (inAir) {
+			debug("JUNKBOT", "IN AIR - DO GRID-BASED BALLISTIC MOTION");
+		} else if (jumpStarting) {
+			debug("JUNKBOT", "JUMP - DO GRID-BASED BALLISTIC MOTION");
+		} else if (unaligned) {
+			debug("JUNKBOT", "UNALIGNED - DO (BALLISTIC MOTION AND) SNAPPING TO GROUND");
+			// @TODO: handle this case again, snap junkbot to grid
+		}
+
+		// To debug momentum, uncomment drawText in drawJunkbot.
+		const dirX = junkbot.momentumY < -2 ? 0 : Math.sign(junkbot.momentumX);
+		const dirY = Math.sign(junkbot.momentumY);
+		const newX = junkbot.x + dirX * 15;
+		const newY = junkbot.y + dirY * 18;
+		if (entityCollisionTest(newX, newY, junkbot, notDroplet)) {
+			if (!entityCollisionTest(junkbot.x, newY, junkbot, notDroplet)) {
+				// moving Y only is not a collision
+				junkbot.momentumX = 0;
+				junkbot.y = newY;
+			} else if (!entityCollisionTest(newX, junkbot.y, junkbot, notDroplet)) {
+				// moving X only is not a collision
+				junkbot.momentumY = 0;
+				junkbot.x = newX;
+			} else {
+				debug("JUNKBOT", "collision in both X and Y directions");
+				junkbot.momentumX = 0;
+				junkbot.momentumY = 0;
+			}
+			playSound("headBonk");
+		} else {
+			junkbot.x = newX;
+			junkbot.y = newY;
+			junkbot.momentumX -= dirX; // -= Math.sign(junkbot.momentumX) would be different
+		}
+		junkbot.momentumY += 1;
+		if (junkbot.momentumY < 5) {
+			junkbot.animationFrame = 9; // stick leg closer to the camera out backwards
+		}
+		if (junkbot.momentumY === 5) {
+			playSound("fall");
+		}
+
+		const jumpBrick = entityCollisionTest(junkbot.x, junkbot.y + 1, junkbot, (brick) => brick.type === "jump");
+		const ahead = entityCollisionTest(junkbot.x + junkbot.facing * 15, junkbot.y, junkbot, notDroplet);
+		if (
+			jumpBrick &&
+			jumpBrick.x <= junkbot.x &&
+			jumpBrick.x + jumpBrick.width >= junkbot.x + junkbot.width &&
+			!ahead // prevent getting stuck bouncing up against a wall
+		) {
+			// @TODO: DRY with other jump code
+			// Might also want to trigger related behavior like dying on fire bricks here
+			// Note this must be after junkbot.momentumY += 1;
+			if (!jumpBrick.active) {
+				junkbot.animationFrame = 0;
+				junkbot.momentumY = -3;
+				junkbot.momentumX = junkbot.facing * 5;
+				playSound("jump");
+				jumpBrick.active = true;
+				jumpBrick.animationFrame = 0;
+			}
+		}
+		entityMoved(junkbot);
+		return;
+	}
+	if (junkbot.animationFrame % 5 === 4) {
+		const posInFront = { x: junkbot.x + junkbot.facing * 15, y: junkbot.y };
+		const cratesInFront = rectangleCollisionAll(posInFront.x, posInFront.y, junkbot.width, junkbot.height + 1, (otherEntity) => (
+			otherEntity.type === "crate" && (
+				otherEntity.x + otherEntity.width <= junkbot.x ||
+				junkbot.x + junkbot.width <= otherEntity.x
+			)
+		));
+		if (cratesInFront.every((crate) => !entityCollisionTest(crate.x + junkbot.facing * 15, crate.y, crate, notDroplet))) {
+			for (const crate of cratesInFront) {
+				crate.x += junkbot.facing * 15;
+			}
+		}
+		const turnedAround = walk(junkbot) === "turned";
+		const groundLevelEntities = entitiesByTopY[junkbot.y + junkbot.height] || [];
+		for (const groundLevelEntity of groundLevelEntities) {
+			if (
+				groundLevelEntity.x <= junkbot.x &&
+				groundLevelEntity.x + groundLevelEntity.width >= junkbot.x + junkbot.width &&
+				!turnedAround // @TODO: what about for fire and shield bricks? I confirmed this applies to jump bricks and switches
+			) {
+				if (groundLevelEntity.type === "switch") {
+					groundLevelEntity.on = !groundLevelEntity.on;
+					for (const entity of entities) {
+						if (
+							entity.type !== "switch" &&
+							"on" in entity &&
+							"switchID" in entity &&
+							entity.switchID === groundLevelEntity.switchID
+						) {
+							entity.on = !entity.on;
+						}
+					}
+					playSound("switchClick");
+					playSound(groundLevelEntity.on ? "switchOn" : "switchOff");
+				} else if (groundLevelEntity.type === "fire" && groundLevelEntity.on) {
+					hurtJunkbot(junkbot, "fire");
+				} else if (groundLevelEntity.type === "shield" && !groundLevelEntity.used && (junkbot.losingShield || !junkbot.armored)) {
+					junkbot.animationFrame = 0;
+					junkbot.gettingShield = true;
+					junkbot.losingShield = false;
+					junkbot.losingShieldTime = 0; // important for next damage event
+					groundLevelEntity.used = true;
+					playSound("getShield");
+					playSound("getPowerup");
+				} else if (groundLevelEntity.type === "jump") {
+					// @TODO: DRY with copied jump code
+					if (!groundLevelEntity.active) {
+						junkbot.animationFrame = 0;
+						junkbot.momentumY = -3;
+						junkbot.momentumX = junkbot.facing * 5;
+						playSound("jump");
+						groundLevelEntity.active = true;
+						groundLevelEntity.animationFrame = 0;
+					}
+				} else if (
+					groundLevelEntity.type === "teleport" &&
+					groundLevelEntity.timer === 0 &&
+					junkbot.x === groundLevelEntity.x + 15
+				) {
+					const linkedTeleport = findLinkedTeleport(groundLevelEntity);
+					if (linkedTeleport && !linkedTeleport.blocked) {
+						junkbot.x = linkedTeleport.x + 15;
+						junkbot.y = linkedTeleport.y - junkbot.height;
+						linkedTeleport.timer = TELEPORT_COOLDOWN;
+						groundLevelEntity.timer = TELEPORT_COOLDOWN;
+						entityMoved(junkbot);
+						playSound("teleport");
+					}
+				}
+			}
+		}
+	}
+
+	const bin = entityCollisionTest(junkbot.x + junkbot.facing * 15, junkbot.y, junkbot, (otherEntity) => (
+		otherEntity.type === "bin"
+	));
+	if (bin) {
+		junkbot.animationFrame = 0;
+		junkbot.collectingBin = true;
+		bin.removeBeforeRender = true; // it's important not to remove entities while iterating over them
+		playSound("collectBin");
+		playSound("collectBin2");
+		collectBinTime = Date.now();
+	}
+};
+
+const simulateGearbot = (gearbot) => {
+	gearbot.animationFrame += 1;
+	if (gearbot.animationFrame > 2) {
+		gearbot.animationFrame = 0;
+		const aheadPos = { x: gearbot.x + gearbot.facing * 15, y: gearbot.y };
+		const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, gearbot, notDroplet);
+		const groundAhead = rectangleCollisionTest(gearbot.x + ((gearbot.facing === -1) ? -15 : gearbot.width), gearbot.y + 1, 15, gearbot.height, notDroplet);
+		if (ahead) {
+			if (ahead.type === "junkbot" && !ahead.dying && !ahead.dead) {
+				hurtJunkbot(ahead, "bot");
+			}
+			gearbot.facing *= -1;
+		} else if (groundAhead) {
+			gearbot.x = aheadPos.x;
+			gearbot.y = aheadPos.y;
+			entityMoved(gearbot);
+		} else {
+			gearbot.facing *= -1;
+		}
+	}
+};
+
+// #@: simulateBin
+const simulateScaredy = (bin) => {
+	bin.animationFrame += 1;
+	if (bin.animationFrame > 2) {
+		bin.animationFrame = 0;
+		const searchDist = 15 * 4; // AKA scare distance
+		// @TODO: don't become scared through walls
+		const searchRect = [bin.x - searchDist, bin.y, bin.width + searchDist * 2, bin.height];
+		debugWorldSpaceRect(...searchRect);
+		const junkbot = rectangleCollisionTest(...searchRect, (otherEntity) => otherEntity.type === "junkbot");
+		if (junkbot) {
+			bin.facing = junkbot.x > bin.x ? -1 : 1;
+			const aheadPos = { x: bin.x + bin.facing * 15, y: bin.y };
+			const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, bin, notDroplet);
+			if (ahead) {
+				bin.facing = 0;
+			} else {
+				bin.x = aheadPos.x;
+				bin.y = aheadPos.y;
+				entityMoved(bin);
+			}
+		} else {
+			bin.facing = 0;
+		}
+	}
+};
+
+const simulateFlybot = (flybot) => {
+	// Could merge with eyebot movement:
+	// doEyebotMovement(flybot);
+	// return;
+
+	flybot.animationFrame += 1;
+	if (flybot.animationFrame % 2 === 0) {
+		const aheadPos = { x: flybot.x + flybot.facing * 15, y: flybot.y };
+		const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, flybot, (otherEntity) => otherEntity.type !== "droplet");
+		if (ahead) {
+			if (ahead.type === "junkbot") {
+				hurtJunkbot(ahead, "bot");
+			}
+			flybot.facing *= -1;
+		} else {
+			flybot.x = aheadPos.x;
+			flybot.y = aheadPos.y;
+			entityMoved(flybot);
+		}
+	}
+};
+
+// #@: simulateEyebot
+const doEyebotTargeting = (eyebot) => {
+	for (const [directionX, directionY] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+		const offsets = directionY !== 0 ? [[0, 0], [15, 0]] : [[0, 0], [0, 18]];
+		for (const [offsetX, offsetY] of offsets) {
+			const { hit } = raycast({
+				startX: eyebot.x + offsetX,
+				startY: eyebot.y + offsetY,
+				width: 15,
+				height: 18,
+				directionX, directionY,
+				maxSteps: 50,
+				entityFilter: (entity) => entity.type !== "droplet" && entity !== eyebot,
+			});
+			if (hit && hit.type === "junkbot") {
+				eyebot.facing = directionX;
+				eyebot.facingY = directionY;
+				eyebot.activeTimer = 110;
+			}
+		}
+	}
+};
+
+const doEyebotMovement = (eyebot) => {
+	eyebot.activeTimer -= 1;
+	eyebot.animationFrame += 1;
+	if (eyebot.animationFrame % ((eyebot.activeTimer > 0) ? 1 : 2) === 0) {
+		const aheadPos = { x: eyebot.x + eyebot.facing * 15, y: eyebot.y + (eyebot.facingY || 0) * 18 };
+		const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, eyebot, (otherEntity) => otherEntity.type !== "droplet");
+		if (ahead) {
+			if (ahead.type === "junkbot") {
+				hurtJunkbot(ahead, "bot");
+			}
+			eyebot.facing *= -1;
+			eyebot.facingY *= -1;
+		} else {
+			eyebot.x = aheadPos.x;
+			eyebot.y = aheadPos.y;
+			entityMoved(eyebot);
+		}
+	}
+};
+
+const simulateClimbbot = (climbbot) => {
+	climbbot.animationFrame += 1;
+	if (climbbot.animationFrame > 6) {
+		climbbot.animationFrame = 0;
+		const asidePos = { x: climbbot.x + climbbot.facing * 15, y: climbbot.y };
+		const groundAsidePos = { x: climbbot.x + climbbot.facing * 15, y: climbbot.y + 1 };
+		const behindHorizontallyPos = { x: climbbot.x + climbbot.facing * -15, y: climbbot.y };
+		const aheadPos = climbbot.facingY === 0 ? asidePos : { x: climbbot.x, y: climbbot.y + climbbot.facingY * 18 };
+		const belowPos = { x: climbbot.x, y: climbbot.y + 18 };
+		const aside = entityCollisionTest(asidePos.x, asidePos.y, climbbot, notDroplet);
+		const groundAside = entityCollisionTest(groundAsidePos.x, groundAsidePos.y, climbbot, notBinOrDroplet);
+		const ahead = entityCollisionTest(aheadPos.x, aheadPos.y, climbbot, notDroplet);
+		const behindHorizontally = entityCollisionTest(behindHorizontallyPos.x, behindHorizontallyPos.y, climbbot, notDroplet);
+		const below = entityCollisionTest(belowPos.x, belowPos.y, climbbot, notDroplet);
+
+		if (ahead && ahead.type === "junkbot") {
+			hurtJunkbot(ahead, "bot");
+		}
+		if (climbbot.facingY === -1) {
+			if (!aside && groundAside) {
+				climbbot.facingY = 0;
+				climbbot.x = asidePos.x;
+				climbbot.y = asidePos.y;
+			} else if (climbbot.energy > 0 && !ahead) {
+				climbbot.energy -= 1;
+				climbbot.x = aheadPos.x;
+				climbbot.y = aheadPos.y;
+				entityMoved(climbbot);
+			} else {
+				climbbot.facingY = 1;
+			}
+		} else if (climbbot.facingY === 1) {
+			if (below) {
+				if (aside && behindHorizontally) {
+					climbbot.facingY = -1;
+					climbbot.energy = 3;
+				} else {
+					climbbot.facingY = 0;
+					if (aside) {
+						if (!behindHorizontally) {
+							climbbot.facing *= -1;
+							climbbot.x = behindHorizontallyPos.x;
+							climbbot.y = behindHorizontallyPos.y;
+							entityMoved(climbbot);
+						}
+					} else {
+						climbbot.x = asidePos.x;
+						climbbot.y = asidePos.y;
+						entityMoved(climbbot);
+					}
+				}
+			} else {
+				climbbot.x = belowPos.x;
+				climbbot.y = belowPos.y;
+				entityMoved(climbbot);
+			}
+		} else {
+			if (below) {
+				if (aside) {
+					climbbot.facingY = -1;
+					climbbot.energy = 3;
+				} else {
+					climbbot.x = asidePos.x;
+					climbbot.y = asidePos.y;
+					entityMoved(climbbot);
+				}
+			} else {
+				if (aside) {
+					climbbot.facingY = 1;
+				} else {
+					// if (groundAside) {
+					// 	climbbot.x = asidePos.x;
+					// 	climbbot.y = asidePos.y;
+					// 	entityMoved(climbbot);
+					// } else {
+					climbbot.facingY = 1;
+					climbbot.x = belowPos.x;
+					climbbot.y = belowPos.y;
+					entityMoved(climbbot);
+				}
+			}
+		}
+	}
+	// may not be necessary, but it "feels right" to reset this
+	if (climbbot.facingY !== -1) {
+		climbbot.energy = 0;
+	}
+};
+
+const simulateDroplet = (droplet) => {
+	if (droplet.splashing) {
+		droplet.animationFrame += 1;
+		if (droplet.animationFrame > 4) {
+			droplet.removeBeforeRender = true; // it's important not to remove entities while iterating over them
+		}
+	} else {
+		for (let i = 0; i < 18; i++) {
+			const underneath = entitiesByTopY[droplet.y + droplet.height] || [];
+			droplet.y += 1;
+			entityMoved(droplet);
+			for (const ground of underneath) {
+				if (
+					!ground.grabbed &&
+					droplet.x + droplet.width > ground.x &&
+					droplet.x < ground.x + ground.width &&
+					// ground.type !== "pipe" && // actually it should hit pipes, ref: https://youtu.be/Z_PmQhrk5Zw?t=4418
+					ground.type !== "droplet"
+				) {
+					if (ground.type === "junkbot") {
+						hurtJunkbot(ground, "water");
+					}
+
+					droplet.splashing = true;
+					droplet.animationFrame = 0;
+
+					playSound(`drip${Math.floor(Math.random() * numDrips)}`);
+					break;
+				}
+			}
+		}
+	}
+};
+
+const maxDripPeriod = 50;
+const minDripPeriod = 20;
+const simulatePipe = (pipe) => {
+	pipe.timer -= 1;
+	// @TODO: how do pipe drips work in the original game?
+	// - after X time, C% chance every frame? (maybe with a max of Y time?)
+	// - timer set to random value between X and Y?
+	// - only initial randomization, consistent interval after that, just offset from other pipes
+	if (pipe.timer === 0) {
+		entities.push(makeDroplet({
+			x: pipe.x,
+			y: pipe.y,
+		}));
+	}
+	if (pipe.timer <= 0) { // includes initial -1 for initial randomization
+		pipe.timer = Math.floor(Math.random() * (maxDripPeriod - minDripPeriod)) + minDripPeriod;
+	}
+};
+
+const simulateJump = (jump) => {
+	jump.animationFrame += 1;
+	if (jump.animationFrame >= 5) {
+		jump.animationFrame = 0;
+		jump.active = false;
+	}
+};
+
+const notDropletOrJunkbot = (entity) => entity.type !== "droplet" && entity.type !== "junkbot";
+const simulateTeleport = (teleport) => {
+	if (teleport.timer > 0) {
+		teleport.timer -= 1;
+	}
+	const targetTeleport = findLinkedTeleport(teleport);
+	teleport.blocked =
+		!targetTeleport ||
+		rectangleCollisionTest(teleport.x + 15, teleport.y - 18 * 4, 15 * 2, 18 * 4, notDropletOrJunkbot) ||
+		rectangleCollisionTest(targetTeleport.x + 15, targetTeleport.y - 18 * 4, 15 * 2, 18 * 4, notDropletOrJunkbot);
+	if (teleport.timer > TELEPORT_COOLDOWN - TELEPORT_EFFECT_PERIOD) {
+		teleportEffects.push({
+			x: teleport.x + 15,
+			y: teleport.y, // - 18 * 4,
+			frameIndex: (teleport.timer % 3),
+		});
+	}
+};
+
+// #endregion
+//
+// █████ █████ █ █ █ ███ █   █ ████            █████ █     █████ █   █ ████  █████ █████ █   █
+// █   █ █     █ █ █  █  ██  █ █   █     █     █   █ █     █   █ █   █ █   █ █   █ █     █  █
+// █████ █████ █ █ █  █  █ █ █ █   █    ███    █████ █     █████  █ █  █████ █████ █     ███
+// █  █  █     █ █ █  █  █  ██ █   █     █     █     █     █   █   █   █   █ █   █ █     █  █
+// █  ██ █████  █ █  ███ █   █ ████            █     █████ █   █   █   ████  █   █ █████ █   █
+//
+//               ▄█      ▄█       .--.--------.--.       █▄      █▄
+//             ▄███    ▄███       |  ._.    ._D90|       ███▄    ███▄
+//           ▄█████  ▄█████       | ((_))  ((_)) |       █████▄  █████▄
+//          ▀██████ ▀██████       |  `_______-'  |       ██████▀ ██████▀
+//            ▀████   ▀████       [()/o      o\()]       ████▀   ████▀
+//              ▀██     ▀██       "-'--"----"--`-"       ██▀     ██▀
+//                ▀       ▀                              ▀       ▀
+// #region Rewind + Playback
+
+// Helps to detect desynchronization between playback and recording.
+// There's also a separate detection in the problem detection code.
+const findMisplacedEntities = (withinEntities, compareToEntities) => {
+	return withinEntities.filter((entity) => {
+		for (const compareToEntity of compareToEntities) {
+			if (
+				entity.type === compareToEntity.type &&
+				(
+					(entity.grabbed &&
+						compareToEntity.grabbed) ||
+					(entity.x === compareToEntity.x &&
+						entity.y === compareToEntity.y)
+				)
+			) {
+				return false;
+			}
+		}
+		return true;
+	});
+};
+
+let pausedForRewind = false;
+const rewindRate = 2;
+const handleRewind = () => {
+	// rewind, like in Braid etc.
+	if (keys.ShiftLeft || keys.ShiftRight || rewindingWithButton) {
+		if (!paused) {
+			pausedForRewind = true;
+			paused = true;
+			playbackLevel = diffPatcher.clone(currentLevel); // HACK
+		}
+		if (frameCounter > 0) {
+			// playSound("undo", 0.3, 0.6);
+			playSound("undo", 0.1, 0.6);
+			// playSound("turn", 0.3, 0.5);
+			// playSound("jump", 0.3, 0.8);
+			// playSound("rustle0", 0.1, 0.8);
+		}
+		// sort for consistency for level delta patching
+		entities.sort((a, b) => a.id - b.id);
+		for (let i = 0; i < rewindRate; i++) {
+			frameCounter -= 1;
+			if (frameCounter < 0) {
+				frameCounter = 0;
+			} else if (frameCounter > 0) { // don't undo level initialization
+				// handle playbackLevel and currentLevel separately, as
+				// they could have their own notions of what's going on
+				for (const event of playthroughEvents) {
+					if (event.t === frameCounter + 1) {
+						diffPatcher.unpatch(currentLevel, event.levelPatch);
+					}
+				}
+				for (const event of playbackEvents) {
+					if (event.t === frameCounter + 1) {
+						diffPatcher.unpatch(playbackLevel, event.levelPatch);
+					}
+				}
+			}
+		}
+	} else if (pausedForRewind) {
+		pausedForRewind = false;
+		paused = false;
+	}
+};
+const handlePlayback = () => {
+	debug("handlePlayback: frameCounter", frameCounter);
+	for (const event of playbackEvents) {
+		if (event.t === frameCounter + 1) {
+			if (event.levelPatch) {
+				// sort for consistency for level delta patching
+				playbackLevel.entities?.sort((a, b) => a.id - b.id);
+				diffPatcher.patch(playbackLevel, event.levelPatch);
+
+				// compare level state to see if it's desynchronized
+				if (currentLevel.name !== playbackLevel.name) {
+					desynchronized = true;
+					paused = true;
+					showErrorMessage("Wrong level for playback.");
+					return;
+				}
+				const misplacedInSimulation = findMisplacedEntities(entities, playbackLevel.entities);
+				const misplacedInRecording = findMisplacedEntities(playbackLevel.entities, entities);
+				if (misplacedInSimulation.length || misplacedInRecording.length) {
+					desynchronized = true;
+					for (const entity of [...misplacedInSimulation, ...misplacedInRecording]) {
+						entity.misplaced = true;
+					}
+					// paused = true;
+					// showErrorMessage("Desynchronized playback.");
+					// return;
+				}
+			}
+
+			const playbackMouse = { worldX: event.x, worldY: event.y };
+			const { x, y } = worldToCanvas(playbackMouse.worldX, playbackMouse.worldY);
+			playbackMouse.x = x;
+			playbackMouse.y = y;
+			if (event.type === "pickup") {
+				const grabs = possibleGrabs(playbackMouse);
+				if (grabs && !dragging.length) {
+					if (event.grabType === "upward") {
+						startGrab(grabs.upward, { grabType: "upward", duringPlayback: true, mouse: playbackMouse });
+					} else if (event.grabType === "downward") {
+						startGrab(grabs.downward, { grabType: "downward", duringPlayback: true, mouse: playbackMouse });
+					} else {
+						startGrab(grabs[0], { grabType: "single", duringPlayback: true, mouse: playbackMouse });
+					}
+					// @TODO: this should play a sound, right?
+					// playSound("blockClick");
+				} else {
+					// showErrorMessage("Something must be different between recording and playback.");
+					desynchronized = true;
+				}
+			} else if (event.type === "place") {
+				updateDrag(playbackMouse);
+				finishDrag({ duringPlayback: true, mouse: playbackMouse });
+			} else if (event.type === "pointer") {
+				updateDrag(playbackMouse);
+				mouse.worldX = playbackMouse.worldX;
+				mouse.worldY = playbackMouse.worldY;
+				mouse.x = playbackMouse.x;
+				mouse.y = playbackMouse.y;
+				playthroughEvents.push(event); // preserve this information in case of re-saving a recording from playback
+			}
+		}
+	}
+};
+
+// #endregion
+//                                                       ▄
+// █████ ███ █   █ █   █ █     █████ █████ █████ █       ███▄▄
+// █      █  ██ ██ █   █ █     █   █   █   █     █       ███████▄▄
+// █████  █  █ █ █ █   █ █     █████   █   █████ █       █████████▀▀
+//     █  █  █   █ █   █ █     █   █   █   █             █████▀▀
+// █████ ███ █   █ █████ █████ █   █   █   █████ █       █▀▀
+//
+// #region Simulate! (simulation main)
+
+const simulate = (entities) => {
+	frameCounter += 1;
+
+	updateAccelerationStructures();
+
+	// sort for gravity
+	entities.sort((a, b) => b.y - a.y);
+
+	simulateGravity();
+
+	teleportEffects.length = 0;
+
+	for (const entity of entities) {
+		if (!entity.grabbed) {
+			if (entity.type === "junkbot") {
+				simulateJunkbot(entity);
+			} else if (entity.type === "gearbot") {
+				simulateGearbot(entity);
+			} else if (entity.type === "climbbot") {
+				simulateClimbbot(entity);
+			} else if (entity.type === "flybot") {
+				simulateFlybot(entity);
+			} else if (entity.type === "eyebot") {
+				doEyebotMovement(entity);
+			} else if (entity.type === "jump") {
+				simulateJump(entity);
+			} else if (entity.type === "teleport") {
+				simulateTeleport(entity);
+			} else if (entity.type === "pipe") {
+				simulatePipe(entity);
+			} else if (entity.type === "droplet") {
+				simulateDroplet(entity);
+			} else if (entity.type === "bin" && entity.scaredy) {
+				simulateScaredy(entity);
+			} else if ("animationFrame" in entity) {
+				entity.animationFrame += 1;
+			}
+		}
+	}
+	// Remove entities with flag removeBeforeRender.
+	// It's important not to remove entities while iterating over them,
+	// as this can lead to entities not being simulated in a frame,
+	// which can lead to entities offset from each other, which is problematic e.g. for "Ally" test level.
+	{
+		let iOut = 0;
+		for (let i = 0; i < entities.length; i++) {
+			if (!entities[i].removeBeforeRender) {
+				entities[iOut] = entities[i];
+				iOut += 1;
+			}
+		}
+		entities.length = iOut;
+	}
+
+	for (const entity of entities) {
+		if ("floating" in entity) {
+			entity.wasFloating = entity.floating;
+			delete entity.floating;
+		}
+
+		// eyebot targeting is done separately from movement, so that it can support
+		// a flybot continuously blocking an eyebot's line of sight ("Ally" test case)
+		if (entity.type === "eyebot") {
+			doEyebotTargeting(entity);
+		}
+	}
+	// wind and laser beams
+	wind.length = 0;
+	laserBeams.length = 0;
+	for (const entity of entities) {
+		if (entity.type === "fan" && entity.on) {
+			const fan = entity;
+			const extents = [];
+			for (let x = fan.x + 15; x < fan.x + fan.width - 15; x += 15) {
+				let extent = 0;
+				for (let y = fan.y - 18; y > -200; y -= 18) {
+					let collision = false;
+					for (const otherEntity of entities) {
+						if (!otherEntity.grabbed && rectanglesIntersect(
+							x,
+							y,
+							15,
+							18,
+							otherEntity.x,
+							otherEntity.y,
+							otherEntity.width,
+							otherEntity.height,
+						)) {
+							if (otherEntity.type === "junkbot") {
+								if (!otherEntity.wasFloating) {
+									playSound("fan");
+								}
+								otherEntity.floating = true;
+							} else if (otherEntity.type !== "droplet") {
+								collision = true;
+								break;
+							}
+						}
+					}
+					if (collision) {
+						break;
+					}
+					extent += 1;
+				}
+				extents.push(extent);
+			}
+			wind.push({ fan, extents });
+		}
+		if (entity.type === "laser" && entity.on) {
+			const laserBrick = entity;
+			// @TODO: collide with level bounds
+			let extent = 0;
+			let collision;
+			for (; extent < 200; extent += 1) {
+				const x = laserBrick.x +
+					(laserBrick.facing === 1 ? laserBrick.width : -15) +
+					15 * extent * laserBrick.facing;
+				for (const otherEntity of entities) {
+					if (!otherEntity.grabbed && rectanglesIntersect(
+						x,
+						laserBrick.y,
+						15,
+						18,
+						otherEntity.x,
+						otherEntity.y,
+						otherEntity.width,
+						otherEntity.height,
+					)) {
+						if (otherEntity.type === "junkbot") {
+							hurtJunkbot(otherEntity, "laser");
+						}
+						if (otherEntity.type !== "droplet") {
+							collision = otherEntity;
+							break;
+						}
+					}
+				}
+				if (collision) {
+					break;
+				}
+			}
+			laserBeams.push({ laserBrick, extent, hitWhat: collision });
+		}
+	}
+	for (const entity of entities) {
+		delete entity.wasFloating;
+	}
+
+	// sort for consistency for level delta patching
+	entities.sort((a, b) => a.id - b.id);
+	playthroughEvents.push({
+		type: "step",
+		t: frameCounter,
+		x: mouse.worldX,
+		y: mouse.worldY,
+		editing,
+		levelPatch: diffPatcher.clone(diffPatcher.diff(levelLastFrame, currentLevel)),
+	});
+	levelLastFrame = diffPatcher.clone(currentLevel);
+};
+
+// #endregion
+//                                                                                      .-"""-.
+// █████ █████ █████ ████  █     █████ █   █    █████ █     █████ █   █ █████ █   █    //  .  \\
+// █   █ █   █ █   █ █   █ █     █     ██ ██    █     █     █     █   █   █   █   █    |  /!\  ;
+// █████ █████ █   █ █████ █     █████ █ █ █    █████ █     █████ █   █   █   █████    \\ ‾‾‾ //
+// █     █  █  █   █ █   █ █     █     █   █        █ █     █     █   █   █   █   █      '--'( \
+// █     █  ██ █████ ████  █████ █████ █   █    █████ █████ █████ █████   █   █   █           \ \
+//                                                                                             \_)
+// #region Problem Sleuth (issue detection)
+// #@: problem detection, problem detector, issue detector, problem highlighting, problem highlighter, issue highlighting, issue highlighter
+
+const detectProblems = () => {
+	// active validity checking of the world
+
+	const maxEntityHeight = 100;
+	const reportedCollisions = new Map();
+	const isNum = (value) => typeof value === "number" && isFinite(value);
+	const problems = [];
+	for (const entity of entities) {
+		/* eslint-disable no-continue */
+		if (!isNum(entity.x) || !isNum(entity.y)) {
+			problems.push({ message: `Invalid position (x/y) for entity ${JSON.stringify(entity, null, "\t")}\n` });
+			continue;
+		}
+		if (entity.x % 15 !== 0) {
+			problems.push({ message: `x position not aligned to grid for entity ${JSON.stringify(entity, null, "\t")}\n` });
+			continue;
+		}
+		if (!isNum(entity.width) || !isNum(entity.height)) {
+			problems.push({ message: `Invalid size (width/height) for entity ${JSON.stringify(entity, null, "\t")}\n` });
+			continue;
+		}
+		if (entity.type === "brick" && !isNum(entity.widthInStuds)) {
+			problems.push({ message: `Invalid widthInStuds for entity ${JSON.stringify(entity, null, "\t")}\n` });
+			continue;
+		}
+		if (entity.type === "brick" && entity.width !== 15 * entity.widthInStuds) {
+			problems.push({ message: `width doesn't match widthInStuds * 15 for entity ${JSON.stringify(entity, null, "\t")}\n` });
+			continue;
+		}
+
+		/* eslint-enable no-continue */
+		for (const topY of Object.keys(entitiesByTopY).map(Number)) {
+			if (
+				topY < entity.y + entity.height &&
+				topY + maxEntityHeight > entity.y
+			) {
+				for (const otherEntity of entitiesByTopY[topY]) {
+					if (
+						otherEntity !== entity &&
+						(reportedCollisions.get(entity) || []).indexOf(otherEntity) === -1 &&
+						(reportedCollisions.get(otherEntity) || []).indexOf(entity) === -1
+					) {
+						if (
+							rectanglesIntersect(
+								entity.x,
+								entity.y,
+								entity.width,
+								entity.height,
+								otherEntity.x,
+								otherEntity.y,
+								otherEntity.width,
+								otherEntity.height,
+							)
+						) {
+							const worldX = (entity.x + otherEntity.x + (entity.width + otherEntity.width) / 2) / 2;
+							const worldY = (entity.y + otherEntity.y + (entity.height + otherEntity.height) / 2) / 2;
+							problems.push({ message: `${entity.type} to ${otherEntity.type} collision`, worldX, worldY });
+							if (reportedCollisions.has(entity)) {
+								reportedCollisions.get(entity).push(otherEntity);
+							} else {
+								reportedCollisions.set(entity, [otherEntity]);
+							}
+							if (reportedCollisions.has(otherEntity)) {
+								reportedCollisions.get(otherEntity).push(entity);
+							} else {
+								reportedCollisions.set(otherEntity, [entity]);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// also detect problems with desynchronization between the recording and playback
+	if (playbackLevel?.entities) {
+		for (const entity of entities) {
+			let found = false;
+			for (const recordedEntity of playbackLevel.entities) {
+				if (entity.id === recordedEntity.id) {
+					found = true;
+					if (
+						entity.x !== recordedEntity.x ||
+						entity.y !== recordedEntity.y ||
+						entity.animationFrame !== recordedEntity.animationFrame
+					) {
+						problems.push({ message: `${entity.type} desynchronized\n(ID: ${entity.id})`, worldX: entity.x, worldY: entity.y });
+					}
+					break;
+				}
+			}
+			if (!found) {
+				problems.push({ message: `${entity.type} not found in recording, but exists in simulation\n(ID: ${entity.id})`, worldX: entity.x, worldY: entity.y });
+			}
+		}
+		for (const recordedEntity of playbackLevel.entities) {
+			let found = false;
+			for (const entity of entities) {
+				if (recordedEntity.id === entity.id) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				problems.push({ message: `${recordedEntity.type} not found in simulation, but exists in recording\n(ID: ${recordedEntity.id})`, worldX: recordedEntity.x, worldY: recordedEntity.y + 8 });
+			}
+		}
+	}
+
+	return problems;
+};
+
+// #endregion
+//
+// █████ █   █ ███ █   █ █████ █████ ███ █████ █   █    [◢◼◤◢◼◤◢◼◤◢◼◤]
+// █   █ ██  █  █  ██ ██ █   █   █    █  █   █ ██  █    [◥◼◣◥◼◣◥◼◣◥◼◣]
+// █████ █ █ █  █  █ █ █ █████   █    █  █   █ █ █ █    |__Junkbot_3_|
+// █   █ █  ██  █  █   █ █   █   █    █  █   █ █  ██    |SN_|TK_|RL__|
+// █   █ █   █ ███ █   █ █   █   █   ███ █████ █   █    |____2022____|
+//
+// #region Animation
+
+let rafid;
+window.addEventListener("error", () => {
+	// so my computer doesn't freeze up from the console logging messages about repeated errors
+	cancelAnimationFrame(rafid);
+});
 const controlViewport = () => {
 	if (!keys.ControlLeft && !keys.ControlRight && !keys.AltLeft && !keys.AltRight) {
 		if (keys.KeyW || keys.ArrowUp) {
@@ -4084,328 +5196,6 @@ const checkLevelEnd = () => {
 		}
 	}
 };
-
-window.JunkbotRenderer = {
-	js_set_alpha: (alpha) => {
-		ctx.globalAlpha = alpha;
-	},
-	js_draw_wind_column: (x, y, extent, flags) => {
-		const fan = { x: x - 15, y, width: 30, on: true, animationFrame: flags };
-		drawWind(ctx, fan, [extent]);
-	},
-	js_draw_laser_beam: (x, y, facing, extent, a, b) => {
-		const laserBrick = { x, y, facing, on: true };
-		drawLaserBeam(ctx, laserBrick, extent, null);
-	},
-	js_draw_teleport_effect: (x, y, frameIndex) => {
-		drawTeleportEffect(ctx, { x, y, frameIndex });
-	},
-	js_draw_brick: (x, y, colorIndex, widthInStuds, fixed) => {
-		// colorNames are roughly index mapped in the original JS:
-		const colors = ["red", "blue", "green", "yellow", "gray"];
-		const colorName = colors[colorIndex] || "red";
-		drawBrick(ctx, { x, y, colorName, widthInStuds, fixed: !!fixed });
-	},
-	js_draw_junkbot: (x, y, facing, animationFrame, flags) => {
-		const armored = !!(flags & 1);
-		const dead = !!(flags & 2);
-		const dyingFromWater = !!(flags & 4);
-		const collectingBin = !!(flags & 8);
-		const dying = !dyingFromWater && !dead && !!(flags & 16); // wait, dying wasn't in flags? Oh wait, in Swift: flags |= 4 if dyingFromWater, wait, dying is flags & 16? Let's check swift.
-		const losingShield = !!(flags & 32);
-		const gettingShield = !!(flags & 64);
-		drawJunkbot(ctx, { x, y, height: 18, facing, animationFrame, armored, dead, dyingFromWater, dying, collectingBin, losingShield, gettingShield });
-	},
-	js_draw_gearbot: (x, y, facing, animationFrame) => {
-		drawGearbot(ctx, { x, y, height: 18, facing, animationFrame });
-	},
-	js_draw_climbbot: (x, y, facing, facingY, animationFrame) => {
-		drawClimbbot(ctx, { x, y, height: 18, facing, facingY, animationFrame });
-	},
-	js_draw_flybot: (x, y, facing, animationFrame) => {
-		drawFlybot(ctx, { x, y, height: 18, facing, animationFrame });
-	},
-	js_draw_eyebot: (x, y, facing, facingY, animationFrame, activeTimer) => {
-		drawEyebot(ctx, { x, y, height: 18, facing, facingY, animationFrame, activeTimer });
-	},
-	js_draw_bin: (x, y, facing, scaredy, animationFrame) => {
-		drawBin(ctx, { x, y, height: 18, facing, scaredy: !!scaredy, animationFrame });
-	},
-	js_draw_crate: (x, y) => {
-		drawCrate(ctx, { x, y, height: 18 });
-	},
-	js_draw_fire: (x, y, on, animationFrame) => {
-		drawFire(ctx, { x, y, height: 18, on: !!on, animationFrame });
-	},
-	js_draw_fan: (x, y, on, animationFrame) => {
-		drawFan(ctx, { x, y, height: 18, on: !!on, animationFrame });
-	},
-	js_draw_switch: (x, y, on, animationFrame) => {
-		drawSwitch(ctx, { x, y, height: 18, on: !!on, animationFrame });
-	},
-	js_draw_pipe: (x, y, animationFrame) => {
-		drawPipe(ctx, { x, y, height: 18, animationFrame });
-	},
-	js_draw_shield: (x, y, used, fixed) => {
-		drawShield(ctx, { x, y, height: 18, used: !!used, fixed: !!fixed });
-	},
-	js_draw_jump: (x, y, active, animationFrame, fixed) => {
-		drawJump(ctx, { x, y, height: 18, active: !!active, animationFrame, fixed: !!fixed });
-	},
-	js_draw_teleport: (x, y, animationFrame, blocked) => {
-		drawTeleport(ctx, { x, y, height: 18, animationFrame, blocked: !!blocked });
-	},
-	js_draw_laser: (x, y, facing, on) => {
-		drawLaser(ctx, { x, y, height: 18, facing, on: !!on });
-	},
-	js_draw_droplet: (x, y, splashing, animationFrame) => {
-		drawDroplet(ctx, { x, y, height: 18, splashing: !!splashing, animationFrame });
-	}
-};
-
-
-window.sync_entities_start = (count) => {
-	while (entities.length < count) {
-		entities.push({});
-	}
-	entities.length = count;
-};
-
-const entityTypes = [
-	"brick", "junkbot", "gearbot", "climbbot", "flybot", "eyebot", "bin",
-	"crate", "fire", "fan", "switch", "pipe", "shield", "teleport",
-	"laser", "jump", "droplet", "levelBounds", "unknown"
-];
-const engineBrickColorNames = ["red", "blue", "green", "yellow", "gray"]; // GameEngine's Entity.colorIndex convention (distinct from the editor palette's `brickColorNames`)
-
-
-window.sync_entity_1 = (i, id, typeIndex, x, y, width, height) => {
-	const e = entities[i];
-	e.id = id;
-	e.type = entityTypes[typeIndex] || "unknown";
-	e.x = x;
-	e.y = y;
-	e.width = width;
-	e.height = height;
-};
-
-window.sync_entity_2 = (i, facing, facingY, animationFrame, widthInStuds, colorIndex, switchID) => {
-	const e = entities[i];
-	e.facing = facing;
-	e.facingY = facingY;
-	e.animationFrame = animationFrame;
-	e.widthInStuds = widthInStuds;
-	e.colorName = engineBrickColorNames[colorIndex] || "red";
-	e.switchID = switchID;
-};
-
-window.sync_entity_3 = (i, teleportID, timer, activeTimer, flags) => {
-	const e = entities[i];
-	e.teleportID = teleportID;
-	e.timer = timer;
-	e.activeTimer = activeTimer;
-
-	e.grabbed = !!(flags & (1 << 0));
-	e.fixed = !!(flags & (1 << 1));
-	e.floating = !!(flags & (1 << 2));
-	e.wasFloating = !!(flags & (1 << 3));
-	e.removeBeforeRender = !!(flags & (1 << 4));
-	e.armored = !!(flags & (1 << 5));
-	e.losingShield = !!(flags & (1 << 6));
-	e.gettingShield = !!(flags & (1 << 7));
-	e.dying = !!(flags & (1 << 8));
-	e.dyingFromWater = !!(flags & (1 << 9));
-	e.dead = !!(flags & (1 << 10));
-	e.collectingBin = !!(flags & (1 << 11));
-	e.headLoaded = !!(flags & (1 << 12));
-	e.scaredy = !!(flags & (1 << 13));
-	e.on = !!(flags & (1 << 14));
-	e.used = !!(flags & (1 << 15));
-	e.blocked = !!(flags & (1 << 16));
-	e.active = !!(flags & (1 << 17));
-	e.splashing = !!(flags & (1 << 18));
-};
-
-window.sync_wind_start = (count) => {
-	while (wind.length < count) {
-		wind.push({ extents: [] });
-	}
-	wind.length = count;
-};
-
-window.sync_wind_1 = (i, fanEntityIndex, numExtents, e0, e1, e2) => {
-	const w = wind[i];
-	w.fan = entities[fanEntityIndex] || {};
-	w.extents = [e0, e1, e2];
-	w.numExtents = numExtents; // Temp store
-};
-
-window.sync_wind_2 = (i, e3, e4, e5, e6, e7) => {
-	const w = wind[i];
-	w.extents.push(e3, e4, e5, e6, e7);
-	w.extents.length = w.numExtents;
-};
-
-
-window.sync_lasers_start = (count) => {
-	while (wind.length < count) {
-		wind.push({ extents: [] });
-	}
-	wind.length = count;
-};
-
-window.sync_lasers_start = (count) => {
-	while (laserBeams.length < count) {
-		laserBeams.push({});
-	}
-	laserBeams.length = count;
-};
-
-window.sync_lasers = (i, laserEntityIndex, extent, hitEntityIndex) => {
-	const l = laserBeams[i];
-	l.laserBrick = entities[laserEntityIndex] || {};
-	l.extent = extent;
-	l.hitWhat = hitEntityIndex >= 0 ? entities[hitEntityIndex] : null;
-};
-
-window.sync_teleport_effects_start = (count) => {
-	while (teleportEffects.length < count) {
-		teleportEffects.push({});
-	}
-	teleportEffects.length = count;
-};
-
-window.sync_teleport_effects = (i, x, y, frameIndex) => {
-	const t = teleportEffects[i];
-	t.x = x;
-	t.y = y;
-	t.frameIndex = frameIndex;
-};
-
-// #region Rewind + Playback
-// Restored from the original janitorial-android source: this whole region (findMisplacedEntities,
-// handleRewind, handlePlayback) was missing from this file even though `animate()` below still calls
-// handleRewind()/handlePlayback() every frame, which threw ReferenceErrors continuously.
-
-// Helps to detect desynchronization between playback and recording.
-// There's also a separate detection in the problem detection code.
-const findMisplacedEntities = (withinEntities, compareToEntities) => {
-	return withinEntities.filter((entity) => {
-		for (const compareToEntity of compareToEntities) {
-			if (
-				entity.type === compareToEntity.type &&
-				(
-					(entity.grabbed &&
-						compareToEntity.grabbed) ||
-					(entity.x === compareToEntity.x &&
-						entity.y === compareToEntity.y)
-				)
-			) {
-				return false;
-			}
-		}
-		return true;
-	});
-};
-
-let pausedForRewind = false;
-const rewindRate = 2;
-const handleRewind = () => {
-	// rewind, like in Braid etc.
-	if (keys.ShiftLeft || keys.ShiftRight || rewindingWithButton) {
-		if (!paused) {
-			pausedForRewind = true;
-			paused = true;
-			playbackLevel = diffPatcher.clone(currentLevel); // HACK
-		}
-		if (frameCounter > 0) {
-			playSound("undo", 0.1, 0.6);
-		}
-		// sort for consistency for level delta patching
-		entities.sort((a, b) => a.id - b.id);
-		for (let i = 0; i < rewindRate; i++) {
-			frameCounter -= 1;
-			if (frameCounter < 0) {
-				frameCounter = 0;
-			} else if (frameCounter > 0) { // don't undo level initialization
-				// handle playbackLevel and currentLevel separately, as
-				// they could have their own notions of what's going on
-				for (const event of playthroughEvents) {
-					if (event.t === frameCounter + 1) {
-						diffPatcher.unpatch(currentLevel, event.levelPatch);
-					}
-				}
-				for (const event of playbackEvents) {
-					if (event.t === frameCounter + 1) {
-						diffPatcher.unpatch(playbackLevel, event.levelPatch);
-					}
-				}
-			}
-		}
-	} else if (pausedForRewind) {
-		pausedForRewind = false;
-		paused = false;
-	}
-};
-const handlePlayback = () => {
-	debug("handlePlayback: frameCounter", frameCounter);
-	for (const event of playbackEvents) {
-		if (event.t === frameCounter + 1) {
-			if (event.levelPatch) {
-				// sort for consistency for level delta patching
-				playbackLevel.entities?.sort((a, b) => a.id - b.id);
-				diffPatcher.patch(playbackLevel, event.levelPatch);
-
-				// compare level state to see if it's desynchronized
-				if (currentLevel.name !== playbackLevel.name) {
-					desynchronized = true;
-					paused = true;
-					showErrorMessage("Wrong level for playback.");
-					return;
-				}
-				const misplacedInSimulation = findMisplacedEntities(entities, playbackLevel.entities);
-				const misplacedInRecording = findMisplacedEntities(playbackLevel.entities, entities);
-				if (misplacedInSimulation.length || misplacedInRecording.length) {
-					desynchronized = true;
-					for (const entity of [...misplacedInSimulation, ...misplacedInRecording]) {
-						entity.misplaced = true;
-					}
-				}
-			}
-
-			const playbackMouse = { worldX: event.x, worldY: event.y };
-			const { x, y } = worldToCanvas(playbackMouse.worldX, playbackMouse.worldY);
-			playbackMouse.x = x;
-			playbackMouse.y = y;
-			if (event.type === "pickup") {
-				const grabs = possibleGrabs(playbackMouse);
-				if (grabs && !dragging.length) {
-					if (event.grabType === "upward") {
-						startGrab(grabs.upward, { grabType: "upward", duringPlayback: true, mouse: playbackMouse });
-					} else if (event.grabType === "downward") {
-						startGrab(grabs.downward, { grabType: "downward", duringPlayback: true, mouse: playbackMouse });
-					} else {
-						startGrab(grabs[0], { grabType: "single", duringPlayback: true, mouse: playbackMouse });
-					}
-				} else {
-					desynchronized = true;
-				}
-			} else if (event.type === "place") {
-				updateDrag(playbackMouse);
-				finishDrag({ duringPlayback: true, mouse: playbackMouse });
-			} else if (event.type === "pointer") {
-				updateDrag(playbackMouse);
-				mouse.worldX = playbackMouse.worldX;
-				mouse.worldY = playbackMouse.worldY;
-				mouse.x = playbackMouse.x;
-				mouse.y = playbackMouse.y;
-				playthroughEvents.push(event); // preserve this information in case of re-saving a recording from playback
-			}
-		}
-	}
-};
-// #endregion
-
 const animate = () => {
 	rafid = requestAnimationFrame(animate);
 
@@ -4427,7 +5217,7 @@ const animate = () => {
 		debug("TIME SINCE LAST SIMULATE", timeSinceLastSimulate);
 		if (timeSinceLastSimulate >= 1000 / targetFPS) {
 			debug("REMAINDER MILLISECONDS", timeSinceLastSimulate - 1000 / targetFPS);
-			if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { simulate(entities); } }
+			simulate(entities);
 			smoothedFrameTime += (timeSinceLastSimulate - smoothedFrameTime) / fpsSmoothing;
 			lastSimulateTime = now;
 		}
@@ -5550,7 +6340,7 @@ const runTests = async () => {
 			await new Promise((resolve) => {
 				requestAnimationFrame(resolve); // accounts for one time step, with `++` above and `- 1` below (assuming animation loop is running)
 				for (let i = 0; i < testSpeedInput.valueAsNumber - 1; i++) {
-					if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { if (window.JunkbotWasm) { window.JunkbotWasm.game_tick(); } else { simulate(entities); } }
+					simulate(entities);
 					timeStep += 1;
 					if (checkTestEnd()) {
 						break;
