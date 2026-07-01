@@ -9,7 +9,7 @@ extension JSValue {
   static func array(_ values: [JSValue]) -> JSValue {
     let array = JSObject.global["Array"].function!.new()
     for value in values {
-      _ = array.push(value)
+      _ = array.push!(value)
     }
     return array.jsValue
   }
@@ -972,7 +972,7 @@ var entityMoved = { (entity: JSValue) in
   let topY = entity.y.number ?? 0
   let bottomY = topY + (entity.height.number ?? 0)
 
-  var yKeys = lastKeys.get(entity)
+  var yKeys = lastKeys.get!(entity)
   if yKeys.isUndefined || yKeys.isNull {
     yKeys = .object(JSObject.global.Object.function!.new())
   }
@@ -990,7 +990,7 @@ var entityMoved = { (entity: JSValue) in
   yKeys.bottomY = .number(bottomY)
   entitiesByTopY[topY]?.append(entity)
   entitiesByBottomY[bottomY]?.append(entity)
-  _ = lastKeys.set(entity, yKeys)
+  _ = lastKeys.set!(entity, yKeys)
 }
 
 var updateAccelerationStructures = { () in
