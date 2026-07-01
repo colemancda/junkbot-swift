@@ -205,6 +205,7 @@ let moves = 0; // your score (lower is better); only picking up bricks counts, n
 let frameCounter = 0; // for precise recording/playback
 let desynchronized = false;
 let idCounter = 0;
+const useSwiftGameEngine = true;
 const getID = () => {
 	idCounter += 1;
 	return idCounter;
@@ -1441,6 +1442,7 @@ const resetAndInit = (level) => {
 			entity.id = getID();
 		}
 	}
+	window.JunkbotWasm.engineLoadLevel(currentLevel, idCounter);
 	winLoseState = winOrLose(); // in case there's no bins, don't say OH YEAH; and in case there's no junkbots, don't consider it a lose
 	updateEditorUIForLevelChange(currentLevel);
 };
@@ -3832,6 +3834,27 @@ const handlePlayback = () => {
 // #region Simulate! (simulation main)
 
 const simulate = (entities) => {
+	if (useSwiftGameEngine) {
+		const levelForSimulation = entities === currentLevel.entities ? currentLevel : { ...currentLevel, entities };
+		const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter);
+		frameCounter = result.frameCounter;
+		if (result.collectedBin) {
+			collectBinTime = Date.now();
+		}
+		// sort for consistency for level delta patching
+		entities.sort((a, b) => a.id - b.id);
+		playthroughEvents.push({
+			type: "step",
+			t: frameCounter,
+			x: mouse.worldX,
+			y: mouse.worldY,
+			editing,
+			levelPatch: diffPatcher.clone(diffPatcher.diff(levelLastFrame, currentLevel)),
+		});
+		levelLastFrame = diffPatcher.clone(currentLevel);
+		return;
+	}
+
 	frameCounter += 1;
 
 	updateAccelerationStructures();

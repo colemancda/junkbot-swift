@@ -5,6 +5,460 @@ nonisolated(unsafe) let window = JSObject.global
 _ = window.console.log("Swift: module started")
 let exports = JSObject.global.Object.function!.new()
 let document = window.document.object!
+let gameEngine = GameEngine()
+
+extension GameEngine {
+    func rectanglesIntersectExport(_ args: [JSValue]) -> JSValue {
+        let ax = Int32(args[0].number ?? 0)
+        let ay = Int32(args[1].number ?? 0)
+        let aw = Int32(args[2].number ?? 0)
+        let ah = Int32(args[3].number ?? 0)
+
+        let bx = Int32(args[4].number ?? 0)
+        let by = Int32(args[5].number ?? 0)
+        let bw = Int32(args[6].number ?? 0)
+        let bh = Int32(args[7].number ?? 0)
+
+        return .boolean(rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh))
+    }
+
+    func rectangleLevelBoundsCollisionTestExport(_ args: [JSValue]) -> JSValue {
+        let x = Int32(args[0].number ?? 0)
+        let y = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        return rectangleLevelBoundsCollisionObject(x: x, y: y, width: width, height: height) ?? .undefined
+    }
+
+    func rectangleCollisionTestExport(_ args: [JSValue]) -> JSValue {
+        let x = Int32(args[0].number ?? 0)
+        let y = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        guard let filter = args[4].function, let entities = args[5].object else { return .null }
+
+        return rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
+            ?? .null
+    }
+
+    func rectangleCollisionAllExport(_ args: [JSValue]) -> JSValue {
+        let x = Int32(args[0].number ?? 0)
+        let y = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        guard let filter = args[4].function, let entities = args[5].object else { return [JSValue]().jsValue }
+
+        return rectangleCollisionAll(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
+            .jsValue
+    }
+
+    func raycastExport(_ args: [JSValue]) -> JSValue {
+        let startX = Int32(args[0].number ?? 0)
+        let startY = Int32(args[1].number ?? 0)
+        let width = Int32(args[2].number ?? 0)
+        let height = Int32(args[3].number ?? 0)
+        let directionX = Int32(args[4].number ?? 0)
+        let directionY = Int32(args[5].number ?? 0)
+        let maxSteps = Int32(args[6].number ?? 0)
+        guard let filter = args[7].function, let entities = args[8].object else { return .undefined }
+        let onStep = args[9].function
+
+        var x = startX
+        var y = startY
+        var steps: Int32 = 0
+        let result = JSObject.global.Object.function!.new()
+        while steps < maxSteps {
+            x += CELL_W * directionX
+            y += CELL_H * directionY
+            _ = onStep?(x, y, width, height)
+            if let hit = rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities) {
+                result.steps = Double(steps).jsValue
+                result.hit = hit
+                return result.jsValue
+            }
+            steps += 1
+        }
+        result.steps = Double(steps).jsValue
+        result.hit = .null
+        return result.jsValue
+    }
+
+    func sortEntitiesForRenderingExport(_ args: [JSValue]) -> JSValue {
+        guard let array = args[0].object else { return .undefined }
+        let length = Int(array.length.number ?? 0)
+        guard length > 1 else { return .undefined }
+
+        let elements = (0..<length).map { array[$0] }
+        let boxes = elements.map { element -> RenderBox in
+            let obj = element.object!
+            return RenderBox(
+                x: obj.x.number ?? 0,
+                y: obj.y.number ?? 0,
+                width: obj.width.number ?? 0,
+                height: obj.height.number ?? 0
+            )
+        }
+
+        let order = sortOrderForRendering(boxes)
+        for i in 0..<length {
+            array[i] = elements[order[i]]
+        }
+
+        return .undefined
+    }
+
+    func winOrLoseExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object else { return .string("") }
+        let length = Int(entities.length.number ?? 0)
+
+        var anyJunkbotAlive = false
+        var anyJunkbotAliveNotDying = false
+        var anyBin = false
+        var allNotCollectingBin = true
+
+        for i in 0..<length {
+            guard let e = entities[i].object else { continue }
+            let type = e.type.jsString
+            if type == junkbotType {
+                let dead = e.dead.boolean == true
+                let dying = e.dying.boolean == true
+                if !dead {
+                    anyJunkbotAlive = true
+                    if !dying { anyJunkbotAliveNotDying = true }
+                }
+            }
+            if type == binType { anyBin = true }
+            if e.collectingBin.boolean == true { allNotCollectingBin = false }
+        }
+
+        if !anyJunkbotAlive { return .string("lose") }
+        if anyJunkbotAliveNotDying && !anyBin && allNotCollectingBin {
+            return .string("win")
+        }
+        return .string("")
+    }
+
+    func rebuildAccelerationStructuresExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object else { return .undefined }
+        let length = Int(entities.length.number ?? 0)
+
+        var elements: [JSValue] = []
+        var extents: [YExtent] = []
+        elements.reserveCapacity(length)
+        extents.reserveCapacity(length)
+        for i in 0..<length {
+            let element = entities[i]
+            elements.append(element)
+            let obj = element.object
+            let y = Int32(obj?.y.number ?? 0)
+            let height = Int32(obj?.height.number ?? 0)
+            extents.append(YExtent(top: y, bottom: y + height))
+        }
+
+        let (byTop, byBottom) = groupIndicesByY(extents)
+
+        func buildMap(_ grouping: [Int32: [Int]]) -> JSValue {
+            let obj = JSObject.global.Object.function!.new()
+            for (y, indices) in grouping {
+                obj[Int(y)] = indices.map { elements[$0] }.jsValue
+            }
+            return obj.jsValue
+        }
+
+        let result = JSObject.global.Object.function!.new()
+        result.byTopY = buildMap(byTop)
+        result.byBottomY = buildMap(byBottom)
+        return result.jsValue
+    }
+
+    func connectsExport(_ args: [JSValue]) -> JSValue {
+        guard let a = args[0].object, let b = args[1].object else { return .boolean(false) }
+        let direction = Int32(args[2].number ?? 0)
+        return .boolean(entitiesConnect(a, b, direction: direction))
+    }
+
+    func connectsToFixedExport(_ args: [JSValue]) -> JSValue {
+        guard let startEntity = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return .boolean(false) }
+        let direction = Int32(args[3].number ?? 0)
+        let ignoreEntities = jsObjectArray(args[4])
+
+        return .boolean(
+            connectsToFixedCore(
+                startEntity: startEntity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                direction: direction, ignoreEntities: ignoreEntities))
+    }
+
+    func allConnectedToFixedExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object,
+            let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return [JSValue]().jsValue }
+        let ignoreEntities = jsObjectArray(args[3])
+
+        var connectedToFixed: [JSObject] = []
+        var connectedToFixedValues: [JSValue] = []
+
+        func addAnyAttached(_ entity: JSObject) {
+            let ex = Int32(entity.x.number ?? 0), ey = Int32(entity.y.number ?? 0)
+            let ew = Int32(entity.width.number ?? 0), eh = Int32(entity.height.number ?? 0)
+            let candidates = yBucket(entitiesByTopY, ey + eh) + yBucket(entitiesByBottomY, ey)
+            for otherValue in candidates {
+                guard let otherEntity = otherValue.object else { continue }
+                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
+                guard ex + ew > ox && ex < ox + ow else { continue }
+                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
+                if connectedToFixed.contains(where: { $0 == otherEntity }) { continue }
+                connectedToFixed.append(otherEntity)
+                connectedToFixedValues.append(otherValue)
+                addAnyAttached(otherEntity)
+            }
+        }
+
+        let length = Int(entities.length.number ?? 0)
+        for i in 0..<length {
+            let entityValue = entities[i]
+            guard let entity = entityValue.object else { continue }
+            if ignoreEntities.contains(where: { $0 == entity }) { continue }
+            if connectedToFixed.contains(where: { $0 == entity }) { continue }
+            if entity.fixed.boolean == true {
+                connectedToFixed.append(entity)
+                connectedToFixedValues.append(entityValue)
+                addAnyAttached(entity)
+            }
+        }
+
+        return connectedToFixedValues.jsValue
+    }
+
+    func makeEntityExport(_ kind: JSString, _ args: [JSValue]) -> JSValue {
+        let id = args[0]
+        let x = args[1]
+        let y = args[2]
+
+        if kind == "brick" {
+            let widthInStuds = args[3]
+            let colorName = args[4]
+            let fixed = args[5]
+            let obj = makeEntityBase(
+                id: id, type: "brick", x: x, y: y,
+                width: Int32(widthInStuds.number ?? 0) * CELL_W, height: CELL_H)
+            obj.widthInStuds = widthInStuds
+            obj.colorName = colorName
+            obj.fixed = fixed
+            return obj.jsValue
+        }
+        if kind == junkbotType {
+            let obj = makeEntityBase(id: id, type: "junkbot", x: x, y: y, width: 2 * CELL_W, height: 4 * CELL_H)
+            obj.facing = args[3]
+            obj.armored = args[4]
+            obj.losingShield = .boolean(false)
+            obj.losingShieldTime = .number(0)
+            obj.animationFrame = .number(0)
+            obj.headLoaded = .boolean(false)
+            return obj.jsValue
+        }
+        if kind == gearbotType {
+            let obj = makeEntityBase(id: id, type: "gearbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == climbbotType {
+            let obj = makeEntityBase(id: id, type: "climbbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.facingY = args[4]
+            obj.animationFrame = .number(0)
+            obj.energy = .number(0)
+            return obj.jsValue
+        }
+        if kind == flybotType {
+            let obj = makeEntityBase(id: id, type: "flybot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == eyebotType {
+            let obj = makeEntityBase(id: id, type: "eyebot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
+            obj.facing = args[3]
+            obj.facingY = args[4]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == binType {
+            let obj = makeEntityBase(id: id, type: "bin", x: x, y: y, width: 2 * CELL_W, height: 3 * CELL_H)
+            obj.facing = args[3]
+            obj.scaredy = args[4]
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        if kind == crateType {
+            return makeEntityBase(id: id, type: "crate", x: x, y: y, width: 3 * CELL_W, height: 2 * CELL_H).jsValue
+        }
+        if kind == fireType {
+            let obj = makeEntityBase(id: id, type: "fire", x: x, y: y, width: 4 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.animationFrame = .number(0)
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == fanType {
+            let obj = makeEntityBase(id: id, type: "fan", x: x, y: y, width: 4 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.animationFrame = .number(0)
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == laserType {
+            let obj = makeEntityBase(id: id, type: "laser", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.animationFrame = .number(0)
+            obj.facing = args[5]
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == switchType {
+            let obj = makeEntityBase(id: id, type: "switch", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.on = args[3]
+            obj.switchID = args[4]
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == teleportType {
+            let obj = makeEntityBase(id: id, type: "teleport", x: x, y: y, width: 4 * CELL_W, height: CELL_H)
+            obj.teleportID = args[3]
+            obj.fixed = .boolean(true)
+            obj.timer = .number(0)
+            return obj.jsValue
+        }
+        if kind == jumpType {
+            let obj = makeEntityBase(id: id, type: "jump", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.animationFrame = .number(0)
+            obj.fixed = args[3]
+            return obj.jsValue
+        }
+        if kind == shieldType {
+            let obj = makeEntityBase(id: id, type: "shield", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.fixed = args[4]
+            obj.used = args[3]
+            return obj.jsValue
+        }
+        if kind == "pipe" {
+            let obj = makeEntityBase(id: id, type: "pipe", x: x, y: y, width: 2 * CELL_W, height: CELL_H)
+            obj.timer = .number(-1)
+            obj.fixed = .boolean(true)
+            return obj.jsValue
+        }
+        if kind == dropletType {
+            let obj = makeEntityBase(id: id, type: "droplet", x: x, y: y, width: CELL_W, height: CELL_H)
+            obj.splashing = .boolean(false)
+            obj.animationFrame = .number(0)
+            return obj.jsValue
+        }
+        return .undefined
+    }
+
+    func findMisplacedEntitiesExport(_ args: [JSValue]) -> JSValue {
+        guard let within = args[0].object, let compareTo = args[1].object else { return [JSValue]().jsValue }
+
+        let compareLength = Int(compareTo.length.number ?? 0)
+        let compareEntities = (0..<compareLength).compactMap { compareTo[$0].object }
+
+        let withinLength = Int(within.length.number ?? 0)
+        var result: [JSValue] = []
+        for i in 0..<withinLength {
+            let entityValue = within[i]
+            guard let entity = entityValue.object else { continue }
+            let entityType = entity.type.jsString
+            let entityGrabbed = entity.grabbed.boolean == true
+            let ex = entity.x.number, ey = entity.y.number
+
+            var misplaced = true
+            for compareToEntity in compareEntities {
+                guard entityType == compareToEntity.type.jsString else { continue }
+                if entityGrabbed && compareToEntity.grabbed.boolean == true {
+                    misplaced = false
+                    break
+                }
+                if ex == compareToEntity.x.number && ey == compareToEntity.y.number {
+                    misplaced = false
+                    break
+                }
+            }
+            if misplaced { result.append(entityValue) }
+        }
+        return result.jsValue
+    }
+
+    func engineLoadLevelExport(_ args: [JSValue]) -> JSValue {
+        guard let level = args[0].object else { return .undefined }
+
+        let nextID = Int32(args[1].number ?? 0)
+        let state = engineLevelState(from: level)
+        loadLevelState(entities: state.entities, levelBounds: state.bounds, nextID: nextID)
+        return .undefined
+    }
+
+    func engineTickExport(_ args: [JSValue]) -> JSValue {
+        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
+            let teleportEffects = args[3].object, let level = args[4].object, let playSound = args[6].function
+        else { return .undefined }
+        let nextID = Int32(args[5].number ?? 0)
+        frameCounter = Int32(args[7].number ?? Double(frameCounter))
+
+        var collectedBin = false
+        onPlaySound = { id in
+            if id == 6 { collectedBin = true }
+            guard let soundName = engineSoundName(id) else { return }
+            _ = playSound(soundName)
+        }
+
+        let state = engineLevelState(from: level)
+        replaceLiveState(entities: state.entities, levelBounds: state.bounds, nextID: nextID)
+        tick()
+        syncEngineEntities(to: entities)
+        syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
+
+        let result = JSObject.global.Object.function!.new()
+        result.frameCounter = frameCounter.jsValue
+        result.collectedBin = collectedBin.jsValue
+        return result.jsValue
+    }
+
+    func hurtJunkbotExport(_ args: [JSValue]) -> JSValue {
+        guard let junkbot = args[0].object, let playSound = args[2].function else { return .undefined }
+        hurtJunkbotCore(junkbot: junkbot, cause: args[1].jsString, playSound: playSound)
+        return .undefined
+    }
+
+    func walkExport(_ args: [JSValue]) -> JSValue {
+        guard let junkbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
+            let playSound = args[3].function
+        else { return .undefined }
+        let turned = walkCore(junkbot: junkbot, entities: entities, entityMoved: entityMoved, playSound: playSound)
+        return turned ? .string("turned") : .undefined
+    }
+
+    func simulateJumpExport(_ args: [JSValue]) -> JSValue {
+        guard let jump = args[0].object else { return .undefined }
+        jump.animationFrame = (Int32(jump.animationFrame.number ?? 0) + 1).jsValue
+        if Int32(jump.animationFrame.number ?? 0) >= 5 {
+            jump.animationFrame = .number(0)
+            jump.active = .boolean(false)
+        }
+        return .undefined
+    }
+
+    func findLinkedTeleportExport(_ args: [JSValue]) -> JSValue {
+        guard let teleport = args[0].object, let entities = args[1].object else { return .undefined }
+        return findLinkedTeleportCore(teleport: teleport, entities: entities)?.jsValue ?? .undefined
+    }
+}
 
 let dropletType: JSString = "droplet"
 let binType: JSString = "bin"
@@ -26,6 +480,94 @@ let jumpType: JSString = "jump"
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
 
+func engineEntityType(_ jsType: JSString?) -> EntityType {
+    if jsType == "brick" { return .brick }
+    if jsType == junkbotType { return .junkbot }
+    if jsType == gearbotType { return .gearbot }
+    if jsType == climbbotType { return .climbbot }
+    if jsType == flybotType { return .flybot }
+    if jsType == eyebotType { return .eyebot }
+    if jsType == binType { return .bin }
+    if jsType == crateType { return .crate }
+    if jsType == fireType { return .fire }
+    if jsType == fanType { return .fan }
+    if jsType == switchType { return .switch }
+    if jsType == "pipe" { return .pipe }
+    if jsType == shieldType { return .shield }
+    if jsType == teleportType { return .teleport }
+    if jsType == laserType { return .laser }
+    if jsType == jumpType { return .jump }
+    if jsType == dropletType { return .droplet }
+    return .unknown
+}
+
+func engineEntityTypeName(_ type: EntityType) -> JSValue {
+    switch type {
+    case .brick: return "brick".jsValue
+    case .junkbot: return "junkbot".jsValue
+    case .gearbot: return "gearbot".jsValue
+    case .climbbot: return "climbbot".jsValue
+    case .flybot: return "flybot".jsValue
+    case .eyebot: return "eyebot".jsValue
+    case .bin: return "bin".jsValue
+    case .crate: return "crate".jsValue
+    case .fire: return "fire".jsValue
+    case .fan: return "fan".jsValue
+    case .switch: return "switch".jsValue
+    case .pipe: return "pipe".jsValue
+    case .shield: return "shield".jsValue
+    case .teleport: return "teleport".jsValue
+    case .laser: return "laser".jsValue
+    case .jump: return "jump".jsValue
+    case .droplet: return "droplet".jsValue
+    case .levelBounds: return "levelBounds".jsValue
+    case .unknown: return "unknown".jsValue
+    }
+}
+
+func engineSoundName(_ id: Int32) -> JSValue? {
+    switch id {
+    case 0: return "turn".jsValue
+    case 1: return "blockPickUp".jsValue
+    case 2: return "blockDrop".jsValue
+    case 3: return "blockClick".jsValue
+    case 4: return "fall".jsValue
+    case 5: return "headBonk".jsValue
+    case 6: return "collectBin".jsValue
+    case 7: return "collectBin2".jsValue
+    case 8: return "switchClick".jsValue
+    case 9: return "switchOn".jsValue
+    case 10: return "switchOff".jsValue
+    case 11: return "deathByFire".jsValue
+    case 12: return "deathByWater".jsValue
+    case 13: return "deathByLaser".jsValue
+    case 14: return "deathByBot".jsValue
+    case 15: return "getShield".jsValue
+    case 16: return "getPowerup".jsValue
+    case 17: return "losePowerup".jsValue
+    case 18: return "teleport".jsValue
+    case 22: return "jump".jsValue
+    case 23: return "fan".jsValue
+    case 24: return "drip0".jsValue
+    case 25: return "drip1".jsValue
+    case 26: return "drip2".jsValue
+    case 27: return "undo".jsValue
+    default: return nil
+    }
+}
+
+func deleteJSProperty(_ object: JSObject, _ property: String) {
+    _ = window.Reflect.deleteProperty(object, property)
+}
+
+func int32Property(_ object: JSObject, _ name: String, default defaultValue: Int32 = 0) -> Int32 {
+    Int32(object[name].number ?? Double(defaultValue))
+}
+
+func boolProperty(_ object: JSObject, _ name: String) -> Bool {
+    object[name].boolean == true
+}
+
 func entityType(_ e: JSObject) -> JSString? { e.type.jsString }
 func isNotDroplet(_ e: JSObject) -> Bool { entityType(e) != dropletType }
 func isNotBinOrDroplet(_ e: JSObject) -> Bool { entityType(e) != binType && isNotDroplet(e) }
@@ -34,13 +576,6 @@ func isNotBinOrDropletOrEnemyBot(_ e: JSObject) -> Bool {
         && entityType(e) != flybotType && entityType(e) != eyebotType
 }
 func isNotDropletOrJunkbot(_ e: JSObject) -> Bool { isNotDroplet(e) && entityType(e) != junkbotType }
-
-func rectanglesIntersect(
-    _ ax: Int32, _ ay: Int32, _ aw: Int32, _ ah: Int32,
-    _ bx: Int32, _ by: Int32, _ bw: Int32, _ bh: Int32
-) -> Bool {
-    ax + aw > bx && ax < bx + bw && ay + ah > by && ay < by + bh
-}
 
 /// Reads `window.currentLevel.bounds` directly rather than mirroring it into a Swift-side global:
 /// game.js declares `currentLevel` with `var` (not `let`) specifically so it's a real
@@ -69,23 +604,22 @@ func rectangleLevelBoundsCollision(x: Int32, y: Int32, width: Int32, height: Int
 }
 
 exports.rectanglesIntersect =
-    JSClosure { args in
-        let ax = Int32(args[0].number ?? 0)
-        let ay = Int32(args[1].number ?? 0)
-        let aw = Int32(args[2].number ?? 0)
-        let ah = Int32(args[3].number ?? 0)
+    JSClosure { args in gameEngine.rectanglesIntersectExport(args) }.jsValue
 
-        let bx = Int32(args[4].number ?? 0)
-        let by = Int32(args[5].number ?? 0)
-        let bw = Int32(args[6].number ?? 0)
-        let bh = Int32(args[7].number ?? 0)
-
-        let intersects = rectanglesIntersect(ax, ay, aw, ah, bx, by, bw, bh)
-
-        return .boolean(intersects)
-    }.jsValue
+func levelBoundsObject(from entity: Entity) -> JSValue {
+    let obj = JSObject.global.Object.function!.new()
+    obj.type = "levelBounds".jsValue
+    obj.x = entity.x.jsValue
+    obj.y = entity.y.jsValue
+    obj.width = entity.width.jsValue
+    obj.height = entity.height.jsValue
+    return obj.jsValue
+}
 
 func rectangleLevelBoundsCollisionObject(x: Int32, y: Int32, width: Int32, height: Int32) -> JSValue? {
+    if let bounds = gameEngine.rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height) {
+        return levelBoundsObject(from: bounds)
+    }
     guard let r = rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height) else {
         return nil
     }
@@ -121,7 +655,7 @@ func rectangleCollisionCore(
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
         let oh = Int32(otherObj.height.number ?? 0)
-        if rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
+        if gameEngine.rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
             return other
         }
     }
@@ -149,7 +683,7 @@ func rectangleCollisionAllCore(
         let oy = Int32(otherObj.y.number ?? 0)
         let ow = Int32(otherObj.width.number ?? 0)
         let oh = Int32(otherObj.height.number ?? 0)
-        if rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
+        if gameEngine.rectanglesIntersect(x, y, width, height, ox, oy, ow, oh) {
             result.append(other)
         }
     }
@@ -220,163 +754,25 @@ func raycastCore(
 }
 
 exports.rectangleLevelBoundsCollisionTest =
-    JSClosure { args in
-        let x = Int32(args[0].number ?? 0)
-        let y = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        return rectangleLevelBoundsCollisionObject(x: x, y: y, width: width, height: height) ?? .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.rectangleLevelBoundsCollisionTestExport(args) }.jsValue
 
 exports.rectangleCollisionTest =
-    JSClosure { args in
-        let x = Int32(args[0].number ?? 0)
-        let y = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        guard let filter = args[4].function, let entities = args[5].object else { return .null }
-
-        return rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
-            ?? .null
-    }.jsValue
+    JSClosure { args in gameEngine.rectangleCollisionTestExport(args) }.jsValue
 
 exports.rectangleCollisionAll =
-    JSClosure { args in
-        let x = Int32(args[0].number ?? 0)
-        let y = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        guard let filter = args[4].function, let entities = args[5].object else { return [JSValue]().jsValue }
-
-        return rectangleCollisionAll(x: x, y: y, width: width, height: height, filter: filter, entities: entities)
-            .jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.rectangleCollisionAllExport(args) }.jsValue
 
 exports.raycast =
-    JSClosure { args in
-        let startX = Int32(args[0].number ?? 0)
-        let startY = Int32(args[1].number ?? 0)
-        let width = Int32(args[2].number ?? 0)
-        let height = Int32(args[3].number ?? 0)
-        let directionX = Int32(args[4].number ?? 0)
-        let directionY = Int32(args[5].number ?? 0)
-        let maxSteps = Int32(args[6].number ?? 0)
-        guard let filter = args[7].function, let entities = args[8].object else { return .undefined }
-        let onStep = args[9].function
-
-        var x = startX
-        var y = startY
-        var steps: Int32 = 0
-        let result = JSObject.global.Object.function!.new()
-        while steps < maxSteps {
-            x += CELL_W * directionX
-            y += CELL_H * directionY
-            _ = onStep?(x, y, width, height)
-            if let hit = rectangleCollision(x: x, y: y, width: width, height: height, filter: filter, entities: entities) {
-                result.steps = Double(steps).jsValue
-                result.hit = hit
-                return result.jsValue
-            }
-            steps += 1
-        }
-        result.steps = Double(steps).jsValue
-        result.hit = .null
-        return result.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.raycastExport(args) }.jsValue
 
 exports.sortEntitiesForRendering =
-    JSClosure { args in
-        guard let array = args[0].object else { return .undefined }
-        let length = Int(array.length.number ?? 0)
-        guard length > 1 else { return .undefined }
-
-        let elements = (0..<length).map { array[$0] }
-        let boxes = elements.map { element -> RenderBox in
-            let obj = element.object!
-            return RenderBox(
-                x: obj.x.number ?? 0,
-                y: obj.y.number ?? 0,
-                width: obj.width.number ?? 0,
-                height: obj.height.number ?? 0
-            )
-        }
-
-        let order = sortOrderForRendering(boxes)
-        for i in 0..<length {
-            array[i] = elements[order[i]]
-        }
-
-        return .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.sortEntitiesForRenderingExport(args) }.jsValue
 
 exports.winOrLose =
-    JSClosure { args in
-        guard let entities = args[0].object else { return .string("") }
-        let length = Int(entities.length.number ?? 0)
-
-        let junkbotType: JSString = "junkbot"
-        let binType: JSString = "bin"
-
-        var anyJunkbotAlive = false
-        var anyJunkbotAliveNotDying = false
-        var anyBin = false
-        var allNotCollectingBin = true
-
-        for i in 0..<length {
-            guard let e = entities[i].object else { continue }
-            let type = e.type.jsString
-            if type == junkbotType {
-                let dead = e.dead.boolean == true
-                let dying = e.dying.boolean == true
-                if !dead {
-                    anyJunkbotAlive = true
-                    if !dying { anyJunkbotAliveNotDying = true }
-                }
-            }
-            if type == binType { anyBin = true }
-            if e.collectingBin.boolean == true { allNotCollectingBin = false }
-        }
-
-        if !anyJunkbotAlive { return .string("lose") }
-        if anyJunkbotAliveNotDying && !anyBin && allNotCollectingBin {
-            return .string("win")
-        }
-        return .string("")
-    }.jsValue
+    JSClosure { args in gameEngine.winOrLoseExport(args) }.jsValue
 
 exports.rebuildAccelerationStructures =
-    JSClosure { args in
-        guard let entities = args[0].object else { return .undefined }
-        let length = Int(entities.length.number ?? 0)
-
-        var elements: [JSValue] = []
-        var extents: [YExtent] = []
-        elements.reserveCapacity(length)
-        extents.reserveCapacity(length)
-        for i in 0..<length {
-            let element = entities[i]
-            elements.append(element)
-            let obj = element.object
-            let y = Int32(obj?.y.number ?? 0)
-            let height = Int32(obj?.height.number ?? 0)
-            extents.append(YExtent(top: y, bottom: y + height))
-        }
-
-        let (byTop, byBottom) = groupIndicesByY(extents)
-
-        func buildMap(_ grouping: [Int32: [Int]]) -> JSValue {
-            let obj = JSObject.global.Object.function!.new()
-            for (y, indices) in grouping {
-                obj[Int(y)] = indices.map { elements[$0] }.jsValue
-            }
-            return obj.jsValue
-        }
-
-        let result = JSObject.global.Object.function!.new()
-        result.byTopY = buildMap(byTop)
-        result.byBottomY = buildMap(byBottom)
-        return result.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.rebuildAccelerationStructuresExport(args) }.jsValue
 
 func entitiesConnect(_ a: JSObject, _ b: JSObject, direction: Int32) -> Bool {
     let ax = Int32(a.x.number ?? 0), ay = Int32(a.y.number ?? 0)
@@ -400,11 +796,7 @@ func jsObjectArray(_ value: JSValue) -> [JSObject] {
 }
 
 exports.connects =
-    JSClosure { args in
-        guard let a = args[0].object, let b = args[1].object else { return .boolean(false) }
-        let direction = Int32(args[2].number ?? 0)
-        return .boolean(entitiesConnect(a, b, direction: direction))
-    }.jsValue
+    JSClosure { args in gameEngine.connectsExport(args) }.jsValue
 
 func connectsToFixedCore(
     startEntity: JSObject, entitiesByTopY: JSObject, entitiesByBottomY: JSObject,
@@ -445,95 +837,13 @@ func connectsToFixedCore(
 }
 
 exports.connectsToFixed =
-    JSClosure { args in
-        guard let startEntity = args[0].object,
-            let entitiesByTopY = args[1].object,
-            let entitiesByBottomY = args[2].object
-        else { return .boolean(false) }
-        let direction = Int32(args[3].number ?? 0)
-        let ignoreEntities = jsObjectArray(args[4])
-
-        return .boolean(
-            connectsToFixedCore(
-                startEntity: startEntity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
-                direction: direction, ignoreEntities: ignoreEntities))
-    }.jsValue
+    JSClosure { args in gameEngine.connectsToFixedExport(args) }.jsValue
 
 exports.allConnectedToFixed =
-    JSClosure { args in
-        guard let entities = args[0].object,
-            let entitiesByTopY = args[1].object,
-            let entitiesByBottomY = args[2].object
-        else { return [JSValue]().jsValue }
-        let ignoreEntities = jsObjectArray(args[3])
-
-        var connectedToFixed: [JSObject] = []
-        var connectedToFixedValues: [JSValue] = []
-
-        func addAnyAttached(_ entity: JSObject) {
-            let ex = Int32(entity.x.number ?? 0), ey = Int32(entity.y.number ?? 0)
-            let ew = Int32(entity.width.number ?? 0), eh = Int32(entity.height.number ?? 0)
-            let candidates = yBucket(entitiesByTopY, ey + eh) + yBucket(entitiesByBottomY, ey)
-            for otherValue in candidates {
-                guard let otherEntity = otherValue.object else { continue }
-                let ox = Int32(otherEntity.x.number ?? 0), ow = Int32(otherEntity.width.number ?? 0)
-                guard ex + ew > ox && ex < ox + ow else { continue }
-                if ignoreEntities.contains(where: { $0 == otherEntity }) { continue }
-                if connectedToFixed.contains(where: { $0 == otherEntity }) { continue }
-                connectedToFixed.append(otherEntity)
-                connectedToFixedValues.append(otherValue)
-                addAnyAttached(otherEntity)
-            }
-        }
-
-        let length = Int(entities.length.number ?? 0)
-        for i in 0..<length {
-            let entityValue = entities[i]
-            guard let entity = entityValue.object else { continue }
-            if ignoreEntities.contains(where: { $0 == entity }) { continue }
-            if connectedToFixed.contains(where: { $0 == entity }) { continue }
-            if entity.fixed.boolean == true {
-                connectedToFixed.append(entity)
-                connectedToFixedValues.append(entityValue)
-                addAnyAttached(entity)
-            }
-        }
-
-        return connectedToFixedValues.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.allConnectedToFixedExport(args) }.jsValue
 
 exports.findMisplacedEntities =
-    JSClosure { args in
-        guard let within = args[0].object, let compareTo = args[1].object else { return [JSValue]().jsValue }
-
-        let compareLength = Int(compareTo.length.number ?? 0)
-        let compareEntities = (0..<compareLength).compactMap { compareTo[$0].object }
-
-        let withinLength = Int(within.length.number ?? 0)
-        var result: [JSValue] = []
-        for i in 0..<withinLength {
-            let entityValue = within[i]
-            guard let entity = entityValue.object else { continue }
-            let entityType = entity.type.jsString
-            let entityGrabbed = entity.grabbed.boolean == true
-            let ex = entity.x.number, ey = entity.y.number
-
-            var misplaced = true
-            for compareToEntity in compareEntities {
-                guard entityType == compareToEntity.type.jsString else { continue }
-                if entityGrabbed && compareToEntity.grabbed.boolean == true {
-                    misplaced = false
-                    break
-                }
-                if ex == compareToEntity.x.number && ey == compareToEntity.y.number {
-                    misplaced = false
-                    break
-                }
-            }
-            if misplaced { result.append(entityValue) }
-        }
-        return result.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.findMisplacedEntitiesExport(args) }.jsValue
 
 exports.simulateGravity =
     JSClosure { args in
@@ -641,11 +951,7 @@ func hurtJunkbotCore(junkbot: JSObject, cause: JSString?, playSound: JSObject) {
 }
 
 exports.hurtJunkbot =
-    JSClosure { args in
-        guard let junkbot = args[0].object, let playSound = args[2].function else { return .undefined }
-        hurtJunkbotCore(junkbot: junkbot, cause: args[1].jsString, playSound: playSound)
-        return .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.hurtJunkbotExport(args) }.jsValue
 
 /// Returns whether the junkbot turned around (hit a cliff/wall/bot), matching the JS
 /// `walk()`'s `=== "turned"` contract.
@@ -713,26 +1019,10 @@ func walkCore(junkbot: JSObject, entities: JSObject, entityMoved: JSObject, play
 }
 
 exports.walk =
-    JSClosure { args in
-        guard let junkbot = args[0].object, let entities = args[1].object, let entityMoved = args[2].function,
-            let playSound = args[3].function
-        else { return .undefined }
-        let turned = walkCore(junkbot: junkbot, entities: entities, entityMoved: entityMoved, playSound: playSound)
-        return turned ? .string("turned") : .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.walkExport(args) }.jsValue
 
 exports.simulateJump =
-    JSClosure { args in
-        guard let jump = args[0].object else { return .undefined }
-        let animationFrame = Int32(jump.animationFrame.number ?? 0) + 1
-        if animationFrame >= 5 {
-            jump.animationFrame = .number(0)
-            jump.active = .boolean(false)
-        } else {
-            jump.animationFrame = animationFrame.jsValue
-        }
-        return .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.simulateJumpExport(args) }.jsValue
 
 exports.simulateGearbot =
     JSClosure { args in
@@ -941,10 +1231,7 @@ func findLinkedTeleportCore(teleport: JSObject, entities: JSObject) -> JSObject?
 }
 
 exports.findLinkedTeleport =
-    JSClosure { args in
-        guard let teleport = args[0].object, let entities = args[1].object else { return .undefined }
-        return findLinkedTeleportCore(teleport: teleport, entities: entities)?.jsValue ?? .undefined
-    }.jsValue
+    JSClosure { args in gameEngine.findLinkedTeleportExport(args) }.jsValue
 
 exports.simulateTeleport =
     JSClosure { args in
@@ -1197,7 +1484,7 @@ exports.simulateFansAndLasers =
                             let oy = Int32(other.y.number ?? 0)
                             let ow = Int32(other.width.number ?? 0)
                             let oh = Int32(other.height.number ?? 0)
-                            guard rectanglesIntersect(x, y, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
+                            guard gameEngine.rectanglesIntersect(x, y, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
                             if entityType(other) == junkbotType {
                                 if other.wasFloating.boolean != true {
                                     _ = playSound("fan")
@@ -1239,7 +1526,7 @@ exports.simulateFansAndLasers =
                         let oy = Int32(other.y.number ?? 0)
                         let ow = Int32(other.width.number ?? 0)
                         let oh = Int32(other.height.number ?? 0)
-                        guard rectanglesIntersect(x, ly, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
+                        guard gameEngine.rectanglesIntersect(x, ly, CELL_W, CELL_H, ox, oy, ow, oh) else { continue }
                         if entityType(other) == junkbotType {
                             hurtJunkbotCore(junkbot: other, cause: "laser", playSound: playSound)
                         }
@@ -1556,252 +1843,285 @@ func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: In
 }
 
 exports.makeBrick =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let widthInStuds = args[3]
-        let colorName = args[4]
-        let fixed = args[5]
-
-        let obj = makeEntityBase(
-            id: id, type: "brick", x: x, y: y,
-            width: Int32(widthInStuds.number ?? 0) * CELL_W, height: CELL_H)
-        obj.widthInStuds = widthInStuds
-        obj.colorName = colorName
-        obj.fixed = fixed
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport("brick", args) }.jsValue
 
 exports.makeJunkbot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let armored = args[4]
-
-        let obj = makeEntityBase(id: id, type: "junkbot", x: x, y: y, width: 2 * CELL_W, height: 4 * CELL_H)
-        obj.facing = facing
-        obj.armored = armored
-        obj.losingShield = .boolean(false)
-        obj.losingShieldTime = .number(0)
-        obj.animationFrame = .number(0)
-        obj.headLoaded = .boolean(false)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(junkbotType, args) }.jsValue
 
 exports.makeGearbot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-
-        let obj = makeEntityBase(id: id, type: "gearbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(gearbotType, args) }.jsValue
 
 exports.makeClimbbot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let facingY = args[4]
-
-        let obj = makeEntityBase(id: id, type: "climbbot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.facingY = facingY
-        obj.animationFrame = .number(0)
-        obj.energy = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(climbbotType, args) }.jsValue
 
 exports.makeFlybot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-
-        let obj = makeEntityBase(id: id, type: "flybot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(flybotType, args) }.jsValue
 
 exports.makeEyebot =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let facingY = args[4]
-
-        let obj = makeEntityBase(id: id, type: "eyebot", x: x, y: y, width: 2 * CELL_W, height: 2 * CELL_H)
-        obj.facing = facing
-        obj.facingY = facingY
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(eyebotType, args) }.jsValue
 
 exports.makeBin =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let facing = args[3]
-        let scaredy = args[4]
-
-        let obj = makeEntityBase(id: id, type: "bin", x: x, y: y, width: 2 * CELL_W, height: 3 * CELL_H)
-        obj.facing = facing
-        obj.scaredy = scaredy
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(binType, args) }.jsValue
 
 exports.makeCrate =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-
-        let obj = makeEntityBase(id: id, type: "crate", x: x, y: y, width: 3 * CELL_W, height: 2 * CELL_H)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(crateType, args) }.jsValue
 
 exports.makeFire =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-
-        let obj = makeEntityBase(id: id, type: "fire", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.animationFrame = .number(0)
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(fireType, args) }.jsValue
 
 exports.makeFan =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-
-        let obj = makeEntityBase(id: id, type: "fan", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.animationFrame = .number(0)
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(fanType, args) }.jsValue
 
 exports.makeLaser =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-        let facing = args[5]
-
-        let obj = makeEntityBase(id: id, type: "laser", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.animationFrame = .number(0)
-        obj.facing = facing
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(laserType, args) }.jsValue
 
 exports.makeSwitch =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let on = args[3]
-        let switchID = args[4]
-
-        let obj = makeEntityBase(id: id, type: "switch", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.on = on
-        obj.switchID = switchID
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(switchType, args) }.jsValue
 
 exports.makeTeleport =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let teleportID = args[3]
-
-        let obj = makeEntityBase(id: id, type: "teleport", x: x, y: y, width: 4 * CELL_W, height: 1 * CELL_H)
-        obj.teleportID = teleportID
-        obj.fixed = .boolean(true)
-        obj.timer = .number(0)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(teleportType, args) }.jsValue
 
 exports.makeJump =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let fixed = args[3]
-
-        let obj = makeEntityBase(id: id, type: "jump", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.animationFrame = .number(0)
-        obj.fixed = fixed
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(jumpType, args) }.jsValue
 
 exports.makeShield =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-        let used = args[3]
-        let fixed = args[4]
-
-        let obj = makeEntityBase(id: id, type: "shield", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.fixed = fixed
-        obj.used = used
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport(shieldType, args) }.jsValue
 
 exports.makePipe =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
-
-        let obj = makeEntityBase(id: id, type: "pipe", x: x, y: y, width: 2 * CELL_W, height: 1 * CELL_H)
-        obj.timer = .number(-1)
-        obj.fixed = .boolean(true)
-        return obj.jsValue
-    }.jsValue
+    JSClosure { args in gameEngine.makeEntityExport("pipe", args) }.jsValue
 
 exports.makeDroplet =
-    JSClosure { args in
-        let id = args[0]
-        let x = args[1]
-        let y = args[2]
+    JSClosure { args in gameEngine.makeEntityExport(dropletType, args) }.jsValue
 
-        let obj = makeEntityBase(id: id, type: "droplet", x: x, y: y, width: CELL_W, height: CELL_H)
-        obj.splashing = .boolean(false)
-        obj.animationFrame = .number(0)
-        return obj.jsValue
-    }.jsValue
+func engineEntity(from object: JSObject) -> Entity {
+    var entity = Entity(
+        id: int32Property(object, "id"),
+        type: engineEntityType(entityType(object)),
+        x: int32Property(object, "x"),
+        y: int32Property(object, "y"),
+        width: int32Property(object, "width"),
+        height: int32Property(object, "height"))
+
+    entity.grabbed = boolProperty(object, "grabbed")
+    entity.fixed = boolProperty(object, "fixed")
+    entity.floating = boolProperty(object, "floating")
+    entity.wasFloating = boolProperty(object, "wasFloating")
+    entity.removeBeforeRender = boolProperty(object, "removeBeforeRender")
+    entity.facing = int32Property(object, "facing", default: 1)
+    entity.facingY = int32Property(object, "facingY")
+    entity.animationFrame = int32Property(object, "animationFrame")
+    entity.widthInStuds = int32Property(object, "widthInStuds", default: max(1, int32Property(object, "width") / CELL_W))
+    entity.armored = boolProperty(object, "armored")
+    entity.losingShield = boolProperty(object, "losingShield")
+    entity.losingShieldTime = int32Property(object, "losingShieldTime")
+    entity.gettingShield = boolProperty(object, "gettingShield")
+    entity.dying = boolProperty(object, "dying")
+    entity.dyingFromWater = boolProperty(object, "dyingFromWater")
+    entity.dead = boolProperty(object, "dead")
+    entity.collectingBin = boolProperty(object, "collectingBin")
+    entity.headLoaded = boolProperty(object, "headLoaded")
+    entity.momentumX = int32Property(object, "momentumX")
+    entity.momentumY = int32Property(object, "momentumY")
+    entity.scaredy = boolProperty(object, "scaredy")
+    entity.on = boolProperty(object, "on")
+    entity.used = boolProperty(object, "used")
+    entity.switchID = int32Property(object, "switchID", default: -1)
+    entity.teleportID = int32Property(object, "teleportID", default: -1)
+    entity.timer = int32Property(object, "timer")
+    entity.blocked = boolProperty(object, "blocked")
+    entity.energy = int32Property(object, "energy")
+    entity.active = boolProperty(object, "active")
+    entity.activeTimer = int32Property(object, "activeTimer")
+    entity.splashing = boolProperty(object, "splashing")
+
+    if let grabOffset = object.grabOffset.object {
+        entity.grabOffsetX = int32Property(grabOffset, "x")
+        entity.grabOffsetY = int32Property(grabOffset, "y")
+    }
+    return entity
+}
+
+func existingEntityObject(id: Int32, in values: [JSValue]) -> JSValue? {
+    for value in values {
+        if Int32(value.object?.id.number ?? -1) == id {
+            return value
+        }
+    }
+    return nil
+}
+
+func syncEntity(_ entity: Entity, to object: JSObject) {
+    object.id = entity.id.jsValue
+    object.type = engineEntityTypeName(entity.type)
+    object.x = entity.x.jsValue
+    object.y = entity.y.jsValue
+    object.width = entity.width.jsValue
+    object.height = entity.height.jsValue
+    object.fixed = entity.fixed.jsValue
+    object.facing = entity.facing.jsValue
+    object.facingY = entity.facingY.jsValue
+    object.animationFrame = entity.animationFrame.jsValue
+
+    if entity.type == .brick {
+        object.widthInStuds = entity.widthInStuds.jsValue
+    }
+    if entity.type == .junkbot {
+        object.armored = entity.armored.jsValue
+        object.losingShield = entity.losingShield.jsValue
+        object.losingShieldTime = entity.losingShieldTime.jsValue
+        object.gettingShield = entity.gettingShield.jsValue
+        object.dying = entity.dying.jsValue
+        object.dyingFromWater = entity.dyingFromWater.jsValue
+        object.dead = entity.dead.jsValue
+        object.collectingBin = entity.collectingBin.jsValue
+        object.headLoaded = entity.headLoaded.jsValue
+        object.momentumX = entity.momentumX.jsValue
+        object.momentumY = entity.momentumY.jsValue
+    }
+    if entity.type == .bin {
+        object.scaredy = entity.scaredy.jsValue
+    }
+    if entity.type == .fire || entity.type == .fan || entity.type == .laser || entity.type == .switch {
+        object.on = entity.on.jsValue
+        object.switchID = entity.switchID.jsValue
+    }
+    if entity.type == .shield {
+        object.used = entity.used.jsValue
+    }
+    if entity.type == .teleport {
+        object.teleportID = entity.teleportID.jsValue
+        object.timer = entity.timer.jsValue
+        object.blocked = entity.blocked.jsValue
+    }
+    if entity.type == .pipe {
+        object.timer = entity.timer.jsValue
+    }
+    if entity.type == .jump {
+        object.active = entity.active.jsValue
+    }
+    if entity.type == .climbbot {
+        object.energy = entity.energy.jsValue
+    }
+    if entity.type == .eyebot {
+        object.activeTimer = entity.activeTimer.jsValue
+    }
+    if entity.type == .droplet {
+        object.splashing = entity.splashing.jsValue
+    }
+
+    if entity.grabbed {
+        object.grabbed = .boolean(true)
+        let offset = object.grabOffset.object ?? JSObject.global.Object.function!.new()
+        offset.x = entity.grabOffsetX.jsValue
+        offset.y = entity.grabOffsetY.jsValue
+        object.grabOffset = offset.jsValue
+    }
+    if entity.floating {
+        object.floating = .boolean(true)
+    } else {
+        deleteJSProperty(object, "floating")
+    }
+    if entity.wasFloating {
+        object.wasFloating = .boolean(true)
+    } else {
+        deleteJSProperty(object, "wasFloating")
+    }
+    if entity.removeBeforeRender {
+        object.removeBeforeRender = .boolean(true)
+    } else {
+        deleteJSProperty(object, "removeBeforeRender")
+    }
+}
+
+func syncEngineEntities(to entitiesArray: JSObject) {
+    let previousLength = Int(entitiesArray.length.number ?? 0)
+    let previousValues = (0..<previousLength).map { entitiesArray[$0] }
+    var outputIndex = 0
+    for entity in gameEngine.entities {
+        let value = existingEntityObject(id: entity.id, in: previousValues) ?? JSObject.global.Object.function!.new().jsValue
+        if let object = value.object {
+            syncEntity(entity, to: object)
+            entitiesArray[outputIndex] = object.jsValue
+            outputIndex += 1
+        }
+    }
+    entitiesArray.length = outputIndex.jsValue
+}
+
+func syncEngineEffects(entities: JSObject, wind: JSObject, laserBeams: JSObject, teleportEffects: JSObject) {
+    wind.length = .number(0)
+    let entityValues = (0..<Int(entities.length.number ?? 0)).map { entities[$0] }
+    for effect in gameEngine.wind {
+        guard effect.fanEntityIndex >= 0, effect.fanEntityIndex < gameEngine.entities.count else { continue }
+        let fanID = gameEngine.entities[effect.fanEntityIndex].id
+        guard let fan = existingEntityObject(id: fanID, in: entityValues) else { continue }
+        let entry = JSObject.global.Object.function!.new()
+        entry.fan = fan
+        var extents: [JSValue] = []
+        for i in 0..<effect.numExtents {
+            extents.append(effect.extent(at: i).jsValue)
+        }
+        entry.extents = extents.jsValue
+        _ = wind.push!(entry.jsValue)
+    }
+
+    laserBeams.length = .number(0)
+    for beam in gameEngine.laserBeams {
+        guard beam.laserEntityIndex >= 0, beam.laserEntityIndex < gameEngine.entities.count else { continue }
+        let laserID = gameEngine.entities[beam.laserEntityIndex].id
+        guard let laser = existingEntityObject(id: laserID, in: entityValues) else { continue }
+        let entry = JSObject.global.Object.function!.new()
+        entry.laserBrick = laser
+        entry.extent = beam.extent.jsValue
+        if beam.hitEntityIndex >= 0, beam.hitEntityIndex < gameEngine.entities.count {
+            let hitID = gameEngine.entities[beam.hitEntityIndex].id
+            entry.hitWhat = existingEntityObject(id: hitID, in: entityValues) ?? .undefined
+        } else {
+            entry.hitWhat = .undefined
+        }
+        _ = laserBeams.push!(entry.jsValue)
+    }
+
+    teleportEffects.length = .number(0)
+    for effect in gameEngine.teleportEffects {
+        let entry = JSObject.global.Object.function!.new()
+        entry.x = effect.x.jsValue
+        entry.y = effect.y.jsValue
+        entry.frameIndex = effect.frameIndex.jsValue
+        _ = teleportEffects.push!(entry.jsValue)
+    }
+}
+
+func engineLevelState(from level: JSObject) -> (entities: [Entity], bounds: LevelBounds?) {
+    guard let entities = level.entities.object else { return ([], nil) }
+
+    var nativeEntities: [Entity] = []
+    let length = Int(entities.length.number ?? 0)
+    nativeEntities.reserveCapacity(length)
+    for i in 0..<length {
+        guard let object = entities[i].object else { continue }
+        nativeEntities.append(engineEntity(from: object))
+    }
+
+    let bounds: LevelBounds?
+    if let levelBounds = level.bounds.object {
+        bounds = LevelBounds(
+            x: int32Property(levelBounds, "x"),
+            y: int32Property(levelBounds, "y"),
+            width: int32Property(levelBounds, "width"),
+            height: int32Property(levelBounds, "height"))
+    } else {
+        bounds = nil
+    }
+
+    return (nativeEntities, bounds)
+}
+
+exports.engineLoadLevel =
+    JSClosure { args in gameEngine.engineLoadLevelExport(args) }.jsValue
+
+exports.engineTick =
+    JSClosure { args in gameEngine.engineTickExport(args) }.jsValue
 
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")
