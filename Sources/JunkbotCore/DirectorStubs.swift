@@ -1,6 +1,13 @@
 // DirectorStubs.swift
-// All Director/platform-specific stubs in one place.
-// Replace these with real platform implementations.
+//
+// Adobe Director/Lingo compatibility shims required by the auto-generated, transpiled Lingo
+// behavior scripts (see the `Internal`/`catalog`/`dynamic`/`editor`/`loading`/`play`/
+// `screens_by_peter` subdirectories) so they compile as plain Swift. These are not part of the
+// hand-written game/simulation logic in the rest of JunkbotCore — most are no-op stubs (sound,
+// networking, cast-member lookup) standing in for engine/platform features the transpiled scripts
+// reference but that this port doesn't need; a few (`currentTicks`, `mouseIsDown`, `lingoRandom`)
+// are wired up to real state by the host application's game loop. Replace stubs with real
+// implementations only if a transpiled script actually needs the behavior.
 
 import LingoRuntime
 
