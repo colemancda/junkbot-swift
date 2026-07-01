@@ -1,11 +1,18 @@
 // MARK: - Level data model
 
+/// A level file's raw, structured contents (INI-style `.txt` format), as opposed to `GameEngine`'s
+/// live `[Entity]` array. This is the level-editor/persistence-facing model: it preserves every
+/// field needed to serialize back to text losslessly (see `LevelParse.swift`/`LevelSerialize.swift`
+/// for the `init(text:)`/`text` conversions), whereas `GameEngine.entities` only keeps what the
+/// simulation itself needs.
 public struct Level: Equatable, Sendable {
     public var title: String
+    /// The target/"par" move count for scoring purposes; `nil` if the level has none.
     public var par: Int?
     public var hint: String
     public var background: LevelBackground?
     public var playfield: LevelPlayfield
+    /// Every placed object in the level, in file order.
     public var parts: [LevelPart]
 
     public init(
@@ -25,9 +32,13 @@ public struct Level: Equatable, Sendable {
     }
 }
 
+/// The `[background]` section: the backdrop image plus two independent decal layers.
 public struct LevelBackground: Equatable, Sendable {
+    /// Name of the backdrop image asset (e.g. "bkg1").
     public var backdrop: String
+    /// Decals drawn in front of the backdrop but behind entities.
     public var decals: [LevelDecal]
+    /// Decals drawn behind the backdrop (or otherwise further back than `decals`).
     public var backgroundDecals: [LevelDecal]
 
     public init(backdrop: String, decals: [LevelDecal] = [], backgroundDecals: [LevelDecal] = []) {
@@ -37,9 +48,11 @@ public struct LevelBackground: Equatable, Sendable {
     }
 }
 
+/// A single decorative image placed at a fixed pixel position, purely cosmetic (no gameplay effect).
 public struct LevelDecal: Equatable, Sendable {
     public var x: Double
     public var y: Double
+    /// Name of the decal image asset (e.g. "arrowur", "safetystrip_horiz").
     public var name: String
 
     public init(x: Double, y: Double, name: String) {
@@ -49,10 +62,13 @@ public struct LevelDecal: Equatable, Sendable {
     }
 }
 
+/// The `[playfield]` section: grid dimensions and cell size for this level.
 public struct LevelPlayfield: Equatable, Sendable {
     public var columns: Int
     public var rows: Int
+    /// Grid cell width in pixels (normally matches `CELL_W`).
     public var spacingX: Int
+    /// Grid cell height in pixels (normally matches `CELL_H`).
     public var spacingY: Int
     public var scale: Double
 
@@ -68,20 +84,35 @@ public struct LevelPlayfield: Equatable, Sendable {
     public var pixelHeight: Int { rows * spacingY }
 }
 
-/// The animation/state field from a part entry (field [4] in the raw format).
+/// The animation/state field from a part entry (field [4] in the raw format). This is a coarser,
+/// canonicalized view of the raw string — e.g. both `"on"` and `"none"` (the latter being the JS
+/// default animation name) collapse to `.on` — so round-tripping through `PartState` does not
+/// always reproduce the exact original text (see `PartState.rawText` in `LevelSerialize.swift`).
 public enum PartState: Hashable, Sendable {
-    case none       // "0" or empty — not active / no initial state
-    case on         // "on" or "none" — active/on
-    case off        // "off"
-    case inactive   // "inactive" — present but not yet activated
-    case dormant    // "dormant"
-    case dry        // "DRY"
-    case walkRight  // "WALK_R"
-    case walkLeft   // "WALK_L"
-    case walkUp     // "WALK_U"
-    case walkDown   // "WALK_D"
+    /// Raw value `"0"` or empty — not active / no initial state.
+    case none
+    /// Raw value `"on"` or `"none"` — active/on.
+    case on
+    /// Raw value `"off"`.
+    case off
+    /// Raw value `"inactive"` — present but not yet activated.
+    case inactive
+    /// Raw value `"dormant"`.
+    case dormant
+    /// Raw value `"dry"`.
+    case dry
+    /// Raw value `"walk_r"`.
+    case walkRight
+    /// Raw value `"walk_l"`.
+    case walkLeft
+    /// Raw value `"walk_u"`.
+    case walkUp
+    /// Raw value `"walk_d"`.
+    case walkDown
+    /// Any raw value not otherwise recognized, preserved verbatim.
     case custom(String)
 
+    /// Parses a raw state string (case-insensitively) into its canonical case.
     public init(_ raw: String) {
         switch raw.lowercased() {
         case "0", "":
@@ -111,6 +142,8 @@ public enum PartState: Hashable, Sendable {
     }
 }
 
+/// One placed object from a level's `[partslist]` section — a brick, hazard, enemy, Junkbot's
+/// start position, etc. — in its raw, not-yet-converted-to-`Entity` form.
 public struct LevelPart: Equatable, Sendable {
     /// 1-based grid column (may be fractional per JS float coercion)
     public var gridX: Double
@@ -154,6 +187,7 @@ public struct LevelPart: Equatable, Sendable {
 
 extension GameEngine {
 
+    /// Sets `levelBounds` to the given rectangle and centers the viewport on it.
     func initLevelBounds(x: Int32, y: Int32, width: Int32, height: Int32) {
         levelBounds = LevelBounds(x: x, y: y, width: width, height: height)
         viewportCenterX = x + width / 2
