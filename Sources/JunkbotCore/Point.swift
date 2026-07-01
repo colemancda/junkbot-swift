@@ -5,6 +5,9 @@
 //  Created by Alsey Coleman Miller on 7/1/26.
 //
 
+/// A 2D integer point, used by the Lingo/Director compatibility shims in `DirectorStubs.swift`
+/// (e.g. `mouseLoc`, `LingoSprite.loc`) rather than by the core game/collision types, which use
+/// `Int32` fields on `Entity` directly.
 public struct Point: Equatable, @unchecked Sendable {
   public var x: Int
   public var y: Int
