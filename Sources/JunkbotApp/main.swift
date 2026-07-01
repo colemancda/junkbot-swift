@@ -568,47 +568,49 @@ exports.simulateGravity =
         return .undefined
     }.jsValue
 
+let fireCause: JSString = "fire"
+let waterCause: JSString = "water"
+let laserCause: JSString = "laser"
+
+func hurtJunkbotCore(junkbot: JSObject, cause: JSString?, playSound: JSObject) {
+    if junkbot.dying.boolean == true || junkbot.dead.boolean == true || junkbot.grabbed.boolean == true {
+        return
+    }
+
+    // Play sound even if shielded, but not if losing shield because then it would repeat and
+    // sound ugly. This has to be before junkbot.losingShield is set, so it can play the first time.
+    if junkbot.losingShield.boolean != true {
+        if cause == fireCause {
+            _ = playSound("deathByFire")
+        } else if cause == waterCause {
+            _ = playSound("deathByWater")
+        } else if cause == laserCause {
+            _ = playSound("deathByLaser")
+        } else {
+            _ = playSound("deathByBot")
+        }
+    }
+
+    if junkbot.armored.boolean == true {
+        if junkbot.losingShield.boolean != true {
+            junkbot.losingShield = .boolean(true)
+            // don't reset junkbot.losingShieldTime to 0 - it wouldn't make sense for multiple
+            // hits to extend the shield (it should be reset elsewhere)
+        }
+    } else {
+        junkbot.animationFrame = .number(0)
+        junkbot.collectingBin = .boolean(false)
+        junkbot.dying = .boolean(true)
+        if cause == waterCause {
+            junkbot.dyingFromWater = .boolean(true)
+        }
+    }
+}
+
 exports.hurtJunkbot =
     JSClosure { args in
         guard let junkbot = args[0].object, let playSound = args[2].function else { return .undefined }
-        let cause = args[1].jsString
-
-        if junkbot.dying.boolean == true || junkbot.dead.boolean == true || junkbot.grabbed.boolean == true {
-            return .undefined
-        }
-
-        let fireCause: JSString = "fire"
-        let waterCause: JSString = "water"
-        let laserCause: JSString = "laser"
-
-        // Play sound even if shielded, but not if losing shield because then it would repeat and
-        // sound ugly. This has to be before junkbot.losingShield is set, so it can play the first time.
-        if junkbot.losingShield.boolean != true {
-            if cause == fireCause {
-                _ = playSound("deathByFire")
-            } else if cause == waterCause {
-                _ = playSound("deathByWater")
-            } else if cause == laserCause {
-                _ = playSound("deathByLaser")
-            } else {
-                _ = playSound("deathByBot")
-            }
-        }
-
-        if junkbot.armored.boolean == true {
-            if junkbot.losingShield.boolean != true {
-                junkbot.losingShield = .boolean(true)
-                // don't reset junkbot.losingShieldTime to 0 - it wouldn't make sense for multiple
-                // hits to extend the shield (it should be reset elsewhere)
-            }
-        } else {
-            junkbot.animationFrame = .number(0)
-            junkbot.collectingBin = .boolean(false)
-            junkbot.dying = .boolean(true)
-            if cause == waterCause {
-                junkbot.dyingFromWater = .boolean(true)
-            }
-        }
+        hurtJunkbotCore(junkbot: junkbot, cause: args[1].jsString, playSound: playSound)
         return .undefined
     }.jsValue
 
