@@ -541,6 +541,15 @@ const storageKeys = {
 const floor = (x, multiple) => Math.floor(x / multiple) * multiple;
 const round = (x, multiple) => Math.round(x / multiple) * multiple;
 
+const arrayRemove = (array, value) => {
+    if (array === entities) {
+        window.console?.warn("arrayRemove on entities array is unsafe if iterating over entities. Set flag entity.removeBeforeRender instead.");
+    }
+    const index = array.indexOf(value);
+    if (index !== -1) {
+        array.splice(index, 1);
+    }
+};
 
 const sortEntitiesForRendering = window.JunkbotWasm.sortEntitiesForRendering;
 
@@ -1204,7 +1213,24 @@ const routingTests = [
 
 let entitiesByTopY = {}; // y to array of entities with that y as their top
 let entitiesByBottomY = {}; // y to array of entities with that y as their bottom
-let lastKeys = new Map(); // unused now that acceleration structures are rebuilt in Swift; kept declared for the editor preview block below, which saves/restores it (and is already broken independent of this, since it also calls the removed `simulate` function)
+let lastKeys = new Map(); // ancillary structure for updating the by-y structures - entity to {topY, bottomY}
+
+const entityMoved = (entity) => {
+    const yKeys = lastKeys.get(entity) || {};
+    entitiesByTopY[entity.y] = entitiesByTopY[entity.y] || [];
+    entitiesByBottomY[entity.y + entity.height] = entitiesByBottomY[entity.y + entity.height] || [];
+    if (yKeys.topY) {
+        arrayRemove(entitiesByTopY[yKeys.topY], entity);
+    }
+    if (yKeys.bottomY) {
+        arrayRemove(entitiesByBottomY[yKeys.bottomY], entity);
+    }
+    yKeys.topY = entity.y;
+    yKeys.bottomY = entity.y + entity.height;
+    entitiesByTopY[yKeys.topY].push(entity);
+    entitiesByBottomY[yKeys.bottomY].push(entity);
+    lastKeys.set(entity, yKeys);
+};
 
 const updateAccelerationStructures = () => {
 	const result = window.JunkbotWasm.rebuildAccelerationStructures(entities);
