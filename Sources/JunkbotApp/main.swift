@@ -5820,7 +5820,7 @@ var render = JSClosure { args in
     let h = min((bottomRight.y.number ?? 0.0) - (topLeft.y.number ?? 0.0), (JSObject.global.canvas.height.number ?? 0.0) - (topLeft.y.number ?? 0.0))
     let imageData = ctx.getImageData!(topLeft.x, topLeft.y, w, h)
     if w > 0.0 && h > 0.0 {
-      let data = imageData.data
+      let data = imageData.object!.data
       let len = Int(data.length.number ?? 0.0)
       var j = 0
       for i in stride(from: 0, to: len, by: 4) {
