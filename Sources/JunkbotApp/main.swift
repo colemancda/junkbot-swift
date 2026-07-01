@@ -766,6 +766,89 @@ exports.connectsToFixed =
 exports.allConnectedToFixed =
     JSClosure { args in gameEngine.allConnectedToFixedExport(args) }.jsValue
 
+// Finds the group(s) of unfixed bricks that would move together if `brick` were grabbed and
+// dragged, in each of the two possible directions (attached bricks above it / below it). Mirrors
+// the original JS's `possibleGrabs`' inner `findAttached` recursive traversal; the editor-specific
+// policy (ctrl-click, multi-select, bypassing fixed/grabbable checks while editing) stays in JS.
+func possibleGrabsCore(
+    brick: JSObject, entitiesByTopY: JSObject, entitiesByBottomY: JSObject
+) -> (canGrabDownward: Bool, grabDownward: [JSObject], canGrabUpward: Bool, grabUpward: [JSObject]) {
+    func findAttached(_ start: JSObject, direction: Int32, attached: inout [JSObject], topLevel: Bool) -> Bool {
+        let sy = Int32(start.y.number ?? 0), sh = Int32(start.height.number ?? 0)
+        let candidates = yBucket(entitiesByTopY, sy + sh) + yBucket(entitiesByBottomY, sy)
+        for otherValue in candidates {
+            guard let entity = otherValue.object, entity != start else { continue }
+            let entityIsBrick = entityType(entity) == "brick"
+            guard entitiesConnect(start, entity, direction: entityIsBrick ? direction : -1) else { continue }
+            if attached.contains(where: { $0 == entity }) { continue }
+            if entity.fixed.boolean == true || !entityIsBrick {
+                return false
+            }
+            attached.append(entity)
+            if !findAttached(entity, direction: direction, attached: &attached, topLevel: false) {
+                return false
+            }
+        }
+        if topLevel {
+            for brickInGroup in attached {
+                let bx = Int32(brickInGroup.x.number ?? 0), by = Int32(brickInGroup.y.number ?? 0)
+                let bw = Int32(brickInGroup.width.number ?? 0), bh = Int32(brickInGroup.height.number ?? 0)
+                let candidates2 = yBucket(entitiesByTopY, by + bh) + yBucket(entitiesByBottomY, by)
+                for otherValue in candidates2 {
+                    guard let entity = otherValue.object else { continue }
+                    let entType = entityType(entity)
+                    guard entity.fixed.boolean != true,
+                        entType == "brick" || entType == "jump" || entType == "shield"
+                    else { continue }
+                    let ex = Int32(entity.x.number ?? 0), ew = Int32(entity.width.number ?? 0)
+                    guard bx + bw > ex && bx < ex + ew else { continue }
+                    if attached.contains(where: { $0 == entity }) { continue }
+                    if connectsToFixedCore(
+                        startEntity: entity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                        direction: 0, ignoreEntities: attached)
+                    {
+                        continue
+                    }
+                    let ey = Int32(entity.y.number ?? 0)
+                    var blocked = false
+                    for junkValue in yBucket(entitiesByBottomY, ey) {
+                        guard let junk = junkValue.object, entityType(junk) != "brick" else { continue }
+                        let jx = Int32(junk.x.number ?? 0), jw = Int32(junk.width.number ?? 0)
+                        if ex + ew > jx && ex < jx + jw {
+                            blocked = true
+                            break
+                        }
+                    }
+                    if blocked { return false }
+                    attached.append(entity)
+                }
+            }
+        }
+        return true
+    }
+
+    var grabDownward: [JSObject] = [brick]
+    var grabUpward: [JSObject] = [brick]
+    let canGrabDownward = findAttached(brick, direction: 1, attached: &grabDownward, topLevel: true)
+    let canGrabUpward = findAttached(brick, direction: -1, attached: &grabUpward, topLevel: true)
+    return (canGrabDownward, grabDownward, canGrabUpward, grabUpward)
+}
+
+exports.possibleGrabs =
+    JSClosure { args in
+        guard let brick = args[0].object, let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return .undefined }
+        let result = possibleGrabsCore(
+            brick: brick, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY)
+        let obj = JSObject.global.Object.function!.new()
+        obj.canGrabDownward = result.canGrabDownward.jsValue
+        obj.canGrabUpward = result.canGrabUpward.jsValue
+        obj.grabDownward = result.grabDownward.map { $0.jsValue }.jsValue
+        obj.grabUpward = result.grabUpward.map { $0.jsValue }.jsValue
+        return obj.jsValue
+    }.jsValue
+
 exports.findMisplacedEntities =
     JSClosure { args in gameEngine.findMisplacedEntitiesExport(args) }.jsValue
 

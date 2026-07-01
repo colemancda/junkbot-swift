@@ -3234,66 +3234,10 @@ const allConnectedToFixed = ({ ignoreEntities = [] } = {}) =>
 const connectsToFixed = (startEntity, { direction = 0, ignoreEntities = [] } = {}) =>
 	window.JunkbotWasm.connectsToFixed(startEntity, entitiesByTopY, entitiesByBottomY, direction, ignoreEntities);
 
+// The recursive "which attached bricks move together" traversal (findAttached) is implemented in
+// Swift (window.JunkbotWasm.possibleGrabs); this keeps only the editor-specific policy (ctrl-click,
+// multi-select, bypassing fixed/grabbable checks while editing).
 const possibleGrabs = ({ worldX, worldY } = mouse) => {
-	const findAttached = (brick, direction, attached, topLevel) => {
-		const entitiesToCheck1 = [].concat(
-			entitiesByTopY[brick.y + brick.height] || [],
-			entitiesByBottomY[brick.y] || [],
-		);
-		for (const entity of entitiesToCheck1) {
-			if (
-				entity !== brick &&
-				// for things that aren't bricks, check above, in case someone's standing on these blocks
-				connects(brick, entity, entity.type === "brick" ? direction : -1) &&
-				// prevent heavy recursion when e.g. there's a pyramid of blocks
-				attached.indexOf(entity) === -1
-			) {
-				if (entity.fixed || entity.type !== "brick") {
-					// can't drag in this direction (e.g. the block might be sandwiched) or
-					// junkbot or an enemy might be standing on these blocks
-					return false;
-				} else {
-					attached.push(entity);
-					const okay = findAttached(entity, direction, attached);
-					if (!okay) {
-						return false;
-					}
-				}
-			}
-		}
-		if (topLevel) {
-			for (const brick of attached) {
-				const entitiesToCheck2 = [].concat(
-					entitiesByTopY[brick.y + brick.height] || [],
-					entitiesByBottomY[brick.y] || [],
-				);
-				for (const entity of entitiesToCheck2) {
-					if (
-						!entity.fixed &&
-						(entity.type === "brick" || entity.type === "jump" || entity.type === "shield") &&
-						brick.x + brick.width > entity.x &&
-						brick.x < entity.x + entity.width &&
-						attached.indexOf(entity) === -1 &&
-						!connectsToFixed(entity, { ignoreEntities: attached })
-					) {
-						const entitiesToCheck3 = entitiesByBottomY[entity.y] || [];
-						for (const junk of entitiesToCheck3) {
-							if (junk.type !== "brick") {
-								if (
-									entity.x + entity.width > junk.x &&
-									entity.x < junk.x + junk.width
-								) {
-									return false;
-								}
-							}
-						}
-						attached.push(entity);
-					}
-				}
-			}
-		}
-		return true;
-	};
 	if (paused && !editing) {
 		return [];
 	}
@@ -3319,10 +3263,8 @@ const possibleGrabs = ({ worldX, worldY } = mouse) => {
 		return [];
 	}
 
-	const grabDownward = [brick];
-	const grabUpward = [brick];
-	const canGrabDownward = findAttached(brick, +1, grabDownward, true);
-	const canGrabUpward = findAttached(brick, -1, grabUpward, true);
+	const { canGrabDownward, canGrabUpward, grabDownward, grabUpward } =
+		window.JunkbotWasm.possibleGrabs(brick, entitiesByTopY, entitiesByBottomY);
 	if (editing && canGrabDownward === canGrabUpward) {
 		grabs.push([brick]);
 		return grabs;
