@@ -10,7 +10,7 @@ async function initBrowser(_options) {
     };
     let module = options.module;
     if (!module) {
-        module = fetch(new URL("JunkbotApp.wasm", import.meta.url))
+        module = fetch(new URL("JunkbotWASM.wasm", import.meta.url))
     }
     const instantiateOptions = await defaultBrowserSetup({
         module,

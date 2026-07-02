@@ -2,8 +2,9 @@
 /// models (`Types.swift`, `Level.swift`), simulation (`GameEngine.swift`, `Simulation.swift`,
 /// `Collision.swift`), and level text I/O (`LevelText.swift`, `LevelParse.swift`,
 /// `LevelSerialize.swift`). It has no dependency on JavaScriptKit or any browser/DOM API, so it
-/// builds both for native platforms (used by `JunkbotCoreTests`) and for the embedded-Swift WASM
-/// target consumed by `JunkbotApp`, which bridges it to the browser.
+/// builds both for native platforms (used by `JunkbotCoreTests` and the SDL3-based `JunkbotSDL3`
+/// native app) and for the embedded-Swift WASM target consumed by `JunkbotWASM`, which bridges it
+/// to the browser.
 ///
 /// The `Internal`/`catalog`/`dynamic`/`editor`/`loading`/`play`/`screens_by_peter` subdirectories
 /// and `DirectorStubs.swift` are auto-generated/scaffolding for the Lingo-to-Swift transpiler

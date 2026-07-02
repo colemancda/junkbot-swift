@@ -5,7 +5,7 @@
     "private": true,
     "exports": {
         ".": "./index.js",
-        "./wasm": "./JunkbotApp.wasm"
+        "./wasm": "./JunkbotWASM.wasm"
     },
     "dependencies": {
         "@bjorn3/browser_wasi_shim": "0.3.0"

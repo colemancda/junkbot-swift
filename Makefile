@@ -9,7 +9,7 @@ all:
 	@echo "▶ Building Swift WASM…"
 	$(SWIFT) package \
 	    --swift-sdk $(SWIFT_SDK) \
-	    js -c release
+	    js --product JunkbotWASM -c release
 	@echo "▶ Copying package output to web/Package/…"
 	rm -rf $(WEB_PACKAGE)
 	cp -r $(BUILD_OUTPUT) $(WEB_PACKAGE)

@@ -22,7 +22,7 @@ let package = Package(
       ]
     ),
     .executableTarget(
-      name: "JunkbotApp",
+      name: "JunkbotWASM",
       dependencies: [
         "JunkbotCore",
         .product(name: "JavaScriptKit", package: "JavaScriptKit"),
@@ -32,6 +32,24 @@ let package = Package(
         .unsafeFlags(["-wmo", "-Osize"], .when(platforms: [.wasi])),
         .swiftLanguageMode(.v5),
       ],
+    ),
+    .systemLibrary(
+      name: "CSDL3",
+      pkgConfig: "sdl3",
+      providers: [.brew(["sdl3"])]
+    ),
+    .systemLibrary(
+      name: "CSDL3Image",
+      pkgConfig: "sdl3-image",
+      providers: [.brew(["sdl3_image"])]
+    ),
+    .executableTarget(
+      name: "JunkbotSDL3",
+      dependencies: [
+        "JunkbotCore",
+        "CSDL3",
+        "CSDL3Image",
+      ]
     ),
     .testTarget(
       name: "JunkbotCoreTests",
