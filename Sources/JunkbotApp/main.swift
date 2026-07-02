@@ -482,11 +482,11 @@ extension GameEngine {
 
     func engineTickExport(_ args: [JSValue]) -> JSValue {
         guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
-            let teleportEffects = args[3].object, let playSound = args[6].function
+            let teleportEffects = args[3].object, let playSound = args[5].function
         else { return .undefined }
-        let nextID = Int32(args[5].number ?? 0)
+        let nextID = Int32(args[4].number ?? 0)
         // frameCounter is now Swift-owned (incremented inside tick()/simulate()); no longer
-        // overwritten from JS's args[7] here. The result object below still reports it back so
+        // overwritten from JS's args[6] here. The result object below still reports it back so
         // JS's own `frameCounter` (used for playthrough/rewind timestamping) stays in sync.
 
         var collectedBin = false
@@ -501,7 +501,7 @@ extension GameEngine {
         // play-mode dragging moved to Swift. `recordDragEvent` persists across ticks the same way
         // `onPlaySound` does — it's set here but invoked later, from `mouseDown`/`mouseMove`/
         // `mouseUp`, which run outside of any `engineTick` call.
-        if let recordDragEvent = args[9].function {
+        if let recordDragEvent = args[8].function {
             onDragEvent = { isPickup, worldX, worldY, direction in
                 let grabType: JSString = direction == -1 ? "upward" : (direction == 1 ? "downward" : "single")
                 _ = recordDragEvent(isPickup, worldX, worldY, grabType)
@@ -515,7 +515,7 @@ extension GameEngine {
         // just-finished native release: JS's mirror is always one tick stale, so right after
         // `mouseUp` clears `draggingIndices`, this merge would still see the old `grabbed: true`
         // and re-grab the entity in Swift before this tick's sync corrects the mirror.
-        if args[8].boolean == true {
+        if args[7].boolean == true {
             mergeGrabbedEntities(from: entities)
         }
         ensureIDCounterAtLeast(nextID)

@@ -3760,8 +3760,7 @@ const simulate = (entities) => {
 		// state at the tick cadence rather than the display's raw frame rate.
 		window.JunkbotWasm.mouseMove(mouse.worldX, mouse.worldY);
 	}
-	const levelForSimulation = entities === currentLevel.entities ? currentLevel : { ...currentLevel, entities };
-	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter, editing, recordDragEvent);
+	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, idCounter, playSound, frameCounter, editing, recordDragEvent);
 	frameCounter = result.frameCounter;
 	moves = result.moves;
 	if (result.collectedBin) {
