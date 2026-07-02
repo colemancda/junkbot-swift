@@ -2926,14 +2926,12 @@ const pasteFromClipboard = async () => {
 //                                        '--------------'
 // #region Camera
 
-const worldToCanvas = (worldX, worldY) => ({
-	x: (worldX - viewport.centerX) * viewport.scale + Math.floor(canvas.width / 2),
-	y: (worldY - viewport.centerY) * viewport.scale + Math.floor(canvas.height / 2),
-});
-const canvasToWorld = (canvasX, canvasY) => ({
-	x: (canvasX - Math.floor(canvas.width / 2)) / viewport.scale + viewport.centerX,
-	y: (canvasY - Math.floor(canvas.height / 2)) / viewport.scale + viewport.centerY,
-});
+const worldToCanvas = (worldX, worldY) => window.JunkbotWasm.worldToCanvas(
+	worldX, worldY, viewport.centerX, viewport.centerY, viewport.scale, canvas.width, canvas.height,
+);
+const canvasToWorld = (canvasX, canvasY) => window.JunkbotWasm.canvasToWorld(
+	canvasX, canvasY, viewport.centerX, viewport.centerY, viewport.scale, canvas.width, canvas.height,
+);
 
 const zoomTo = (newScale, focalPointOnCanvas = { x: canvas.width / 2, y: canvas.height / 2 }) => {
 	if (pointerEventCache.length === 2) {
@@ -3881,12 +3879,6 @@ const render = () => {
 		canvas.style.cursor = "default";
 	}
 
-	if (currentLevel.title === "Title Screen") {
-		viewport.centerX = titleScreen.offsetWidth / 2 - 1;
-		viewport.centerY = titleScreen.offsetHeight / 2 - 26;
-		viewport.scale = window.devicePixelRatio;
-	}
-
 	// Note: while zooming, innerWidth * window.devicePixelRatio often stays the same, while both factors change
 	if (
 		canvas.width !== innerWidth * window.devicePixelRatio ||
@@ -4249,6 +4241,17 @@ const animate = () => {
 	}
 
 	checkLevelEnd();
+
+	// The title screen forces a specific viewport, framed against its own welcome-panel image
+	// rather than the level bounds controlViewport() clamps to; this must run right before
+	// render() (not earlier, e.g. folded into controlViewport()) so it overrides whatever
+	// controlViewport()/margin-panning computed this frame, matching the original placement at
+	// the top of render() (was hoisted out so render() only draws, doesn't mutate viewport state).
+	if (currentLevel.title === "Title Screen") {
+		viewport.centerX = titleScreen.offsetWidth / 2 - 1;
+		viewport.centerY = titleScreen.offsetHeight / 2 - 26;
+		viewport.scale = window.devicePixelRatio;
+	}
 
 	render();
 };

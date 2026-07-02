@@ -83,6 +83,30 @@ extension GameEngine {
         return result.jsValue
     }
 
+    func worldToCanvasExport(_ args: [JSValue]) -> JSValue {
+        let point = worldToCanvas(
+            worldX: args[0].number ?? 0, worldY: args[1].number ?? 0,
+            centerX: args[2].number ?? 0, centerY: args[3].number ?? 0, scale: args[4].number ?? 1,
+            canvasWidth: args[5].number ?? 0, canvasHeight: args[6].number ?? 0
+        )
+        let result = JSObject.global.Object.function!.new()
+        result.x = point.x.jsValue
+        result.y = point.y.jsValue
+        return result.jsValue
+    }
+
+    func canvasToWorldExport(_ args: [JSValue]) -> JSValue {
+        let point = canvasToWorld(
+            canvasX: args[0].number ?? 0, canvasY: args[1].number ?? 0,
+            centerX: args[2].number ?? 0, centerY: args[3].number ?? 0, scale: args[4].number ?? 1,
+            canvasWidth: args[5].number ?? 0, canvasHeight: args[6].number ?? 0
+        )
+        let result = JSObject.global.Object.function!.new()
+        result.x = point.x.jsValue
+        result.y = point.y.jsValue
+        return result.jsValue
+    }
+
     func sortEntitiesForRenderingExport(_ args: [JSValue]) -> JSValue {
         guard let array = args[0].object else { return .undefined }
         let length = Int(array.length.number ?? 0)
@@ -404,12 +428,57 @@ extension GameEngine {
         return .undefined
     }
 
+    /// Merges just the currently-`grabbed` (mid-drag) entities' position/offset from the JS
+    /// mirror into this engine's persistent `entities`, instead of replacing all of `entities`
+    /// from JS every tick (contrast the old `engineTickExport` behavior, still used by
+    /// `engineLoadLevelExport`'s one-time load path via `loadLevelState`). This is the one place
+    /// JS still feeds live state into Swift each frame: dragging (`updateDrag` in src/game.js)
+    /// mutates the JS-side entity's x/y directly every frame, and Swift needs to see that
+    /// update before its own physics runs that tick. Everything else in `entities` is
+    /// Swift-owned and persists across ticks untouched.
+    ///
+    /// Also adopts brand-new entities introduced while already `grabbed` (e.g. paste-while-
+    /// dragging in the editor — pasted entities start `grabbed = true`), and drops any
+    /// Swift-side entity whose JS counterpart no longer exists (e.g. deleted mid-drag), so
+    /// neither case leaves a stale/ghost entity behind. Editor actions that don't involve an
+    /// in-progress grab (plain delete, flip/rotate, the palette hover-preview) are NOT covered
+    /// by this merge — a known, tracked gap (see project plan), not a regression from today's
+    /// full-replace behavior, since those are comparatively rare/editor-only paths.
+    func mergeGrabbedEntities(from jsEntities: JSObject) {
+        let length = Int(jsEntities.length.number ?? 0)
+        var jsById: [Int32: JSObject] = [:]
+        for i in 0..<length {
+            guard let obj = jsEntities[i].object else { continue }
+            jsById[Int32(obj.id.number ?? -1)] = obj
+        }
+
+        for (id, obj) in jsById {
+            let jsGrabbed = obj.grabbed.boolean == true
+            if let idx = entities.firstIndex(where: { $0.id == id }) {
+                guard jsGrabbed || entities[idx].grabbed else { continue }
+                entities[idx].grabbed = jsGrabbed
+                entities[idx].x = Int32(obj.x.number ?? 0)
+                entities[idx].y = Int32(obj.y.number ?? 0)
+                if let offset = obj.grabOffset.object {
+                    entities[idx].grabOffsetX = Int32(offset.x.number ?? 0)
+                    entities[idx].grabOffsetY = Int32(offset.y.number ?? 0)
+                }
+            } else if jsGrabbed {
+                entities.append(engineEntity(from: obj))
+            }
+        }
+
+        entities.removeAll { $0.grabbed && jsById[$0.id] == nil }
+    }
+
     func engineTickExport(_ args: [JSValue]) -> JSValue {
         guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
-            let teleportEffects = args[3].object, let level = args[4].object, let playSound = args[6].function
+            let teleportEffects = args[3].object, let playSound = args[6].function
         else { return .undefined }
         let nextID = Int32(args[5].number ?? 0)
-        frameCounter = Int32(args[7].number ?? Double(frameCounter))
+        // frameCounter is now Swift-owned (incremented inside tick()/simulate()); no longer
+        // overwritten from JS's args[7] here. The result object below still reports it back so
+        // JS's own `frameCounter` (used for playthrough/rewind timestamping) stays in sync.
 
         var collectedBin = false
         onPlaySound = { id in
@@ -418,8 +487,8 @@ extension GameEngine {
             _ = playSound(soundName)
         }
 
-        let state = engineLevelState(from: level)
-        replaceLiveState(entities: state.entities, levelBounds: state.bounds, nextID: nextID)
+        mergeGrabbedEntities(from: entities)
+        ensureIDCounterAtLeast(nextID)
         tick()
         syncEngineEntities(to: entities)
         syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
@@ -688,6 +757,12 @@ exports.rectangleCollisionAll =
 
 exports.raycast =
     JSClosure { args in gameEngine.raycastExport(args) }.jsValue
+
+exports.worldToCanvas =
+    JSClosure { args in gameEngine.worldToCanvasExport(args) }.jsValue
+
+exports.canvasToWorld =
+    JSClosure { args in gameEngine.canvasToWorldExport(args) }.jsValue
 
 exports.sortEntitiesForRendering =
     JSClosure { args in gameEngine.sortEntitiesForRenderingExport(args) }.jsValue
