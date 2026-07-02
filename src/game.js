@@ -3693,7 +3693,38 @@ const handlePlayback = () => {
 			const { x, y } = worldToCanvas(playbackMouse.worldX, playbackMouse.worldY);
 			playbackMouse.x = x;
 			playbackMouse.y = y;
-			if (event.type === "pickup") {
+			// Play-mode dragging is Swift-native (Sources/JunkbotCore/Input.swift) - replay must drive
+			// the same mouseDown/mouseUp path real input uses, not the old JS possibleGrabs/startGrab/
+			// updateDrag/finishDrag. Those only ever mutate the JS-side entities mirror directly, and
+			// mergeGrabbedEntities (the only thing that reads that mirror's `grabbed` flag back into
+			// GameEngine) only runs while `editing` - during play-mode replay it's never called, so the
+			// "grab" would have zero effect on the actual simulation and immediately desync. Editor-mode
+			// replay (rare/legacy) is untouched below, since editor dragging itself is still JS-only.
+			if (!editing) {
+				if (event.type === "pickup") {
+					mouse.worldX = playbackMouse.worldX;
+					mouse.worldY = playbackMouse.worldY;
+					mouse.x = playbackMouse.x;
+					mouse.y = playbackMouse.y;
+					if (!window.JunkbotWasm.isDragging()) {
+						window.JunkbotWasm.mouseDown(playbackMouse.worldX, playbackMouse.worldY);
+					} else {
+						desynchronized = true;
+					}
+				} else if (event.type === "place") {
+					mouse.worldX = playbackMouse.worldX;
+					mouse.worldY = playbackMouse.worldY;
+					mouse.x = playbackMouse.x;
+					mouse.y = playbackMouse.y;
+					window.JunkbotWasm.mouseUp(playbackMouse.worldX, playbackMouse.worldY);
+				} else if (event.type === "pointer") {
+					mouse.worldX = playbackMouse.worldX;
+					mouse.worldY = playbackMouse.worldY;
+					mouse.x = playbackMouse.x;
+					mouse.y = playbackMouse.y;
+					playthroughEvents.push(event); // preserve this information in case of re-saving a recording from playback
+				}
+			} else if (event.type === "pickup") {
 				const grabs = possibleGrabs(playbackMouse);
 				if (grabs && !dragging.length) {
 					if (event.grabType === "upward") {
