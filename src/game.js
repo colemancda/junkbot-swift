@@ -199,7 +199,6 @@ var currentLevel = {
 let playthroughEvents = []; // records your solution to the current level
 let playbackEvents = []; // could be used for testing or a demo mode or just playing back what you just did
 let playbackLevel = {}; // level object built from json diff patches; if gameplay behavior changes, a recording can still be played back without simulation using this, and compared to simulation for debugging
-let levelLastFrame = {}; // for generating diff patches for playthrough recording
 let winLoseState = "";
 let moves = 0; // your score (lower is better); only picking up bricks counts, not putting them down.
 let frameCounter = 0; // for precise recording/playback
@@ -1394,7 +1393,6 @@ const resetAndInit = (level) => {
 	playbackEvents.length = 0;
 	// playbackEvents = playthroughEvents; // for rewinding with negative rewind speed
 	playbackLevel = {};
-	levelLastFrame = {};
 	// sort for consistency for level delta patching
 	entities.sort((a, b) => a.id - b.id);
 	playthroughEvents.push({
@@ -2684,7 +2682,15 @@ let recentUndoSound = 0;
 let recentRedoSound = 0;
 const undo = () => {
 	if (!editing) {
-		toggleEditing();
+		// Play-mode undo (Sources/JunkbotCore/Undo.swift) is a separate, new capability from the
+		// editor's own undo/redo below - it reverts the last completed brick drag rather than any
+		// editor edit. GameEngine.undo() plays its own sound feedback internally (see onPlaySound),
+		// so no extra playSound call is needed here.
+		if (window.JunkbotWasm.undo()) {
+			const result = window.JunkbotWasm.syncEngineState(entities, wind, laserBeams, teleportEffects);
+			frameCounter = result.frameCounter;
+			moves = result.moves;
+		}
 		return;
 	}
 	const didSomething = undoOrRedo(undos, redos);
@@ -3627,28 +3633,31 @@ const handleRewind = () => {
 		}
 		// sort for consistency for level delta patching
 		entities.sort((a, b) => a.id - b.id);
+		// Actual rewind now runs entirely in Swift's GameEngine (Sources/JunkbotCore/Undo.swift),
+		// via a ring buffer of per-tick full-state snapshots - replacing the diffPatcher-based
+		// unpatch-through-playthroughEvents/playbackEvents mechanism this used to be.
+		window.JunkbotWasm.beginRewind();
+		let didStep = false;
 		for (let i = 0; i < rewindRate; i++) {
-			frameCounter -= 1;
-			if (frameCounter < 0) {
-				frameCounter = 0;
-			} else if (frameCounter > 0) { // don't undo level initialization
-				// handle playbackLevel and currentLevel separately, as
-				// they could have their own notions of what's going on
-				for (const event of playthroughEvents) {
-					if (event.t === frameCounter + 1) {
-						diffPatcher.unpatch(currentLevel, event.levelPatch);
-					}
-				}
-				for (const event of playbackEvents) {
-					if (event.t === frameCounter + 1) {
-						diffPatcher.unpatch(playbackLevel, event.levelPatch);
-					}
-				}
+			if (window.JunkbotWasm.stepRewind()) {
+				didStep = true;
 			}
 		}
-	} else if (pausedForRewind) {
-		pausedForRewind = false;
-		paused = false;
+		if (didStep) {
+			const result = window.JunkbotWasm.syncEngineState(entities, wind, laserBeams, teleportEffects);
+			frameCounter = result.frameCounter;
+			moves = result.moves;
+		}
+	} else {
+		// Always tell Swift the rewind gesture ended, even if `pausedForRewind` is false (e.g. the
+		// game was already paused for an unrelated reason, like a loss, when rewind started) -
+		// `isRewinding` must never get stuck true, or GameEngine.tick() would silently stop
+		// advancing forever even after JS's own `paused` becomes false again.
+		window.JunkbotWasm.endRewind();
+		if (pausedForRewind) {
+			pausedForRewind = false;
+			paused = false;
+		}
 	}
 };
 const handlePlayback = () => {
@@ -3764,17 +3773,6 @@ const simulate = (entities) => {
 		// highlight logic (which reads `dragging`, not gameEngine directly) keeps working unchanged.
 		dragging = entities.filter((entity) => entity.grabbed);
 	}
-	// sort for consistency for level delta patching
-	entities.sort((a, b) => a.id - b.id);
-	playthroughEvents.push({
-		type: "step",
-		t: frameCounter,
-		x: mouse.worldX,
-		y: mouse.worldY,
-		editing,
-		levelPatch: diffPatcher.clone(diffPatcher.diff(levelLastFrame, currentLevel)),
-	});
-	levelLastFrame = diffPatcher.clone(currentLevel);
 };
 
 // #endregion
@@ -4858,7 +4856,6 @@ const initEditorUI = () => {
 					lastKeys,
 					playthroughEvents,
 					playbackEvents,
-					levelLastFrame,
 					frameCounter,
 				};
 				muted = true;
@@ -4874,7 +4871,6 @@ const initEditorUI = () => {
 				lastKeys = new Map();
 				playthroughEvents = [];
 				playbackEvents = [];
-				levelLastFrame = {};
 				frameCounter = 0;
 				simulate([previewEntity]);
 				({
@@ -4891,7 +4887,6 @@ const initEditorUI = () => {
 					lastKeys,
 					playthroughEvents,
 					playbackEvents,
-					levelLastFrame,
 					frameCounter,
 				} = prev);
 				previewEntity.x = prev.x;

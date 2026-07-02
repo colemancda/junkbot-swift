@@ -1366,6 +1366,48 @@ exports.mouseUp =
 exports.isDragging =
     JSClosure { _ in .boolean(gameEngine.isDragging) }.jsValue
 
+// Play-mode undo (see Sources/JunkbotCore/Undo.swift) — a separate, new capability from the
+// level editor's own undo/redo (JS-side, JSON-snapshot based, `editing`-gated, untouched).
+exports.undo =
+    JSClosure { _ in .boolean(gameEngine.undo()) }.jsValue
+
+exports.canUndo =
+    JSClosure { _ in .boolean(gameEngine.canUndo) }.jsValue
+
+// Play-mode rewind (see Sources/JunkbotCore/Undo.swift), replacing the old JS-side
+// jsondiffpatch-based `playbackLevel`/`levelLastFrame` scrubbing.
+exports.beginRewind =
+    JSClosure { _ in
+        gameEngine.beginRewind()
+        return .undefined
+    }.jsValue
+
+exports.stepRewind =
+    JSClosure { _ in .boolean(gameEngine.stepRewind()) }.jsValue
+
+exports.endRewind =
+    JSClosure { _ in
+        gameEngine.endRewind()
+        return .undefined
+    }.jsValue
+
+// undo()/stepRewind() mutate gameEngine.entities directly, bypassing the usual
+// tick() -> syncEngineEntities path (and both can run while paused, so no
+// engineTick call happens on its own to refresh JS's mirror). JS calls this once right after
+// undo()/stepRewind() return true, reusing the same sync logic engineTick already uses.
+exports.syncEngineState =
+    JSClosure { args in
+        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
+            let teleportEffects = args[3].object
+        else { return .undefined }
+        syncEngineEntities(to: entities)
+        syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
+        let result = JSObject.global.Object.function!.new()
+        result.frameCounter = gameEngine.frameCounter.jsValue
+        result.moves = gameEngine.moves.jsValue
+        return result.jsValue
+    }.jsValue
+
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")
 
