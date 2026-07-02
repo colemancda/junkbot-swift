@@ -18,11 +18,31 @@ let spritesUndercoverDirectory = spritesDirectory.appendingPathComponent("Underc
 
 // MARK: - Level sequencing
 
+/// Reads a level `.txt` file as UTF-8, stripping a leading byte-order-mark if present - a few
+/// files under `levels/` (e.g. `Terrarium.txt`, `The Garage.txt`) have one, and `String.Encoding
+/// .utf8` decoding doesn't strip it automatically, which left a stray `\u{FEFF}` glued to the
+/// `[info]` line and broke that file's section parsing entirely (silently, since `Level(text:)`
+/// isn't throwing - it would just fail to find `[info]` and produce an all-default/empty `Level`).
+func readLevelText(at url: URL) -> String? {
+  guard var text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+  if text.hasPrefix("\u{FEFF}") {
+    text.removeFirst()
+  }
+  return text
+}
+
+/// Collapses runs of whitespace to a single space, for matching titles that differ only in
+/// incidental whitespace (a couple of `levels/*.txt` files have a typo'd double space in their
+/// `title=` line, e.g. "Running  the Gauntlet" vs. `_LEVEL_LISTING.txt`'s "Running the Gauntlet").
+func normalizedTitle(_ title: String) -> String {
+  title.trimmingCharacters(in: .whitespaces).split(separator: " ").joined(separator: " ")
+}
+
 /// `_LEVEL_LISTING.txt`'s order is the source of truth for level progression, but its titles don't
 /// always match their on-disk filename 1:1 (e.g. "Caution: Fire" -> "Caution Fire.txt", punctuation
 /// stripped inconsistently) - so rather than guessing a sanitizer, every top-level `levels/*.txt`
 /// file gets parsed once at startup and matched back to the listing by its *parsed* `[info] title=`,
-/// which is always exact.
+/// which is always exact (modulo incidental whitespace, see `normalizedTitle`).
 func loadLevelSequence() -> [(title: String, url: URL)] {
   let fileManager = FileManager.default
   guard
@@ -32,18 +52,16 @@ func loadLevelSequence() -> [(title: String, url: URL)] {
 
   var urlByTitle: [String: URL] = [:]
   for url in entries where url.pathExtension == "txt" {
-    guard let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
-    let title = Level(text: text).title
-    urlByTitle[title] = url
+    guard let text = readLevelText(at: url) else { continue }
+    urlByTitle[normalizedTitle(Level(text: text).title)] = url
   }
 
   guard
-    let listingText = try? String(
-      contentsOf: levelsDirectory.appendingPathComponent("_LEVEL_LISTING.txt"), encoding: .utf8)
+    let listingText = readLevelText(at: levelsDirectory.appendingPathComponent("_LEVEL_LISTING.txt"))
   else { return [] }
 
   return listingText.split(separator: "\n").compactMap { line in
-    let title = line.trimmingCharacters(in: .whitespaces)
+    let title = normalizedTitle(String(line))
     guard !title.isEmpty else { return nil }
     guard let url = urlByTitle[title] else {
       // Pre-existing data mismatch in a few `levels/*.txt` files (their `[info] title=` doesn't
@@ -64,16 +82,39 @@ guard !levelSequence.isEmpty else {
 
 let gameEngine = GameEngine()
 var currentLevelIndex = 0
-/// World-space camera center/scale, recomputed once per level load (static for the level's
-/// duration - no camera-follows-Junkbot panning yet, matching this pass's "just watch it play"
-/// scope).
+/// World-space camera center/scale, initialized to the level's center on load and then re-centered
+/// on Junkbot every frame by `updateCamera()` (a simplified version of JS's `controlViewport`: no
+/// margin-based "only pan once near the edge" deadzone or smoothing, just clamp so the camera never
+/// shows past the level bounds).
 var cameraCenterX: Double = 0
 var cameraCenterY: Double = 0
 let cameraScale: Double = 1
 
+@MainActor func updateCamera() {
+  guard let junkbot = gameEngine.entities.first(where: { $0.type == .junkbot }) else { return }
+  var targetX = Double(junkbot.x) + Double(junkbot.width) / 2
+  var targetY = Double(junkbot.y) + Double(junkbot.height) / 2
+
+  if let bounds = gameEngine.levelBounds {
+    let halfViewWidth = Double(windowWidth) / 2 / cameraScale
+    let halfViewHeight = Double(windowHeight) / 2 / cameraScale
+    let minX = Double(bounds.x) + halfViewWidth
+    let maxX = Double(bounds.x) + Double(bounds.width) - halfViewWidth
+    let minY = Double(bounds.y) + halfViewHeight
+    let maxY = Double(bounds.y) + Double(bounds.height) - halfViewHeight
+    // If the level is narrower/shorter than the window, center on it instead of clamping to a
+    // backwards (min > max) range.
+    targetX = minX > maxX ? Double(bounds.x) + Double(bounds.width) / 2 : min(max(targetX, minX), maxX)
+    targetY = minY > maxY ? Double(bounds.y) + Double(bounds.height) / 2 : min(max(targetY, minY), maxY)
+  }
+
+  cameraCenterX = targetX
+  cameraCenterY = targetY
+}
+
 @MainActor func loadCurrentLevel() {
   let (title, url) = levelSequence[currentLevelIndex]
-  guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+  guard let text = readLevelText(at: url) else {
     FileHandle.standardError.write(Data("Failed to read \(url.path)\n".utf8))
     exit(1)
   }
@@ -217,6 +258,22 @@ func fallbackColor(for e: Entity) -> (r: UInt8, g: UInt8, b: UInt8) {
     let offsetX = Float(screen.x) - Float(entity.x)
     let offsetY = Float(screen.y) - Float(entity.y)
 
+    if entity.type == .junkbot {
+      let frame = junkbotFrame(for: entity)
+      if let texture = textureCache.texture(named: frame.spriteName) {
+        var texW: Float = 0
+        var texH: Float = 0
+        _ = SDL_GetTextureSize(texture, &texW, &texH)
+        // Matches drawJunkbot's `junkbot.x - offset.x, junkbot.y + junkbot.height - 1 - height - offset.y`.
+        var dst = SDL_FRect(
+          x: Float(entity.x) - Float(frame.offsetX) + offsetX,
+          y: Float(entity.y) + Float(entity.height) - 1 - texH - Float(frame.offsetY) + offsetY,
+          w: texW, h: texH)
+        _ = SDL_RenderTexture(renderer, texture, nil, &dst)
+        continue
+      }
+    }
+
     if let name = spriteName(for: entity), let texture = textureCache.texture(named: name) {
       var texW: Float = 0
       var texH: Float = 0
@@ -285,6 +342,7 @@ while running {
     }
   }
 
+  updateCamera()
   render()
   SDL_Delay(1)
 }
