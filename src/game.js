@@ -3398,6 +3398,17 @@ canvas.addEventListener("pointerdown", (event) => {
 		worldX: mouse.worldX,
 		worldY: mouse.worldY,
 	};
+	if (!editing) {
+		// Play-mode dragging is routed through GameEngine (Sources/JunkbotCore/Input.swift), which
+		// owns the grab/direction-resolution/release logic against its own persistent `entities`.
+		// `dragging`/`entity.grabbed` get refreshed from the synced mirror in `simulate()` below,
+		// not here (mouseDown's effect on gameEngine.entities isn't visible on the JS mirror until
+		// the next engineTick's syncEngineEntities).
+		if (!window.JunkbotWasm.isDragging()) {
+			window.JunkbotWasm.mouseDown(mouse.worldX, mouse.worldY);
+		}
+		return;
+	}
 	if (dragging.length === 0) {
 		sortEntitiesForRendering(entities);
 		const grabs = possibleGrabs();
@@ -3541,6 +3552,10 @@ const finishDrag = ({
 };
 
 addEventListener("pointerup", () => {
+	if (!editing) {
+		window.JunkbotWasm.mouseUp(mouse.worldX, mouse.worldY);
+		return;
+	}
 	if (dragging.length) {
 		finishDrag();
 	} else if (selectionBox) {
@@ -3713,11 +3728,25 @@ const handlePlayback = () => {
 const simulate = (entities) => {
 	// Simulation runs entirely in Swift's GameEngine (via engineTick). The former JS-side
 	// per-entity dispatch fallback has been removed; GameEngine is the single source of truth.
+	if (!editing) {
+		// Play-mode drag-following and direction-resolution (see Sources/JunkbotCore/Input.swift's
+		// mouseMove) run once per tick here, rather than once per render frame as JS's own
+		// updateDrag(mouse) used to (see render()) - consistent with GameEngine owning simulation
+		// state at the tick cadence rather than the display's raw frame rate.
+		window.JunkbotWasm.mouseMove(mouse.worldX, mouse.worldY);
+	}
 	const levelForSimulation = entities === currentLevel.entities ? currentLevel : { ...currentLevel, entities };
-	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter);
+	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter, editing);
 	frameCounter = result.frameCounter;
+	moves = result.moves;
 	if (result.collectedBin) {
 		collectBinTime = Date.now();
+	}
+	if (!editing) {
+		// entity.grabbed/grabOffset were just refreshed onto the JS mirror above (engineTick ->
+		// syncEngineEntities); re-derive `dragging` from that so render()'s cursor/hover/connection-
+		// highlight logic (which reads `dragging`, not gameEngine directly) keeps working unchanged.
+		dragging = entities.filter((entity) => entity.grabbed);
 	}
 	// sort for consistency for level delta patching
 	entities.sort((a, b) => a.id - b.id);
@@ -3865,7 +3894,11 @@ const render = () => {
 	if (paused && !editing) {
 		canvas.style.cursor = "default";
 	} else if (dragging.length) {
-		updateDrag(mouse);
+		// Play-mode dragging's position updates now happen in simulate() (Swift-side, via
+		// GameEngine.mouseMove) - only editor-mode dragging still needs this JS-side updateDrag.
+		if (editing) {
+			updateDrag(mouse);
+		}
 		canvas.style.cursor = `url("images/cursors/cursor-grabbing.png") 8 8, grabbing`;
 	} else if (hovered.length >= 2) {
 		canvas.style.cursor = `url("images/cursors/cursor-grab-either.png") 8 8, grab`;

@@ -452,7 +452,16 @@ extension GameEngine {
             jsById[Int32(obj.id.number ?? -1)] = obj
         }
 
+        // Entities Swift's own native play-mode drag (`draggingIndices`, driven by `mouseDown`/
+        // `mouseMove`/`mouseUp` — see Input.swift) is already tracking are authoritative from
+        // Swift's side. JS's mirror of `grabbed` for these lags one tick behind (it's only
+        // refreshed by this tick's own `syncEngineEntities`, after this function runs), so merging
+        // it in here would immediately clobber a just-started native drag back to `grabbed: false`
+        // on its very first tick. Skip them; this merge is for JS-initiated (editor-mode) drags.
+        let nativelyDraggingIDs = draggingEntityIDs
+
         for (id, obj) in jsById {
+            guard !nativelyDraggingIDs.contains(id) else { continue }
             let jsGrabbed = obj.grabbed.boolean == true
             if let idx = entities.firstIndex(where: { $0.id == id }) {
                 guard jsGrabbed || entities[idx].grabbed else { continue }
@@ -487,7 +496,16 @@ extension GameEngine {
             _ = playSound(soundName)
         }
 
-        mergeGrabbedEntities(from: entities)
+        // Only merge JS's `grabbed` mirror into Swift while editing: editor-mode dragging still
+        // sets `entity.grabbed` directly on JS objects (this is how Swift learns about it), but
+        // play-mode dragging is entirely Swift-native now (mouseDown/mouseMove/mouseUp) - JS never
+        // independently sets `grabbed` there anymore. Merging unconditionally would clobber a
+        // just-finished native release: JS's mirror is always one tick stale, so right after
+        // `mouseUp` clears `draggingIndices`, this merge would still see the old `grabbed: true`
+        // and re-grab the entity in Swift before this tick's sync corrects the mirror.
+        if args[8].boolean == true {
+            mergeGrabbedEntities(from: entities)
+        }
         ensureIDCounterAtLeast(nextID)
         tick()
         syncEngineEntities(to: entities)
@@ -496,6 +514,11 @@ extension GameEngine {
         let result = JSObject.global.Object.function!.new()
         result.frameCounter = frameCounter.jsValue
         result.collectedBin = collectedBin.jsValue
+        // `moves` is also Swift-owned now (incremented by Input.swift's startDrag for play-mode
+        // grabs, which JS no longer sees directly since it no longer calls its own startGrab for
+        // those). Editor-mode grabs never increment it (matches JS's original `if (!editing)`
+        // guard in startGrab), so reporting it back unconditionally is a no-op during editing.
+        result.moves = moves.jsValue
         return result.jsValue
     }
 
@@ -1193,6 +1216,9 @@ func syncEntity(_ entity: Entity, to object: JSObject) {
         offset.x = entity.grabOffsetX.jsValue
         offset.y = entity.grabOffsetY.jsValue
         object.grabOffset = offset.jsValue
+    } else {
+        deleteJSProperty(object, "grabbed")
+        deleteJSProperty(object, "grabOffset")
     }
     if entity.floating {
         object.floating = .boolean(true)
@@ -1300,6 +1326,33 @@ exports.engineLoadLevel =
 
 exports.engineTick =
     JSClosure { args in gameEngine.engineTickExport(args) }.jsValue
+
+// Play-mode drag-and-drop, routed through GameEngine's persistent `entities` (see
+// `Sources/JunkbotCore/Input.swift`). Editor-mode dragging stays JS-side (unchanged); the JS
+// caller only invokes these while `!editing`. Position updates land directly on
+// `gameEngine.entities`, then reach JS's read-only mirror via the next `engineTick`'s
+// `syncEngineEntities` (mirror-and-sync, same as every other tick-driven state change) — these
+// exports don't sync entities themselves.
+exports.mouseDown =
+    JSClosure { args in
+        gameEngine.mouseDown(Int32(args[0].number ?? 0), Int32(args[1].number ?? 0))
+        return .undefined
+    }.jsValue
+
+exports.mouseMove =
+    JSClosure { args in
+        gameEngine.mouseMove(Int32(args[0].number ?? 0), Int32(args[1].number ?? 0))
+        return .undefined
+    }.jsValue
+
+exports.mouseUp =
+    JSClosure { args in
+        gameEngine.mouseUp(Int32(args[0].number ?? 0), Int32(args[1].number ?? 0))
+        return .undefined
+    }.jsValue
+
+exports.isDragging =
+    JSClosure { _ in .boolean(gameEngine.isDragging) }.jsValue
 
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")

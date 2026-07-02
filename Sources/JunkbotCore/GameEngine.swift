@@ -329,6 +329,12 @@ public final class GameEngine: @unchecked Sendable {
     guard canRelease() else { return }
     finishDrag()
   }
+  /// Whether a play-mode drag (started via `mouseDown`/`mouseMove`) is currently in progress.
+  public var isDragging: Bool { !draggingIndices.isEmpty }
+  /// IDs of entities currently part of a native (`mouseDown`/`mouseMove`-driven) drag. See
+  /// `main.swift`'s `mergeGrabbedEntities`, which uses this to avoid clobbering a just-started
+  /// native drag with a stale JS-side `grabbed` reading.
+  public var draggingEntityIDs: Set<Int32> { Set(draggingIndices.map { entities[$0].id }) }
   public func setPaused(_ isPaused: Bool) { paused = isPaused }
   public func setViewport(_ cx: Int32, _ cy: Int32, _ scale: Float) {
     viewportCenterX = cx
