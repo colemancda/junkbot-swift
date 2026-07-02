@@ -74,6 +74,19 @@ public final class GameEngine: @unchecked Sendable {
   var isRewinding: Bool = false
   var wasPausedBeforeRewind: Bool = false
 
+  // MARK: - Background layers (see RenderList.swift)
+  /// Sprite ID of the level's backdrop image, `-1` if none/not yet provided. Set via
+  /// `setBackground` (JS host resolves names to IDs at load; native path uses `spriteIDForName`).
+  var backdropSpriteID: Int32 = -1
+  /// Decals drawn behind the backdrop layer boundary (JS: `currentLevel.backgroundDecals`).
+  var backgroundDecals: [DecalInstance] = []
+  /// Decals drawn in front of `backgroundDecals` but behind entities (JS: `currentLevel.decals`).
+  var decals: [DecalInstance] = []
+  /// Dedicated xorshift state for *cosmetic* randomness (scaredy-bin wobble in
+  /// `RenderList.swift`) - deliberately separate from `rngState` so building render frames never
+  /// perturbs the simulation RNG sequence that replay/rewind determinism depends on.
+  var renderRNGState: UInt32 = 0x9E37_79B9
+
   // MARK: - Viewport
   public var viewportCenterX: Int32 = 0
   public var viewportCenterY: Int32 = 0
@@ -163,6 +176,9 @@ public final class GameEngine: @unchecked Sendable {
     undoStack.removeAll(keepingCapacity: true)
     rewindBuffer = Array(repeating: nil, count: rewindBuffer.count)
     isRewinding = false
+    backdropSpriteID = -1
+    backgroundDecals.removeAll(keepingCapacity: true)
+    decals.removeAll(keepingCapacity: true)
   }
 
   /// Resets and loads a complete level from an already-constructed entity list, e.g. when
