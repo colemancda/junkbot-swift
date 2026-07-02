@@ -110,8 +110,10 @@ extension GameEngine {
 
   /// Begins dragging every entity in `indices` as a group, recording each dragged entity's offset
   /// from the grab point so their relative layout is preserved as the group moves. No-op if the
-  /// first entity is already `grabbed`.
-  func startDrag(indices: [Int], worldX: Int32, worldY: Int32) {
+  /// first entity is already `grabbed`. `direction` is purely for `onDragEvent`'s recording
+  /// purposes (see `mouseDown`/`mouseMove`): `0` if resolved immediately at press time, `-1`/`1`
+  /// if resolved upward/downward via the drag gesture.
+  func startDrag(indices: [Int], worldX: Int32, worldY: Int32, direction: Int32) {
     guard let first = indices.first, !entities[first].grabbed else { return }
     draggingIndices = indices
     moves += 1
@@ -121,6 +123,7 @@ extension GameEngine {
       entities[idx].grabOffsetY = entities[idx].y - worldY
     }
     playSound(.blockPickUp)
+    onDragEvent?(true, worldX, worldY, direction)
   }
 
   /// Moves the entire `draggingIndices` group to follow the pointer, snapped to the grid and
@@ -154,6 +157,7 @@ extension GameEngine {
     }
     playSound(.blockDrop)
     draggingIndices.removeAll(keepingCapacity: true)
+    onDragEvent?(false, mouseWorldX, mouseWorldY, 0)
   }
 
   /// Whether the currently-dragged group could be released at its present position: no collision
