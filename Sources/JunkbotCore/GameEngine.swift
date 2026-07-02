@@ -196,6 +196,9 @@ public final class GameEngine: @unchecked Sendable {
     winLoseState = winOrLose()
   }
 
+  /// One `add*` method per `EntityType` for use with the `beginLoadLevel`/`finishLoadLevel`
+  /// incremental level-building sequence: each appends the corresponding `make*` factory's result
+  /// (see `EntityFactory.swift` for the entity's fixed dimensions and defaults) to `entities`.
   public func addBrick(
     _ x: Int32, _ y: Int32, _ widthInStuds: Int32, _ colorIndex: Int32, _ fixed: Bool
   ) {
