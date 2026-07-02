@@ -52,6 +52,14 @@ public final class GameEngine: @unchecked Sendable {
   /// Indices into `entities` that would be grabbed if the mouse were pressed right now, used for
   /// hover feedback.
   var hoveredIndices: [Int] = []
+  /// While a grab is possible in both directions from press position (until the drag gesture
+  /// resolves which one), the two candidate groups; `nil` otherwise. See `mouseDown`/`mouseMove`.
+  var pendingGrabUpward: [Int]? = nil
+  var pendingGrabDownward: [Int]? = nil
+  /// World position at the most recent `mouseDown`, used to measure the drag gesture that
+  /// resolves `pendingGrabUpward`/`pendingGrabDownward`.
+  var mouseDownWorldX: Int32 = 0
+  var mouseDownWorldY: Int32 = 0
 
   // MARK: - Viewport
   public var viewportCenterX: Int32 = 0
@@ -260,35 +268,66 @@ public final class GameEngine: @unchecked Sendable {
   }
 
   /// Starts a drag if the position at press-time has a grabbable entity (or entity group)
-  /// beneath it; no-op if already dragging. See `Input.swift`.
+  /// beneath it; no-op if already dragging. If the entity is grabbable in only one direction
+  /// (up or down), starts dragging immediately; if grabbable in both, defers to `mouseMove`
+  /// to resolve which direction based on the drag gesture (matches JS's `pendingGrabs`). See
+  /// `Input.swift`.
   public func mouseDown(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
+    mouseDownWorldX = worldX
+    mouseDownWorldY = worldY
+    pendingGrabUpward = nil
+    pendingGrabDownward = nil
     guard draggingIndices.isEmpty else { return }
-    let grabs = possibleGrabsAt(worldX: worldX, worldY: worldY)
-    if let first = grabs.first {
-      startDrag(entityIndex: first, worldX: worldX, worldY: worldY)
+    guard let first = possibleGrabsAt(worldX: worldX, worldY: worldY).first else { return }
+    let grabs = possibleGrabsInDirections(startIndex: first)
+    if grabs.canGrabDownward && grabs.canGrabUpward {
+      pendingGrabDownward = grabs.grabDownward
+      pendingGrabUpward = grabs.grabUpward
+      playSound(.blockClick)
+    } else if grabs.canGrabDownward {
+      startDrag(indices: grabs.grabDownward, worldX: worldX, worldY: worldY)
+      playSound(.blockClick)
+    } else if grabs.canGrabUpward {
+      startDrag(indices: grabs.grabUpward, worldX: worldX, worldY: worldY)
+      playSound(.blockClick)
     }
   }
-  /// Updates the active drag to follow the pointer, or (if not dragging) refreshes `hoveredIndices`
-  /// for hover feedback.
+  /// Updates the active drag to follow the pointer; resolves a pending two-direction grab (see
+  /// `mouseDown`) once the pointer has moved far enough vertically from the press position; or,
+  /// if neither dragging nor pending, refreshes `hoveredIndices` for hover feedback.
   public func mouseMove(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
+    if pendingGrabUpward != nil || pendingGrabDownward != nil {
+      if worldY < mouseDownWorldY - dragResolveThreshold, let up = pendingGrabUpward {
+        startDrag(indices: up, worldX: worldX, worldY: worldY)
+        pendingGrabUpward = nil
+        pendingGrabDownward = nil
+      } else if worldY > mouseDownWorldY + dragResolveThreshold, let down = pendingGrabDownward {
+        startDrag(indices: down, worldX: worldX, worldY: worldY)
+        pendingGrabUpward = nil
+        pendingGrabDownward = nil
+      }
+    }
     if !draggingIndices.isEmpty {
       updateDrag(worldX: worldX, worldY: worldY)
     } else {
       hoveredIndices = possibleGrabsAt(worldX: worldX, worldY: worldY)
     }
   }
-  /// Releases the active drag (if any) at its final position, committing the move.
+  /// Releases the active drag (if any) at its final position, committing the move — but only if
+  /// `canRelease()` allows it there (collision-free, and connected to something fixed on exactly
+  /// one vertical side). If not, the drag simply continues (matches JS's `finishDrag`, which
+  /// no-ops on an invalid release rather than snapping back or forcing a drop).
   public func mouseUp(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
-    if !draggingIndices.isEmpty {
-      updateDrag(worldX: worldX, worldY: worldY)
-      finishDrag()
-    }
+    guard !draggingIndices.isEmpty else { return }
+    updateDrag(worldX: worldX, worldY: worldY)
+    guard canRelease() else { return }
+    finishDrag()
   }
   public func setPaused(_ isPaused: Bool) { paused = isPaused }
   public func setViewport(_ cx: Int32, _ cy: Int32, _ scale: Float) {
