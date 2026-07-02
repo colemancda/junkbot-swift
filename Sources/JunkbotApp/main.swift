@@ -769,6 +769,88 @@ exports.allConnectedToFixed =
 exports.findMisplacedEntities =
     JSClosure { args in gameEngine.findMisplacedEntitiesExport(args) }.jsValue
 
+// Debug-overlay validity/collision checks for the given `entities` array (the "Problem Sleuth"),
+// mirroring the original JS's `detectProblems`. Returns raw `{kind, entity, otherEntity?, worldX?,
+// worldY?}` records rather than formatted messages, so message text stays in JS (no native Swift
+// String formatting needed here) — see `detectProblems` in src/game.js for how these get turned
+// into display strings. The playback/recording desync check from the original stays JS-side too,
+// since it compares against JS-only `playbackLevel` state that has no GameEngine equivalent.
+func detectProblemsExport(_ args: [JSValue]) -> JSValue {
+    guard let entities = args[0].object else { return [JSValue]().jsValue }
+    let length = Int(entities.length.number ?? 0)
+    let values = (0..<length).map { entities[$0] }
+
+    func makeResult(
+        kind: String, entity: JSValue, otherEntity: JSValue? = nil,
+        worldX: Int32? = nil, worldY: Int32? = nil
+    ) -> JSValue {
+        let obj = JSObject.global.Object.function!.new()
+        obj.kind = kind.jsValue
+        obj.entity = entity
+        if let otherEntity { obj.otherEntity = otherEntity }
+        if let worldX { obj.worldX = worldX.jsValue }
+        if let worldY { obj.worldY = worldY.jsValue }
+        return obj.jsValue
+    }
+
+    var results: [JSValue] = []
+    for i in 0..<length {
+        guard let entity = values[i].object else { continue }
+
+        // Reading straight from loosely-typed JS objects (unlike a native Swift `Entity`, whose
+        // Int32 fields can't be NaN/non-numeric by construction), so these validity checks are
+        // still meaningful here and are kept faithful to the original.
+        guard let xNum = entity.x.number, xNum.isFinite, let yNum = entity.y.number, yNum.isFinite
+        else {
+            results.append(makeResult(kind: "invalidPosition", entity: values[i]))
+            continue
+        }
+        let ex = Int32(xNum), ey = Int32(yNum)
+
+        if ex % CELL_W != 0 {
+            results.append(makeResult(kind: "misaligned", entity: values[i]))
+            continue
+        }
+
+        guard let wNum = entity.width.number, wNum.isFinite, let hNum = entity.height.number,
+            hNum.isFinite
+        else {
+            results.append(makeResult(kind: "invalidSize", entity: values[i]))
+            continue
+        }
+        let ew = Int32(wNum), eh = Int32(hNum)
+
+        if entityType(entity) == "brick" {
+            guard let widthInStudsNum = entity.widthInStuds.number, widthInStudsNum.isFinite else {
+                results.append(makeResult(kind: "invalidWidthInStuds", entity: values[i]))
+                continue
+            }
+            let widthInStuds = Int32(widthInStudsNum)
+            if ew != CELL_W * widthInStuds {
+                results.append(makeResult(kind: "widthMismatch", entity: values[i]))
+                continue
+            }
+        }
+        for j in (i + 1)..<length {
+            guard let other = values[j].object else { continue }
+            let ox = Int32(other.x.number ?? 0), oy = Int32(other.y.number ?? 0)
+            let ow = Int32(other.width.number ?? 0), oh = Int32(other.height.number ?? 0)
+            if gameEngine.rectanglesIntersect(ex, ey, ew, eh, ox, oy, ow, oh) {
+                let worldX = (ex + ox + (ew + ow) / 2) / 2
+                let worldY = (ey + oy + (eh + oh) / 2) / 2
+                results.append(
+                    makeResult(
+                        kind: "collision", entity: values[i], otherEntity: values[j],
+                        worldX: worldX, worldY: worldY))
+            }
+        }
+    }
+    return results.jsValue
+}
+
+exports.detectProblems =
+    JSClosure { args in detectProblemsExport(args) }.jsValue
+
 func makeEntityBase(id: JSValue, type: String, x: JSValue, y: JSValue, width: Int32, height: Int32) -> JSObject {
     let obj = JSObject.global.Object.function!.new()
     obj.id = id

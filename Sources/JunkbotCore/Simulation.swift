@@ -1,7 +1,15 @@
+/// Per-`EntityType` simulation step functions (one `simulate*`/`do*` per type, dispatched by
+/// `simulate()`'s main loop), plus the shared helpers they call (`hurtJunkbot`, `walk`,
+/// `winOrLose`). Each function advances exactly one entity by one tick; cross-entity effects
+/// (gravity, fans/lasers) are separate passes run once per `simulate()` call rather than folded
+/// into a single entity's step.
 extension GameEngine {
 
   // MARK: - Win / Lose
 
+  /// The current win/lose result: `0` (in progress), `1` (won — every bin collected, Junkbot
+  /// alive and not dying), or `2` (lost — no Junkbot alive). Recomputed from scratch each call
+  /// rather than cached, so it naturally reflects the very latest entity state.
   func winOrLose() -> Int32 {
     // Mirrors the original JS: junkbot's alive/dead state takes precedence over bin state, so
     // a level can flip from "win" back to "lose" on a later frame if the junkbot dies after
@@ -19,6 +27,12 @@ extension GameEngine {
 
   // MARK: - Hurt Junkbot
 
+  /// Applies a hit to the Junkbot at `index`: if armored, consumes the shield (starts it counting
+  /// down via `losingShield`/`losingShieldTime` in `simulateJunkbot`) instead of killing; otherwise
+  /// starts the death animation (`dying`). No-op if Junkbot is already dying/dead/grabbed.
+  ///
+  /// - Parameter cause: Selects the death sound/animation: `1` fire, `2` water (also sets
+  ///   `dyingFromWater`), `3` laser, anything else a generic enemy-contact death.
   func hurtJunkbot(index: Int, cause: Int32) {
     var junkbot = entities[index]
     if junkbot.dying || junkbot.dead || junkbot.grabbed { return }
@@ -43,6 +57,11 @@ extension GameEngine {
 
   // MARK: - Gravity
 
+  /// Drops every unsupported, non-`fixed`, non-`grabbed`, non-`floating` brick/crate/bin/etc. one
+  /// grid cell (or onto whatever's directly below it, if closer), once per tick. Junkbot and the
+  /// enemy types move under their own logic instead (see their respective `simulate*` functions)
+  /// and are excluded here. "Unsupported" is determined by `connectsToFixed`, not simple contact,
+  /// so a whole disconnected structure falls together rather than each brick falling individually.
   func simulateGravity() {
     for i in 0..<entities.count {
       let e = entities[i]
@@ -78,6 +97,13 @@ extension GameEngine {
 
   // MARK: - Walk (Junkbot)
 
+  /// Advances Junkbot one grid cell in its `facing` direction — stepping up onto a low ledge or
+  /// down a short drop as needed — or turns around in place if the way is blocked (a wall, a step
+  /// too tall/short, or nothing solid to land on). Called from `simulateJunkbot` on its walk-cadence
+  /// frames, not every tick.
+  ///
+  /// - Returns: `true` if Junkbot turned around instead of moving, `false` if it stepped forward
+  ///   (matching the ground it stepped onto/off of is left to the caller to react to).
   @discardableResult
   func walk(junkbotIndex: Int) -> Bool {
     let junkbot = entities[junkbotIndex]
@@ -149,6 +175,8 @@ extension GameEngine {
 
   // MARK: - Find linked teleport
 
+  /// The index of the other `.teleport` entity sharing `teleportIndex`'s `teleportID`, or `-1` if
+  /// unlinked/not found.
   func findLinkedTeleportIndex(for teleportIndex: Int) -> Int {
     let tp = entities[teleportIndex]
     for i in 0..<entities.count {
@@ -161,6 +189,11 @@ extension GameEngine {
 
   // MARK: - Simulate Junkbot
 
+  /// Advances the Junkbot at `index` by one tick: head-bonk/shield-decay bookkeeping, then one of
+  /// (in priority order) the collecting-bin, dying, dead, getting-shield, floating, or airborne
+  /// (jump/fall ballistics) states if active; otherwise, on its walk-cadence frames, calls `walk`
+  /// and reacts to whatever's underfoot (switches, fire, a shield, a jump brick, a linked
+  /// teleport), and finally checks whether it's now standing in front of a bin to start collecting it.
   func simulateJunkbot(index: Int) {
     var junkbot = entities[index]
 
@@ -430,6 +463,9 @@ extension GameEngine {
 
   // MARK: - Simulate Gearbot
 
+  /// Advances the gearbot at `index` on its move cadence: hurts Junkbot and turns around if it's
+  /// directly ahead, otherwise steps forward if there's solid ground there, or turns around if not
+  /// (never steps up/down — gearbots only walk on flat ground).
   func simulateGearbot(index: Int) {
     entities[index].animationFrame += 1
     if entities[index].animationFrame > 2 {
@@ -461,6 +497,9 @@ extension GameEngine {
 
   // MARK: - Simulate Climbbot
 
+  /// Advances the climbbot at `index` on its move cadence: hurts Junkbot if directly ahead, then
+  /// follows its wall-climbing state machine (`facingY`: climbing up while `energy` remains, then
+  /// switching to moving across/down, resetting `energy` once it reaches the top) to move one step.
   func simulateClimbbot(index: Int) {
     entities[index].animationFrame += 1
     if entities[index].animationFrame > 6 {
@@ -550,6 +589,8 @@ extension GameEngine {
 
   // MARK: - Simulate Flybot
 
+  /// Advances the flybot at `index` on its move cadence: hurts Junkbot and turns around if it's
+  /// directly ahead, otherwise flies forward in a straight line (ignoring ground/gravity).
   func simulateFlybot(index: Int) {
     entities[index].animationFrame += 1
     if entities[index].animationFrame % 2 == 0 {
@@ -572,6 +613,10 @@ extension GameEngine {
 
   // MARK: - Simulate Eyebot
 
+  /// Casts short rays in all 4 directions from the eyebot at `index`; if Junkbot is spotted,
+  /// faces toward it and resets `activeTimer` (keeping it in tracking/attacking mode). Run as a
+  /// separate pass after the main per-entity dispatch, since it can retarget any eyebot regardless
+  /// of simulation order.
   func doEyebotTargeting(index: Int) {
     let eyebot = entities[index]
     let directions: [(Int32, Int32)] = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -598,6 +643,9 @@ extension GameEngine {
     }
   }
 
+  /// Advances the eyebot at `index`, moving faster (every tick) while `activeTimer` is counting
+  /// down from a recent Junkbot sighting, or slower (every other tick) otherwise. Hurts Junkbot
+  /// and turns around if it's directly ahead.
   func doEyebotMovement(index: Int) {
     entities[index].activeTimer -= 1
     entities[index].animationFrame += 1
@@ -625,6 +673,8 @@ extension GameEngine {
 
   // MARK: - Simulate Scaredy Bin
 
+  /// Advances the `scaredy` bin at `index`: if Junkbot is within range, flees one step in the
+  /// opposite direction (or stops, `facing = 0`, if blocked); otherwise stands still.
   func simulateScaredy(index: Int) {
     entities[index].animationFrame += 1
     if entities[index].animationFrame > 2 {
@@ -656,6 +706,9 @@ extension GameEngine {
 
   // MARK: - Simulate Droplet
 
+  /// Advances the droplet at `index`: while `splashing`, plays out its splash animation and then
+  /// marks itself `removeBeforeRender`; otherwise falls up to 18 sub-steps this tick, hurting
+  /// Junkbot (by water) and starting the splash animation if it lands on something.
   func simulateDroplet(index: Int) {
     if entities[index].splashing {
       entities[index].animationFrame += 1
@@ -690,6 +743,8 @@ extension GameEngine {
 
   // MARK: - Simulate Pipe
 
+  /// Counts down the pipe at `index`'s drip `timer`; once it elapses, spawns a new `droplet` below
+  /// it and resets the timer to a new random interval (`MIN_DRIP_PERIOD..<MAX_DRIP_PERIOD`).
   func simulatePipe(index: Int) {
     entities[index].timer -= 1
     if entities[index].timer == 0 {
@@ -703,6 +758,8 @@ extension GameEngine {
 
   // MARK: - Simulate Jump block
 
+  /// Plays out the jump brick at `index`'s launch animation, then clears `active` (taking it off
+  /// cooldown) once it finishes.
   func simulateJump(index: Int) {
     entities[index].animationFrame += 1
     if entities[index].animationFrame >= 5 {
@@ -713,6 +770,10 @@ extension GameEngine {
 
   // MARK: - Simulate Teleport
 
+  /// Counts down the teleport pad at `index`'s cooldown `timer`, recomputes whether its exit is
+  /// `blocked` (something solid resting where a teleported entity would appear), and — while
+  /// within `TELEPORT_EFFECT_PERIOD` of the end of cooldown — emits a `TeleportEffect` frame.
+  /// Marks itself `blocked` permanently if it has no linked partner.
   func simulateTeleport(index: Int) {
     if entities[index].timer > 0 { entities[index].timer -= 1 }
     let tp = entities[index]
@@ -741,6 +802,10 @@ extension GameEngine {
 
   // MARK: - Fans and Lasers
 
+  /// Recomputes `wind` and `laserBeams` from scratch for the current tick: for every `on` fan,
+  /// casts an updraft column-by-column (marking any junkbot it passes through `floating`, stopping
+  /// at the first solid, non-droplet obstacle per column); for every `on` laser, casts a beam
+  /// until it hits something solid (hurting Junkbot by laser if it's what's hit).
   func simulateFansAndLasers() {
     wind.removeAll(keepingCapacity: true)
     laserBeams.removeAll(keepingCapacity: true)
@@ -815,6 +880,11 @@ extension GameEngine {
 
   // MARK: - Main simulate
 
+  /// Advances the entire level by one tick, in order: sort entities and rebuild acceleration
+  /// structures, apply gravity, dispatch each entity to its type's `simulate*`/`do*` step function
+  /// (skipping `grabbed` entities), remove anything marked `removeBeforeRender`, run eyebot
+  /// targeting as a separate pass, recompute fans/lasers, re-sort by ID, and finally refresh
+  /// `winLoseState`. Called once per frame by `GameEngine.tick()`.
   func simulate() {
     frameCounter += 1
     entities.sort { $0.y > $1.y }

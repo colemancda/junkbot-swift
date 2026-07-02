@@ -1,26 +1,56 @@
+/// The authoritative simulation state and entry point for one Junkbot level.
+///
+/// `GameEngine` owns the live `entities` array and everything derived from it each tick
+/// (acceleration structures, wind/laser/teleport effects, win/lose state). A level is loaded via
+/// `loadLevelState`/`replaceLiveState` (or the `beginLoadLevel`/`add*`/`finishLoadLevel` sequence),
+/// advanced one frame at a time via `tick()`, and queried via `entities`/`winLose()`.
+///
+/// This class is also the extension point for the rest of `JunkbotCore`: collision queries
+/// (`Collision.swift`), per-entity-type simulation (`Simulation.swift`), entity construction
+/// (`EntityFactory.swift`), and level text I/O (`LevelText.swift`) are all declared as
+/// `extension GameEngine` methods rather than free functions, so they share its state without
+/// threading it through every call.
 public final class GameEngine: @unchecked Sendable {
 
   // MARK: - Entity state
+  /// Every live game object in the level. Order is not semantically meaningful between ticks
+  /// (`simulate()` re-sorts it for gravity/rendering purposes) but IDs (`Entity.id`) are stable.
   public var entities: [Entity] = []
+  /// This tick's active fan updraft effects, one per on fan entity (see `WindEffect`).
   public var wind: [WindEffect] = []
+  /// This tick's active laser beams, one per on laser entity (see `LaserBeam`).
   public var laserBeams: [LaserBeam] = []
+  /// Currently-playing teleport visual effects (see `TeleportEffect`).
   public var teleportEffects: [TeleportEffect] = []
+  /// The level's boundary walls, if any. `nil` means the level is unbounded.
   public var levelBounds: LevelBounds? = nil
 
   // MARK: - Counters
+  /// Monotonically increasing counter used to assign new `Entity.id`s (see `getID()`).
   var idCounter: Int32 = 0
+  /// Number of `tick()`s simulated since the level was loaded.
   public var frameCounter: Int32 = 0
+  /// Number of completed drag-and-drop moves made by the player, for scoring.
   public var moves: Int32 = 0
+  /// The last-computed win/lose result: `0` (in progress), `1` (won), or `2` (lost). See `winOrLose()`.
   public var winLoseState: Int32 = 0
 
   // MARK: - Acceleration structures
+  /// Maps a y-coordinate to the indices of every entity whose top edge is at that y, rebuilt each
+  /// tick by `rebuildAccelerationStructures()`. Used to find what's directly above/below a
+  /// position without scanning every entity (see `Collision.swift`).
   var entitiesByTopY: [Int32: [Int]] = [:]
+  /// Maps a y-coordinate to the indices of every entity whose bottom edge is at that y; the
+  /// counterpart to `entitiesByTopY`.
   var entitiesByBottomY: [Int32: [Int]] = [:]
 
   // MARK: - Input
   var mouseWorldX: Int32 = 0
   var mouseWorldY: Int32 = 0
+  /// Indices into `entities` currently being dragged as a group (see `mouseDown`/`Input.swift`).
   var draggingIndices: [Int] = []
+  /// Indices into `entities` that would be grabbed if the mouse were pressed right now, used for
+  /// hover feedback.
   var hoveredIndices: [Int] = []
 
   // MARK: - Viewport
@@ -31,16 +61,22 @@ public final class GameEngine: @unchecked Sendable {
   // MARK: - Level metadata
   public var levelTitle: String = ""
   public var levelHint: String = ""
+  /// The target/"par" move count for scoring purposes; `Int.max` if the level has none.
   public var levelPar: Int = Int.max
 
   // MARK: - Flags
+  /// While `true`, `tick()` is a no-op.
   public var paused: Bool = false
 
   // MARK: - RNG (injectable; defaults to xorshift32)
   var rngState: UInt32 = 12345
+  /// Produces the next value in `[0, 1)`. Defaults to a seeded xorshift32 generator (see `init()`);
+  /// replaceable for deterministic testing.
   public var rng: () -> Float = { 0 }  // replaced in init
 
   // MARK: - Sound callback
+  /// Invoked with a `SoundID.rawValue` whenever the simulation wants to play a sound effect.
+  /// The host (e.g. the JS bridge) is responsible for mapping the ID to an actual audio asset.
   public var onPlaySound: ((Int32) -> Void)? = nil
 
   public init() {
@@ -60,16 +96,20 @@ public final class GameEngine: @unchecked Sendable {
 
   func randomFloat() -> Float { rng() }
 
+  /// A uniformly-distributed random integer in `0..<n` (or `0` if `n <= 0`).
   func randomInt(_ n: Int32) -> Int32 {
     guard n > 0 else { return 0 }
     return Int32(rng() * Float(n))
   }
 
+  /// Returns a fresh, level-unique entity ID by incrementing `idCounter`.
   func getID() -> Int32 {
     idCounter += 1
     return idCounter
   }
 
+  /// Clears all level state back to its just-constructed defaults. Called at the start of every
+  /// level load.
   public func resetLevel() {
     entities.removeAll(keepingCapacity: true)
     wind.removeAll(keepingCapacity: true)
@@ -90,6 +130,9 @@ public final class GameEngine: @unchecked Sendable {
     levelPar = Int.max
   }
 
+  /// Resets and loads a complete level from an already-constructed entity list, e.g. when
+  /// starting a level for the first time. Compare `replaceLiveState`, which does *not* reset
+  /// (used to refresh state from a live source every tick instead of loading a level).
   public func loadLevelState(entities newEntities: [Entity], levelBounds newLevelBounds: LevelBounds?, nextID: Int32) {
     resetLevel()
     entities = newEntities
@@ -99,6 +142,10 @@ public final class GameEngine: @unchecked Sendable {
     winLoseState = winOrLose()
   }
 
+  /// Replaces `entities`/`levelBounds` in place without resetting other state (counters, pause
+  /// flag, etc.), then rebuilds acceleration structures. Used when another source of truth (e.g.
+  /// a JS-side entities array) is authoritative and this engine's state needs to be refreshed to
+  /// match it before/after simulating a tick.
   public func replaceLiveState(entities newEntities: [Entity], levelBounds newLevelBounds: LevelBounds?, nextID: Int32) {
     entities = newEntities
     levelBounds = newLevelBounds
@@ -118,16 +165,22 @@ public final class GameEngine: @unchecked Sendable {
 
   // MARK: - Public API
 
+  /// Resets the RNG to a fixed seed and clears all level state. Intended for one-time setup
+  /// before the first level load (use `resetLevel`/`loadLevelState` for subsequent levels, which
+  /// don't re-seed the RNG).
   public func initialize() {
     rngState = 42
     resetLevel()
   }
 
+  /// Advances the simulation by one frame, unless `paused`.
   public func tick() {
     guard !paused else { return }
     simulate()
   }
 
+  /// Starts building a level incrementally: resets state and sets `levelBounds` (if a non-zero
+  /// size is given). Follow with `add*` calls for each entity, then `finishLoadLevel()`.
   public func beginLoadLevel(_ boundsX: Int32, _ boundsY: Int32, _ boundsW: Int32, _ boundsH: Int32)
   {
     resetLevel()
@@ -136,11 +189,16 @@ public final class GameEngine: @unchecked Sendable {
     }
   }
 
+  /// Completes an incremental level load started with `beginLoadLevel`: rebuilds acceleration
+  /// structures and computes the initial win/lose state.
   public func finishLoadLevel() {
     rebuildAccelerationStructures()
     winLoseState = winOrLose()
   }
 
+  /// One `add*` method per `EntityType` for use with the `beginLoadLevel`/`finishLoadLevel`
+  /// incremental level-building sequence: each appends the corresponding `make*` factory's result
+  /// (see `EntityFactory.swift` for the entity's fixed dimensions and defaults) to `entities`.
   public func addBrick(
     _ x: Int32, _ y: Int32, _ widthInStuds: Int32, _ colorIndex: Int32, _ fixed: Bool
   ) {
@@ -193,6 +251,8 @@ public final class GameEngine: @unchecked Sendable {
     entities.append(makeLaser(x: x, y: y, facing: facing, on: on, switchID: switchID))
   }
 
+  /// Starts a drag if the position at press-time has a grabbable entity (or entity group)
+  /// beneath it; no-op if already dragging. See `Input.swift`.
   public func mouseDown(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
@@ -202,6 +262,8 @@ public final class GameEngine: @unchecked Sendable {
       startDrag(entityIndex: first, worldX: worldX, worldY: worldY)
     }
   }
+  /// Updates the active drag to follow the pointer, or (if not dragging) refreshes `hoveredIndices`
+  /// for hover feedback.
   public func mouseMove(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
@@ -211,6 +273,7 @@ public final class GameEngine: @unchecked Sendable {
       hoveredIndices = possibleGrabsAt(worldX: worldX, worldY: worldY)
     }
   }
+  /// Releases the active drag (if any) at its final position, committing the move.
   public func mouseUp(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
@@ -225,5 +288,6 @@ public final class GameEngine: @unchecked Sendable {
     viewportCenterY = cy
     viewportScale = scale
   }
+  /// The last-computed win/lose result. See `winLoseState`.
   public func winLose() -> Int32 { winLoseState }
 }
