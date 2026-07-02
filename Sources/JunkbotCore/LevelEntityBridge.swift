@@ -104,6 +104,22 @@ extension GameEngine {
     levelHint = level.hint
     levelPar = level.par ?? Int.max
     winLoseState = winOrLose()
+
+    // Resolve background layers for the renderer (RenderList.swift). Unresolvable names (a few
+    // levels reference decals with no atlas entry) are skipped, matching JS's silent fallback.
+    func resolveDecals(_ levelDecals: [LevelDecal]) -> [DecalInstance] {
+      var result: [DecalInstance] = []
+      for decal in levelDecals {
+        guard let spriteID = backgroundSpriteIDForName(decal.name) else { continue }
+        result.append(DecalInstance(x: Int32(decal.x), y: Int32(decal.y), spriteID: spriteID))
+      }
+      return result
+    }
+    let background = level.background
+    setBackground(
+      backdropSpriteID: backgroundSpriteIDForName(background?.backdrop ?? "bkg1") ?? -1,
+      backgroundDecals: resolveDecals(background?.backgroundDecals ?? []),
+      decals: resolveDecals(background?.decals ?? []))
   }
 }
 #endif
