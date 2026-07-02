@@ -36,16 +36,20 @@ struct InputTests {
     engine.finishLoadLevel()
 
     let cIndex = engine.entities.firstIndex { $0.x == 0 && $0.y == 0 }!
+    let dIndex = engine.entities.firstIndex { $0.x == 0 && $0.y == -18 }!
     let cEntity = engine.entities[cIndex]
 
+    // Since neither C nor D is anchored to anything fixed, both grab directions succeed and (via
+    // the dependent-neighbor sweep) end up pulling in the same floating pair either way - but it's
+    // still ambiguous up front (mouseDown can't yet know both will match), so it must still defer
+    // to mouseMove's drag-gesture resolution rather than assuming and dragging immediately.
     engine.mouseDown(cEntity.x + 1, cEntity.y + 1)
     #expect(engine.draggingIndices.isEmpty, "should not commit to a direction immediately")
     #expect(engine.pendingGrabDownward != nil)
     #expect(engine.pendingGrabUpward != nil)
 
-    // Drag gesture resolves downward (grabbing just C, since nothing rests below it).
     engine.mouseMove(cEntity.x + 1, cEntity.y + 1 + engine.dragResolveThreshold + 1)
-    #expect(engine.draggingIndices == [cIndex])
+    #expect(Set(engine.draggingIndices) == Set([cIndex, dIndex]))
     #expect(engine.pendingGrabDownward == nil && engine.pendingGrabUpward == nil)
   }
 
@@ -55,7 +59,7 @@ struct InputTests {
     engine.beginLoadLevel(0, 0, 300, 300)
     Self.makeFloor(engine, y: 18)  // fixed floor, top edge at y=18
     engine.addBrick(0, 0, 1, 0, false)  // draggable brick resting on the floor
-    engine.addFire(15, 0, true, -1)  // fire directly beside the brick, same row
+    engine.addFire(0, -18, true, -1)  // fire directly above the brick (touching, not overlapping)
 
     let brickIndex = engine.entities.firstIndex { $0.type == .brick && !$0.fixed }!
     engine.draggingIndices = [brickIndex]
@@ -76,15 +80,25 @@ struct InputTests {
     let brickIndex = engine.entities.firstIndex { $0.type == .brick && !$0.fixed }!
     let brick = engine.entities[brickIndex]
 
-    engine.mouseDown(brick.x + 1, brick.y + 1)
-    #expect(engine.draggingIndices == [brickIndex], "isolated single brick should be immediately draggable in whichever direction resolves")
+    // An isolated brick (nothing touching it in any direction) is still ambiguous at press time
+    // (both directions trivially succeed with just itself) - matches JS, which defers even this
+    // case to the drag gesture before actually starting the drag.
+    engine.mouseDown(brick.x, brick.y)
+    #expect(engine.draggingIndices.isEmpty)
+    engine.mouseMove(brick.x, brick.y + engine.dragResolveThreshold + 1)
+    #expect(engine.draggingIndices == [brickIndex])
 
-    // Drag it over to rest directly on the floor at x=0.
-    engine.mouseMove(1, 19)
+    // Drag it over to rest directly on the floor (top edge at y=36), landing at (0, 18);
+    // account for the grab offset recorded at the resolve position above (not the original press
+    // position), so this doesn't depend on the exact threshold arithmetic.
+    let offsetX = engine.entities[brickIndex].grabOffsetX
+    let offsetY = engine.entities[brickIndex].grabOffsetY
+    engine.mouseMove(0 - offsetX, 18 - offsetY)
     #expect(engine.canRelease())
-    engine.mouseUp(1, 19)
+    engine.mouseUp(0 - offsetX, 18 - offsetY)
     #expect(engine.draggingIndices.isEmpty)
     #expect(!engine.entities[brickIndex].grabbed)
+    #expect(engine.entities[brickIndex].x == 0)
     #expect(engine.entities[brickIndex].y == 18)
   }
 }
