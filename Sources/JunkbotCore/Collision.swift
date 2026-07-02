@@ -233,20 +233,24 @@ extension GameEngine {
       let e = entities[startIndex]
       if e.y + e.height >= bounds.y + bounds.height { return true }
     }
-    var visited: [Int] = [startIndex]
+    var visited: [Int] = []
 
     func search(fromIndex: Int) -> Bool {
       let from = entities[fromIndex]
       if let bounds = levelBounds, from.y + from.height >= bounds.y + bounds.height { return true }
-      let above = entitiesByTopY[from.y + from.height] ?? []
-      let below = entitiesByBottomY[from.y] ?? []
-      var candidates: [Int] = []
-      if fromIndex != startIndex || direction != -1 { candidates += above }
-      if fromIndex != startIndex || direction != 1 { candidates += below }
-      for otherIdx in candidates {
+      // `direction` only restricts which side is searched from `startIndex` itself; once the
+      // search moves on to a neighbor, both sides are always considered (matches the original
+      // JS `connectsToFixed`).
+      let includeBelow = fromIndex != startIndex || direction != -1
+      let includeAbove = fromIndex != startIndex || direction != 1
+      for otherIdx in 0..<entities.count {
+        guard otherIdx != fromIndex else { continue }
+        let other = entities[otherIdx]
+        let isBelow = other.y == from.y + from.height  // other's top touches from's bottom
+        let isAbove = other.y + other.height == from.y  // other's bottom touches from's top
+        guard (isBelow && includeBelow) || (isAbove && includeAbove) else { continue }
         if ignoreIndices.contains(otherIdx) { continue }
         if visited.contains(otherIdx) { continue }
-        let other = entities[otherIdx]
         if other.grabbed { continue }
         guard from.x + from.width > other.x && from.x < other.x + other.width else { continue }
         visited.append(otherIdx)
