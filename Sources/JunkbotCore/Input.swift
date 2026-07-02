@@ -87,7 +87,8 @@ extension GameEngine {
         let o = entities[other]
         guard !o.fixed, o.type == .brick || o.type == .jump || o.type == .shield else { continue }
         guard connects(brickIndex, other) else { continue }
-        if connectsToFixed(startIndex: other, direction: 0, ignoreIndices: attached) { continue }
+        let ctf = connectsToFixed(startIndex: other, direction: 0, ignoreIndices: attached)
+        if ctf { continue }
         if isBlockedByJunkAbove(other) { return nil }
         attached.append(other)
       }
