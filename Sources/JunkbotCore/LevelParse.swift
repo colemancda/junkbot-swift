@@ -78,7 +78,11 @@ extension Level {
             switch key.lowercased() {
             case "size":
                 let f = value.split(separator: ",").compactMap { Int($0) }
-                if f.count == 2 { playfield.columns = f[0]; playfield.rows = f[1] }
+                if f.count == 2 {
+                    playfield.columns = f[0]
+                    playfield.rows = f[1]
+                    playfield.hasExplicitSize = true
+                }
             case "spacing":
                 let f = value.split(separator: ",").compactMap { Int($0) }
                 if f.count == 2 { playfield.spacingX = f[0]; playfield.spacingY = f[1] }
