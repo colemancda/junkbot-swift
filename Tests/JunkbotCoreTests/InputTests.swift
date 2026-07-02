@@ -14,6 +14,14 @@ struct InputTests {
   func titleScreenPyramidRepro() {
     let engine = GameEngine()
     engine.beginLoadLevel(0, 0, 600, 600)
+    // A handful of unrelated entities sharing y=342 with the pyramid's bottom brick, matching the
+    // real Title Screen level's crowded "floor row" - this is what actually triggered the bug
+    // (entitiesByTopY/entitiesByBottomY corruption), which a too-minimal repro didn't surface.
+    engine.addBrick(0, 342, 2, 3, false)
+    engine.addBrick(30, 342, 2, 3, false)
+    engine.addBrick(60, 342, 2, 3, false)
+    engine.addBrick(450, 342, 2, 3, false)
+    engine.addBrick(480, 342, 2, 3, false)
     // Fixed neighbors flanking the bottom brick (matches ids 21 and 20 from Title Screen.txt).
     engine.addBrick(165, 342, 2, 5, true)  // fixed, x:[165,195)
     engine.addBrick(225, 342, 2, 5, true)  // fixed, x:[225,255)
@@ -27,18 +35,17 @@ struct InputTests {
     func index(x: Int32, y: Int32) -> Int {
       engine.entities.firstIndex { $0.x == x && $0.y == y }!
     }
-    let i16 = index(x: 195, y: 342)
-    let i14 = index(x: 180, y: 324)
-    let i15 = index(x: 210, y: 324)
     let i13 = index(x: 195, y: 306)
 
     let grabs13 = engine.possibleGrabsInDirections(startIndex: i13)
     #expect(grabs13.canGrabUpward)
     #expect(grabs13.grabUpward == [i13], "grabbing the top brick upward should only grab itself, nothing is above it")
-    #expect(
-      Bool(false),
-      "DEBUG i13=\(i13) i14=\(i14) i15=\(i15) i16=\(i16) canGrabDownward=\(grabs13.canGrabDownward) grabDownward=\(grabs13.grabDownward)"
-    )
+    if grabs13.canGrabDownward {
+      #expect(
+        grabs13.grabDownward == [i13],
+        "grabbing the top brick downward should NOT pull in 14/15 below: they're independently supported by the adjacent fixed bricks (21/20)"
+      )
+    }
   }
 
   @Test("Grabbing the middle of a stack resting on a fixed floor only allows the upward direction")
