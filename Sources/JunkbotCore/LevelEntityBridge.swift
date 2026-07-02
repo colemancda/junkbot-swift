@@ -7,6 +7,12 @@ import Foundation
 /// which now just calls `Level(text:)` followed by this method rather than re-parsing text itself.
 extension GameEngine {
 
+  /// Resets this engine and loads `level`'s parts as live `entities`, resolving each `LevelPart`
+  /// to the appropriate `Entity` via the `make*` factories in `EntityFactory.swift` (brick width
+  /// from its type name, facing/on/used from its `PartState`, switch/teleport linkage from its
+  /// `relationID`), then sets `levelBounds`/`levelTitle`/`levelHint`/`levelPar` and computes the
+  /// initial `winLoseState`. `levelBounds` is left `nil` if `level.playfield.hasExplicitSize` is
+  /// `false` — some levels rely on there being no boundary at all.
   public func loadLevel(_ level: Level) {
     resetLevel()
 
