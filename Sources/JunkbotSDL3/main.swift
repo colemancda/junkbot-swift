@@ -15,6 +15,8 @@ let repoRoot = URL(fileURLWithPath: #filePath)
 let levelsDirectory = repoRoot.appendingPathComponent("levels")
 let spritesDirectory = repoRoot.appendingPathComponent("images/sprites")
 let spritesUndercoverDirectory = spritesDirectory.appendingPathComponent("Undercover Exclusive")
+let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
+let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
 
 // MARK: - Level sequencing
 
@@ -161,38 +163,49 @@ guard let renderer = SDL_CreateRenderer(window, nil) else {
 }
 defer { SDL_DestroyRenderer(renderer) }
 
-// MARK: - Sprite loading (mirrors src/game.js's sprite atlas, but loads each PNG individually
-// rather than reproducing the atlas/JSON lookup - see SpriteMapping.swift)
+// MARK: - Sprite loading
 
+/// Texture cache keyed by the generated sprite ID (`Generated/SpriteTable.swift`). Individual
+/// per-frame PNGs (rather than the JS frontend's packed spritesheets) are loaded by the ID's
+/// atlas name from `images/sprites` / `images/backgrounds` (each with an "Undercover Exclusive"
+/// subdirectory) - the individual files share the atlas's exact frame names.
 final class TextureCache {
-  private var textures: [String: UnsafeMutablePointer<SDL_Texture>] = [:]
-  private var attemptedAndMissing: Set<String> = []
+  private var textures: [Int32: UnsafeMutablePointer<SDL_Texture>] = [:]
+  private var attemptedAndMissing: Set<Int32> = []
   let renderer: OpaquePointer
 
   init(renderer: OpaquePointer) {
     self.renderer = renderer
   }
 
-  /// Loads (and caches) the texture named `name` (no extension), trying the base sprites
-  /// directory first, then the Undercover-exclusive one (where crates/teleports/lasers/non-fixed
-  /// shields live). Returns `nil` if no such file exists in either location.
-  func texture(named name: String) -> UnsafeMutablePointer<SDL_Texture>? {
-    if let cached = textures[name] { return cached }
-    guard !attemptedAndMissing.contains(name) else { return nil }
+  func texture(for spriteID: Int32) -> UnsafeMutablePointer<SDL_Texture>? {
+    if let cached = textures[spriteID] { return cached }
+    guard !attemptedAndMissing.contains(spriteID), spriteID >= 0,
+      spriteID < spriteNameTable.count
+    else { return nil }
+    let staticName = spriteNameTable[Int(spriteID)]
+    let name = staticName.withUTF8Buffer { String(decoding: $0, as: UTF8.self) }
+    guard !name.isEmpty else { return nil }
 
-    let candidates = [
-      spritesDirectory.appendingPathComponent("\(name).png"),
-      spritesUndercoverDirectory.appendingPathComponent("\(name).png"),
-    ]
-    for url in candidates {
+    // The sheet tells us the primary directory, but keep the historical fallback scan too -
+    // a few names exist in a different directory than their sheet suggests.
+    let directories: [URL]
+    switch SpriteSheet(rawValue: spriteSheetTable[Int(spriteID)]) {
+    case .backgrounds, .backgroundsUndercover:
+      directories = [backgroundsDirectory, backgroundsUndercoverDirectory, spritesDirectory]
+    default:
+      directories = [spritesDirectory, spritesUndercoverDirectory, backgroundsDirectory]
+    }
+    for directory in directories {
+      let url = directory.appendingPathComponent("\(name).png")
       guard FileManager.default.fileExists(atPath: url.path) else { continue }
       guard let surface = IMG_Load(url.path) else { continue }
       defer { SDL_DestroySurface(surface) }
       guard let texture = SDL_CreateTextureFromSurface(renderer, surface) else { continue }
-      textures[name] = texture
+      textures[spriteID] = texture
       return texture
     }
-    attemptedAndMissing.insert(name)
+    attemptedAndMissing.insert(spriteID)
     return nil
   }
 
@@ -203,18 +216,6 @@ final class TextureCache {
   }
 }
 let textureCache = TextureCache(renderer: renderer)
-
-/// A flat fallback color for entity types/states with no resolved sprite (shouldn't normally hit
-/// this - `spriteName(for:)` covers every `EntityType` - but a source PNG could still be missing
-/// on disk).
-func fallbackColor(for e: Entity) -> (r: UInt8, g: UInt8, b: UInt8) {
-  switch e.type {
-  case .brick: return e.fixed ? (120, 120, 120) : (80, 140, 220)
-  case .junkbot: return (240, 150, 40)
-  case .bin: return (60, 90, 200)
-  default: return (200, 60, 60)
-  }
-}
 
 // MARK: - Input
 
@@ -242,52 +243,75 @@ func fallbackColor(for e: Entity) -> (r: UInt8, g: UInt8, b: UInt8) {
 
 // MARK: - Rendering
 
+/// Reused across frames to avoid per-frame allocation.
+var renderFrame = RenderFrame()
+
 @MainActor func render() {
   _ = SDL_SetRenderDrawColor(renderer, 40, 40, 45, 255)
   _ = SDL_RenderClear(renderer)
 
-  let boxes = gameEngine.entities.map {
-    RenderBox(x: Double($0.x), y: Double($0.y), width: Double($0.width), height: Double($0.height))
-  }
-  for index in sortOrderForRendering(boxes) {
-    let entity = gameEngine.entities[index]
-    let screen = gameEngine.worldToCanvas(
-      worldX: Double(entity.x), worldY: Double(entity.y),
-      centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
-      canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
-    let offsetX = Float(screen.x) - Float(entity.x)
-    let offsetY = Float(screen.y) - Float(entity.y)
+  gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
 
-    if entity.type == .junkbot {
-      let frame = junkbotFrame(for: entity)
-      if let texture = textureCache.texture(named: frame.spriteName) {
-        var texW: Float = 0
-        var texH: Float = 0
-        _ = SDL_GetTextureSize(texture, &texW, &texH)
-        // Matches drawJunkbot's `junkbot.x - offset.x, junkbot.y + junkbot.height - 1 - height - offset.y`.
-        var dst = SDL_FRect(
-          x: Float(entity.x) - Float(frame.offsetX) + offsetX,
-          y: Float(entity.y) + Float(entity.height) - 1 - texH - Float(frame.offsetY) + offsetY,
-          w: texW, h: texH)
-        _ = SDL_RenderTexture(renderer, texture, nil, &dst)
-        continue
-      }
-    }
+  // World-space -> screen-space: with scale 1 the camera transform is a pure translation, so
+  // compute it once rather than per command.
+  let origin = gameEngine.worldToCanvas(
+    worldX: 0, worldY: 0,
+    centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
+    canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
+  let offsetX = Float(origin.x)
+  let offsetY = Float(origin.y)
 
-    if let name = spriteName(for: entity), let texture = textureCache.texture(named: name) {
-      var texW: Float = 0
-      var texH: Float = 0
-      _ = SDL_GetTextureSize(texture, &texW, &texH)
-      let position = spriteDrawPosition(for: entity, textureWidth: texW, textureHeight: texH)
-      var dst = SDL_FRect(
-        x: position.x + offsetX, y: position.y + offsetY, w: texW, h: texH)
-      _ = SDL_RenderTexture(renderer, texture, nil, &dst)
-    } else {
-      let color = fallbackColor(for: entity)
-      _ = SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255)
+  for command in renderFrame.commands {
+    switch command.kind {
+    case .solidRect:
+      let rgba = UInt32(bitPattern: command.c)
+      _ = SDL_SetRenderDrawColor(
+        renderer,
+        UInt8((rgba >> 24) & 0xFF), UInt8((rgba >> 16) & 0xFF), UInt8((rgba >> 8) & 0xFF),
+        UInt8(rgba & 0xFF))
       var rect = SDL_FRect(
-        x: Float(screen.x), y: Float(screen.y), w: Float(entity.width), h: Float(entity.height))
+        x: Float(command.x) + offsetX, y: Float(command.y) + offsetY,
+        w: Float(command.a), h: Float(command.b))
       _ = SDL_RenderFillRect(renderer, &rect)
+
+    case .sprite:
+      guard let texture = textureCache.texture(for: command.spriteID) else { continue }
+      // Draw at the atlas frame's authoritative size (matching the JS renderer), not the
+      // individual PNG's size, in case the two ever disagree.
+      let w = Float(spriteWidthTable[Int(command.spriteID)])
+      let h = Float(spriteHeightTable[Int(command.spriteID)])
+      let clip = Float(command.c)
+      var src: SDL_FRect? = nil
+      var dstW = w
+      if clip > 0 && clip < w {
+        src = SDL_FRect(x: 0, y: 0, w: clip, h: h)
+        dstW = clip
+      }
+      var dst = SDL_FRect(
+        x: Float(command.x) + offsetX, y: Float(command.y) + offsetY, w: dstW, h: h)
+
+      if command.a < 100 {
+        _ = SDL_SetTextureAlphaMod(texture, UInt8(max(0, min(100, command.a)) * 255 / 100))
+      }
+      if command.b != 0 {
+        // Milliradians -> degrees, rotating around the destination-rect center.
+        let degrees = Double(command.b) / 1000 * 180 / Double.pi
+        withUnsafeMutablePointer(to: &dst) { dstPtr in
+          if var srcRect = src {
+            _ = SDL_RenderTextureRotated(
+              renderer, texture, &srcRect, dstPtr, degrees, nil, SDL_FLIP_NONE)
+          } else {
+            _ = SDL_RenderTextureRotated(renderer, texture, nil, dstPtr, degrees, nil, SDL_FLIP_NONE)
+          }
+        }
+      } else if var srcRect = src {
+        _ = SDL_RenderTexture(renderer, texture, &srcRect, &dst)
+      } else {
+        _ = SDL_RenderTexture(renderer, texture, nil, &dst)
+      }
+      if command.a < 100 {
+        _ = SDL_SetTextureAlphaMod(texture, 255)
+      }
     }
   }
 

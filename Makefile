@@ -3,7 +3,10 @@ SWIFT        := swift
 BUILD_OUTPUT := .build/plugins/PackageToJS/outputs/Package
 WEB_PACKAGE  := web/Package
 
-.PHONY: all clean serve
+.PHONY: all clean serve codegen
+
+codegen:
+	python3 tools/generate_render_tables.py
 
 all:
 	@echo "▶ Building Swift WASM…"
