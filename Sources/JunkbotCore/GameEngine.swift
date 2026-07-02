@@ -87,6 +87,17 @@ public final class GameEngine: @unchecked Sendable {
   /// The host (e.g. the JS bridge) is responsible for mapping the ID to an actual audio asset.
   public var onPlaySound: ((Int32) -> Void)? = nil
 
+  // MARK: - Drag event callback
+  /// Invoked whenever a native (play-mode) drag starts (`isPickup: true`) or ends
+  /// (`isPickup: false`) — see `Input.swift`'s `startDrag`/`finishDrag`/`mouseDown`/`mouseMove`.
+  /// The host is responsible for recording this into its own solution/replay log (e.g. JS's
+  /// `playthroughEvents`), mirroring the "pickup"/"place" entries JS's own `startGrab`/
+  /// `finishDrag` used to push before play-mode dragging moved to Swift. `direction` matches the
+  /// `direction` parameter used throughout `Input.swift`: `-1` = resolved upward (via drag
+  /// gesture), `1` = resolved downward (via drag gesture), `0` = resolved immediately at press
+  /// time (only one direction was possible) — meaningless for a "place" event.
+  public var onDragEvent: ((_ isPickup: Bool, _ worldX: Int32, _ worldY: Int32, _ direction: Int32) -> Void)? = nil
+
   public init() {
     rng = { [unowned(unsafe) self] in
       self.rngState ^= self.rngState << 13
@@ -287,10 +298,10 @@ public final class GameEngine: @unchecked Sendable {
       pendingGrabUpward = grabs.grabUpward
       playSound(.blockClick)
     } else if grabs.canGrabDownward {
-      startDrag(indices: grabs.grabDownward, worldX: worldX, worldY: worldY)
+      startDrag(indices: grabs.grabDownward, worldX: worldX, worldY: worldY, direction: 0)
       playSound(.blockClick)
     } else if grabs.canGrabUpward {
-      startDrag(indices: grabs.grabUpward, worldX: worldX, worldY: worldY)
+      startDrag(indices: grabs.grabUpward, worldX: worldX, worldY: worldY, direction: 0)
       playSound(.blockClick)
     }
   }
@@ -302,11 +313,11 @@ public final class GameEngine: @unchecked Sendable {
     mouseWorldY = worldY
     if pendingGrabUpward != nil || pendingGrabDownward != nil {
       if worldY < mouseDownWorldY - dragResolveThreshold, let up = pendingGrabUpward {
-        startDrag(indices: up, worldX: worldX, worldY: worldY)
+        startDrag(indices: up, worldX: worldX, worldY: worldY, direction: -1)
         pendingGrabUpward = nil
         pendingGrabDownward = nil
       } else if worldY > mouseDownWorldY + dragResolveThreshold, let down = pendingGrabDownward {
-        startDrag(indices: down, worldX: worldX, worldY: worldY)
+        startDrag(indices: down, worldX: worldX, worldY: worldY, direction: 1)
         pendingGrabUpward = nil
         pendingGrabDownward = nil
       }
