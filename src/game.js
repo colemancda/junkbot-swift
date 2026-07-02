@@ -3803,79 +3803,27 @@ const simulate = (entities) => {
 // #region Problem Sleuth (issue detection)
 // #@: problem detection, problem detector, issue detector, problem highlighting, problem highlighter, issue highlighting, issue highlighter
 
+// Entity validity checks (misaligned/invalid position/size, brick width mismatch) and pairwise
+// collision detection now happen in Swift (window.JunkbotWasm.detectProblems); this only turns
+// the raw {kind, entity, otherEntity?, worldX?, worldY?} records into display messages. The
+// playback/recording desync check stays here since it compares against JS-only playbackLevel state.
 const detectProblems = () => {
-	// active validity checking of the world
-
-	const maxEntityHeight = 100;
-	const reportedCollisions = new Map();
-	const isNum = (value) => typeof value === "number" && isFinite(value);
-	const problems = [];
-	for (const entity of entities) {
-		/* eslint-disable no-continue */
-		if (!isNum(entity.x) || !isNum(entity.y)) {
-			problems.push({ message: `Invalid position (x/y) for entity ${JSON.stringify(entity, null, "\t")}\n` });
-			continue;
+	const problems = window.JunkbotWasm.detectProblems(entities).map(({ kind, entity, otherEntity, worldX, worldY }) => {
+		switch (kind) {
+			case "invalidPosition":
+				return { message: `Invalid position (x/y) for entity ${JSON.stringify(entity, null, "\t")}\n` };
+			case "misaligned":
+				return { message: `x position not aligned to grid for entity ${JSON.stringify(entity, null, "\t")}\n` };
+			case "invalidSize":
+				return { message: `Invalid size (width/height) for entity ${JSON.stringify(entity, null, "\t")}\n` };
+			case "invalidWidthInStuds":
+				return { message: `Invalid widthInStuds for entity ${JSON.stringify(entity, null, "\t")}\n` };
+			case "widthMismatch":
+				return { message: `width doesn't match widthInStuds * 15 for entity ${JSON.stringify(entity, null, "\t")}\n` };
+			default: // "collision"
+				return { message: `${entity.type} to ${otherEntity.type} collision`, worldX, worldY };
 		}
-		if (entity.x % 15 !== 0) {
-			problems.push({ message: `x position not aligned to grid for entity ${JSON.stringify(entity, null, "\t")}\n` });
-			continue;
-		}
-		if (!isNum(entity.width) || !isNum(entity.height)) {
-			problems.push({ message: `Invalid size (width/height) for entity ${JSON.stringify(entity, null, "\t")}\n` });
-			continue;
-		}
-		if (entity.type === "brick" && !isNum(entity.widthInStuds)) {
-			problems.push({ message: `Invalid widthInStuds for entity ${JSON.stringify(entity, null, "\t")}\n` });
-			continue;
-		}
-		if (entity.type === "brick" && entity.width !== 15 * entity.widthInStuds) {
-			problems.push({ message: `width doesn't match widthInStuds * 15 for entity ${JSON.stringify(entity, null, "\t")}\n` });
-			continue;
-		}
-
-		/* eslint-enable no-continue */
-		for (const topY of Object.keys(entitiesByTopY).map(Number)) {
-			if (
-				topY < entity.y + entity.height &&
-				topY + maxEntityHeight > entity.y
-			) {
-				for (const otherEntity of entitiesByTopY[topY]) {
-					if (
-						otherEntity !== entity &&
-						(reportedCollisions.get(entity) || []).indexOf(otherEntity) === -1 &&
-						(reportedCollisions.get(otherEntity) || []).indexOf(entity) === -1
-					) {
-						if (
-							rectanglesIntersect(
-								entity.x,
-								entity.y,
-								entity.width,
-								entity.height,
-								otherEntity.x,
-								otherEntity.y,
-								otherEntity.width,
-								otherEntity.height,
-							)
-						) {
-							const worldX = (entity.x + otherEntity.x + (entity.width + otherEntity.width) / 2) / 2;
-							const worldY = (entity.y + otherEntity.y + (entity.height + otherEntity.height) / 2) / 2;
-							problems.push({ message: `${entity.type} to ${otherEntity.type} collision`, worldX, worldY });
-							if (reportedCollisions.has(entity)) {
-								reportedCollisions.get(entity).push(otherEntity);
-							} else {
-								reportedCollisions.set(entity, [otherEntity]);
-							}
-							if (reportedCollisions.has(otherEntity)) {
-								reportedCollisions.get(otherEntity).push(entity);
-							} else {
-								reportedCollisions.set(otherEntity, [entity]);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	});
 	// also detect problems with desynchronization between the recording and playback
 	if (playbackLevel?.entities) {
 		for (const entity of entities) {
