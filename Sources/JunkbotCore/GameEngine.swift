@@ -153,6 +153,14 @@ public final class GameEngine: @unchecked Sendable {
     rebuildAccelerationStructures()
   }
 
+  /// Raises `idCounter` to at least `minValue` if it isn't already, without otherwise touching
+  /// engine state. Used to stay ahead of IDs already assigned JS-side (e.g. its own `getID()`
+  /// when pasting a new entity) so this engine's own `getID()` (used when spawning droplets,
+  /// etc.) never collides with one JS already handed out.
+  public func ensureIDCounterAtLeast(_ minValue: Int32) {
+    idCounter = max(idCounter, minValue)
+  }
+
   private func maxEntityID(in entities: [Entity]) -> Int32 {
     var result: Int32 = 0
     for entity in entities {
