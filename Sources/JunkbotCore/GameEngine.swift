@@ -61,6 +61,19 @@ public final class GameEngine: @unchecked Sendable {
   var mouseDownWorldX: Int32 = 0
   var mouseDownWorldY: Int32 = 0
 
+  // MARK: - Undo / rewind (see Undo.swift)
+  /// One `EngineSnapshot` per completed move, pushed just before each drag starts (mirroring the
+  /// JS editor's `undoable()`, which also snapshots before the mutation). Unbounded, like the
+  /// editor's own `undos` stack — a level has at most a few dozen moves, trivial memory.
+  var undoStack: [EngineSnapshot] = []
+  /// Ring buffer of per-tick snapshots for `stepRewind()`, indexed by `frameCounter % count`.
+  /// Fixed capacity rather than unbounded: at this project's 18-tick/sec simulation rate, 600
+  /// slots cover roughly half a minute of game-tick history, matching "scrub back a recent
+  /// mistake" rather than unbounded time travel.
+  var rewindBuffer: [EngineSnapshot?] = Array(repeating: nil, count: 600)
+  var isRewinding: Bool = false
+  var wasPausedBeforeRewind: Bool = false
+
   // MARK: - Viewport
   public var viewportCenterX: Int32 = 0
   public var viewportCenterY: Int32 = 0
@@ -147,6 +160,9 @@ public final class GameEngine: @unchecked Sendable {
     levelTitle = ""
     levelHint = ""
     levelPar = Int.max
+    undoStack.removeAll(keepingCapacity: true)
+    rewindBuffer = Array(repeating: nil, count: rewindBuffer.count)
+    isRewinding = false
   }
 
   /// Resets and loads a complete level from an already-constructed entity list, e.g. when
