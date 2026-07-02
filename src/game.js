@@ -3725,6 +3725,22 @@ const handlePlayback = () => {
 //
 // #region Simulate! (simulation main)
 
+// Records a native play-mode drag's pickup/place (see GameEngine.onDragEvent in
+// Sources/JunkbotCore/GameEngine.swift) into playthroughEvents, the same shape JS's own
+// startGrab/finishDrag used to push directly before play-mode dragging moved to Swift. This is
+// what makes a play session's saved solution (localStorage) and replay/rewind (handlePlayback/
+// handleRewind) correctly reproduce drags, not just simulation steps.
+const recordDragEvent = (isPickup, worldX, worldY, grabType) => {
+	playthroughEvents.push({
+		type: isPickup ? "pickup" : "place",
+		x: worldX,
+		y: worldY,
+		t: frameCounter,
+		editing: false,
+		...(isPickup ? { grabType } : {}),
+	});
+};
+
 const simulate = (entities) => {
 	// Simulation runs entirely in Swift's GameEngine (via engineTick). The former JS-side
 	// per-entity dispatch fallback has been removed; GameEngine is the single source of truth.
@@ -3736,7 +3752,7 @@ const simulate = (entities) => {
 		window.JunkbotWasm.mouseMove(mouse.worldX, mouse.worldY);
 	}
 	const levelForSimulation = entities === currentLevel.entities ? currentLevel : { ...currentLevel, entities };
-	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter, editing);
+	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, levelForSimulation, idCounter, playSound, frameCounter, editing, recordDragEvent);
 	frameCounter = result.frameCounter;
 	moves = result.moves;
 	if (result.collectedBin) {

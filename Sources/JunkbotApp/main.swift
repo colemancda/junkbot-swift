@@ -496,6 +496,18 @@ extension GameEngine {
             _ = playSound(soundName)
         }
 
+        // Records a native play-mode drag's pickup/place into JS's `playthroughEvents` (solution
+        // recording/replay), mirroring what JS's own `startGrab`/`finishDrag` used to push before
+        // play-mode dragging moved to Swift. `recordDragEvent` persists across ticks the same way
+        // `onPlaySound` does — it's set here but invoked later, from `mouseDown`/`mouseMove`/
+        // `mouseUp`, which run outside of any `engineTick` call.
+        if let recordDragEvent = args[9].function {
+            onDragEvent = { isPickup, worldX, worldY, direction in
+                let grabType: JSString = direction == -1 ? "upward" : (direction == 1 ? "downward" : "single")
+                _ = recordDragEvent(isPickup, worldX, worldY, grabType)
+            }
+        }
+
         // Only merge JS's `grabbed` mirror into Swift while editing: editor-mode dragging still
         // sets `entity.grabbed` directly on JS objects (this is how Swift learns about it), but
         // play-mode dragging is entirely Swift-native now (mouseDown/mouseMove/mouseUp) - JS never
