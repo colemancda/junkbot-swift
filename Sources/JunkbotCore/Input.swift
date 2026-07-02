@@ -1,26 +1,36 @@
 /// Native-only drag-and-drop input handling, driving `GameEngine.mouseDown`/`mouseMove`/`mouseUp`.
 ///
-/// This is a simpler, self-contained alternative to the JS-bridge grab logic in `main.swift`
-/// (`possibleGrabsCore`/`entitiesConnect`/etc. in `JunkbotApp`, which the browser build actually
-/// uses): it only ever grabs a brick together with whatever's directly stacked above it
-/// (`attachedAbove`), rather than JS's fuller up/down-direction, sandwich-detection logic. Used
-/// by any host embedding `GameEngine` directly (see `GameEngine.mouseDown`/`mouseMove`/`mouseUp`),
-/// not by the WASM/browser bridge.
+/// Ports JS's play-mode grab/drag/release logic (`possibleGrabs`/`startGrab`/`updateDrag`/
+/// `canRelease`/`finishDrag` in `src/game.js`) to operate on `GameEngine.entities` by index
+/// instead of live JS objects. Editor-mode-only behavior (ctrl-click, multi-select, bypassing the
+/// fixed/grabbable checks while editing) is deliberately NOT ported — editor-mode dragging stays
+/// JS-side, using the WASM-bridge logic in `main.swift` (`possibleGrabsCore`/`entitiesConnect`/
+/// etc.) unchanged. Used by any host embedding `GameEngine` directly; the WASM/browser bridge
+/// wires play-mode mouse events to `mouseDown`/`mouseMove`/`mouseUp` below.
+///
+/// One disclosed simplification from JS: the up/down grab-direction resolution threshold
+/// (`dragResolveThreshold`) is measured in world-space pixels here, whereas JS measures 10
+/// *canvas*-space pixels (so its effective world-space threshold varies with zoom level). This
+/// only affects how far you must drag before the direction commits, not which entities end up
+/// grabbable in each direction — a minor feel difference, not a correctness/rules gap.
 extension GameEngine {
 
-  /// Indices of every grabbable (not `fixed`, not already `grabbed`, not an enemy/junkbot/droplet)
-  /// entity whose bounds contain the given world position.
+  /// World-space vertical distance the pointer must move from its press position before a
+  /// two-directions-possible grab (see `pendingGrabUpward`/`pendingGrabDownward`) resolves to
+  /// upward or downward. See this file's header comment re: JS's canvas-space equivalent.
+  var dragResolveThreshold: Int32 { CELL_H / 2 }
+
+  /// Indices of every grabbable (not `fixed`, not already `grabbed`, `brick`/`jump`/`shield`)
+  /// entity whose bounds contain the given world position. Matches JS's play-mode allowlist in
+  /// `possibleGrabs` exactly (other types, e.g. crates or hazards, are never play-mode-draggable
+  /// even though they aren't `fixed`).
   func possibleGrabsAt(worldX: Int32, worldY: Int32) -> [Int] {
     var result: [Int] = []
     for i in 0..<entities.count {
       let e = entities[i]
       if e.fixed { continue }
       if e.grabbed { continue }
-      if e.type == .junkbot || e.type == .gearbot || e.type == .climbbot || e.type == .flybot
-        || e.type == .eyebot || e.type == .droplet
-      {
-        continue
-      }
+      guard e.type == .brick || e.type == .jump || e.type == .shield else { continue }
       if worldX >= e.x && worldX < e.x + e.width && worldY >= e.y && worldY < e.y + e.height {
         result.append(i)
       }
@@ -28,41 +38,81 @@ extension GameEngine {
     return result
   }
 
-  /// Indices of every grabbable entity transitively stacked directly on top of `startIndex`
-  /// (excluding `startIndex` itself), so dragging one brick carries the tower above it along.
-  func attachedAbove(startIndex: Int) -> [Int] {
-    var result: [Int] = []
-    var frontier: [Int] = [startIndex]
-    while !frontier.isEmpty {
-      let current = frontier.removeLast()
-      let e = entities[current]
-      let topY = e.y
-      for i in 0..<entities.count {
-        if i == current { continue }
-        if result.contains(i) || i == startIndex { continue }
-        let other = entities[i]
-        if other.fixed { continue }
-        if other.type == .junkbot || other.type == .gearbot || other.type == .climbbot
-          || other.type == .flybot || other.type == .eyebot || other.type == .droplet
-        {
-          continue
-        }
-        if other.y + other.height == topY && other.x + other.width > e.x && other.x < e.x + e.width
-        {
-          result.append(i)
-          frontier.append(i)
-        }
+  /// Finds the group of un-fixed brick/jump/shield entities that would need to move together if
+  /// `startIndex` were grabbed and dragged in `direction` (`1` = downward, following bricks
+  /// resting below; `-1` = upward, following bricks resting above — matches `connects`'
+  /// direction convention). Returns `nil` if the direction-limited traversal hits something
+  /// ungrabbable (a `fixed` entity, or any non-brick entity) — that direction isn't grabbable at
+  /// all. Otherwise also sweeps in any additional un-fixed brick/jump/shield neighbor of the
+  /// resulting group that isn't independently anchored to something fixed (so it would be left
+  /// unsupported if not grabbed too), unless blocked by non-brick "junk" resting on that neighbor
+  /// (in which case the whole grab is disallowed). Index-based port of `main.swift`'s
+  /// `possibleGrabsCore`/`findAttached`.
+  func findAttachedGroup(startIndex: Int, direction: Int32) -> [Int]? {
+    var attached: [Int] = [startIndex]
+
+    func walkInitialDirection(_ index: Int) -> Bool {
+      for other in 0..<entities.count {
+        guard other != index, !attached.contains(other) else { continue }
+        let isBrick = entities[other].type == .brick
+        guard connects(index, other, direction: isBrick ? direction : -1) else { continue }
+        if entities[other].fixed || !isBrick { return false }
+        attached.append(other)
+        if !walkInitialDirection(other) { return false }
       }
+      return true
     }
-    return result
+    guard walkInitialDirection(startIndex) else { return nil }
+
+    func isBlockedByJunkAbove(_ entityIndex: Int) -> Bool {
+      let e = entities[entityIndex]
+      for other in 0..<entities.count {
+        guard other != entityIndex, entities[other].type != .brick else { continue }
+        let o = entities[other]
+        guard o.y + o.height == e.y else { continue }
+        guard e.x + e.width > o.x && e.x < o.x + o.width else { continue }
+        return true
+      }
+      return false
+    }
+
+    // Sweep in dependent neighbors (both directions) that aren't independently fixed-connected;
+    // a worklist over `attached` (which grows during iteration) so newly-swept-in neighbors are
+    // themselves checked for their own dependents, matching JS's live-array `for...of` traversal.
+    var i = 0
+    while i < attached.count {
+      let brickIndex = attached[i]
+      for other in 0..<entities.count {
+        guard other != brickIndex, !attached.contains(other) else { continue }
+        let o = entities[other]
+        guard !o.fixed, o.type == .brick || o.type == .jump || o.type == .shield else { continue }
+        guard connects(brickIndex, other) else { continue }
+        if connectsToFixed(startIndex: other, direction: 0, ignoreIndices: attached) { continue }
+        if isBlockedByJunkAbove(other) { return nil }
+        attached.append(other)
+      }
+      i += 1
+    }
+    return attached
   }
 
-  /// Begins dragging `entityIndex` together with `attachedAbove(startIndex:)`, recording each
-  /// dragged entity's offset from the grab point so their relative layout is preserved as the
-  /// group moves. No-op if `entityIndex` is already `grabbed`.
-  func startDrag(entityIndex: Int, worldX: Int32, worldY: Int32) {
-    guard !entities[entityIndex].grabbed else { return }
-    draggingIndices = [entityIndex] + attachedAbove(startIndex: entityIndex)
+  /// Computes both possible grab groups for the grabbable entity at `startIndex`: dragging it
+  /// downward (following what rests below) or upward (following what rests above). Index-based
+  /// port of `main.swift`'s `possibleGrabsCore`.
+  func possibleGrabsInDirections(startIndex: Int)
+    -> (canGrabDownward: Bool, grabDownward: [Int], canGrabUpward: Bool, grabUpward: [Int])
+  {
+    let downward = findAttachedGroup(startIndex: startIndex, direction: 1)
+    let upward = findAttachedGroup(startIndex: startIndex, direction: -1)
+    return (downward != nil, downward ?? [startIndex], upward != nil, upward ?? [startIndex])
+  }
+
+  /// Begins dragging every entity in `indices` as a group, recording each dragged entity's offset
+  /// from the grab point so their relative layout is preserved as the group moves. No-op if the
+  /// first entity is already `grabbed`.
+  func startDrag(indices: [Int], worldX: Int32, worldY: Int32) {
+    guard let first = indices.first, !entities[first].grabbed else { return }
+    draggingIndices = indices
     moves += 1
     for idx in draggingIndices {
       entities[idx].grabbed = true
@@ -90,69 +140,59 @@ extension GameEngine {
   }
 
   /// Ends the current drag: clears `grabbed` on every dragged entity, refreshes their
-  /// acceleration-structure entries, and plays a drop (if the final position doesn't collide with
-  /// anything solid) or reject (if it does) sound. Does not undo the move on collision — that's
-  /// `canRelease()`'s job to check *before* calling this.
+  /// acceleration-structure entries, and plays the drop sound. Callers must check `canRelease()`
+  /// first (see `mouseUp`) — unlike the pre-`canRelease`-gating version of this function, it no
+  /// longer re-checks placement validity itself, since by contract every call now represents an
+  /// already-confirmed-valid placement (matching JS's `finishDrag`, which only ever commits after
+  /// its own `canRelease()` gate passes).
   func finishDrag() {
     guard !draggingIndices.isEmpty else { return }
-    var canPlace = true
-    for idx in draggingIndices {
-      let e = entities[idx]
-      if entityCollisionTest(
-        entityX: e.x, entityY: e.y, entityIndex: idx,
-        filter: { other in
-          !other.grabbed && other.type != .droplet
-        }) != nil
-      {
-        canPlace = false
-        break
-      }
-    }
     for idx in draggingIndices {
       entities[idx].grabbed = false
       entityMoved(index: idx)
     }
-    playSound(canPlace ? .blockDrop : .blockClick)
+    playSound(.blockDrop)
     draggingIndices.removeAll(keepingCapacity: true)
   }
 
   /// Whether the currently-dragged group could be released at its present position: no collision
-  /// with anything solid, and connected to something fixed (a brick or the level floor) on
-  /// exactly one vertical side — ceiling *or* floor, not both (would be over-constrained) and not
-  /// neither (would float unsupported). Matches the original game's placement rule.
+  /// with anything solid, not adjacent to an active `fire`/`fan` hazard, and connected to
+  /// something transitively fixed (a brick or the level floor) on exactly one vertical side —
+  /// ceiling *or* floor, not both (over-constrained) and not neither (would float unsupported).
+  /// Matches JS's `canRelease` (`src/game.js`) exactly, for the play-mode case (no `editing`
+  /// bypass, since editor-mode dragging stays JS-side — see this file's header comment).
   public func canRelease() -> Bool {
     guard !draggingIndices.isEmpty else { return false }
+    guard !paused else { return false }
 
-    // Fail if any dragged entity collides with a non-grabbed entity
+    // Fail if any dragged entity collides with a non-grabbed, non-droplet entity.
     for idx in draggingIndices {
       let e = entities[idx]
       if entityCollisionTest(
         entityX: e.x, entityY: e.y, entityIndex: idx,
-        filter: {
-          !$0.grabbed && $0.type != .droplet
-        }) != nil
+        filter: { !$0.grabbed && $0.type != .droplet }) != nil
       {
         return false
       }
     }
 
+    if draggingIndices.allSatisfy({ entities[$0].fixed }) { return true }
+
+    let connectedToFixed = allConnectedToFixed()
     var connectsCeiling = false
     var connectsFloor = false
 
-    for idx in draggingIndices {
-      let e = entities[idx]
-      for i in 0..<entities.count {
-        let other = entities[i]
-        guard !other.grabbed && other.type == .brick else { continue }
-        guard other.x + other.width > e.x && other.x < e.x + e.width else { continue }
-        // ceiling: other sits directly above e
-        if other.y + other.height == e.y { connectsCeiling = true }
-        // floor: other sits directly below e
-        if e.y + e.height == other.y { connectsFloor = true }
-      }
-      // level floor counts as floor connection
-      if let bounds = levelBounds, e.y + e.height >= bounds.y + bounds.height {
-        connectsFloor = true
+    for dIdx in draggingIndices {
+      for otherIdx in 0..<entities.count {
+        let other = entities[otherIdx]
+        if other.grabbed { continue }
+        if (other.type == .fire || other.type == .fan) && connects(dIdx, otherIdx) {
+          return false
+        }
+        if other.type == .brick && connectedToFixed.contains(otherIdx) {
+          if connects(dIdx, otherIdx, direction: -1) { connectsCeiling = true }
+          if connects(dIdx, otherIdx, direction: 1) { connectsFloor = true }
+        }
       }
     }
 
