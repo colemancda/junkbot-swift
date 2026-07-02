@@ -69,7 +69,7 @@ extension Level {
         lines.append("hint=\(hint)")
         lines.append("")
         lines.append("[playfield]")
-        lines.append("size=\(playfield.columns),\(playfield.rows)")
+        lines.append(playfield.hasExplicitSize ? "size=\(playfield.columns),\(playfield.rows)" : "size=")
         lines.append("spacing=\(playfield.spacingX),\(playfield.spacingY)")
         lines.append("scale=\(formatJSNumber(playfield.scale))")
         lines.append("")
