@@ -10,6 +10,37 @@ struct InputTests {
     engine.addBrick(0, y, 20, 0, true)
   }
 
+  @Test("Reproduces the title-screen pyramid: grabbing the top brick should not pull in bricks below that are independently supported by adjacent fixed bricks")
+  func titleScreenPyramidRepro() {
+    let engine = GameEngine()
+    engine.beginLoadLevel(0, 0, 600, 600)
+    // Fixed neighbors flanking the bottom brick (matches ids 21 and 20 from Title Screen.txt).
+    engine.addBrick(165, 342, 2, 5, true)  // fixed, x:[165,195)
+    engine.addBrick(225, 342, 2, 5, true)  // fixed, x:[225,255)
+    // The 4-brick pyramid itself (matches ids 16,14,15,13 from Title Screen.txt exactly).
+    engine.addBrick(195, 342, 2, 3, false)  // 16: bottom-center
+    engine.addBrick(180, 324, 2, 3, false)  // 14: mid-left, partially resting on the fixed brick at x:165
+    engine.addBrick(210, 324, 2, 3, false)  // 15: mid-right, partially resting on the fixed brick at x:225
+    engine.addBrick(195, 306, 2, 3, false)  // 13: top-center, bridging 14 and 15
+    engine.finishLoadLevel()
+
+    func index(x: Int32, y: Int32) -> Int {
+      engine.entities.firstIndex { $0.x == x && $0.y == y }!
+    }
+    let i16 = index(x: 195, y: 342)
+    let i14 = index(x: 180, y: 324)
+    let i15 = index(x: 210, y: 324)
+    let i13 = index(x: 195, y: 306)
+
+    let grabs13 = engine.possibleGrabsInDirections(startIndex: i13)
+    #expect(grabs13.canGrabUpward)
+    #expect(grabs13.grabUpward == [i13], "grabbing the top brick upward should only grab itself, nothing is above it")
+    #expect(
+      Bool(false),
+      "DEBUG i13=\(i13) i14=\(i14) i15=\(i15) i16=\(i16) canGrabDownward=\(grabs13.canGrabDownward) grabDownward=\(grabs13.grabDownward)"
+    )
+  }
+
   @Test("Grabbing the middle of a stack resting on a fixed floor only allows the upward direction")
   func middleOfStackOnlyGrabsUpward() {
     let engine = GameEngine()
@@ -25,6 +56,25 @@ struct InputTests {
     #expect(!grabs.canGrabDownward, "grabbing downward from the middle brick would drag the fixed floor")
     #expect(grabs.canGrabUpward)
     #expect(Set(grabs.grabUpward) == Set(engine.entities.indices.filter { engine.entities[$0].y <= 18 }))
+  }
+
+  @Test("Grabbing the top of a stack resting on a fixed floor should NOT pull in the independently-supported brick underneath")
+  func topOfStackDoesNotPullInSupportedBrickBelow() {
+    let engine = GameEngine()
+    engine.beginLoadLevel(0, 0, 300, 300)
+    Self.makeFloor(engine, y: 54)  // fixed floor, top edge at y=54
+    engine.addBrick(0, 36, 1, 0, false)  // A: resting directly on the floor
+    engine.addBrick(0, 18, 1, 0, false)  // B: resting on A
+    engine.finishLoadLevel()
+
+    let aIndex = engine.entities.firstIndex { $0.x == 0 && $0.y == 36 }!
+    let bIndex = engine.entities.firstIndex { $0.x == 0 && $0.y == 18 }!
+    let grabs = engine.possibleGrabsInDirections(startIndex: bIndex)
+
+    #expect(grabs.canGrabUpward)
+    #expect(grabs.grabUpward == [bIndex], "grabbing B upward should only grab B, not A (A is independently supported by the floor)")
+    #expect(!grabs.canGrabDownward, "grabbing downward from B would drag the fixed floor (through A)")
+    _ = aIndex
   }
 
   @Test("Grabbing a brick with unconnected bricks both above and below is ambiguous until the drag resolves")
