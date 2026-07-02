@@ -71,13 +71,22 @@ public struct LevelPlayfield: Equatable, Sendable {
     /// Grid cell height in pixels (normally matches `CELL_H`).
     public var spacingY: Int
     public var scale: Double
+    /// Whether the source file actually had a `size=` line. `columns`/`rows` default to 35×22
+    /// either way, but some levels omit `size=` entirely and rely on there being no level
+    /// boundary at all (e.g. placing floor bricks beyond the nominal grid) — this flag lets
+    /// `LevelSerialize.swift`/`LevelEntityBridge.swift` tell that apart from an explicit 35×22.
+    public var hasExplicitSize: Bool
 
-    public init(columns: Int = 35, rows: Int = 22, spacingX: Int = 15, spacingY: Int = 18, scale: Double = 1) {
+    public init(
+        columns: Int = 35, rows: Int = 22, spacingX: Int = 15, spacingY: Int = 18, scale: Double = 1,
+        hasExplicitSize: Bool = false
+    ) {
         self.columns = columns
         self.rows = rows
         self.spacingX = spacingX
         self.spacingY = spacingY
         self.scale = scale
+        self.hasExplicitSize = hasExplicitSize
     }
 
     public var pixelWidth: Int { columns * spacingX }
