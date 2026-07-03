@@ -45,47 +45,39 @@ struct LevelTests {
     LevelCase("Shallow Steps", .win),
     LevelCase("Don't Skate The Crate", .win),
     LevelCase("Twixt Crates", .win),
-    // KNOWN BUG: after winOrLose() was fixed to match the original JS's precedence (junkbot
-    // alive/dead takes priority over bins remaining, so a win can flip back to a loss on a later
-    // frame - needed to make "You'll Be Shocked!" pass), these 9 levels started reproducibly
-    // winning and then dying to a hazard afterward, including one literally named "Once You Win,
-    // You Won" whose whole premise is that winning is permanent. Confirmed via the browser build
-    // (same GameEngine.swift) that this is a real simulation discrepancy from the original, not a
-    // test-harness or level-parser artifact - most likely junkbot's post-win AI wandering into a
-    // hazard it shouldn't. Tracked for follow-up; remove `knownFailing: true` once fixed.
-    LevelCase("Armor Farmer", .win, knownFailing: true),
+    LevelCase("Armor Farmer", .win),
     LevelCase("Armor Harmer", .lose),
     LevelCase("Out of the Frying Pan And Into The Fire (Murder)", .draw),
     LevelCase("Out of the Frying Pan And Into The Fire (Vengeance)", .lose),
-    LevelCase("Once You Win, You Won", .win, knownFailing: true),
+    LevelCase("Once You Win, You Won", .win),
     LevelCase("You'll Be Shocked!", .lose),
     LevelCase("All-Off Offal", .win),
-    LevelCase("Switch Off At Edge Case", .win, knownFailing: true),
+    LevelCase("Switch Off At Edge Case", .win),
     LevelCase("Scared Off", .lose),
     LevelCase("Scared Off II Junkbot's Jowls", .win),
     LevelCase("Jump Stair Case", .win),
     LevelCase("Jump Around (bricks in place)", .win),
     LevelCase("Jump Around (bricks out of place)", .draw),
     LevelCase("Perpetual Motion Machine (Test)", .win),
-    LevelCase("Jump Up Just To Edge", .win, knownFailing: true),
+    LevelCase("Jump Up Just To Edge", .win),
     LevelCase("Collide With Bins In Midair", .win),
     LevelCase("Don't Get Stuck On Jump", .win),
     LevelCase("Bounce Against Wall", .win),
-    LevelCase("Turning Shouldn't Jump", .win, knownFailing: true),
+    LevelCase("Turning Shouldn't Jump", .win),
     LevelCase("Portable Boost (Test)", .win),
     LevelCase("Blocked Teleport", .lose),
     LevelCase("Lasers Not Blocked By Water", .lose),
-    LevelCase("Lasers Blocked By Gearbots", .win, knownFailing: true),
+    LevelCase("Lasers Blocked By Gearbots", .win),
     LevelCase("Don't Step Up Onto Gearbot", .win),
     LevelCase("Don't Walk Over Gearbot", .win),
     LevelCase("Don't Step Down Onto Gearbot", .win),
     LevelCase("Step Down Onto Falling Crate", .win),
-    LevelCase("Don't Walk Over Bins", .win, knownFailing: true),
-    LevelCase("Don't Step Down Onto Bins", .win, knownFailing: true),
+    LevelCase("Don't Walk Over Bins", .win),
+    LevelCase("Don't Step Down Onto Bins", .win),
     LevelCase("Death From Below", .lose),
     LevelCase("Flying Death", .lose),
     LevelCase("Turn Away from Climbbot I", .win),
-    LevelCase("Turn Away from Climbbot II", .win, knownFailing: true),
+    LevelCase("Turn Away from Climbbot II", .win),
     LevelCase("Crate Fall Onto Offset Blocks", .win),
     LevelCase("Gearbot Fall Onto Offset Blocks", .lose),
     LevelCase("Climbbot Fall Onto Offset Blocks", .lose),
@@ -93,34 +85,37 @@ struct LevelTests {
     LevelCase("Ally", .win),
   ]
 
-  /// Runs a level for the full `maxSteps`, mirroring runTests()' per-test loop in src/game.js:
-  /// `won`/`lost` are OR'd across every step rather than stopping at the first non-zero result,
-  /// since winOrLose() is not sticky (a level can flip from "win" back to "lose" on a later
-  /// frame, e.g. a hazard that only becomes active post-victory).
+  /// Runs a level for up to `maxSteps`, mirroring runTests()' per-test loop in src/game.js.
+  /// `GameEngine.winLoseState` now latches once it reaches a terminal result (see the comment on
+  /// `simulate()` in Simulation.swift) - matching the original Lingo's one-shot
+  /// `addStatus(#damage/#goals, ...)` event model - so it can no longer flip from win back to
+  /// lose (or vice versa) on a later tick; checking it after the loop (rather than OR-ing
+  /// win/lose across every step, as this used to) is now sufficient.
   func runLevel(_ testCase: LevelCase, maxSteps: Int = 1000) throws {
     let engine = GameEngine()
     engine.loadLevel(fromText: try Self.loadTestCase(testCase.name))
 
-    var won = false
-    var lost = false
     for _ in 0..<maxSteps {
       engine.tick()
-      let state = engine.winOrLose()
-      if state == 1 { won = true }
-      if state == 2 { lost = true }
+      if engine.winLoseState != 0 { break }
     }
 
-    if won && lost {
-      Issue.record("\"\(testCase.name)\" both won and lost (at different times) - this should never happen!")
-      return
-    }
     switch testCase.expect {
     case .win:
-      #expect(won, "Expected \"\(testCase.name)\" to win within \(maxSteps) steps, but \(lost ? "lost instead" : "neither won nor lost")")
+      #expect(
+        engine.winLoseState == 1,
+        "Expected \"\(testCase.name)\" to win within \(maxSteps) steps, but \(engine.winLoseState == 2 ? "lost instead" : "neither won nor lost")"
+      )
     case .lose:
-      #expect(lost, "Expected \"\(testCase.name)\" to lose within \(maxSteps) steps, but \(won ? "won instead" : "neither won nor lost")")
+      #expect(
+        engine.winLoseState == 2,
+        "Expected \"\(testCase.name)\" to lose within \(maxSteps) steps, but \(engine.winLoseState == 1 ? "won instead" : "neither won nor lost")"
+      )
     case .draw:
-      #expect(!won && !lost, "Expected \"\(testCase.name)\" to draw (neither win nor lose), but \(won ? "won instead" : "lost instead")")
+      #expect(
+        engine.winLoseState == 0,
+        "Expected \"\(testCase.name)\" to draw (neither win nor lose), but \(engine.winLoseState == 1 ? "won instead" : "lost instead")"
+      )
     }
   }
 
