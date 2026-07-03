@@ -124,6 +124,7 @@ let cameraScale: Double = 1
   }
   gameEngine.loadLevel(fromText: text)
   print("Level \(currentLevelIndex + 1)/\(levelSequence.count): \(title)")
+  musicPlayer.startRandomLevelMusic()
 
   if let bounds = gameEngine.levelBounds {
     cameraCenterX = Double(bounds.x) + Double(bounds.width) / 2
@@ -233,11 +234,35 @@ let textureCache = TextureCache(renderer: renderer)
 
 // MARK: - Audio
 
-/// Sound-effect playback, mirroring `src/game.js`'s `playSound(soundName)` / `hotResourcePaths`
-/// (both .ogg and .wav files - SDL3_mixer's new "MIX_" API, not the old SDL2-style `Mix_*` API,
-/// decodes both via its bundled codecs). `GameEngine.onPlaySound` is int-keyed
-/// (`Types.swift`'s `SoundID`), so this maps id -> repo-relative filename directly instead of
-/// going through JS's intermediate string-name indirection.
+/// One shared `MIX_Mixer` device for both sound effects (`SoundBoard`) and background music
+/// (`MusicPlayer`) - SDL3_mixer's new "MIX_" API (a from-scratch redesign, not the old
+/// SDL2-style `Mix_*` API), which decodes both .ogg and .wav via its bundled codecs.
+let mixer: OpaquePointer? = {
+  guard MIX_Init() else {
+    FileHandle.standardError.write(Data("MIX_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
+    return nil
+  }
+  // SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK's macro (a C cast expression) doesn't import into Swift -
+  // its raw value (SDL_audio.h) is 0xFFFFFFFF.
+  let defaultPlaybackDevice: SDL_AudioDeviceID = 0xFFFF_FFFF
+  guard let mixer = MIX_CreateMixerDevice(defaultPlaybackDevice, nil) else {
+    FileHandle.standardError.write(
+      Data("MIX_CreateMixerDevice failed: \(String(cString: SDL_GetError()))\n".utf8))
+    return nil
+  }
+  return mixer
+}()
+defer {
+  if let mixer {
+    MIX_DestroyMixer(mixer)
+  }
+  MIX_Quit()
+}
+
+/// Sound-effect playback, mirroring `src/game.js`'s `playSound(soundName)` / `hotResourcePaths`.
+/// `GameEngine.onPlaySound` is int-keyed (`Types.swift`'s `SoundID`), so this maps id ->
+/// repo-relative filename directly instead of going through JS's intermediate string-name
+/// indirection.
 final class SoundBoard {
   private let mixer: OpaquePointer?
   private var audioByID: [Int32: OpaquePointer] = [:]
@@ -277,22 +302,9 @@ final class SoundBoard {
     27: "lego-creator/undo-I0512.wav",
   ]
 
-  init(directory: URL) {
-    guard MIX_Init() else {
-      FileHandle.standardError.write(Data("MIX_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
-      mixer = nil
-      return
-    }
-    // SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK's macro (a C cast expression) doesn't import into Swift -
-    // its raw value (SDL_audio.h) is 0xFFFFFFFF.
-    let defaultPlaybackDevice: SDL_AudioDeviceID = 0xFFFF_FFFF
-    guard let mixer = MIX_CreateMixerDevice(defaultPlaybackDevice, nil) else {
-      FileHandle.standardError.write(
-        Data("MIX_CreateMixerDevice failed: \(String(cString: SDL_GetError()))\n".utf8))
-      self.mixer = nil
-      return
-    }
+  init(mixer: OpaquePointer?, directory: URL) {
     self.mixer = mixer
+    guard let mixer else { return }
     for (id, filename) in Self.paths {
       let url = directory.appendingPathComponent(filename)
       guard let audio = MIX_LoadAudio(mixer, url.path, false) else {
@@ -318,14 +330,112 @@ final class SoundBoard {
     for audio in audioByID.values {
       MIX_DestroyAudio(audio)
     }
-    if let mixer {
-      MIX_DestroyMixer(mixer)
-    }
-    MIX_Quit()
   }
 }
-let soundBoard = SoundBoard(directory: audioDirectory)
+let soundBoard = SoundBoard(mixer: mixer, directory: audioDirectory)
 gameEngine.onPlaySound = { [soundBoard] id in soundBoard.play(id) }
+
+/// Background music, reconstructing `Sources/JunkbotCore/Internal/movie_Sound Code.ls`'s
+/// playlist model (`SndMusicStart`/`SndMusicEnd`/`SndCheckPlaylist`) as closely as the available
+/// assets allow: `parent_game manager.ls`'s `SndMusicStart("level" & random(5))` picked one of 5
+/// named playlists at random per level, each a Director cast member whose *text* listed which
+/// audio members to cycle through - that member text isn't preserved here, but `audio/music/`
+/// still has exactly 5 same-prefix track groups (`lego1.*`, `demo_4.*`, `demo_5.*`, `demo_6.*`,
+/// `demo6_*`) plus an `intro_1.*` group for the loading/menu screens (`SndMusicStart("intro")`
+/// in `parent_download manager.ls`) - strongly suggesting those 5 groups are exactly what
+/// "level1".."level5" pointed to. Each group loops a random one of its own tracks forever
+/// (re-picking whenever the current one finishes, `update()`) until `stop()`, which - mirroring
+/// `SndMusicEnd`'s `member(whichMusic & ".end")` lookup - plays that group's fade-out sting once
+/// if it has one.
+final class MusicPlayer {
+  struct Group {
+    let tracks: [String]
+    let end: String?
+  }
+
+  /// Best-effort reconstruction of the original 5 `"level" & random(5)` playlists - see this
+  /// class's doc comment. Not verified against the original Director cast member text (lost).
+  static let levelGroups: [Group] = [
+    Group(tracks: ["lego1.1.ogg", "lego1.2.ogg", "lego1.3.ogg"], end: "lego1.end.ogg"),
+    Group(tracks: ["demo_4.1.ogg", "demo_4.3.ogg", "demo_4.5.ogg", "demo_4.6.ogg"], end: "demo_4.end.ogg"),
+    Group(tracks: ["demo_5.1.ogg", "demo_5.2.ogg", "demo_5.7.ogg", "demo_5.8.ogg"], end: "demo_5.end.ogg"),
+    Group(tracks: ["demo_6.1.ogg", "demo_6.2.ogg", "demo_6.4.ogg", "demo_6.5.ogg"], end: "demo_6.end.ogg"),
+    Group(tracks: ["demo6_3.ogg", "demo6_5.ogg", "demo6_6.ogg"], end: "demo6_end.ogg"),
+  ]
+
+  private let mixer: OpaquePointer?
+  private let directory: URL
+  private let track: OpaquePointer?
+  private var audioByFilename: [String: OpaquePointer] = [:]
+  private var currentGroup: Group?
+
+  init(mixer: OpaquePointer?, directory: URL) {
+    self.mixer = mixer
+    self.directory = directory
+    track = mixer.flatMap { MIX_CreateTrack($0) }
+  }
+
+  private func audio(for filename: String) -> OpaquePointer? {
+    if let cached = audioByFilename[filename] { return cached }
+    guard let mixer else { return nil }
+    let url = directory.appendingPathComponent(filename)
+    guard let audio = MIX_LoadAudio(mixer, url.path, false) else {
+      FileHandle.standardError.write(
+        Data("Failed to load music track \(url.path): \(String(cString: SDL_GetError()))\n".utf8))
+      return nil
+    }
+    audioByFilename[filename] = audio
+    return audio
+  }
+
+  /// Picks one of `levelGroups` at random and starts looping it - the reconstructed equivalent
+  /// of `SndMusicStart("level" & random(5))`.
+  func startRandomLevelMusic() {
+    currentGroup = Self.levelGroups.randomElement()
+    playNextTrack()
+  }
+
+  private func playNextTrack() {
+    guard let track, let group = currentGroup, let filename = group.tracks.randomElement(),
+      let audio = audio(for: filename)
+    else { return }
+    _ = MIX_SetTrackAudio(track, audio)
+    _ = MIX_PlayTrack(track, 0)
+  }
+
+  /// Call once per frame: whenever the currently-playing track finishes, picks a fresh random
+  /// track from the same group so the music loops forever, mirroring `SndCheckPlaylist`'s
+  /// multi-deep queue refill (simplified to a single track re-armed on completion instead of a
+  /// backing queue, which is inaudibly different for a look-ahead this short).
+  func update() {
+    guard let track, currentGroup != nil, !MIX_TrackPlaying(track) else { return }
+    playNextTrack()
+  }
+
+  /// Stops the looping playlist, playing the current group's fade-out sting once first if it has
+  /// one (`SndMusicEnd`'s `member(whichMusic & ".end")` lookup).
+  func stop() {
+    guard let track, let group = currentGroup else { return }
+    currentGroup = nil
+    if let end = group.end, let audio = audio(for: end) {
+      _ = MIX_SetTrackAudio(track, audio)
+      _ = MIX_PlayTrack(track, 0)
+    } else {
+      _ = MIX_StopTrack(track, 0)
+    }
+  }
+
+  deinit {
+    for audio in audioByFilename.values {
+      MIX_DestroyAudio(audio)
+    }
+    if let track {
+      MIX_DestroyTrack(track)
+    }
+  }
+}
+let musicPlayer = MusicPlayer(
+  mixer: mixer, directory: repoRoot.appendingPathComponent("audio/music"))
 
 // MARK: - Input
 
@@ -530,6 +640,10 @@ while running {
       gameEngine.tick()
       if gameEngine.winLose() == 1 {
         winPauseUntil = now + winPauseNanoseconds
+        // Mirrors parent_game manager.ls's endLevel calling SndMusicEnd() before the next
+        // level's SndMusicStart(); the winPauseNanoseconds gap before advanceToNextLevel()
+        // gives the fade-out sting (if any) room to actually be heard.
+        musicPlayer.stop()
         break
       }
     }
@@ -537,6 +651,7 @@ while running {
 
   updateCamera()
   cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
+  musicPlayer.update()
   render()
   SDL_Delay(1)
 }
