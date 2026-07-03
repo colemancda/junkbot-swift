@@ -104,6 +104,10 @@ let window: OpaquePointer = {
     FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
     exit(1)
   }
+  // Don't allow shrinking below the default size - `windowWidth`/`windowHeight` are also the
+  // fixed logical resolution `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE` scales up from, so a
+  // smaller window would force a sub-1x (fractional/cropped) scale instead of a clean integer one.
+  _ = SDL_SetWindowMinimumSize(window, windowWidth, windowHeight)
   return window
 }()
 defer { SDL_DestroyWindow(window) }
