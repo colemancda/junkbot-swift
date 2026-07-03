@@ -108,6 +108,16 @@ func loadSaveData() -> SaveData {
   return texture
 }
 
+/// The image's natural pixel size, or `(0, 0)` if it failed to load - used to lay out images
+/// by their own dimensions (matching CSS block flow) instead of assuming a fixed size.
+@MainActor func menuTextureSize(_ name: String) -> (width: Float, height: Float) {
+  guard let texture = menuTexture(name) else { return (0, 0) }
+  var w: Float = 0
+  var h: Float = 0
+  _ = SDL_GetTextureSize(texture, &w, &h)
+  return (w, h)
+}
+
 @MainActor func drawMenuTexture(
   _ name: String, x: Float, y: Float, alphaPercent: Int32 = 100, scale: Float = 1
 ) {
@@ -404,12 +414,22 @@ let levelSelectRowsLeft: Float = 11
       _ = SDL_RenderFillRect(renderer, &baseline)
     }
     if game == .junkbot {
+      // Matches the CSS block flow exactly: `.level-group-tab` is bottom-aligned in the 74px
+      // strip, `.tab-text-image` sits at its bottom with a 2px margin, and `.building-image`
+      // stacks directly above that with its own 12px bottom margin - each image's OWN height
+      // (not a size borrowed from building 1) determines how far up its top edge lands, and
+      // each is independently centered by its OWN width, since the 4 icons aren't uniform size.
+      let textImageName = "buidling_tab_\(tabIndex + 1)"
+      let textImageSize = menuTextureSize(textImageName)
+      let textImageY = tabStripHeight - 2 - textImageSize.height
       drawMenuTexture(
-        "buidling_tab_\(tabIndex + 1)", x: x + (tabImageWidth - 83) / 2, y: tabStripHeight - 2 - 13,
+        textImageName, x: x + (tabImageWidth - textImageSize.width) / 2, y: textImageY,
         alphaPercent: selected ? 100 : 50)
-      drawMenuTexture(
-        "building_icon_\(tabIndex + 1)", x: x + (tabImageWidth - 61) / 2,
-        y: tabStripHeight - 2 - 13 - 12 - 38)
+
+      let iconName = "building_icon_\(tabIndex + 1)"
+      let iconSize = menuTextureSize(iconName)
+      let iconY = textImageY - 12 - iconSize.height
+      drawMenuTexture(iconName, x: x + (tabImageWidth - iconSize.width) / 2, y: iconY)
     } else {
       let label = "Basement \(tabIndex + 1)"
       let size = textRenderer.measure(label)
