@@ -37,7 +37,10 @@ extension GameEngine {
       let facing: Int32 = part.state == .walkLeft ? -1 : 1
       let facingY: Int32 = part.state == .walkUp ? -1 : (part.state == .walkDown ? 1 : 0)
       let isOn = part.state == .on
-      let colorIndex = Int32(part.colorIndex)
+      // part.colorIndex indexes the level file's own [partslist] colors= list, whose order
+      // varies per level; the renderer's brick sprite IDs use the canonical brickColorNames
+      // order, so resolve by name (unknown names fall back to gray, matching the JS bridge).
+      let colorIndex = Int32(brickColorNames.firstIndex(of: part.colorName) ?? 5)
 
       if typeName.hasPrefix("brick_"), let widthInStuds = Int32(typeName.dropFirst("brick_".count)) {
         entities.append(
