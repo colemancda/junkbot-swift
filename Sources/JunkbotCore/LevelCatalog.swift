@@ -55,6 +55,12 @@ public struct LevelCatalog: Sendable {
   /// `_LEVEL_LISTING.txt`'s order is the source of truth for level progression, but its titles
   /// don't always match their on-disk filename 1:1 - so every level `.txt` file directly under
   /// `directory` gets parsed once and matched back to the listing by its parsed `[info] title=`.
+  /// Matching is case-insensitive: the Undercover level files' own `title=` lines are ALL CAPS
+  /// (e.g. `title=BLOW UP`) while `Undercover Exclusive/_LEVEL_LISTING.txt` uses title case
+  /// (`Blow Up`) - a real casing mismatch in the level data itself, not a normalization bug (the
+  /// top-level Junkbot game's files don't have this mismatch, but Undercover's do, for all but a
+  /// handful of entries). The listing's own text is kept as the entry's display title, since
+  /// that's what the browser build's level-select list shows.
   private static func loadEntries(directory: URL) -> [LevelCatalogEntry] {
     let fileManager = FileManager.default
     guard
@@ -66,7 +72,7 @@ public struct LevelCatalog: Sendable {
     for url in files where url.pathExtension == "txt" {
       guard let text = readLevelText(at: url) else { continue }
       let level = Level(text: text)
-      byTitle[normalizedTitle(level.title)] = (url, level.par)
+      byTitle[normalizedTitle(level.title).lowercased()] = (url, level.par)
     }
 
     guard let listingText = readLevelText(at: directory.appendingPathComponent("_LEVEL_LISTING.txt"))
@@ -74,7 +80,7 @@ public struct LevelCatalog: Sendable {
 
     return listingText.split(separator: "\n").compactMap { line in
       let title = normalizedTitle(String(line))
-      guard !title.isEmpty, let match = byTitle[title] else { return nil }
+      guard !title.isEmpty, let match = byTitle[title.lowercased()] else { return nil }
       return LevelCatalogEntry(title: title, url: match.url, par: match.par)
     }
   }
