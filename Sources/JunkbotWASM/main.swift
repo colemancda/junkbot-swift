@@ -83,6 +83,30 @@ extension GameEngine {
         return result.jsValue
     }
 
+    func worldToCanvasExport(_ args: [JSValue]) -> JSValue {
+        let point = worldToCanvas(
+            worldX: args[0].number ?? 0, worldY: args[1].number ?? 0,
+            centerX: args[2].number ?? 0, centerY: args[3].number ?? 0, scale: args[4].number ?? 1,
+            canvasWidth: args[5].number ?? 0, canvasHeight: args[6].number ?? 0
+        )
+        let result = JSObject.global.Object.function!.new()
+        result.x = point.x.jsValue
+        result.y = point.y.jsValue
+        return result.jsValue
+    }
+
+    func canvasToWorldExport(_ args: [JSValue]) -> JSValue {
+        let point = canvasToWorld(
+            canvasX: args[0].number ?? 0, canvasY: args[1].number ?? 0,
+            centerX: args[2].number ?? 0, centerY: args[3].number ?? 0, scale: args[4].number ?? 1,
+            canvasWidth: args[5].number ?? 0, canvasHeight: args[6].number ?? 0
+        )
+        let result = JSObject.global.Object.function!.new()
+        result.x = point.x.jsValue
+        result.y = point.y.jsValue
+        return result.jsValue
+    }
+
     func sortEntitiesForRenderingExport(_ args: [JSValue]) -> JSValue {
         guard let array = args[0].object else { return .undefined }
         let length = Int(array.length.number ?? 0)
@@ -404,12 +428,65 @@ extension GameEngine {
         return .undefined
     }
 
+    /// Merges just the currently-`grabbed` (mid-drag) entities' position/offset from the JS
+    /// mirror into this engine's persistent `entities`, instead of replacing all of `entities`
+    /// from JS every tick (contrast the old `engineTickExport` behavior, still used by
+    /// `engineLoadLevelExport`'s one-time load path via `loadLevelState`). This is the one place
+    /// JS still feeds live state into Swift each frame: dragging (`updateDrag` in src/game.js)
+    /// mutates the JS-side entity's x/y directly every frame, and Swift needs to see that
+    /// update before its own physics runs that tick. Everything else in `entities` is
+    /// Swift-owned and persists across ticks untouched.
+    ///
+    /// Also adopts brand-new entities introduced while already `grabbed` (e.g. paste-while-
+    /// dragging in the editor — pasted entities start `grabbed = true`), and drops any
+    /// Swift-side entity whose JS counterpart no longer exists (e.g. deleted mid-drag), so
+    /// neither case leaves a stale/ghost entity behind. Editor actions that don't involve an
+    /// in-progress grab (plain delete, flip/rotate, the palette hover-preview) are NOT covered
+    /// by this merge — a known, tracked gap (see project plan), not a regression from today's
+    /// full-replace behavior, since those are comparatively rare/editor-only paths.
+    func mergeGrabbedEntities(from jsEntities: JSObject) {
+        let length = Int(jsEntities.length.number ?? 0)
+        var jsById: [Int32: JSObject] = [:]
+        for i in 0..<length {
+            guard let obj = jsEntities[i].object else { continue }
+            jsById[Int32(obj.id.number ?? -1)] = obj
+        }
+
+        // Entities Swift's own native play-mode drag (`draggingIndices`, driven by `mouseDown`/
+        // `mouseMove`/`mouseUp` — see Input.swift) is already tracking are authoritative from
+        // Swift's side. JS's mirror of `grabbed` for these lags one tick behind (it's only
+        // refreshed by this tick's own `syncEngineEntities`, after this function runs), so merging
+        // it in here would immediately clobber a just-started native drag back to `grabbed: false`
+        // on its very first tick. Skip them; this merge is for JS-initiated (editor-mode) drags.
+        let nativelyDraggingIDs = draggingEntityIDs
+
+        for (id, obj) in jsById {
+            guard !nativelyDraggingIDs.contains(id) else { continue }
+            let jsGrabbed = obj.grabbed.boolean == true
+            if let idx = entities.firstIndex(where: { $0.id == id }) {
+                guard jsGrabbed || entities[idx].grabbed else { continue }
+                entities[idx].grabbed = jsGrabbed
+                entities[idx].x = Int32(obj.x.number ?? 0)
+                entities[idx].y = Int32(obj.y.number ?? 0)
+                if let offset = obj.grabOffset.object {
+                    entities[idx].grabOffsetX = Int32(offset.x.number ?? 0)
+                    entities[idx].grabOffsetY = Int32(offset.y.number ?? 0)
+                }
+            } else if jsGrabbed {
+                entities.append(engineEntity(from: obj))
+            }
+        }
+
+        entities.removeAll { $0.grabbed && jsById[$0.id] == nil }
+    }
+
     func engineTickExport(_ args: [JSValue]) -> JSValue {
-        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
-            let teleportEffects = args[3].object, let level = args[4].object, let playSound = args[6].function
+        guard let entities = args[0].object, let playSound = args[2].function
         else { return .undefined }
-        let nextID = Int32(args[5].number ?? 0)
-        frameCounter = Int32(args[7].number ?? Double(frameCounter))
+        let nextID = Int32(args[1].number ?? 0)
+        // frameCounter is now Swift-owned (incremented inside tick()/simulate()); no longer
+        // overwritten from JS's args[3] here. The result object below still reports it back so
+        // JS's own `frameCounter` (used for playthrough/rewind timestamping) stays in sync.
 
         var collectedBin = false
         onPlaySound = { id in
@@ -418,15 +495,40 @@ extension GameEngine {
             _ = playSound(soundName)
         }
 
-        let state = engineLevelState(from: level)
-        replaceLiveState(entities: state.entities, levelBounds: state.bounds, nextID: nextID)
+        // Records a native play-mode drag's pickup/place into JS's `playthroughEvents` (solution
+        // recording/replay), mirroring what JS's own `startGrab`/`finishDrag` used to push before
+        // play-mode dragging moved to Swift. `recordDragEvent` persists across ticks the same way
+        // `onPlaySound` does — it's set here but invoked later, from `mouseDown`/`mouseMove`/
+        // `mouseUp`, which run outside of any `engineTick` call.
+        if let recordDragEvent = args[5].function {
+            onDragEvent = { isPickup, worldX, worldY, direction in
+                let grabType: JSString = direction == -1 ? "upward" : (direction == 1 ? "downward" : "single")
+                _ = recordDragEvent(isPickup, worldX, worldY, grabType)
+            }
+        }
+
+        // Only merge JS's `grabbed` mirror into Swift while editing: editor-mode dragging still
+        // sets `entity.grabbed` directly on JS objects (this is how Swift learns about it), but
+        // play-mode dragging is entirely Swift-native now (mouseDown/mouseMove/mouseUp) - JS never
+        // independently sets `grabbed` there anymore. Merging unconditionally would clobber a
+        // just-finished native release: JS's mirror is always one tick stale, so right after
+        // `mouseUp` clears `draggingIndices`, this merge would still see the old `grabbed: true`
+        // and re-grab the entity in Swift before this tick's sync corrects the mirror.
+        if args[4].boolean == true {
+            mergeGrabbedEntities(from: entities)
+        }
+        ensureIDCounterAtLeast(nextID)
         tick()
         syncEngineEntities(to: entities)
-        syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
 
         let result = JSObject.global.Object.function!.new()
         result.frameCounter = frameCounter.jsValue
         result.collectedBin = collectedBin.jsValue
+        // `moves` is also Swift-owned now (incremented by Input.swift's startDrag for play-mode
+        // grabs, which JS no longer sees directly since it no longer calls its own startGrab for
+        // those). Editor-mode grabs never increment it (matches JS's original `if (!editing)`
+        // guard in startGrab), so reporting it back unconditionally is a no-op during editing.
+        result.moves = moves.jsValue
         return result.jsValue
     }
 
@@ -451,6 +553,27 @@ let switchType: JSString = "switch"
 let fireType: JSString = "fire"
 let shieldType: JSString = "shield"
 let jumpType: JSString = "jump"
+
+/// Matches `Sources/JunkbotCore/LevelSerialize.swift`'s `brickColorNames` (not `public`, so
+/// duplicated here) and `RenderList.swift`'s `colorIndex` switch — order is load-bearing.
+let brickColorNameStrings: [JSString] = ["white", "red", "green", "blue", "yellow", "gray"]
+
+/// `Entity.colorIndex` from a brick's JS-side `colorName` string (defaults to gray/fixed if
+/// unrecognized). Brick color otherwise never crosses the bridge — `engineEntity(from:)` and
+/// `syncEntity` only touch `x`/`y`/`width`/etc., leaving every brick's `colorIndex` at its
+/// zero-initialized default (white) unless this is called.
+func colorIndex(fromColorName object: JSObject) -> Int32 {
+    let colorName = object.colorName.jsString
+    for (index, name) in brickColorNameStrings.enumerated() where colorName == name {
+        return Int32(index)
+    }
+    return 5  // gray
+}
+
+func colorName(fromColorIndex index: Int32) -> JSString {
+    guard index >= 0, Int(index) < brickColorNameStrings.count else { return "gray" }
+    return brickColorNameStrings[Int(index)]
+}
 
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
@@ -689,6 +812,12 @@ exports.rectangleCollisionAll =
 exports.raycast =
     JSClosure { args in gameEngine.raycastExport(args) }.jsValue
 
+exports.worldToCanvas =
+    JSClosure { args in gameEngine.worldToCanvasExport(args) }.jsValue
+
+exports.canvasToWorld =
+    JSClosure { args in gameEngine.canvasToWorldExport(args) }.jsValue
+
 exports.sortEntitiesForRendering =
     JSClosure { args in gameEngine.sortEntitiesForRenderingExport(args) }.jsValue
 
@@ -765,6 +894,89 @@ exports.connectsToFixed =
 
 exports.allConnectedToFixed =
     JSClosure { args in gameEngine.allConnectedToFixedExport(args) }.jsValue
+
+// Finds the group(s) of unfixed bricks that would move together if `brick` were grabbed and
+// dragged, in each of the two possible directions (attached bricks above it / below it). Mirrors
+// the original JS's `possibleGrabs`' inner `findAttached` recursive traversal; the editor-specific
+// policy (ctrl-click, multi-select, bypassing fixed/grabbable checks while editing) stays in JS.
+func possibleGrabsCore(
+    brick: JSObject, entitiesByTopY: JSObject, entitiesByBottomY: JSObject
+) -> (canGrabDownward: Bool, grabDownward: [JSObject], canGrabUpward: Bool, grabUpward: [JSObject]) {
+    func findAttached(_ start: JSObject, direction: Int32, attached: inout [JSObject], topLevel: Bool) -> Bool {
+        let sy = Int32(start.y.number ?? 0), sh = Int32(start.height.number ?? 0)
+        let candidates = yBucket(entitiesByTopY, sy + sh) + yBucket(entitiesByBottomY, sy)
+        for otherValue in candidates {
+            guard let entity = otherValue.object, entity != start else { continue }
+            let entityIsBrick = entityType(entity) == "brick"
+            guard entitiesConnect(start, entity, direction: entityIsBrick ? direction : -1) else { continue }
+            if attached.contains(where: { $0 == entity }) { continue }
+            if entity.fixed.boolean == true || !entityIsBrick {
+                return false
+            }
+            attached.append(entity)
+            if !findAttached(entity, direction: direction, attached: &attached, topLevel: false) {
+                return false
+            }
+        }
+        if topLevel {
+            for brickInGroup in attached {
+                let bx = Int32(brickInGroup.x.number ?? 0), by = Int32(brickInGroup.y.number ?? 0)
+                let bw = Int32(brickInGroup.width.number ?? 0), bh = Int32(brickInGroup.height.number ?? 0)
+                let candidates2 = yBucket(entitiesByTopY, by + bh) + yBucket(entitiesByBottomY, by)
+                for otherValue in candidates2 {
+                    guard let entity = otherValue.object else { continue }
+                    let entType = entityType(entity)
+                    guard entity.fixed.boolean != true,
+                        entType == "brick" || entType == "jump" || entType == "shield"
+                    else { continue }
+                    let ex = Int32(entity.x.number ?? 0), ew = Int32(entity.width.number ?? 0)
+                    guard bx + bw > ex && bx < ex + ew else { continue }
+                    if attached.contains(where: { $0 == entity }) { continue }
+                    if connectsToFixedCore(
+                        startEntity: entity, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY,
+                        direction: 0, ignoreEntities: attached)
+                    {
+                        continue
+                    }
+                    let ey = Int32(entity.y.number ?? 0)
+                    var blocked = false
+                    for junkValue in yBucket(entitiesByBottomY, ey) {
+                        guard let junk = junkValue.object, entityType(junk) != "brick" else { continue }
+                        let jx = Int32(junk.x.number ?? 0), jw = Int32(junk.width.number ?? 0)
+                        if ex + ew > jx && ex < jx + jw {
+                            blocked = true
+                            break
+                        }
+                    }
+                    if blocked { return false }
+                    attached.append(entity)
+                }
+            }
+        }
+        return true
+    }
+
+    var grabDownward: [JSObject] = [brick]
+    var grabUpward: [JSObject] = [brick]
+    let canGrabDownward = findAttached(brick, direction: 1, attached: &grabDownward, topLevel: true)
+    let canGrabUpward = findAttached(brick, direction: -1, attached: &grabUpward, topLevel: true)
+    return (canGrabDownward, grabDownward, canGrabUpward, grabUpward)
+}
+
+exports.possibleGrabs =
+    JSClosure { args in
+        guard let brick = args[0].object, let entitiesByTopY = args[1].object,
+            let entitiesByBottomY = args[2].object
+        else { return .undefined }
+        let result = possibleGrabsCore(
+            brick: brick, entitiesByTopY: entitiesByTopY, entitiesByBottomY: entitiesByBottomY)
+        let obj = JSObject.global.Object.function!.new()
+        obj.canGrabDownward = result.canGrabDownward.jsValue
+        obj.canGrabUpward = result.canGrabUpward.jsValue
+        obj.grabDownward = result.grabDownward.map { $0.jsValue }.jsValue
+        obj.grabUpward = result.grabUpward.map { $0.jsValue }.jsValue
+        return obj.jsValue
+    }.jsValue
 
 exports.findMisplacedEntities =
     JSClosure { args in gameEngine.findMisplacedEntitiesExport(args) }.jsValue
@@ -953,6 +1165,9 @@ func engineEntity(from object: JSObject) -> Entity {
     entity.active = boolProperty(object, "active")
     entity.activeTimer = int32Property(object, "activeTimer")
     entity.splashing = boolProperty(object, "splashing")
+    if entity.type == .brick {
+        entity.colorIndex = colorIndex(fromColorName: object)
+    }
 
     if let grabOffset = object.grabOffset.object {
         entity.grabOffsetX = int32Property(grabOffset, "x")
@@ -984,6 +1199,7 @@ func syncEntity(_ entity: Entity, to object: JSObject) {
 
     if entity.type == .brick {
         object.widthInStuds = entity.widthInStuds.jsValue
+        object.colorName = colorName(fromColorIndex: entity.colorIndex).jsValue
     }
     if entity.type == .junkbot {
         object.armored = entity.armored.jsValue
@@ -1035,6 +1251,9 @@ func syncEntity(_ entity: Entity, to object: JSObject) {
         offset.x = entity.grabOffsetX.jsValue
         offset.y = entity.grabOffsetY.jsValue
         object.grabOffset = offset.jsValue
+    } else {
+        deleteJSProperty(object, "grabbed")
+        deleteJSProperty(object, "grabOffset")
     }
     if entity.floating {
         object.floating = .boolean(true)
@@ -1068,50 +1287,6 @@ func syncEngineEntities(to entitiesArray: JSObject) {
     entitiesArray.length = outputIndex.jsValue
 }
 
-func syncEngineEffects(entities: JSObject, wind: JSObject, laserBeams: JSObject, teleportEffects: JSObject) {
-    wind.length = .number(0)
-    let entityValues = (0..<Int(entities.length.number ?? 0)).map { entities[$0] }
-    for effect in gameEngine.wind {
-        guard effect.fanEntityIndex >= 0, effect.fanEntityIndex < gameEngine.entities.count else { continue }
-        let fanID = gameEngine.entities[effect.fanEntityIndex].id
-        guard let fan = existingEntityObject(id: fanID, in: entityValues) else { continue }
-        let entry = JSObject.global.Object.function!.new()
-        entry.fan = fan
-        var extents: [JSValue] = []
-        for i in 0..<effect.numExtents {
-            extents.append(effect.extent(at: i).jsValue)
-        }
-        entry.extents = extents.jsValue
-        _ = wind.push!(entry.jsValue)
-    }
-
-    laserBeams.length = .number(0)
-    for beam in gameEngine.laserBeams {
-        guard beam.laserEntityIndex >= 0, beam.laserEntityIndex < gameEngine.entities.count else { continue }
-        let laserID = gameEngine.entities[beam.laserEntityIndex].id
-        guard let laser = existingEntityObject(id: laserID, in: entityValues) else { continue }
-        let entry = JSObject.global.Object.function!.new()
-        entry.laserBrick = laser
-        entry.extent = beam.extent.jsValue
-        if beam.hitEntityIndex >= 0, beam.hitEntityIndex < gameEngine.entities.count {
-            let hitID = gameEngine.entities[beam.hitEntityIndex].id
-            entry.hitWhat = existingEntityObject(id: hitID, in: entityValues) ?? .undefined
-        } else {
-            entry.hitWhat = .undefined
-        }
-        _ = laserBeams.push!(entry.jsValue)
-    }
-
-    teleportEffects.length = .number(0)
-    for effect in gameEngine.teleportEffects {
-        let entry = JSObject.global.Object.function!.new()
-        entry.x = effect.x.jsValue
-        entry.y = effect.y.jsValue
-        entry.frameIndex = effect.frameIndex.jsValue
-        _ = teleportEffects.push!(entry.jsValue)
-    }
-}
-
 func engineLevelState(from level: JSObject) -> (entities: [Entity], bounds: LevelBounds?) {
     guard let entities = level.entities.object else { return ([], nil) }
 
@@ -1142,6 +1317,89 @@ exports.engineLoadLevel =
 
 exports.engineTick =
     JSClosure { args in gameEngine.engineTickExport(args) }.jsValue
+
+// Play-mode drag-and-drop, routed through GameEngine's persistent `entities` (see
+// `Sources/JunkbotCore/Input.swift`). Editor-mode dragging stays JS-side (unchanged); the JS
+// caller only invokes these while `!editing`. Position updates land directly on
+// `gameEngine.entities`, then reach JS's read-only mirror via the next `engineTick`'s
+// `syncEngineEntities` (mirror-and-sync, same as every other tick-driven state change) — these
+// exports don't sync entities themselves.
+exports.mouseDown =
+    JSClosure { args in
+        gameEngine.mouseDown(Int32(args[0].number ?? 0), Int32(args[1].number ?? 0))
+        return .undefined
+    }.jsValue
+
+exports.mouseMove =
+    JSClosure { args in
+        gameEngine.mouseMove(Int32(args[0].number ?? 0), Int32(args[1].number ?? 0))
+        return .undefined
+    }.jsValue
+
+exports.mouseUp =
+    JSClosure { args in
+        gameEngine.mouseUp(Int32(args[0].number ?? 0), Int32(args[1].number ?? 0))
+        return .undefined
+    }.jsValue
+
+exports.isDragging =
+    JSClosure { _ in .boolean(gameEngine.isDragging) }.jsValue
+
+// Play-mode undo (see Sources/JunkbotCore/Undo.swift) — a separate, new capability from the
+// level editor's own undo/redo (JS-side, JSON-snapshot based, `editing`-gated, untouched).
+exports.undo =
+    JSClosure { _ in .boolean(gameEngine.undo()) }.jsValue
+
+exports.canUndo =
+    JSClosure { _ in .boolean(gameEngine.canUndo) }.jsValue
+
+// Play-mode rewind (see Sources/JunkbotCore/Undo.swift), replacing the old JS-side
+// jsondiffpatch-based `playbackLevel`/`levelLastFrame` scrubbing.
+exports.beginRewind =
+    JSClosure { _ in
+        gameEngine.beginRewind()
+        return .undefined
+    }.jsValue
+
+exports.stepRewind =
+    JSClosure { _ in .boolean(gameEngine.stepRewind()) }.jsValue
+
+exports.endRewind =
+    JSClosure { _ in
+        gameEngine.endRewind()
+        return .undefined
+    }.jsValue
+
+// undo()/stepRewind() mutate gameEngine.entities directly, bypassing the usual
+// tick() -> syncEngineEntities path (and both can run while paused, so no
+// engineTick call happens on its own to refresh JS's mirror). JS calls this once right after
+// undo()/stepRewind() return true, reusing the same sync logic engineTick already uses.
+exports.syncEngineState =
+    JSClosure { args in
+        guard let entities = args[0].object else { return .undefined }
+        syncEngineEntities(to: entities)
+        let result = JSObject.global.Object.function!.new()
+        result.frameCounter = gameEngine.frameCounter.jsValue
+        result.moves = gameEngine.moves.jsValue
+        return result.jsValue
+    }.jsValue
+
+// Generic world renderer (RenderBridge.swift) — replaces src/game.js's draw* decision logic.
+// See RenderCommand.swift/RenderList.swift (JunkbotCore) for the command format and emission.
+exports.renderSpriteTable =
+    JSClosure { args in gameEngine.renderSpriteTableExport(args) }.jsValue
+
+exports.engineSetBackground =
+    JSClosure { args in gameEngine.engineSetBackgroundExport(args) }.jsValue
+
+exports.renderWorld =
+    JSClosure { args in gameEngine.renderWorldExport(args) }.jsValue
+
+exports.renderEntityList =
+    JSClosure { args in gameEngine.renderEntityListExport(args) }.jsValue
+
+exports.renderPreviewEntity =
+    JSClosure { args in gameEngine.renderPreviewEntityExport(args) }.jsValue
 
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")

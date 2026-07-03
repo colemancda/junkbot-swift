@@ -1,7 +1,7 @@
 // @ts-check
 import { SwiftRuntime } from "./runtime.js";
 
-export const MODULE_PATH = "JunkbotApp.wasm";
+export const MODULE_PATH = "JunkbotWASM.wasm";
 
 /**
  * @param {import('./instantiate.d').InstantiateOptions} options

@@ -52,6 +52,40 @@ public final class GameEngine: @unchecked Sendable {
   /// Indices into `entities` that would be grabbed if the mouse were pressed right now, used for
   /// hover feedback.
   var hoveredIndices: [Int] = []
+  /// While a grab is possible in both directions from press position (until the drag gesture
+  /// resolves which one), the two candidate groups; `nil` otherwise. See `mouseDown`/`mouseMove`.
+  var pendingGrabUpward: [Int]? = nil
+  var pendingGrabDownward: [Int]? = nil
+  /// World position at the most recent `mouseDown`, used to measure the drag gesture that
+  /// resolves `pendingGrabUpward`/`pendingGrabDownward`.
+  var mouseDownWorldX: Int32 = 0
+  var mouseDownWorldY: Int32 = 0
+
+  // MARK: - Undo / rewind (see Undo.swift)
+  /// One `EngineSnapshot` per completed move, pushed just before each drag starts (mirroring the
+  /// JS editor's `undoable()`, which also snapshots before the mutation). Unbounded, like the
+  /// editor's own `undos` stack — a level has at most a few dozen moves, trivial memory.
+  var undoStack: [EngineSnapshot] = []
+  /// Ring buffer of per-tick snapshots for `stepRewind()`, indexed by `frameCounter % count`.
+  /// Fixed capacity rather than unbounded: at this project's 18-tick/sec simulation rate, 600
+  /// slots cover roughly half a minute of game-tick history, matching "scrub back a recent
+  /// mistake" rather than unbounded time travel.
+  var rewindBuffer: [EngineSnapshot?] = Array(repeating: nil, count: 600)
+  var isRewinding: Bool = false
+  var wasPausedBeforeRewind: Bool = false
+
+  // MARK: - Background layers (see RenderList.swift)
+  /// Sprite ID of the level's backdrop image, `-1` if none/not yet provided. Set via
+  /// `setBackground` (JS host resolves names to IDs at load; native path uses `spriteIDForName`).
+  var backdropSpriteID: Int32 = -1
+  /// Decals drawn behind the backdrop layer boundary (JS: `currentLevel.backgroundDecals`).
+  var backgroundDecals: [DecalInstance] = []
+  /// Decals drawn in front of `backgroundDecals` but behind entities (JS: `currentLevel.decals`).
+  var decals: [DecalInstance] = []
+  /// Dedicated xorshift state for *cosmetic* randomness (scaredy-bin wobble in
+  /// `RenderList.swift`) - deliberately separate from `rngState` so building render frames never
+  /// perturbs the simulation RNG sequence that replay/rewind determinism depends on.
+  var renderRNGState: UInt32 = 0x9E37_79B9
 
   // MARK: - Viewport
   public var viewportCenterX: Int32 = 0
@@ -78,6 +112,17 @@ public final class GameEngine: @unchecked Sendable {
   /// Invoked with a `SoundID.rawValue` whenever the simulation wants to play a sound effect.
   /// The host (e.g. the JS bridge) is responsible for mapping the ID to an actual audio asset.
   public var onPlaySound: ((Int32) -> Void)? = nil
+
+  // MARK: - Drag event callback
+  /// Invoked whenever a native (play-mode) drag starts (`isPickup: true`) or ends
+  /// (`isPickup: false`) — see `Input.swift`'s `startDrag`/`finishDrag`/`mouseDown`/`mouseMove`.
+  /// The host is responsible for recording this into its own solution/replay log (e.g. JS's
+  /// `playthroughEvents`), mirroring the "pickup"/"place" entries JS's own `startGrab`/
+  /// `finishDrag` used to push before play-mode dragging moved to Swift. `direction` matches the
+  /// `direction` parameter used throughout `Input.swift`: `-1` = resolved upward (via drag
+  /// gesture), `1` = resolved downward (via drag gesture), `0` = resolved immediately at press
+  /// time (only one direction was possible) — meaningless for a "place" event.
+  public var onDragEvent: ((_ isPickup: Bool, _ worldX: Int32, _ worldY: Int32, _ direction: Int32) -> Void)? = nil
 
   public init() {
     rng = { [unowned(unsafe) self] in
@@ -128,6 +173,12 @@ public final class GameEngine: @unchecked Sendable {
     levelTitle = ""
     levelHint = ""
     levelPar = Int.max
+    undoStack.removeAll(keepingCapacity: true)
+    rewindBuffer = Array(repeating: nil, count: rewindBuffer.count)
+    isRewinding = false
+    backdropSpriteID = -1
+    backgroundDecals.removeAll(keepingCapacity: true)
+    decals.removeAll(keepingCapacity: true)
   }
 
   /// Resets and loads a complete level from an already-constructed entity list, e.g. when
@@ -151,6 +202,14 @@ public final class GameEngine: @unchecked Sendable {
     levelBounds = newLevelBounds
     idCounter = max(nextID, idCounter, maxEntityID(in: newEntities))
     rebuildAccelerationStructures()
+  }
+
+  /// Raises `idCounter` to at least `minValue` if it isn't already, without otherwise touching
+  /// engine state. Used to stay ahead of IDs already assigned JS-side (e.g. its own `getID()`
+  /// when pasting a new entity) so this engine's own `getID()` (used when spawning droplets,
+  /// etc.) never collides with one JS already handed out.
+  public func ensureIDCounterAtLeast(_ minValue: Int32) {
+    idCounter = max(idCounter, minValue)
   }
 
   private func maxEntityID(in entities: [Entity]) -> Int32 {
@@ -252,36 +311,73 @@ public final class GameEngine: @unchecked Sendable {
   }
 
   /// Starts a drag if the position at press-time has a grabbable entity (or entity group)
-  /// beneath it; no-op if already dragging. See `Input.swift`.
+  /// beneath it; no-op if already dragging. If the entity is grabbable in only one direction
+  /// (up or down), starts dragging immediately; if grabbable in both, defers to `mouseMove`
+  /// to resolve which direction based on the drag gesture (matches JS's `pendingGrabs`). See
+  /// `Input.swift`.
   public func mouseDown(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
+    mouseDownWorldX = worldX
+    mouseDownWorldY = worldY
+    pendingGrabUpward = nil
+    pendingGrabDownward = nil
     guard draggingIndices.isEmpty else { return }
-    let grabs = possibleGrabsAt(worldX: worldX, worldY: worldY)
-    if let first = grabs.first {
-      startDrag(entityIndex: first, worldX: worldX, worldY: worldY)
+    guard let first = possibleGrabsAt(worldX: worldX, worldY: worldY).first else { return }
+    let grabs = possibleGrabsInDirections(startIndex: first)
+    if grabs.canGrabDownward && grabs.canGrabUpward {
+      pendingGrabDownward = grabs.grabDownward
+      pendingGrabUpward = grabs.grabUpward
+      playSound(.blockClick)
+    } else if grabs.canGrabDownward {
+      startDrag(indices: grabs.grabDownward, worldX: worldX, worldY: worldY, direction: 0)
+      playSound(.blockClick)
+    } else if grabs.canGrabUpward {
+      startDrag(indices: grabs.grabUpward, worldX: worldX, worldY: worldY, direction: 0)
+      playSound(.blockClick)
     }
   }
-  /// Updates the active drag to follow the pointer, or (if not dragging) refreshes `hoveredIndices`
-  /// for hover feedback.
+  /// Updates the active drag to follow the pointer; resolves a pending two-direction grab (see
+  /// `mouseDown`) once the pointer has moved far enough vertically from the press position; or,
+  /// if neither dragging nor pending, refreshes `hoveredIndices` for hover feedback.
   public func mouseMove(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
+    if pendingGrabUpward != nil || pendingGrabDownward != nil {
+      if worldY < mouseDownWorldY - dragResolveThreshold, let up = pendingGrabUpward {
+        startDrag(indices: up, worldX: worldX, worldY: worldY, direction: -1)
+        pendingGrabUpward = nil
+        pendingGrabDownward = nil
+      } else if worldY > mouseDownWorldY + dragResolveThreshold, let down = pendingGrabDownward {
+        startDrag(indices: down, worldX: worldX, worldY: worldY, direction: 1)
+        pendingGrabUpward = nil
+        pendingGrabDownward = nil
+      }
+    }
     if !draggingIndices.isEmpty {
       updateDrag(worldX: worldX, worldY: worldY)
     } else {
       hoveredIndices = possibleGrabsAt(worldX: worldX, worldY: worldY)
     }
   }
-  /// Releases the active drag (if any) at its final position, committing the move.
+  /// Releases the active drag (if any) at its final position, committing the move — but only if
+  /// `canRelease()` allows it there (collision-free, and connected to something fixed on exactly
+  /// one vertical side). If not, the drag simply continues (matches JS's `finishDrag`, which
+  /// no-ops on an invalid release rather than snapping back or forcing a drop).
   public func mouseUp(_ worldX: Int32, _ worldY: Int32) {
     mouseWorldX = worldX
     mouseWorldY = worldY
-    if !draggingIndices.isEmpty {
-      updateDrag(worldX: worldX, worldY: worldY)
-      finishDrag()
-    }
+    guard !draggingIndices.isEmpty else { return }
+    updateDrag(worldX: worldX, worldY: worldY)
+    guard canRelease() else { return }
+    finishDrag()
   }
+  /// Whether a play-mode drag (started via `mouseDown`/`mouseMove`) is currently in progress.
+  public var isDragging: Bool { !draggingIndices.isEmpty }
+  /// IDs of entities currently part of a native (`mouseDown`/`mouseMove`-driven) drag. See
+  /// `main.swift`'s `mergeGrabbedEntities`, which uses this to avoid clobbering a just-started
+  /// native drag with a stale JS-side `grabbed` reading.
+  public var draggingEntityIDs: Set<Int32> { Set(draggingIndices.map { entities[$0].id }) }
   public func setPaused(_ isPaused: Bool) { paused = isPaused }
   public func setViewport(_ cx: Int32, _ cy: Int32, _ scale: Float) {
     viewportCenterX = cx

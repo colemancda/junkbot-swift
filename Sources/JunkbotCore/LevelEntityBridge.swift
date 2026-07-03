@@ -37,7 +37,10 @@ extension GameEngine {
       let facing: Int32 = part.state == .walkLeft ? -1 : 1
       let facingY: Int32 = part.state == .walkUp ? -1 : (part.state == .walkDown ? 1 : 0)
       let isOn = part.state == .on
-      let colorIndex = Int32(part.colorIndex)
+      // part.colorIndex indexes the level file's own [partslist] colors= list, whose order
+      // varies per level; the renderer's brick sprite IDs use the canonical brickColorNames
+      // order, so resolve by name (unknown names fall back to gray, matching the JS bridge).
+      let colorIndex = Int32(brickColorNames.firstIndex(of: part.colorName) ?? 5)
 
       if typeName.hasPrefix("brick_"), let widthInStuds = Int32(typeName.dropFirst("brick_".count)) {
         entities.append(
@@ -104,6 +107,22 @@ extension GameEngine {
     levelHint = level.hint
     levelPar = level.par ?? Int.max
     winLoseState = winOrLose()
+
+    // Resolve background layers for the renderer (RenderList.swift). Unresolvable names (a few
+    // levels reference decals with no atlas entry) are skipped, matching JS's silent fallback.
+    func resolveDecals(_ levelDecals: [LevelDecal]) -> [DecalInstance] {
+      var result: [DecalInstance] = []
+      for decal in levelDecals {
+        guard let spriteID = backgroundSpriteIDForName(decal.name) else { continue }
+        result.append(DecalInstance(x: Int32(decal.x), y: Int32(decal.y), spriteID: spriteID))
+      }
+      return result
+    }
+    let background = level.background
+    setBackground(
+      backdropSpriteID: backgroundSpriteIDForName(background?.backdrop ?? "bkg1") ?? -1,
+      backgroundDecals: resolveDecals(background?.backgroundDecals ?? []),
+      decals: resolveDecals(background?.decals ?? []))
   }
 }
 #endif

@@ -1104,7 +1104,12 @@
 	</script>
 	<script type="module">
 		import { init } from './web/Package/index.js';
-		init();
+		// Exposes the WASM module's linear memory so the render bridge (src/game.js's
+		// executeRenderCommands) can read RenderCommandBuffer output as an Int32Array without any
+		// per-frame marshaling - see Sources/JunkbotWASM/RenderBridge.swift.
+		init().then(({ instance }) => {
+			window.wasmMemory = instance.exports.memory;
+		});
 	</script>
 </body>
 

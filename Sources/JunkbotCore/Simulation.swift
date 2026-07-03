@@ -886,6 +886,10 @@ extension GameEngine {
   /// targeting as a separate pass, recompute fans/lasers, re-sort by ID, and finally refresh
   /// `winLoseState`. Called once per frame by `GameEngine.tick()`.
   func simulate() {
+    // Captured under the pre-increment frameCounter value, so stepRewind()'s natural lookup
+    // (frameCounter - 1) after a backward step finds "what things looked like going into this
+    // tick" — see Undo.swift.
+    rewindBuffer[Int(frameCounter) % rewindBuffer.count] = snapshot()
     frameCounter += 1
     entities.sort { $0.y > $1.y }
     rebuildAccelerationStructures()

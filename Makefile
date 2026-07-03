@@ -3,13 +3,16 @@ SWIFT        := swift
 BUILD_OUTPUT := .build/plugins/PackageToJS/outputs/Package
 WEB_PACKAGE  := web/Package
 
-.PHONY: all clean serve
+.PHONY: all clean serve codegen
+
+codegen:
+	python3 tools/generate_render_tables.py
 
 all:
 	@echo "▶ Building Swift WASM…"
 	$(SWIFT) package \
 	    --swift-sdk $(SWIFT_SDK) \
-	    js -c release
+	    js --product JunkbotWASM -c release
 	@echo "▶ Copying package output to web/Package/…"
 	rm -rf $(WEB_PACKAGE)
 	cp -r $(BUILD_OUTPUT) $(WEB_PACKAGE)

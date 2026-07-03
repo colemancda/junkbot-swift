@@ -233,20 +233,24 @@ extension GameEngine {
       let e = entities[startIndex]
       if e.y + e.height >= bounds.y + bounds.height { return true }
     }
-    var visited: [Int] = [startIndex]
+    var visited: [Int] = []
 
     func search(fromIndex: Int) -> Bool {
       let from = entities[fromIndex]
       if let bounds = levelBounds, from.y + from.height >= bounds.y + bounds.height { return true }
-      let above = entitiesByTopY[from.y + from.height] ?? []
-      let below = entitiesByBottomY[from.y] ?? []
-      var candidates: [Int] = []
-      if fromIndex != startIndex || direction != -1 { candidates += above }
-      if fromIndex != startIndex || direction != 1 { candidates += below }
-      for otherIdx in candidates {
+      // `direction` only restricts which side is searched from `startIndex` itself; once the
+      // search moves on to a neighbor, both sides are always considered (matches the original
+      // JS `connectsToFixed`).
+      let includeBelow = fromIndex != startIndex || direction != -1
+      let includeAbove = fromIndex != startIndex || direction != 1
+      for otherIdx in 0..<entities.count {
+        guard otherIdx != fromIndex else { continue }
+        let other = entities[otherIdx]
+        let isBelow = other.y == from.y + from.height  // other's top touches from's bottom
+        let isAbove = other.y + other.height == from.y  // other's bottom touches from's top
+        guard (isBelow && includeBelow) || (isAbove && includeAbove) else { continue }
         if ignoreIndices.contains(otherIdx) { continue }
         if visited.contains(otherIdx) { continue }
-        let other = entities[otherIdx]
         if other.grabbed { continue }
         guard from.x + from.width > other.x && from.x < other.x + other.width else { continue }
         visited.append(otherIdx)
@@ -257,5 +261,42 @@ extension GameEngine {
     }
 
     return search(fromIndex: startIndex)
+  }
+
+  /// Whether entity `b` is directly adjacent to entity `a` on the given vertical side, with some
+  /// horizontal overlap: `direction == 1` requires `b` directly below `a` (touching `a`'s bottom
+  /// edge), `direction == -1` requires `b` directly above `a` (touching `a`'s top edge), and the
+  /// default `0` accepts either side. Index-based counterpart of `main.swift`'s `entitiesConnect`
+  /// (which operates on JSObjects for the WASM bridge).
+  func connects(_ aIndex: Int, _ bIndex: Int, direction: Int32 = 0) -> Bool {
+    let a = entities[aIndex], b = entities[bIndex]
+    return ((direction >= 0 && b.y == a.y + a.height) || (direction <= 0 && b.y + b.height == a.y))
+      && a.x + a.width > b.x && a.x < b.x + b.width
+  }
+
+  /// Every entity transitively resting on/under a `fixed` entity, found by breadth-first search
+  /// from each `fixed` entity outward along vertical adjacency (`connects`, either direction).
+  /// Index-based counterpart of `main.swift`'s `allConnectedToFixedExport`; like that function,
+  /// deliberately does not exclude `grabbed` entities from the traversal itself (only callers that
+  /// separately check `!grabbed` exclude them) — matches the original JS behavior exactly.
+  func allConnectedToFixed() -> [Int] {
+    var connected: [Int] = []
+    func addAnyAttached(_ index: Int) {
+      let e = entities[index]
+      for other in 0..<entities.count {
+        guard other != index, !connected.contains(other) else { continue }
+        let o = entities[other]
+        guard e.x + e.width > o.x && e.x < o.x + o.width else { continue }
+        guard o.y + o.height == e.y || e.y + e.height == o.y else { continue }
+        connected.append(other)
+        addAnyAttached(other)
+      }
+    }
+    for i in 0..<entities.count where entities[i].fixed {
+      guard !connected.contains(i) else { continue }
+      connected.append(i)
+      addAnyAttached(i)
+    }
+    return connected
   }
 }
