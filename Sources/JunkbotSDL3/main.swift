@@ -464,6 +464,64 @@ final class CursorSet {
 let cursorSet = CursorSet(
   cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
 
+/// Draws its own cursor sprite via texture blit / `SDL_RenderGeometry`, rather than relying on
+/// `SDL_SetCursor`/`SDL_ShowCursor` - some platforms (notably KMSDRM-backed Linux, as found on
+/// ARM64 handhelds with no mouse hardware at all) have no hardware cursor plane and silently
+/// render nothing for those calls, and `SDL_GetMouseState`/`SDL_WarpMouseInWindow` have no real
+/// pointing device to route through either. Used only while `lastPointingInput == .gamepad` -
+/// mouse/touch keep using the OS cursor (or no cursor) as before.
+final class VirtualCursor {
+  private let renderer: OpaquePointer
+  private var textures: [GameEngine.CursorHint: UnsafeMutablePointer<SDL_Texture>] = [:]
+
+  init(renderer: OpaquePointer, cursorsDirectory: URL) {
+    self.renderer = renderer
+    let files: [(GameEngine.CursorHint, String)] = [
+      (.grabbing, "cursor-grabbing.png"),
+      (.grabEither, "cursor-grab-either.png"),
+      (.grabUpward, "cursor-grab-upward.png"),
+      (.grabDownward, "cursor-grab-downward.png"),
+      (.grab, "cursor-grab.png"),
+    ]
+    for (hint, filename) in files {
+      let url = cursorsDirectory.appendingPathComponent(filename)
+      guard let texture = IMG_LoadTexture(renderer, url.path) else { continue }
+      textures[hint] = texture
+    }
+  }
+
+  func draw(hint: GameEngine.CursorHint, x: Float, y: Float) {
+    if let texture = textures[hint] {
+      var width: Float = 0
+      var height: Float = 0
+      _ = SDL_GetTextureSize(texture, &width, &height)
+      var dst = SDL_FRect(x: x - 8, y: y - 8, w: width, h: height)
+      _ = SDL_RenderTexture(renderer, texture, nil, &dst)
+      return
+    }
+    drawArrow(x: x, y: y)
+  }
+
+  /// Fallback arrow silhouette for `.none` (no grab image loaded for that hint) - a black outline
+  /// triangle with a white fill, drawn as two overlapping `SDL_RenderGeometry` triangles.
+  private func drawArrow(x: Float, y: Float) {
+    func fillTriangle(_ points: [(Float, Float)], color: SDL_FColor) {
+      var vertices = points.map {
+        SDL_Vertex(
+          position: SDL_FPoint(x: x + $0.0, y: y + $0.1), color: color,
+          tex_coord: SDL_FPoint(x: 0, y: 0))
+      }
+      _ = SDL_RenderGeometry(renderer, nil, &vertices, Int32(vertices.count), nil, 0)
+    }
+    let black = SDL_FColor(r: 0, g: 0, b: 0, a: 1)
+    let white = SDL_FColor(r: 1, g: 1, b: 1, a: 1)
+    fillTriangle([(0, 0), (0, 16), (11, 12)], color: black)
+    fillTriangle([(1, 3), (1, 13), (9, 11)], color: white)
+  }
+}
+let virtualCursor = VirtualCursor(
+  renderer: renderer, cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
+
 // MARK: - Rendering
 
 /// Reused across frames to avoid per-frame allocation.
@@ -560,6 +618,13 @@ var renderFrame = RenderFrame()
     drawDialogOverlay()
   }
   drawFocusRing()
+
+  // Menu/d-pad navigation intentionally hides the cursor (the focus ring is the indicator
+  // there) - only draw the virtual cursor on the screens where it's meant to be visible.
+  if lastPointingInput == .gamepad, screenOwnsWorldInput() {
+    let hint = gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY)
+    virtualCursor.draw(hint: hint, x: lastMouseScreenX, y: lastMouseScreenY)
+  }
 
   SDL_RenderPresent(renderer)
 }

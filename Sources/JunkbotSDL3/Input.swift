@@ -66,10 +66,19 @@ let touchMouseID: UInt32 = .max
     self.gamepad = nil
   }
 
-  /// Reads the left stick and warps the cursor accordingly. Call once per frame. Only active on
-  /// screens with a free-roaming cursor to point at (gameplay, and the title screen's
-  /// draggable-bricks demo) - level select and the win/lose dialogs are navigated by d-pad
-  /// focus alone, so stick motion is ignored there rather than fighting with focus navigation.
+  /// Reads the left stick and moves the tracked cursor position accordingly. Call once per
+  /// frame. Only active on screens with a free-roaming cursor to point at (gameplay, and the
+  /// title screen's draggable-bricks demo) - level select and the win/lose dialogs are
+  /// navigated by d-pad focus alone, so stick motion is ignored there rather than fighting with
+  /// focus navigation.
+  ///
+  /// Drives `lastMouseScreenX/Y` and `handleMouseMove` directly instead of routing through
+  /// `SDL_GetMouseState`/`SDL_WarpMouseInWindow` and waiting for the resulting motion event:
+  /// some platforms (KMSDRM-backed Linux, as on ARM64 handhelds with no mouse hardware at all)
+  /// have no real pointing device, so `SDL_GetMouseState` never reflects prior warps (leaving
+  /// the cursor stuck at its initial position) and the warp itself may be a no-op. The warp
+  /// call below is kept as a best-effort sync for platforms that do have a real cursor, but
+  /// nothing here depends on it succeeding.
   func pollSticks(deltaSeconds: Float) {
     guard let gamepad, screenOwnsWorldInput() else { return }
     let rawX = Float(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX)) / 32767
@@ -79,14 +88,19 @@ let touchMouseID: UInt32 = .max
     guard x != 0 || y != 0 else { return }
     notePointingInput(.gamepad)
 
-    var mouseX: Float = 0
-    var mouseY: Float = 0
-    _ = SDL_GetMouseState(&mouseX, &mouseY)
-    let newX = max(0, min(Float(windowWidth) - 1, mouseX + x * cursorSpeed * deltaSeconds))
-    let newY = max(0, min(Float(windowHeight) - 1, mouseY + y * cursorSpeed * deltaSeconds))
-    // Generates a normal SDL_EVENT_MOUSE_MOTION, driving all existing hover/drag paths.
+    // A mouse-never-touched cursor starts at (-1, -1); on devices with no mouse hardware at
+    // all, that's the only initial value it'll ever have - start from the window center
+    // instead of clamping straight into a top-left corner.
+    if lastMouseScreenX < 0 { lastMouseScreenX = Float(windowWidth) / 2 }
+    if lastMouseScreenY < 0 { lastMouseScreenY = Float(windowHeight) / 2 }
+
+    let newX = max(0, min(Float(windowWidth) - 1, lastMouseScreenX + x * cursorSpeed * deltaSeconds))
+    let newY = max(0, min(Float(windowHeight) - 1, lastMouseScreenY + y * cursorSpeed * deltaSeconds))
+    lastMouseScreenX = newX
+    lastMouseScreenY = newY
     suppressNextMouseMotionAsSynthetic = true
     SDL_WarpMouseInWindow(window, newX, newY)
+    handleMouseMove(x: newX, y: newY)
   }
 }
 
