@@ -34,10 +34,17 @@ let touchMouseID: UInt32 = .max
 @MainActor func notePointingInput(_ kind: PointingInputKind) {
   guard kind != lastPointingInput else { return }
   lastPointingInput = kind
-  if kind == .touch {
-    _ = SDL_HideCursor()
-  } else {
+  switch kind {
+  case .mouse:
+    // Real hardware cursor - let the OS draw it (and `cursorSet.apply` swap its grab/grabbing
+    // image), same as before.
     _ = SDL_ShowCursor()
+  case .gamepad, .touch:
+    // Gamepad drives a self-drawn virtual cursor (`VirtualCursor.draw`, main.swift) instead of
+    // the OS cursor - some platforms (KMSDRM-backed Linux handhelds) have no hardware cursor
+    // support at all, so the OS cursor must stay hidden while gamepad-driven, not just while
+    // touch-driven.
+    _ = SDL_HideCursor()
   }
 }
 
