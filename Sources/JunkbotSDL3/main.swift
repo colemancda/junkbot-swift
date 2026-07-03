@@ -620,8 +620,10 @@ var renderFrame = RenderFrame()
   drawFocusRing()
 
   // Menu/d-pad navigation intentionally hides the cursor (the focus ring is the indicator
-  // there) - only draw the virtual cursor on the screens where it's meant to be visible.
-  if lastPointingInput == .gamepad, screenOwnsWorldInput() {
+  // there) - only draw the virtual cursor on the screens where it's meant to be visible, and
+  // only while `virtualCursorVisible` (false during d-pad menu-item focus navigation, even on
+  // a world-owning screen like the title screen's Play/Credits buttons).
+  if lastPointingInput == .gamepad, screenOwnsWorldInput(), virtualCursorVisible {
     let hint = gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY)
     virtualCursor.draw(hint: hint, x: lastMouseScreenX, y: lastMouseScreenY)
   }

@@ -20,6 +20,16 @@ enum PointingInputKind {
 
 @MainActor var lastPointingInput: PointingInputKind = .mouse
 
+/// Whether the gamepad-driven virtual cursor (`VirtualCursor.draw`, main.swift) should be drawn
+/// right now - distinct from `lastPointingInput == .gamepad`, since d-pad *menu-focus*
+/// navigation (as opposed to stick cursor movement or a brick nudge-drag) hides the cursor
+/// entirely in favor of the focus ring, the same way it always hid the OS cursor before the
+/// virtual cursor existed. Toggled alongside every `SDL_HideCursor`/`SDL_ShowCursor` call that's
+/// about gamepad-driven visibility (`pollSticks`, `directionPressed`) - not by
+/// `notePointingInput`, which only fires on an input *kind* change and would miss later
+/// same-kind visibility changes (e.g. stick movement resuming after menu navigation hid it).
+@MainActor var virtualCursorVisible = false
+
 /// `SDL_TOUCH_MOUSEID`'s value - the macro is a C cast expression (`(SDL_MouseID)-1`) that
 /// doesn't import into Swift. Mouse events synthesized from touch carry this `which` id;
 /// filtering on it keeps them from flipping the input kind back to `.mouse`.
@@ -94,6 +104,7 @@ let touchMouseID: UInt32 = .max
     let y = abs(rawY) > deadzone ? rawY : 0
     guard x != 0 || y != 0 else { return }
     notePointingInput(.gamepad)
+    virtualCursorVisible = true
 
     // A mouse-never-touched cursor starts at (-1, -1); on devices with no mouse hardware at
     // all, that's the only initial value it'll ever have - start from the window center
@@ -138,9 +149,11 @@ let touchMouseID: UInt32 = .max
 @MainActor func directionPressed(dx: Int32, dy: Int32, menuDelta: Int) {
   if gameEngine.isDragging {
     notePointingInput(.gamepad)
+    virtualCursorVisible = true
     nudgeDrag(dx: dx, dy: dy)
   } else {
     _ = SDL_HideCursor()
+    virtualCursorVisible = false
     moveFocus(menuDelta)
   }
 }
