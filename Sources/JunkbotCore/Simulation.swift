@@ -929,10 +929,18 @@ extension GameEngine {
     simulateFansAndLasers()
     entities.sort { $0.id < $1.id }
 
-    let newState = winOrLose()
-    if newState != winLoseState {
-      winLoseState = newState
-      if newState == 1 { playSound(.ohYeah) } else if newState == 2 { playSound(.ouch) }
+    // Once a level has won or lost, that result is final - matches the original Lingo's
+    // event-driven model (parent_play manager.ls's addStatus(#damage/#goals, ...) ends the level
+    // the instant a death/last-bin event fires; there's no "recheck everything" step after that).
+    // Recomputing winOrLose() every tick (as this used to do) let a win flip back to a loss on a
+    // later tick if a hazard killed Junkbot after he'd already collected the last bin - the root
+    // cause of the "both won and lost (at different times)" class of test failures.
+    if winLoseState == 0 {
+      let newState = winOrLose()
+      if newState != 0 {
+        winLoseState = newState
+        if newState == 1 { playSound(.ohYeah) } else if newState == 2 { playSound(.ouch) }
+      }
     }
   }
 }
