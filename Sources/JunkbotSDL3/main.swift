@@ -657,13 +657,20 @@ while running {
     case SDL_EVENT_MOUSE_MOTION.rawValue:
       lastMouseScreenX = event.motion.x
       lastMouseScreenY = event.motion.y
-      // Touch-synthesized mouse events carry SDL_TOUCH_MOUSEID; real mouse motion takes over
-      // hover from keyboard/d-pad focus and re-shows a touch-hidden cursor. Warped (gamepad)
-      // motion also lands here but notePointingInput(.gamepad) already ran in pollSticks.
+      // Touch-synthesized mouse events carry SDL_TOUCH_MOUSEID. Programmatic warps (gamepad
+      // stick/d-pad-nudge, via SDL_WarpMouseInWindow) set suppressNextMouseMotionAsSynthetic
+      // right before warping so this one motion event is consumed without re-triggering
+      // anything - those call sites already handled input-kind/cursor-visibility themselves.
+      // Any *other* motion is genuine mouse hardware movement and must unconditionally show
+      // the cursor and hand hover back to the mouse - this can never be skipped based on
+      // `lastPointingInput`, or the cursor can get stuck hidden after gamepad/d-pad use.
       if event.motion.which == touchMouseID {
         notePointingInput(.touch)
-      } else if lastPointingInput != .gamepad {
-        notePointingInput(.mouse)
+      } else if suppressNextMouseMotionAsSynthetic {
+        suppressNextMouseMotionAsSynthetic = false
+      } else {
+        lastPointingInput = .mouse
+        _ = SDL_ShowCursor()
         focusedButtonIndex = nil
       }
       if screenOwnsWorldInput() {
@@ -676,9 +683,9 @@ while running {
     case SDL_EVENT_GAMEPAD_REMOVED.rawValue:
       gamepadState.handleRemoved(event.gdevice.which)
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN.rawValue:
-      notePointingInput(.gamepad)
       switch SDL_GamepadButton(Int32(event.gbutton.button)) {
       case SDL_GAMEPAD_BUTTON_SOUTH:  // A
+        notePointingInput(.gamepad)
         activatePressed()
       case SDL_GAMEPAD_BUTTON_START:
         escapePressed()

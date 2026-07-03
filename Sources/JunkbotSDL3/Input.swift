@@ -25,6 +25,12 @@ enum PointingInputKind {
 /// filtering on it keeps them from flipping the input kind back to `.mouse`.
 let touchMouseID: UInt32 = .max
 
+/// Set right before every programmatic `SDL_WarpMouseInWindow` call (gamepad stick, d-pad
+/// nudge) and consumed by the next `SDL_EVENT_MOUSE_MOTION`, so that one synthetic event isn't
+/// mistaken for genuine mouse hardware movement (which must always show the cursor - see
+/// `main.swift`'s motion handler).
+@MainActor var suppressNextMouseMotionAsSynthetic = false
+
 @MainActor func notePointingInput(_ kind: PointingInputKind) {
   guard kind != lastPointingInput else { return }
   lastPointingInput = kind
@@ -60,9 +66,12 @@ let touchMouseID: UInt32 = .max
     self.gamepad = nil
   }
 
-  /// Reads the left stick and warps the cursor accordingly. Call once per frame.
+  /// Reads the left stick and warps the cursor accordingly. Call once per frame. Only active on
+  /// screens with a free-roaming cursor to point at (gameplay, and the title screen's
+  /// draggable-bricks demo) - level select and the win/lose dialogs are navigated by d-pad
+  /// focus alone, so stick motion is ignored there rather than fighting with focus navigation.
   func pollSticks(deltaSeconds: Float) {
-    guard let gamepad else { return }
+    guard let gamepad, screenOwnsWorldInput() else { return }
     let rawX = Float(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX)) / 32767
     let rawY = Float(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY)) / 32767
     let x = abs(rawX) > deadzone ? rawX : 0
@@ -76,6 +85,7 @@ let touchMouseID: UInt32 = .max
     let newX = max(0, min(Float(windowWidth) - 1, mouseX + x * cursorSpeed * deltaSeconds))
     let newY = max(0, min(Float(windowHeight) - 1, mouseY + y * cursorSpeed * deltaSeconds))
     // Generates a normal SDL_EVENT_MOUSE_MOTION, driving all existing hover/drag paths.
+    suppressNextMouseMotionAsSynthetic = true
     SDL_WarpMouseInWindow(window, newX, newY)
   }
 }
@@ -99,10 +109,17 @@ let touchMouseID: UInt32 = .max
 /// Dispatches an arrow-key/d-pad press: while a brick is grabbed, it nudges the drag exactly
 /// one stud/brick-height in that direction instead of moving menu focus - useful for precise
 /// placement without depending on stick/cursor accuracy.
+///
+/// Cursor visibility differs between the two: nudging a brick keeps the cursor visible (it's
+/// the drag handle - the player needs to see where it'll land), but menu/item navigation hides
+/// it, since the focus ring is the indicator there and a static cursor left over a menu item
+/// would be a confusing, meaningless leftover once you start moving focus with the d-pad/arrows.
 @MainActor func directionPressed(dx: Int32, dy: Int32, menuDelta: Int) {
   if gameEngine.isDragging {
+    notePointingInput(.gamepad)
     nudgeDrag(dx: dx, dy: dy)
   } else {
+    _ = SDL_HideCursor()
     moveFocus(menuDelta)
   }
 }
@@ -123,6 +140,7 @@ let touchMouseID: UInt32 = .max
     canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
   lastMouseScreenX = Float(canvas.x)
   lastMouseScreenY = Float(canvas.y)
+  suppressNextMouseMotionAsSynthetic = true
   SDL_WarpMouseInWindow(window, lastMouseScreenX, lastMouseScreenY)
 }
 

@@ -218,10 +218,19 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
   _ = SDL_RenderRect(renderer, &border)
 }
 
+/// True when `index` (into `menuButtons`) is either under the mouse or the current d-pad/
+/// keyboard focus - the two are equivalent "highlighted" states and get identical visuals
+/// everywhere a button/row can be highlighted.
+@MainActor func isHighlighted(_ index: Int) -> Bool {
+  index == focusedButtonIndex || menuButtons[safe: index]?.contains(lastMouseScreenX, lastMouseScreenY) == true
+}
+
 /// Draws a `Button` as a raised rect with a centered label (the original swaps to `*_ro` member
 /// art on rollover; a brightness change is the equivalent affordance with the assets we have).
-@MainActor func drawButton(_ button: Button, label: String) {
-  let hovered = button.contains(lastMouseScreenX, lastMouseScreenY)
+/// `index` is this button's position in `menuButtons`, used to also treat d-pad/keyboard focus
+/// as a hover for visual purposes.
+@MainActor func drawButton(_ button: Button, label: String, index: Int) {
+  let hovered = isHighlighted(index)
   var body = SDL_FRect(x: button.x, y: button.y, w: button.width, h: button.height)
   _ = SDL_SetRenderDrawColor(
     renderer, hovered ? 220 : 190, hovered ? 220 : 190, hovered ? 200 : 170, 255)
@@ -295,9 +304,9 @@ enum MenuSoundID {
     textRenderer.draw(text, x: Int32(offsetX) + x, y: Int32(offsetY) + y, color: color, scale: 2)
   }
 
-  drawButton(menuButtons[0], label: "Play Junkbot")
-  drawButton(menuButtons[1], label: "Play Undercover")
-  drawButton(menuButtons[2], label: "Credits")
+  drawButton(menuButtons[0], label: "Play Junkbot", index: 0)
+  drawButton(menuButtons[1], label: "Play Undercover", index: 1)
+  drawButton(menuButtons[2], label: "Credits", index: 2)
 }
 
 // MARK: - Level select
@@ -415,10 +424,11 @@ let levelSelectRowsLeft: Float = 11
   }
   drawTab(page, selected: true)
 
-  // "Main" button: lv_quit.png with lv_quit_X.png hover (HTML5's #back-to-title).
+  // "Main" button: lv_quit.png with lv_quit_X.png hover (HTML5's #back-to-title) - also swapped
+  // in when it's the d-pad/keyboard focus, same as a mouse hover.
   let mainButton = menuButtons[0]
   drawMenuTexture(
-    mainButton.contains(lastMouseScreenX, lastMouseScreenY) ? "lv_quit_X" : "lv_quit",
+    isHighlighted(0) ? "lv_quit_X" : "lv_quit",
     x: mainButton.x, y: mainButton.y)
 
   guard let entries = pages[safe: page] else { return }
@@ -431,11 +441,23 @@ let levelSelectRowsLeft: Float = 11
   _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
   _ = SDL_RenderRect(renderer, &listPanel)
 
-  // Rollover row highlight (#BFC0BF, the CSS :hover).
+  // Row buttons start after Main (index 0) and the tabs (indices 1...pages.count) in
+  // menuButtons - used below to also highlight the d-pad/keyboard-focused row.
+  let rowButtonsStart = 1 + pages.count
+
+  // Rollover row highlight (#BFC0BF, the CSS :hover) - shown for whichever row is either
+  // under the mouse or the current d-pad/keyboard focus.
   let hoverRow = Int((lastMouseScreenY - levelSelectRowsTop) / levelSelectRowHeight)
-  if lastMouseScreenY >= levelSelectRowsTop, hoverRow >= 0, hoverRow < entries.count {
+  let mouseHoveredRow =
+    lastMouseScreenY >= levelSelectRowsTop && hoverRow >= 0 && hoverRow < entries.count
+    ? hoverRow : nil
+  let focusedRow = focusedButtonIndex.flatMap { index -> Int? in
+    let row = index - rowButtonsStart
+    return row >= 0 && row < entries.count ? row : nil
+  }
+  if let highlightedRow = mouseHoveredRow ?? focusedRow {
     var bar = SDL_FRect(
-      x: levelSelectRowsLeft, y: levelSelectRowsTop + Float(hoverRow) * levelSelectRowHeight,
+      x: levelSelectRowsLeft, y: levelSelectRowsTop + Float(highlightedRow) * levelSelectRowHeight,
       w: Float(windowWidth) - levelSelectRowsLeft * 2, h: levelSelectRowHeight)
     _ = SDL_SetRenderDrawColor(renderer, 0xBF, 0xC0, 0xBF, 255)
     _ = SDL_RenderFillRect(renderer, &bar)
@@ -583,9 +605,9 @@ let loseMessages = [
           x: Int32(panelX) + 16, y: detailY, color: white)
       }
     }
-    drawButton(menuButtons[0], label: "Select Level")
+    drawButton(menuButtons[0], label: "Select Level", index: 0)
     if menuButtons.count > 1 {
-      drawButton(menuButtons[1], label: "Next Level")
+      drawButton(menuButtons[1], label: "Next Level", index: 1)
     }
 
   case .levelLoseDialog:
@@ -594,8 +616,8 @@ let loseMessages = [
     textRenderer.draw(
       loseDialogMessage, x: Int32(centerX) - messageSize.width / 2, y: Int32(panelY) + 76,
       color: white)
-    drawButton(menuButtons[0], label: "Select Level")
-    drawButton(menuButtons[1], label: "Retry")
+    drawButton(menuButtons[0], label: "Select Level", index: 0)
+    drawButton(menuButtons[1], label: "Retry", index: 1)
 
   default:
     break
