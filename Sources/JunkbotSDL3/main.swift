@@ -1,5 +1,6 @@
 import CSDL3
 import CSDL3Image
+import CSDL3Mixer
 import Foundation
 import JunkbotCore
 
@@ -17,6 +18,7 @@ let spritesDirectory = repoRoot.appendingPathComponent("images/sprites")
 let spritesUndercoverDirectory = spritesDirectory.appendingPathComponent("Undercover Exclusive")
 let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
 let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
+let audioDirectory = repoRoot.appendingPathComponent("audio/sound-effects")
 
 // MARK: - Level sequencing
 
@@ -143,7 +145,7 @@ let cameraScale: Double = 1
 
 // MARK: - SDL setup
 
-guard SDL_Init(SDL_INIT_VIDEO) else {
+guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) else {
   FileHandle.standardError.write(Data("SDL_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
   exit(1)
 }
@@ -228,6 +230,102 @@ final class TextureCache {
   }
 }
 let textureCache = TextureCache(renderer: renderer)
+
+// MARK: - Audio
+
+/// Sound-effect playback, mirroring `src/game.js`'s `playSound(soundName)` / `hotResourcePaths`
+/// (both .ogg and .wav files - SDL3_mixer's new "MIX_" API, not the old SDL2-style `Mix_*` API,
+/// decodes both via its bundled codecs). `GameEngine.onPlaySound` is int-keyed
+/// (`Types.swift`'s `SoundID`), so this maps id -> repo-relative filename directly instead of
+/// going through JS's intermediate string-name indirection.
+final class SoundBoard {
+  private let mixer: OpaquePointer?
+  private var audioByID: [Int32: OpaquePointer] = [:]
+
+  /// `SoundID.rawValue -> audio/sound-effects/-relative path`, matching `hotResourcePaths` in
+  /// src/game.js exactly (including the two win/lose voice lines, ids 19/20 - JS handles those
+  /// via its own separate winLoseState watcher instead of this table, but nothing stops us from
+  /// covering them the same way as every other sound here).
+  private static let paths: [Int32: String] = [
+    0: "turn1.ogg",
+    1: "blockpickup.ogg",
+    2: "blockdrop.ogg",
+    3: "blockclick.ogg",
+    4: "fall.ogg",
+    5: "headbonk1.ogg",
+    6: "eat1.ogg",
+    7: "garbage1.ogg",
+    8: "switch_click.ogg",
+    9: "switch_on.ogg",
+    10: "switch_off.ogg",
+    11: "fire.ogg",
+    12: "electricity1.ogg",
+    13: "undercover/laser_hit.wav",
+    14: "robottouch4.ogg",
+    15: "shieldon2.ogg",
+    16: "h_powerup1.ogg",
+    17: "h_powerdown3.ogg",
+    18: "undercover/teleport.wav",
+    19: "voice_ohyeah.ogg",
+    20: "voice_ouch.ogg",
+    21: "voice_uhoh.ogg",
+    22: "jump3.ogg",
+    23: "fan.ogg",
+    24: "drip1.ogg",
+    25: "drip2.ogg",
+    26: "drip3.ogg",
+    27: "lego-creator/undo-I0512.wav",
+  ]
+
+  init(directory: URL) {
+    guard MIX_Init() else {
+      FileHandle.standardError.write(Data("MIX_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
+      mixer = nil
+      return
+    }
+    // SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK's macro (a C cast expression) doesn't import into Swift -
+    // its raw value (SDL_audio.h) is 0xFFFFFFFF.
+    let defaultPlaybackDevice: SDL_AudioDeviceID = 0xFFFF_FFFF
+    guard let mixer = MIX_CreateMixerDevice(defaultPlaybackDevice, nil) else {
+      FileHandle.standardError.write(
+        Data("MIX_CreateMixerDevice failed: \(String(cString: SDL_GetError()))\n".utf8))
+      self.mixer = nil
+      return
+    }
+    self.mixer = mixer
+    for (id, filename) in Self.paths {
+      let url = directory.appendingPathComponent(filename)
+      guard let audio = MIX_LoadAudio(mixer, url.path, false) else {
+        FileHandle.standardError.write(
+          Data("Failed to load sound effect \(url.path): \(String(cString: SDL_GetError()))\n".utf8)
+        )
+        continue
+      }
+      audioByID[id] = audio
+    }
+    if audioByID.count < Self.paths.count {
+      FileHandle.standardError.write(
+        Data("Loaded \(audioByID.count)/\(Self.paths.count) sound effects\n".utf8))
+    }
+  }
+
+  func play(_ id: Int32) {
+    guard let mixer, let audio = audioByID[id] else { return }
+    _ = MIX_PlayAudio(mixer, audio)
+  }
+
+  deinit {
+    for audio in audioByID.values {
+      MIX_DestroyAudio(audio)
+    }
+    if let mixer {
+      MIX_DestroyMixer(mixer)
+    }
+    MIX_Quit()
+  }
+}
+let soundBoard = SoundBoard(directory: audioDirectory)
+gameEngine.onPlaySound = { [soundBoard] id in soundBoard.play(id) }
 
 // MARK: - Input
 

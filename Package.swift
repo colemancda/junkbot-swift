@@ -43,12 +43,18 @@ let package = Package(
       pkgConfig: "sdl3-image",
       providers: [.brew(["sdl3_image"])]
     ),
+    .systemLibrary(
+      name: "CSDL3Mixer",
+      pkgConfig: "sdl3-mixer",
+      providers: [.brew(["sdl3_mixer"])]
+    ),
     .executableTarget(
       name: "JunkbotSDL3",
       dependencies: [
         "JunkbotCore",
         "CSDL3",
         "CSDL3Image",
+        "CSDL3Mixer",
       ]
     ),
     .testTarget(
