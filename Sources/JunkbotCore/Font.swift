@@ -6,16 +6,29 @@
 /// already has its own working copy) - this exists for `JunkbotSDL3` and any future native
 /// renderer.
 public enum Font {
-  /// One row of glyphs in `font/font.png`, left to right, matching `fontChars` in game.js.
-  public static let characters = Array(
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890?!(),':\"-+.^@#$%*~`&_=;|\\/<>[]{}\u{263A}\u{FFFD}ÄÖÜẞ")
+  /// One row of glyphs in `font/font.png`, left to right - exactly `fontChars` in game.js
+  /// (74 characters; verified via `node -e` evaluating the actual template literal, since the
+  /// source has escaped backtick/backslash characters that are easy to miscount by hand).
+  public static let characters: [Character] = [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+    "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+    "U", "V", "W", "X", "Y", "Z", "1", "2", "3", "4",
+    "5", "6", "7", "8", "9", "0", "?", "!", "(", ")",
+    ",", "'", ":", "\"", "-", "+", ".", "^", "@", "#",
+    "$", "%", "*", "~", "`", "&", "_", "=", ";", "|",
+    "\\", "/", "<", ">", "[", "]", "{", "}", "\u{263A}", "\u{FFFD}",
+    "Ä", "Ö", "Ü", "ẞ",
+  ]
 
-  /// Per-glyph pixel width, matching `fontCharW` (digit string, `_` = 10, decoded once here
-  /// rather than at every call site).
-  public static let characterWidths: [Int32] = {
-    "555555553555555555555555553555555555512211133313553535_255311_55332233555555"
-      .map { $0 == "_" ? 10 : Int32(String($0))! }
-  }()
+  /// Per-glyph pixel width, matching `fontCharW` (the digit string in game.js has 2 literal `_`
+  /// placeholders that are *deleted*, not treated as a width value - `.replace(/_/g, "")` -
+  /// which is why this array has 74 entries, one per `characters` entry, not 76).
+  public static let characterWidths: [Int32] = [
+    5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 2, 2,
+    1, 1, 1, 3, 3, 3, 1, 3, 5, 5, 3, 5, 3, 5, 2, 5, 5, 3, 1, 1,
+    5, 5, 3, 3, 2, 2, 3, 3, 5, 5, 5, 5, 5, 5,
+  ]
 
   /// Cumulative x-offset of each glyph within `font/font.png`, matching `fontCharX`.
   public static let characterOffsets: [Int32] = {
@@ -32,7 +45,7 @@ public enum Font {
   /// Glyph height in `font/font.png`, matching `fontCharHeight`.
   public static let characterHeight: Int32 = 5
 
-  private static var indexByCharacter: [Character: Int] = {
+  private static let indexByCharacter: [Character: Int] = {
     var map: [Character: Int] = [:]
     for (index, char) in characters.enumerated() where map[char] == nil {
       map[char] = index
@@ -43,7 +56,7 @@ public enum Font {
   /// One glyph's placement within a line of laid-out text: which glyph (`atlasIndex`, an index
   /// into `characters`/`characterWidths`/`characterOffsets`), the pen position to draw it at,
   /// and how far to advance the pen afterward. `atlasIndex == nil` means a blank advance (a
-  /// space or unrecognized character with no glyph to draw).
+  /// space, with no glyph to draw).
   public struct GlyphPlacement: Equatable, Sendable {
     public let atlasIndex: Int?
     public let x: Int32
@@ -70,8 +83,7 @@ public enum Font {
         y += characterHeight + 4
         continue
       }
-      let index = indexByCharacter[char] ?? indexByCharacter["\u{FFFD}"]
-      guard let index else { continue }
+      guard let index = indexByCharacter[char] ?? indexByCharacter["\u{FFFD}"] else { continue }
       let advance = characterWidths[index] + 1
       placements.append(GlyphPlacement(atlasIndex: index, x: x, y: y, advance: advance))
       x += advance
