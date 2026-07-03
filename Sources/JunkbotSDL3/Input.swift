@@ -117,7 +117,11 @@ let touchMouseID: UInt32 = .max
     lastMouseScreenX = newX
     lastMouseScreenY = newY
     suppressNextMouseMotionAsSynthetic = true
-    SDL_WarpMouseInWindow(window, newX, newY)
+    // SDL_WarpMouseInWindow takes window-space (point) coordinates, which differ from the
+    // render-space units used everywhere else in this file once
+    // SDL_LOGICAL_PRESENTATION_INTEGER_SCALE introduces letterboxing.
+    let windowPoint = renderToWindowPoint(x: newX, y: newY)
+    SDL_WarpMouseInWindow(window, windowPoint.x, windowPoint.y)
     handleMouseMove(x: newX, y: newY)
   }
 }
@@ -175,7 +179,11 @@ let touchMouseID: UInt32 = .max
   lastMouseScreenX = Float(canvas.x)
   lastMouseScreenY = Float(canvas.y)
   suppressNextMouseMotionAsSynthetic = true
-  SDL_WarpMouseInWindow(window, lastMouseScreenX, lastMouseScreenY)
+  // SDL_WarpMouseInWindow takes window-space (point) coordinates, which differ from the
+  // render-space units used everywhere else in this file once
+  // SDL_LOGICAL_PRESENTATION_INTEGER_SCALE introduces letterboxing.
+  let windowPoint = renderToWindowPoint(x: lastMouseScreenX, y: lastMouseScreenY)
+  SDL_WarpMouseInWindow(window, windowPoint.x, windowPoint.y)
 }
 
 /// Activates the focused menu button if any; otherwise, hit-tests `menuButtons` at the cursor

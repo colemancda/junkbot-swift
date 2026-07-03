@@ -118,12 +118,37 @@ let renderer: OpaquePointer = {
 defer { SDL_DestroyRenderer(renderer) }
 
 // With SDL_WINDOW_HIGH_PIXEL_DENSITY, the renderer's actual output is in real device pixels
-// (e.g. 2x on Retina) while every draw call in this codebase is written in window points -
-// logical presentation makes SDL scale points -> device pixels automatically so all existing
-// coordinate math keeps working, but now renders at full display resolution instead of a 1x
-// buffer the OS then has to blurrily upscale.
+// (e.g. 2x on Retina) while every draw call in this codebase is written in fixed logical units
+// (`windowWidth`/`windowHeight`, set once above from the level's own bounds and never resized -
+// see SDL_EVENT_WINDOW_RESIZED below) - logical presentation makes SDL scale those logical units
+// up to the real device-pixel output automatically. INTEGER_SCALE (rather than LETTERBOX/
+// STRETCH) restricts that scaling to whole multiples (1x, 2x, 3x, ...), letterboxing any
+// leftover space, so resizing the window never produces a fractional/blurry scale factor.
 _ = SDL_SetRenderLogicalPresentation(
-  renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX)
+  renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE)
+
+/// Window-space (point) coordinates, as reported by SDL mouse events, in the current logical
+/// presentation's render-space units - the two differ once `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE`
+/// introduces letterboxing (render-space (0, 0) may sit inside a black bar rather than the
+/// window's actual top-left corner). Every mouse-event handler must convert through this before
+/// using a position for hit-testing or world math, since all of that math is written in
+/// render-space (`windowWidth`/`windowHeight`) units.
+@MainActor func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+  var renderX: Float = 0
+  var renderY: Float = 0
+  _ = SDL_RenderCoordinatesFromWindow(renderer, x, y, &renderX, &renderY)
+  return (renderX, renderY)
+}
+
+/// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor
+/// (`SDL_WarpMouseInWindow` takes window-space coordinates) from a render-space position
+/// (`lastMouseScreenX/Y`, gamepad stick/d-pad nudge math).
+@MainActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+  var windowX: Float = 0
+  var windowY: Float = 0
+  _ = SDL_RenderCoordinatesToWindow(renderer, x, y, &windowX, &windowY)
+  return (windowX, windowY)
+}
 
 // MARK: - Sprite loading
 
@@ -694,8 +719,9 @@ while running {
     case SDL_EVENT_QUIT.rawValue:
       running = false
     case SDL_EVENT_MOUSE_BUTTON_DOWN.rawValue:
-      lastMouseScreenX = event.button.x
-      lastMouseScreenY = event.button.y
+      let downPoint = windowToRenderPoint(x: event.button.x, y: event.button.y)
+      lastMouseScreenX = downPoint.x
+      lastMouseScreenY = downPoint.y
       // Clicking dismisses the level-entry toast early (behavior_msgBox_Title.ls's mouseUp).
       if levelToastUntil != nil {
         dismissLevelToast()
@@ -704,12 +730,13 @@ while running {
       // Menu buttons sit visually on top of the world (the title screen overlays Play/Credits
       // on top of its draggable-bricks scene), so they must be hit-tested first regardless of
       // screen - only fall through to world drag input if nothing was clicked.
-      if !handleClick(menuButtons, at: event.button.x, y: event.button.y), screenOwnsWorldInput() {
-        handleMouseDown(x: event.button.x, y: event.button.y)
+      if !handleClick(menuButtons, at: downPoint.x, y: downPoint.y), screenOwnsWorldInput() {
+        handleMouseDown(x: downPoint.x, y: downPoint.y)
       }
     case SDL_EVENT_MOUSE_BUTTON_UP.rawValue:
       if screenOwnsWorldInput() {
-        handleMouseUp(x: event.button.x, y: event.button.y)
+        let upPoint = windowToRenderPoint(x: event.button.x, y: event.button.y)
+        handleMouseUp(x: upPoint.x, y: upPoint.y)
       }
     case SDL_EVENT_KEY_DOWN.rawValue:
       switch event.key.key {
@@ -733,8 +760,9 @@ while running {
         activateReleased()
       }
     case SDL_EVENT_MOUSE_MOTION.rawValue:
-      lastMouseScreenX = event.motion.x
-      lastMouseScreenY = event.motion.y
+      let motionPoint = windowToRenderPoint(x: event.motion.x, y: event.motion.y)
+      lastMouseScreenX = motionPoint.x
+      lastMouseScreenY = motionPoint.y
       // Touch-synthesized mouse events carry SDL_TOUCH_MOUSEID. Programmatic warps (gamepad
       // stick/d-pad-nudge, via SDL_WarpMouseInWindow) set suppressNextMouseMotionAsSynthetic
       // right before warping so this one motion event is consumed without re-triggering
@@ -752,7 +780,7 @@ while running {
         focusedButtonIndex = nil
       }
       if screenOwnsWorldInput() {
-        handleMouseMove(x: event.motion.x, y: event.motion.y)
+        handleMouseMove(x: motionPoint.x, y: motionPoint.y)
       }
     case SDL_EVENT_FINGER_DOWN.rawValue, SDL_EVENT_FINGER_MOTION.rawValue:
       notePointingInput(.touch)
@@ -783,15 +811,14 @@ while running {
         activateReleased()
       }
     case SDL_EVENT_WINDOW_RESIZED.rawValue:
-      // Mirrors the JS frontend's canvas resizing to fill the browser window (src/game.js's
-      // `innerWidth`/`innerHeight` resize check) - the camera/viewport math above already
-      // reads `windowWidth`/`windowHeight` as plain vars, so updating them here is enough.
-      windowWidth = event.window.data1
-      windowHeight = event.window.data2
-      // Keep logical presentation's logical size in lockstep with the window's point size -
-      // it doesn't track resizes automatically.
-      _ = SDL_SetRenderLogicalPresentation(
-        renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX)
+      // `windowWidth`/`windowHeight` are the fixed logical canvas size set once at startup (see
+      // above) and deliberately NOT updated here - `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE`
+      // needs a stable logical size to scale up by whole multiples as the window resizes
+      // (letterboxing the remainder); if this tracked the window's live size instead, the
+      // logical-to-output ratio would always be exactly 1 and "integer scaling" would be a
+      // no-op. SDL recomputes the actual integer scale factor and letterbox rect from the new
+      // window size automatically on the next present - no explicit action needed here.
+      break
     default:
       break
     }
