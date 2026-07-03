@@ -22,7 +22,7 @@ public struct LevelCatalogEntry: Equatable, Sendable {
 }
 
 public struct LevelCatalog: Sendable {
-  public enum Game: Sendable {
+  public enum Game: Equatable, Sendable {
     case junkbot
     case junkbotUndercover
   }
