@@ -20,7 +20,7 @@ let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
 let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
 let audioDirectory = repoRoot.appendingPathComponent("audio/sound-effects")
 
-// MARK: - Level sequencing
+// MARK: - Level catalog
 
 /// Reads a level `.txt` file as UTF-8, stripping a leading byte-order-mark if present - a few
 /// files under `levels/` (e.g. `Terrarium.txt`, `The Garage.txt`) have one, and `String.Encoding
@@ -35,57 +35,16 @@ func readLevelText(at url: URL) -> String? {
   return text
 }
 
-/// Collapses runs of whitespace to a single space, for matching titles that differ only in
-/// incidental whitespace (a couple of `levels/*.txt` files have a typo'd double space in their
-/// `title=` line, e.g. "Running  the Gauntlet" vs. `_LEVEL_LISTING.txt`'s "Running the Gauntlet").
-func normalizedTitle(_ title: String) -> String {
-  title.trimmingCharacters(in: .whitespaces).split(separator: " ").joined(separator: " ")
-}
-
-/// `_LEVEL_LISTING.txt`'s order is the source of truth for level progression, but its titles don't
-/// always match their on-disk filename 1:1 (e.g. "Caution: Fire" -> "Caution Fire.txt", punctuation
-/// stripped inconsistently) - so rather than guessing a sanitizer, every top-level `levels/*.txt`
-/// file gets parsed once at startup and matched back to the listing by its *parsed* `[info] title=`,
-/// which is always exact (modulo incidental whitespace, see `normalizedTitle`).
-func loadLevelSequence() -> [(title: String, url: URL)] {
-  let fileManager = FileManager.default
-  guard
-    let entries = try? fileManager.contentsOfDirectory(
-      at: levelsDirectory, includingPropertiesForKeys: nil)
-  else { return [] }
-
-  var urlByTitle: [String: URL] = [:]
-  for url in entries where url.pathExtension == "txt" {
-    guard let text = readLevelText(at: url) else { continue }
-    urlByTitle[normalizedTitle(Level(text: text).title)] = url
-  }
-
-  guard
-    let listingText = readLevelText(at: levelsDirectory.appendingPathComponent("_LEVEL_LISTING.txt"))
-  else { return [] }
-
-  return listingText.split(separator: "\n").compactMap { line in
-    let title = normalizedTitle(String(line))
-    guard !title.isEmpty else { return nil }
-    guard let url = urlByTitle[title] else {
-      // Pre-existing data mismatch in a few `levels/*.txt` files (their `[info] title=` doesn't
-      // match their `_LEVEL_LISTING.txt` entry, e.g. "The Garage.txt" actually contains "The
-      // Engine Room") - not something to guess a fix for here, so just skip and report it.
-      FileHandle.standardError.write(Data("Skipping unmatched level listing entry: \(title)\n".utf8))
-      return nil
-    }
-    return (title, url)
-  }
-}
-
-let levelSequence = loadLevelSequence()
-guard !levelSequence.isEmpty else {
+/// Building/basement grouping + listing, shared with any future native target
+/// (`Sources/JunkbotCore/LevelCatalog.swift`) - see the Phase 6 plan for why this replaced the
+/// old flat `loadLevelSequence`/`levelSequence` auto-play sequencing.
+let levelCatalog = LevelCatalog(repoRoot: repoRoot)
+guard !(levelCatalog.pagesByGame[.junkbot] ?? []).isEmpty else {
   FileHandle.standardError.write(Data("No levels found under \(levelsDirectory.path)\n".utf8))
   exit(1)
 }
 
 let gameEngine = GameEngine()
-var currentLevelIndex = 0
 /// World-space camera center/scale, initialized to the level's center on load and then re-centered
 /// on Junkbot every frame by `updateCamera()` (a simplified version of JS's `controlViewport`: no
 /// margin-based "only pan once near the edge" deadzone or smoothing, just clamp so the camera never
@@ -116,63 +75,84 @@ let cameraScale: Double = 1
   cameraCenterY = targetY
 }
 
-@MainActor func loadCurrentLevel() {
-  let (title, url) = levelSequence[currentLevelIndex]
-  guard let text = readLevelText(at: url) else {
-    FileHandle.standardError.write(Data("Failed to read \(url.path)\n".utf8))
-    exit(1)
-  }
-  gameEngine.loadLevel(fromText: text)
-  print("Level \(currentLevelIndex + 1)/\(levelSequence.count): \(title)")
-  musicPlayer.startRandomLevelMusic()
-
-  if let bounds = gameEngine.levelBounds {
-    cameraCenterX = Double(bounds.x) + Double(bounds.width) / 2
-    cameraCenterY = Double(bounds.y) + Double(bounds.height) / 2
-  } else if !gameEngine.entities.isEmpty {
-    let minX = gameEngine.entities.map(\.x).min() ?? 0
-    let maxX = gameEngine.entities.map { $0.x + $0.width }.max() ?? 0
-    let minY = gameEngine.entities.map(\.y).min() ?? 0
-    let maxY = gameEngine.entities.map { $0.y + $0.height }.max() ?? 0
-    cameraCenterX = Double(minX + maxX) / 2
-    cameraCenterY = Double(minY + maxY) / 2
-  }
-}
-
-@MainActor func advanceToNextLevel() {
-  currentLevelIndex = (currentLevelIndex + 1) % levelSequence.count
-  loadCurrentLevel()
-}
-
 // MARK: - SDL setup
 
-guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) else {
+guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD) else {
   FileHandle.standardError.write(Data("SDL_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
   exit(1)
 }
 defer { SDL_Quit() }
 
-// Load the first level before creating the window, so the window's default size can match its
-// actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The window
-// stays resizable afterward for levels of other sizes (see SDL_EVENT_WINDOW_RESIZED below).
-gameEngine.loadLevel(fromText: readLevelText(at: levelSequence[currentLevelIndex].url) ?? "")
+// Load the title screen level before creating the window, so the window's default size can
+// match its actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The
+// window stays resizable afterward for levels of other sizes (see SDL_EVENT_WINDOW_RESIZED below).
+gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
 var windowWidth: Int32 = gameEngine.levelBounds.map { $0.width } ?? 900
 var windowHeight: Int32 = gameEngine.levelBounds.map { $0.height } ?? 675
 // SDL_WINDOW_RESIZABLE's macro (SDL_UINT64_C(...)) doesn't import into Swift - its raw value
-// (SDL_video.h) is 0x0000000000000020.
-let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020
-guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, windowResizableFlag)
-else {
-  FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
-  exit(1)
-}
+// (SDL_video.h) is 0x0000000000000020. SDL_WINDOW_HIGH_PIXEL_DENSITY (0x2000) requests a
+// backing buffer that matches the display's real pixel density (e.g. 2x on Retina) instead of
+// a 1x buffer the OS then has to upscale/blur to fill the screen - without it, everything
+// rendered looks visibly softer than the original (non-Retina-aware) Director/Flash build.
+let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020 | 0x0000_0000_0000_2000
+// Plain top-level `let`s (not `guard let`) so `window`/`renderer` are true module-level symbols
+// visible from other files (Screens.swift, TextRenderer.swift, etc.) - a `guard let` binding at
+// main.swift's top level only stays in scope for the rest of *this* file.
+let window: OpaquePointer = {
+  guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, windowResizableFlag)
+  else {
+    FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
+    exit(1)
+  }
+  // Don't allow shrinking below the default size - `windowWidth`/`windowHeight` are also the
+  // fixed logical resolution `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE` scales up from, so a
+  // smaller window would force a sub-1x (fractional/cropped) scale instead of a clean integer one.
+  _ = SDL_SetWindowMinimumSize(window, windowWidth, windowHeight)
+  return window
+}()
 defer { SDL_DestroyWindow(window) }
 
-guard let renderer = SDL_CreateRenderer(window, nil) else {
-  FileHandle.standardError.write(Data("SDL_CreateRenderer failed: \(String(cString: SDL_GetError()))\n".utf8))
-  exit(1)
-}
+let renderer: OpaquePointer = {
+  guard let renderer = SDL_CreateRenderer(window, nil) else {
+    FileHandle.standardError.write(Data("SDL_CreateRenderer failed: \(String(cString: SDL_GetError()))\n".utf8))
+    exit(1)
+  }
+  return renderer
+}()
 defer { SDL_DestroyRenderer(renderer) }
+
+// With SDL_WINDOW_HIGH_PIXEL_DENSITY, the renderer's actual output is in real device pixels
+// (e.g. 2x on Retina) while every draw call in this codebase is written in fixed logical units
+// (`windowWidth`/`windowHeight`, set once above from the level's own bounds and never resized -
+// see SDL_EVENT_WINDOW_RESIZED below) - logical presentation makes SDL scale those logical units
+// up to the real device-pixel output automatically. INTEGER_SCALE (rather than LETTERBOX/
+// STRETCH) restricts that scaling to whole multiples (1x, 2x, 3x, ...), letterboxing any
+// leftover space, so resizing the window never produces a fractional/blurry scale factor.
+_ = SDL_SetRenderLogicalPresentation(
+  renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE)
+
+/// Window-space (point) coordinates, as reported by SDL mouse events, in the current logical
+/// presentation's render-space units - the two differ once `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE`
+/// introduces letterboxing (render-space (0, 0) may sit inside a black bar rather than the
+/// window's actual top-left corner). Every mouse-event handler must convert through this before
+/// using a position for hit-testing or world math, since all of that math is written in
+/// render-space (`windowWidth`/`windowHeight`) units.
+@MainActor func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+  var renderX: Float = 0
+  var renderY: Float = 0
+  _ = SDL_RenderCoordinatesFromWindow(renderer, x, y, &renderX, &renderY)
+  return (renderX, renderY)
+}
+
+/// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor
+/// (`SDL_WarpMouseInWindow` takes window-space coordinates) from a render-space position
+/// (`lastMouseScreenX/Y`, gamepad stick/d-pad nudge math).
+@MainActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+  var windowX: Float = 0
+  var windowY: Float = 0
+  _ = SDL_RenderCoordinatesToWindow(renderer, x, y, &windowX, &windowY)
+  return (windowX, windowY)
+}
 
 // MARK: - Sprite loading
 
@@ -231,6 +211,10 @@ final class TextureCache {
   }
 }
 let textureCache = TextureCache(renderer: renderer)
+
+/// Bitmap-font text rendering for menu UI (title/level-select/win-lose dialogs) - see
+/// `TextRenderer.swift`/`Sources/JunkbotCore/Font.swift`.
+let textRenderer = TextRenderer(renderer: renderer, fontDirectory: repoRoot.appendingPathComponent("font"))
 
 // MARK: - Audio
 
@@ -300,6 +284,12 @@ final class SoundBoard {
     25: "drip2.ogg",
     26: "drip3.ogg",
     27: "lego-creator/undo-I0512.wav",
+    // Menu sounds (MenuSoundID in Screens.swift, disjoint from the engine's SoundID range) -
+    // buttonClick/tabSwitch/enterLevel in src/game.js's resource paths, matching the Lingo
+    // sources' SndSFX("h_button1")/("h_powerup3")/level-start sounds.
+    100: "h_button1.ogg",
+    101: "h_powerup3.ogg",
+    102: "enter_level.wav",
   ]
 
   init(mixer: OpaquePointer?, directory: URL) {
@@ -514,16 +504,76 @@ final class CursorSet {
 let cursorSet = CursorSet(
   cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
 
+/// Draws its own cursor sprite via texture blit / `SDL_RenderGeometry`, rather than relying on
+/// `SDL_SetCursor`/`SDL_ShowCursor` - some platforms (notably KMSDRM-backed Linux, as found on
+/// ARM64 handhelds with no mouse hardware at all) have no hardware cursor plane and silently
+/// render nothing for those calls, and `SDL_GetMouseState`/`SDL_WarpMouseInWindow` have no real
+/// pointing device to route through either. Used only while `lastPointingInput == .gamepad` -
+/// mouse/touch keep using the OS cursor (or no cursor) as before.
+final class VirtualCursor {
+  private let renderer: OpaquePointer
+  private var textures: [GameEngine.CursorHint: UnsafeMutablePointer<SDL_Texture>] = [:]
+
+  init(renderer: OpaquePointer, cursorsDirectory: URL) {
+    self.renderer = renderer
+    let files: [(GameEngine.CursorHint, String)] = [
+      (.grabbing, "cursor-grabbing.png"),
+      (.grabEither, "cursor-grab-either.png"),
+      (.grabUpward, "cursor-grab-upward.png"),
+      (.grabDownward, "cursor-grab-downward.png"),
+      (.grab, "cursor-grab.png"),
+    ]
+    for (hint, filename) in files {
+      let url = cursorsDirectory.appendingPathComponent(filename)
+      guard let texture = IMG_LoadTexture(renderer, url.path) else { continue }
+      textures[hint] = texture
+    }
+  }
+
+  func draw(hint: GameEngine.CursorHint, x: Float, y: Float) {
+    if let texture = textures[hint] {
+      var width: Float = 0
+      var height: Float = 0
+      _ = SDL_GetTextureSize(texture, &width, &height)
+      var dst = SDL_FRect(x: x - 8, y: y - 8, w: width, h: height)
+      _ = SDL_RenderTexture(renderer, texture, nil, &dst)
+      return
+    }
+    drawArrow(x: x, y: y)
+  }
+
+  /// Fallback arrow silhouette for `.none` (no grab image loaded for that hint) - a black outline
+  /// triangle with a white fill, drawn as two overlapping `SDL_RenderGeometry` triangles.
+  private func drawArrow(x: Float, y: Float) {
+    func fillTriangle(_ points: [(Float, Float)], color: SDL_FColor) {
+      var vertices = points.map {
+        SDL_Vertex(
+          position: SDL_FPoint(x: x + $0.0, y: y + $0.1), color: color,
+          tex_coord: SDL_FPoint(x: 0, y: 0))
+      }
+      _ = SDL_RenderGeometry(renderer, nil, &vertices, Int32(vertices.count), nil, 0)
+    }
+    let black = SDL_FColor(r: 0, g: 0, b: 0, a: 1)
+    let white = SDL_FColor(r: 1, g: 1, b: 1, a: 1)
+    fillTriangle([(0, 0), (0, 16), (11, 12)], color: black)
+    fillTriangle([(1, 3), (1, 13), (9, 11)], color: white)
+  }
+}
+let virtualCursor = VirtualCursor(
+  renderer: renderer, cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
+
 // MARK: - Rendering
 
 /// Reused across frames to avoid per-frame allocation.
 var renderFrame = RenderFrame()
 
-@MainActor func render() {
-  _ = SDL_SetRenderDrawColor(renderer, 40, 40, 45, 255)
-  _ = SDL_RenderClear(renderer)
-
-  gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
+/// Draws the gameplay world (entities/effects/mask) at the given screen-space camera offset.
+/// Used by both `.playing` and `.title` (the title screen is itself a normal playable level, per
+/// `src/game.js`'s `showTitleScreen` - see `Screens.swift`), and reused as the frozen backdrop
+/// behind the win/lose dialogs. Returns the offset, for overlay drawing (e.g. the title screen's
+/// welcome-panel text) that needs to line up with world-space coordinates.
+@MainActor @discardableResult func renderWorld(editing: Bool) -> (offsetX: Float, offsetY: Float) {
+  gameEngine.buildRenderFrame(into: &renderFrame, editing: editing)
 
   // World-space -> screen-space: with scale 1 the camera transform is a pure translation, so
   // compute it once rather than per command.
@@ -587,22 +637,83 @@ var renderFrame = RenderFrame()
       }
     }
   }
+  return (offsetX, offsetY)
+}
+
+@MainActor func render() {
+  _ = SDL_SetRenderDrawColor(renderer, 40, 40, 45, 255)
+  _ = SDL_RenderClear(renderer)
+
+  switch currentScreen {
+  case .title:
+    let (offsetX, offsetY) = renderWorld(editing: false)
+    drawTitleScreenOverlay(offsetX: offsetX, offsetY: offsetY)
+  case .playing:
+    renderWorld(editing: false)
+    drawLevelToast()
+  case .levelSelect(let game, let page):
+    drawLevelSelectScreen(game: game, page: page)
+  case .levelWinDialog, .levelLoseDialog:
+    renderWorld(editing: false)
+    drawDialogOverlay()
+  }
+  drawFocusRing()
+
+  // Menu/d-pad navigation intentionally hides the cursor (the focus ring is the indicator
+  // there) - only draw the virtual cursor on the screens where it's meant to be visible, and
+  // only while `virtualCursorVisible` (false during d-pad menu-item focus navigation, even on
+  // a world-owning screen like the title screen's Play/Credits buttons).
+  if lastPointingInput == .gamepad, screenOwnsWorldInput(), virtualCursorVisible {
+    let hint = gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY)
+    virtualCursor.draw(hint: hint, x: lastMouseScreenX, y: lastMouseScreenY)
+  }
 
   SDL_RenderPresent(renderer)
 }
 
 // MARK: - Game loop
 
-loadCurrentLevel()
+showTitleScreen()
 
 /// Matches `src/game.js`'s `targetFPS = 18` simulation tick rate (the game's actual logic rate,
 /// independent of display refresh rate).
 let tickIntervalNanoseconds: UInt64 = 1_000_000_000 / 18
 var lastTickTime = SDL_GetTicksNS()
-/// Brief pause after a win before loading the next level, so the win is visible for a moment
-/// rather than instantly cutting to the next level.
-let winPauseNanoseconds: UInt64 = 1_500_000_000
-var winPauseUntil: UInt64? = nil
+
+/// Whether the current screen ticks/renders the gameplay world with live drag input - both the
+/// title screen (a normal playable level with draggable bricks, per `src/game.js`'s
+/// `showTitleScreen`) and actual gameplay. Menu-only screens (level-select, win/lose dialogs)
+/// don't tick the engine or forward mouse events to `GameEngine.mouseDown`/etc.
+@MainActor func screenOwnsWorldInput() -> Bool {
+  currentScreen == .title || currentScreen == .playing
+}
+
+/// Backs out one screen: gameplay (or its win/lose dialog) -> level select at the current
+/// level's page, level select -> title. The HTML5 build has no Escape binding (its "Select
+/// Level" is a DOM button); this is the native equivalent, shared by the Escape key and the
+/// gamepad's Start button.
+@MainActor func escapePressed() {
+  switch currentScreen {
+  case .playing, .levelWinDialog, .levelLoseDialog:
+    soundBoard.play(MenuSoundID.buttonClick)
+    dismissLevelToast()
+    if let entry = currentLevelEntry,
+      let location = levelCatalog.location(ofLevelTitled: entry.title, game: currentGame)
+    {
+      showLevelSelectScreen(game: currentGame, page: location.page)
+    } else {
+      showLevelSelectScreen(game: currentGame, page: 0)
+    }
+  case .levelSelect:
+    soundBoard.play(MenuSoundID.buttonClick)
+    showTitleScreen()
+  case .title:
+    break
+  }
+}
+
+let gamepadState = GamepadState()
+var lastFrameTime = SDL_GetTicksNS()
 
 var running = true
 while running {
@@ -612,45 +723,142 @@ while running {
     case SDL_EVENT_QUIT.rawValue:
       running = false
     case SDL_EVENT_MOUSE_BUTTON_DOWN.rawValue:
-      handleMouseDown(x: event.button.x, y: event.button.y)
+      let downPoint = windowToRenderPoint(x: event.button.x, y: event.button.y)
+      lastMouseScreenX = downPoint.x
+      lastMouseScreenY = downPoint.y
+      // Clicking dismisses the level-entry toast early (behavior_msgBox_Title.ls's mouseUp).
+      if levelToastUntil != nil {
+        dismissLevelToast()
+        break
+      }
+      // Menu buttons sit visually on top of the world (the title screen overlays Play/Credits
+      // on top of its draggable-bricks scene), so they must be hit-tested first regardless of
+      // screen - only fall through to world drag input if nothing was clicked.
+      if !handleClick(menuButtons, at: downPoint.x, y: downPoint.y), screenOwnsWorldInput() {
+        handleMouseDown(x: downPoint.x, y: downPoint.y)
+      }
     case SDL_EVENT_MOUSE_BUTTON_UP.rawValue:
-      handleMouseUp(x: event.button.x, y: event.button.y)
+      if screenOwnsWorldInput() {
+        let upPoint = windowToRenderPoint(x: event.button.x, y: event.button.y)
+        handleMouseUp(x: upPoint.x, y: upPoint.y)
+      }
+    case SDL_EVENT_KEY_DOWN.rawValue:
+      switch event.key.key {
+      case SDLK_ESCAPE:
+        escapePressed()
+      case SDLK_UP:
+        directionPressed(dx: 0, dy: -1, menuDelta: -1)
+      case SDLK_DOWN:
+        directionPressed(dx: 0, dy: 1, menuDelta: 1)
+      case SDLK_LEFT:
+        directionPressed(dx: -1, dy: 0, menuDelta: -1)
+      case SDLK_RIGHT:
+        directionPressed(dx: 1, dy: 0, menuDelta: 1)
+      case SDLK_RETURN, SDLK_SPACE:
+        activatePressed()
+      default:
+        break
+      }
+    case SDL_EVENT_KEY_UP.rawValue:
+      if event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE {
+        activateReleased()
+      }
     case SDL_EVENT_MOUSE_MOTION.rawValue:
-      handleMouseMove(x: event.motion.x, y: event.motion.y)
+      let motionPoint = windowToRenderPoint(x: event.motion.x, y: event.motion.y)
+      lastMouseScreenX = motionPoint.x
+      lastMouseScreenY = motionPoint.y
+      // Touch-synthesized mouse events carry SDL_TOUCH_MOUSEID. Programmatic warps (gamepad
+      // stick/d-pad-nudge, via SDL_WarpMouseInWindow) set suppressNextMouseMotionAsSynthetic
+      // right before warping so this one motion event is consumed without re-triggering
+      // anything - those call sites already handled input-kind/cursor-visibility themselves.
+      // Any *other* motion is genuine mouse hardware movement and must unconditionally show
+      // the cursor and hand hover back to the mouse - this can never be skipped based on
+      // `lastPointingInput`, or the cursor can get stuck hidden after gamepad/d-pad use.
+      if event.motion.which == touchMouseID {
+        notePointingInput(.touch)
+      } else if suppressNextMouseMotionAsSynthetic {
+        suppressNextMouseMotionAsSynthetic = false
+      } else {
+        lastPointingInput = .mouse
+        _ = SDL_ShowCursor()
+        focusedButtonIndex = nil
+      }
+      if screenOwnsWorldInput() {
+        handleMouseMove(x: motionPoint.x, y: motionPoint.y)
+      }
+    case SDL_EVENT_FINGER_DOWN.rawValue, SDL_EVENT_FINGER_MOTION.rawValue:
+      notePointingInput(.touch)
+    case SDL_EVENT_GAMEPAD_ADDED.rawValue:
+      gamepadState.handleAdded(event.gdevice.which)
+    case SDL_EVENT_GAMEPAD_REMOVED.rawValue:
+      gamepadState.handleRemoved(event.gdevice.which)
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN.rawValue:
+      switch SDL_GamepadButton(Int32(event.gbutton.button)) {
+      case SDL_GAMEPAD_BUTTON_SOUTH:  // A
+        notePointingInput(.gamepad)
+        activatePressed()
+      case SDL_GAMEPAD_BUTTON_START:
+        escapePressed()
+      case SDL_GAMEPAD_BUTTON_DPAD_UP:
+        directionPressed(dx: 0, dy: -1, menuDelta: -1)
+      case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+        directionPressed(dx: 0, dy: 1, menuDelta: 1)
+      case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+        directionPressed(dx: -1, dy: 0, menuDelta: -1)
+      case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+        directionPressed(dx: 1, dy: 0, menuDelta: 1)
+      default:
+        break
+      }
+    case SDL_EVENT_GAMEPAD_BUTTON_UP.rawValue:
+      if SDL_GamepadButton(Int32(event.gbutton.button)) == SDL_GAMEPAD_BUTTON_SOUTH {
+        activateReleased()
+      }
     case SDL_EVENT_WINDOW_RESIZED.rawValue:
-      // Mirrors the JS frontend's canvas resizing to fill the browser window (src/game.js's
-      // `innerWidth`/`innerHeight` resize check) - the camera/viewport math above already
-      // reads `windowWidth`/`windowHeight` as plain vars, so updating them here is enough.
-      windowWidth = event.window.data1
-      windowHeight = event.window.data2
+      // `windowWidth`/`windowHeight` are the fixed logical canvas size set once at startup (see
+      // above) and deliberately NOT updated here - `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE`
+      // needs a stable logical size to scale up by whole multiples as the window resizes
+      // (letterboxing the remainder); if this tracked the window's live size instead, the
+      // logical-to-output ratio would always be exactly 1 and "integer scaling" would be a
+      // no-op. SDL recomputes the actual integer scale factor and letterbox rect from the new
+      // window size automatically on the next present - no explicit action needed here.
+      break
     default:
       break
     }
   }
 
   let now = SDL_GetTicksNS()
-  if let pauseUntil = winPauseUntil {
-    if now >= pauseUntil {
-      winPauseUntil = nil
-      advanceToNextLevel()
-    }
-  } else {
+  gamepadState.pollSticks(deltaSeconds: Float(now - lastFrameTime) / 1_000_000_000)
+  lastFrameTime = now
+  if let toastUntil = levelToastUntil, now >= toastUntil {
+    dismissLevelToast()
+  }
+  if screenOwnsWorldInput() {
     while now - lastTickTime >= tickIntervalNanoseconds {
       lastTickTime += tickIntervalNanoseconds
       gameEngine.tick()
-      if gameEngine.winLose() == 1 {
-        winPauseUntil = now + winPauseNanoseconds
-        // Mirrors parent_game manager.ls's endLevel calling SndMusicEnd() before the next
-        // level's SndMusicStart(); the winPauseNanoseconds gap before advanceToNextLevel()
-        // gives the fade-out sting (if any) room to actually be heard.
-        musicPlayer.stop()
-        break
+      if currentScreen == .playing {
+        let outcome = gameEngine.winLose()
+        if outcome == 1 {
+          musicPlayer.stop()
+          showLevelWinDialog()
+          break
+        } else if outcome == 2 {
+          musicPlayer.stop()
+          showLevelLoseDialog()
+          break
+        }
       }
     }
+  } else {
+    lastTickTime = now
   }
 
   updateCamera()
-  cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
+  if screenOwnsWorldInput() {
+    cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
+  }
   musicPlayer.update()
   render()
   SDL_Delay(1)
