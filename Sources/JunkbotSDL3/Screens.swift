@@ -455,7 +455,10 @@ let levelSelectRowsLeft: Float = 11
     let row = index - rowButtonsStart
     return row >= 0 && row < entries.count ? row : nil
   }
-  if let highlightedRow = mouseHoveredRow ?? focusedRow {
+  // Active d-pad/keyboard focus wins over a merely-stale mouse position: the mouse cursor
+  // doesn't move on its own, so if it was last resting over some row before the user switched
+  // to d-pad navigation, mouseHoveredRow would otherwise incorrectly keep "winning" forever.
+  if let highlightedRow = focusedRow ?? mouseHoveredRow {
     var bar = SDL_FRect(
       x: levelSelectRowsLeft, y: levelSelectRowsTop + Float(highlightedRow) * levelSelectRowHeight,
       w: Float(windowWidth) - levelSelectRowsLeft * 2, h: levelSelectRowHeight)
