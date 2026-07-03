@@ -3,6 +3,24 @@ public let CELL_W: Int32 = 15
 /// Grid cell height in world-space pixels (matches JS: `snapY = 18`).
 public let CELL_H: Int32 = 18
 
+/// Simulation rate (matches JS: `targetFPS = 18`). The original Director game ran its timers on
+/// wall-clock ticks at 60/sec (`the ticks`), so Lingo durations convert as
+/// `lingoTicks / 60 * SIM_TICKS_PER_SECOND` - the duration-bearing constants below are derived
+/// this way, each citing its original Lingo tick count.
+let SIM_TICKS_PER_SECOND: Int32 = 18
+
+/// How long a consumed shield keeps absorbing damage (with flicker) before expiring.
+/// Original: `shieldticks = the ticks + 120` in `parent_minifig walk parent.ls` = 2.0s.
+let SHIELD_DECAY_TICKS: Int32 = 2 * SIM_TICKS_PER_SECOND  // 36
+/// How long a jump brick refuses to re-launch after firing - independent of (and longer than)
+/// its launch animation. Original: `(the ticks - last_jump) > 60` in
+/// `parent_hazard slick jump parent.ls` = 1.0s.
+let JUMP_COOLDOWN_TICKS: Int32 = 1 * SIM_TICKS_PER_SECOND  // 18
+/// How long an eyebot stays in fast/attacking mode after last sighting Junkbot.
+/// Original: `the timer > pTimer + 120` in `parent_hazard float parent.ls` = 2.0s. (The JS
+/// remake used 110 sim-ticks ≈ 6.1s - eyebots stayed agitated ~3x longer than the original.)
+let EYEBOT_LOCK_TICKS: Int32 = 2 * SIM_TICKS_PER_SECOND  // 36
+
 /// Ticks a teleport pad stays unusable after teleporting an entity through it.
 let TELEPORT_COOLDOWN: Int32 = 50
 /// Number of ticks, at the start of `TELEPORT_COOLDOWN`, during which the teleport visual
