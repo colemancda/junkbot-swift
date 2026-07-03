@@ -274,6 +274,11 @@ public struct Entity {
   /// Groups this entity with every other entity sharing the same `switchID` for the purposes of a
   /// `.switch`'s toggle; `-1` means unlinked. Only meaningful for `.fire`/`.fan`/`.laser`/`.switch`.
   public var switchID: Int32
+  /// Whether Junkbot is currently standing on this switch, so the toggle only fires on the rising
+  /// edge (matching the original `hazard slick switch parent.ls`'s `stepped_on` latch - it toggles
+  /// exactly once per continuous occupancy, not once per tick/walk-step he happens to be on it).
+  /// Only meaningful for `.switch`.
+  public var steppedOn: Bool
   /// Pairs this teleport pad with the other pad sharing the same `teleportID`; `-1` means
   /// unlinked/inactive. Only meaningful for `.teleport`.
   public var teleportID: Int32
@@ -334,6 +339,7 @@ public struct Entity {
     self.on = false
     self.used = false
     self.switchID = -1
+    self.steppedOn = false
     self.teleportID = -1
     self.timer = 0
     self.blocked = false
