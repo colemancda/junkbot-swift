@@ -158,4 +158,37 @@ struct InputTests {
     #expect(engine.entities[brickIndex].x == 0)
     #expect(engine.entities[brickIndex].y == 18)
   }
+
+  @Test("A drag survives an entity being removed mid-tick (collected bin) without stale indices")
+  func dragSurvivesEntityRemovalMidTick() {
+    // Regression test for a crash in canRelease(): draggingIndices held raw indices into
+    // `entities`, which simulate() invalidates when removeBeforeRender shrinks the array (here: a
+    // bin collected by Junkbot while a brick with a *higher* entity ID is mid-drag, so the
+    // brick's stale index ends up past the new end of the array). simulate() now remaps the grab
+    // state's indices by entity ID across the tick.
+    let engine = GameEngine()
+    engine.beginLoadLevel(0, 0, 600, 300)
+    Self.makeFloor(engine, y: 200)
+    engine.addJunkbot(0, 200 - 4 * CELL_H, 1, false)
+    engine.addBin(2 * CELL_W, 200 - 2 * CELL_H, 1, false)  // directly ahead -> collected on tick 1
+    engine.addBrick(150, 200 - CELL_H, 2, 0, false)  // resting on the floor, far from the action
+    engine.finishLoadLevel()
+
+    let brickID = engine.entities.first { $0.type == .brick && !$0.fixed }!.id
+
+    // Grab the brick (resting directly on the fixed floor -> only the upward direction is
+    // possible -> the drag starts immediately at press time).
+    engine.mouseDown(155, 200 - CELL_H + 5)
+    #expect(engine.isDragging)
+
+    // Tick until the bin is gone (collect -> removeBeforeRender -> removed inside simulate()).
+    for _ in 0..<5 { engine.tick() }
+    #expect(!engine.entities.contains { $0.type == .bin }, "the bin should have been collected")
+
+    // Pre-fix, draggingIndices still pointed at the bin-era array layout; canRelease() would
+    // trap on the out-of-range index. Post-fix it must still reference the dragged brick.
+    #expect(engine.isDragging)
+    #expect(engine.draggingIndices.map { engine.entities[$0].id } == [brickID])
+    _ = engine.canRelease()
+  }
 }
