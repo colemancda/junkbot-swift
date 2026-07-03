@@ -395,18 +395,9 @@ extension GameEngine {
         }
         if !turnedAround {
           switch ground.type {
-          case .switch:
-            entities[i].on = !entities[i].on
-            let swID = ground.switchID
-            if swID >= 0 {
-              for j in 0..<entities.count {
-                if entities[j].type != .switch && entities[j].switchID == swID {
-                  entities[j].on = !entities[j].on
-                }
-              }
-            }
-            playSound(.switchClick)
-            playSound(entities[i].on ? .switchOn : .switchOff)
+          // .switch is handled by simulateSwitches(), an always-runs-every-tick pass with its
+          // own rising-edge latch (steppedOn) - see that function's doc comment for why this
+          // walk-cadence-gated dispatch isn't the right place for it.
           case .fire where ground.on:
             // hurtJunkbot reads/writes entities[index] directly; flush the in-progress local
             // `junkbot` (headLoaded/losingShieldTime/animationFrame updates from earlier in this
@@ -800,6 +791,43 @@ extension GameEngine {
     }
   }
 
+  // MARK: - Switches
+
+  /// Toggles every `.switch` entity (and everything sharing its `switchID`) exactly once per
+  /// continuous occupancy by a full-span-aligned Junkbot, run every tick independent of Junkbot's
+  /// own walk cadence - matching `hazard slick switch parent.ls`'s `stepped_on` rising-edge latch,
+  /// which the original checks every frame in its own `checkMiniFig`, not tied to the minifig's
+  /// movement steps at all. Folding this into `simulateJunkbot`'s walk-cadence-gated ground
+  /// reaction (the previous approach here) let the switch re-toggle on separate walk-steps while
+  /// Junkbot remained stuck on the same tile (e.g. turning around against a wall while standing on
+  /// it), which the "Switch Off At Edge Case" regression level specifically covers.
+  func simulateSwitches() {
+    for i in 0..<entities.count where entities[i].type == .switch {
+      let sw = entities[i]
+      let steppedOn = entities.contains { junkbot in
+        junkbot.type == .junkbot && !junkbot.grabbed
+          && junkbot.y + junkbot.height == sw.y
+          && sw.x <= junkbot.x && sw.x + sw.width >= junkbot.x + junkbot.width
+      }
+      if steppedOn && !sw.steppedOn {
+        entities[i].steppedOn = true
+        entities[i].on = !entities[i].on
+        let swID = sw.switchID
+        if swID >= 0 {
+          for j in 0..<entities.count {
+            if entities[j].type != .switch && entities[j].switchID == swID {
+              entities[j].on = !entities[j].on
+            }
+          }
+        }
+        playSound(.switchClick)
+        playSound(entities[i].on ? .switchOn : .switchOff)
+      } else if !steppedOn {
+        entities[i].steppedOn = false
+      }
+    }
+  }
+
   // MARK: - Fans and Lasers
 
   /// Recomputes `wind` and `laserBeams` from scratch for the current tick: for every `on` fan,
@@ -891,9 +919,21 @@ extension GameEngine {
     // tick" — see Undo.swift.
     rewindBuffer[Int(frameCounter) % rewindBuffer.count] = snapshot()
     frameCounter += 1
+
+    // Input.swift's grab state holds raw indices into `entities`, which this function is about
+    // to invalidate (two sorts, plus removeBeforeRender removals that shrink the array) - so
+    // capture the underlying entity IDs now and remap at the end. Without this, a drag active
+    // across a tick that removes an entity (a collected bin, a finished droplet splash) leaves
+    // stale/out-of-range indices behind, crashing the next canRelease()/updateDrag() call.
+    let draggingIDs = draggingIndices.map { entities[$0].id }
+    let hoveredIDs = hoveredIndices.map { entities[$0].id }
+    let pendingUpwardIDs = pendingGrabUpward.map { $0.map { entities[$0].id } }
+    let pendingDownwardIDs = pendingGrabDownward.map { $0.map { entities[$0].id } }
+
     entities.sort { $0.y > $1.y }
     rebuildAccelerationStructures()
     simulateGravity()
+    simulateSwitches()
     teleportEffects.removeAll(keepingCapacity: true)
 
     for i in 0..<entities.count {
@@ -928,6 +968,17 @@ extension GameEngine {
 
     simulateFansAndLasers()
     entities.sort { $0.id < $1.id }
+
+    // Remap the grab state's indices captured at the top of this function (IDs survive the
+    // sorts/removals above; indices don't). An entity that vanished mid-drag just drops out of
+    // its group, matching mergeGrabbedEntities' existing removeAll-on-vanish behavior.
+    func indicesForIDs(_ ids: [Int32]) -> [Int] {
+      ids.compactMap { id in entities.firstIndex { $0.id == id } }
+    }
+    draggingIndices = indicesForIDs(draggingIDs)
+    hoveredIndices = indicesForIDs(hoveredIDs)
+    pendingGrabUpward = pendingUpwardIDs.map(indicesForIDs)
+    pendingGrabDownward = pendingDownwardIDs.map(indicesForIDs)
 
     // Once a level has won or lost, that result is final - matches the original Lingo's
     // event-driven model (parent_play manager.ls's addStatus(#damage/#goals, ...) ends the level
