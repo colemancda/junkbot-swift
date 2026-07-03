@@ -283,29 +283,52 @@ enum MenuSoundID {
 
 // MARK: - Level select
 
-/// Layout constants mirroring `behavior_ListRoHiLite.ls` (`roLineNum = (the mouseV - 87) / 21`,
-/// 21px rows) - the list top is raised so 15 rows fit the title-screen-sized window.
-let levelSelectRowHeight: Float = 21
-let levelSelectRowsTop: Float = 70
-let levelSelectRowsLeft: Float = 24
+/// Layout replicating `index.html`'s `#level-select-screen` CSS (the HTML5 build's level select
+/// is pure DOM/CSS, not canvas - these constants are its measured values): a 74px tab strip
+/// (`#33CCFF` sky over a 32px `#33CC33` grass band) with overlapping `custom/tab.png` tabs
+/// (124px wide, -15px margin), then the `#808080` list panel on a `#7c857c` page background,
+/// 21px bold rows (20px + 1px `#CCCCCC` separator) with ordinal/checkbox/gold/title/score
+/// columns at the CSS's own offsets (2/35/48/63/right), hover `#BFC0BF`.
+let tabStripHeight: Float = 74
+let tabImageWidth: Float = 124
+let tabOverlap: Float = 15
+let listPadX: Float = 11
+// The CSS uses 13px list padding and 21px rows, but 15 of those plus the below-list Main button
+// (which HTML5 places bottom-left, after the list) don't fit the title-screen-sized window -
+// tightened proportionally so the whole layout, button included, matches the browser's.
+let listPadY: Float = 5
+let levelSelectRowHeight: Float = 18
+let levelSelectRowsTop: Float = tabStripHeight + listPadY
+let levelSelectRowsLeft: Float = 11
+
+@MainActor func tabStride(game: LevelCatalog.Game) -> Float {
+  let count = Float(levelCatalog.pagesByGame[game]?.count ?? 4)
+  // Junkbot's 4 tabs use the CSS's exact -15px overlap; Undercover's 5 squeeze a little more
+  // so the row still fits the window.
+  return count <= 4 ? tabImageWidth - tabOverlap : (Float(windowWidth) - tabImageWidth - 4) / (count - 1)
+}
 
 @MainActor func showLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
   currentScreen = .levelSelect(game: game, page: page)
   currentGame = game
   gameEngine.setPaused(true)
   levelToastUntil = nil
-  musicPlayer.update()
 
   let pages = levelCatalog.pagesByGame[game] ?? []
+  let rowCount = pages[safe: page]?.count ?? 0
+  let listBottom = levelSelectRowsTop + Float(rowCount) * levelSelectRowHeight + listPadY
   var buttons: [Button] = [
-    Button(x: 8, y: 8, width: 56, height: 22, action: {
+    // "Main" back-to-title button below the list, bottom-left - HTML5's #back-to-title
+    // (lv_quit.png image button with a 15px margin after the list).
+    Button(x: 15, y: listBottom + 8, width: 96, height: 26, action: {
       soundBoard.play(MenuSoundID.buttonClick)
       showTitleScreen()
     })
   ]
+  let stride = tabStride(game: game)
   for tabIndex in 0..<pages.count {
     buttons.append(
-      Button(x: tabX(tabIndex, game: game), y: 8, width: tabWidth(game: game), height: 40, action: {
+      Button(x: Float(tabIndex) * stride, y: 0, width: tabImageWidth, height: tabStripHeight, action: {
         guard tabIndex != page else { return }
         soundBoard.play(MenuSoundID.tabSwitch)
         showLevelSelectScreen(game: game, page: tabIndex)
@@ -324,85 +347,117 @@ let levelSelectRowsLeft: Float = 24
   menuButtons = buttons
 }
 
-@MainActor func tabX(_ index: Int, game: LevelCatalog.Game) -> Float {
-  76 + Float(index) * (tabWidth(game: game) + 8)
-}
-@MainActor func tabWidth(game: LevelCatalog.Game) -> Float {
-  game == .junkbot ? 61 : 76
-}
-
 @MainActor func drawLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
-  _ = SDL_SetRenderDrawColor(renderer, 96, 96, 100, 255)
+  // Page background (#7c857c).
+  _ = SDL_SetRenderDrawColor(renderer, 0x7C, 0x85, 0x7C, 255)
   _ = SDL_RenderClear(renderer)
 
-  let white = SDL_Color(r: 255, g: 255, b: 255, a: 255)
-  let gold = SDL_Color(r: 210, g: 165, b: 20, a: 255)
+  // Tab strip: #33CCFF sky with the bottom 32px in #33CC33 grass (the CSS's inset box-shadow).
+  var sky = SDL_FRect(x: 0, y: 0, w: Float(windowWidth), h: tabStripHeight - 32)
+  _ = SDL_SetRenderDrawColor(renderer, 0x33, 0xCC, 0xFF, 255)
+  _ = SDL_RenderFillRect(renderer, &sky)
+  var grass = SDL_FRect(x: 0, y: tabStripHeight - 32, w: Float(windowWidth), h: 32)
+  _ = SDL_SetRenderDrawColor(renderer, 0x33, 0xCC, 0x33, 255)
+  _ = SDL_RenderFillRect(renderer, &grass)
 
-  drawButton(menuButtons[0], label: "Main")
-
-  // Tabs: building icons for Junkbot (blend 100 selected / 50 unselected, per
-  // behavior_screen_loop.ls's updateTabs), text tabs for Undercover (whose tab art wasn't
-  // preserved outside Director).
+  // Tabs, unselected first then the selected one on top (CSS z-index on .selected). Each is
+  // custom/tab.png bottom-aligned, with the buidling_tab_N text image 2px above the bottom and
+  // building_icon_N 12px above that (the CSS's margin-bottoms). Unselected tab text at 50%
+  // opacity plus a 1px black baseline (the CSS's inset shadow on :not(.selected)).
   let pages = levelCatalog.pagesByGame[game] ?? []
-  for tabIndex in 0..<pages.count {
-    let x = tabX(tabIndex, game: game)
-    let selected = tabIndex == page
+  let stride = tabStride(game: game)
+  let black = SDL_Color(r: 0, g: 0, b: 0, a: 255)
+  func drawTab(_ tabIndex: Int, selected: Bool) {
+    let x = Float(tabIndex) * stride
+    drawMenuTexture("custom/tab", x: x, y: tabStripHeight - 22)
+    if !selected {
+      var baseline = SDL_FRect(x: x, y: tabStripHeight - 1, w: tabImageWidth, h: 1)
+      _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
+      _ = SDL_RenderFillRect(renderer, &baseline)
+    }
     if game == .junkbot {
-      drawMenuTexture("building_icon_\(tabIndex + 1)", x: x, y: 8, alphaPercent: selected ? 100 : 50)
+      drawMenuTexture(
+        "buidling_tab_\(tabIndex + 1)", x: x + (tabImageWidth - 83) / 2, y: tabStripHeight - 2 - 13,
+        alphaPercent: selected ? 100 : 50)
+      drawMenuTexture(
+        "building_icon_\(tabIndex + 1)", x: x + (tabImageWidth - 61) / 2,
+        y: tabStripHeight - 2 - 13 - 12 - 38)
     } else {
-      var body = SDL_FRect(x: x, y: 8, w: tabWidth(game: game), h: 40)
-      _ = SDL_SetRenderDrawColor(
-        renderer, selected ? 190 : 130, selected ? 190 : 130, selected ? 170 : 120, 255)
-      _ = SDL_RenderFillRect(renderer, &body)
+      let label = "Basement \(tabIndex + 1)"
+      let size = textRenderer.measure(label)
       textRenderer.draw(
-        "Bsmt \(tabIndex + 1)", x: Int32(x) + 8, y: 22,
-        color: selected ? SDL_Color(r: 0, g: 0, b: 0, a: 255) : white)
+        label, x: Int32(x + (tabImageWidth - Float(size.width)) / 2),
+        y: Int32(tabStripHeight) - 16,
+        color: selected ? black : SDL_Color(r: 255, g: 255, b: 255, a: 255))
     }
   }
+  for tabIndex in 0..<pages.count where tabIndex != page {
+    drawTab(tabIndex, selected: false)
+  }
+  drawTab(page, selected: true)
+
+  // "Main" button: lv_quit.png with lv_quit_X.png hover (HTML5's #back-to-title).
+  let mainButton = menuButtons[0]
+  drawMenuTexture(
+    mainButton.contains(lastMouseScreenX, lastMouseScreenY) ? "lv_quit_X" : "lv_quit",
+    x: mainButton.x, y: mainButton.y)
 
   guard let entries = pages[safe: page] else { return }
 
-  // Rollover row highlight (behavior_ListRoHiLite.ls's tracking bar).
+  // List panel: #808080 with a 1px black outline (the CSS box-shadow).
+  let listHeight = listPadY * 2 + Float(entries.count) * levelSelectRowHeight
+  var listPanel = SDL_FRect(x: 0, y: tabStripHeight, w: Float(windowWidth), h: listHeight)
+  _ = SDL_SetRenderDrawColor(renderer, 0x80, 0x80, 0x80, 255)
+  _ = SDL_RenderFillRect(renderer, &listPanel)
+  _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
+  _ = SDL_RenderRect(renderer, &listPanel)
+
+  // Rollover row highlight (#BFC0BF, the CSS :hover).
   let hoverRow = Int((lastMouseScreenY - levelSelectRowsTop) / levelSelectRowHeight)
-  if lastMouseScreenY >= levelSelectRowsTop, hoverRow >= 0, hoverRow < entries.count,
-    lastMouseScreenX >= levelSelectRowsLeft,
-    lastMouseScreenX < Float(windowWidth) - levelSelectRowsLeft
-  {
+  if lastMouseScreenY >= levelSelectRowsTop, hoverRow >= 0, hoverRow < entries.count {
     var bar = SDL_FRect(
       x: levelSelectRowsLeft, y: levelSelectRowsTop + Float(hoverRow) * levelSelectRowHeight,
       w: Float(windowWidth) - levelSelectRowsLeft * 2, h: levelSelectRowHeight)
-    _ = SDL_SetRenderDrawColor(renderer, 130, 130, 140, 255)
+    _ = SDL_SetRenderDrawColor(renderer, 0xBF, 0xC0, 0xBF, 255)
     _ = SDL_RenderFillRect(renderer, &bar)
   }
 
   for (rowIndex, entry) in entries.enumerated() {
     let rowY = levelSelectRowsTop + Float(rowIndex) * levelSelectRowHeight
-    let textY = Int32(rowY) + 7
+    let textY = Int32(rowY) + (Int32(levelSelectRowHeight) - Font.characterHeight) / 2
     let completed = saveData.isCompleted(levelTitle: entry.title)
     let isGold = saveData.isGold(levelTitle: entry.title, par: entry.par)
 
-    // Ordinal, right-aligned in its column like the HTML5 list.
-    let ordinal = "\(page * 15 + rowIndex + 1)"
-    let ordinalSize = textRenderer.measure(ordinal)
-    textRenderer.draw(
-      ordinal, x: Int32(levelSelectRowsLeft) + 18 - ordinalSize.width, y: textY, color: white)
-
-    drawMenuTexture(
-      completed ? "checkbox_on" : "checkbox_off", x: levelSelectRowsLeft + 24, y: rowY + 5)
-    if isGold {
-      drawMenuTexture("check_light", x: levelSelectRowsLeft + 38, y: rowY + 6)
+    // #CCCCCC separators: top border on the first row, bottom border on every row (the CSS).
+    _ = SDL_SetRenderDrawColor(renderer, 0xCC, 0xCC, 0xCC, 255)
+    if rowIndex == 0 {
+      var top = SDL_FRect(
+        x: levelSelectRowsLeft, y: rowY, w: Float(windowWidth) - levelSelectRowsLeft * 2, h: 1)
+      _ = SDL_RenderFillRect(renderer, &top)
     }
+    var bottom = SDL_FRect(
+      x: levelSelectRowsLeft, y: rowY + levelSelectRowHeight - 1,
+      w: Float(windowWidth) - levelSelectRowsLeft * 2, h: 1)
+    _ = SDL_RenderFillRect(renderer, &bottom)
 
+    // Columns at the CSS's own offsets within the list padding: ordinal 2, checkbox 35,
+    // gold check 48, title 63, score right-aligned.
     textRenderer.draw(
-      entry.title, x: Int32(levelSelectRowsLeft) + 52, y: textY, color: isGold ? gold : white)
-
-    // Best moves, right-aligned (behavior_screen_loop.ls sets level.moves alignment #right).
+      "\(page * 15 + rowIndex + 1)", x: Int32(levelSelectRowsLeft) + 2, y: textY, color: black)
+    drawMenuTexture(
+      completed ? "checkbox_on" : "checkbox_off", x: levelSelectRowsLeft + 35,
+      y: rowY + levelSelectRowHeight - 5 - 10)
+    if isGold {
+      drawMenuTexture(
+        "check_light", x: levelSelectRowsLeft + 48, y: rowY + levelSelectRowHeight - 5 - 8)
+    }
+    textRenderer.draw(entry.title, x: Int32(levelSelectRowsLeft) + 63, y: textY, color: black)
     if let moves = saveData.bestMoves[entry.title] {
       let movesText = "\(moves)"
       let size = textRenderer.measure(movesText)
       textRenderer.draw(
-        movesText, x: windowWidth - Int32(levelSelectRowsLeft) - size.width - 4, y: textY,
-        color: white)
+        movesText, x: windowWidth - Int32(levelSelectRowsLeft) - size.width - 5, y: textY,
+        color: black)
     }
   }
 }
