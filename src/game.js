@@ -186,9 +186,6 @@ let prevPointerDist = -1;
 const enableMarginPanning = false;
 
 let entities = [];
-let wind = [];
-let laserBeams = [];
-let teleportEffects = [];
 let collectBinTime = -1;
 // `var` (not `let`) so this is a real `window.currentLevel` property Swift can read directly,
 // instead of JS having to push a copy of the relevant state into Swift on every change.
@@ -1386,9 +1383,6 @@ const resetAndInit = (level) => {
 	entitiesByBottomY = {};
 	lastKeys = new Map();
 	dragging.length = 0;
-	wind.length = 0;
-	laserBeams.length = 0;
-	teleportEffects.length = 0;
 	playthroughEvents.length = 0;
 	playbackEvents.length = 0;
 	// playbackEvents = playthroughEvents; // for rewinding with negative rewind speed
@@ -1416,6 +1410,14 @@ const resetAndInit = (level) => {
 		}
 	}
 	window.JunkbotWasm.engineLoadLevel(currentLevel, idCounter);
+	if (window.wasmMemory) {
+		spriteFrameByID ??= buildSpriteFrameTable();
+		window.JunkbotWasm.engineSetBackground(
+			resolveDecalSpriteID(currentLevel.backdropName || "bkg1", currentLevel.game),
+			flattenDecals(currentLevel.backgroundDecals, currentLevel.game),
+			flattenDecals(currentLevel.decals, currentLevel.game),
+		);
+	}
 	winLoseState = winOrLose(); // in case there's no bins, don't say OH YEAH; and in case there's no junkbots, don't consider it a lose
 	updateEditorUIForLevelChange(currentLevel);
 };
@@ -1670,7 +1672,6 @@ const hotResourcePaths = {
 	spritesAtlas: "images/spritesheets/sprites.json",
 	backgrounds: "images/spritesheets/backgrounds.png",
 	backgroundsAtlas: "images/spritesheets/backgrounds.json",
-	junkbotAnimations: "junkbot-animations.json",
 	font: "font/font.png",
 	turn: "audio/sound-effects/turn1.ogg",
 	blockPickUp: "audio/sound-effects/blockpickup.ogg",
@@ -2061,295 +2062,6 @@ const drawTeleportConnection = (ctx, teleportA, teleportB) => {
 	ctx.stroke();
 };
 
-const drawDecal = (ctx, x, y, name, game) => {
-	let atlas = resources[game === GAME_JUNKBOT_UNDERCOVER ? "backgroundsUndercoverAtlas" : "backgroundsAtlas"];
-	let frame = atlas[name];
-	if (!frame) {
-		atlas = resources.backgroundsAtlas;
-		frame = atlas[name];
-	}
-	const image = resources[atlas === resources.backgroundsUndercoverAtlas ? "backgroundsUndercover" : "backgrounds"];
-	if (!frame) {
-		if (showDebug) {
-			drawText(ctx, `decal ${name} missing`, x, y, "sand");
-		}
-		return;
-	}
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(image, left, top, width, height, x, y, width, height);
-};
-
-const drawBrick = (ctx, brick) => {
-	const frame = resources.spritesAtlas[`brick_${(brick.colorName || "gray") === "gray" ? "immobile" : brick.colorName}_${brick.widthInStuds || 2}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, brick.x, brick.y + brick.height - height - 1, width, height);
-};
-
-const drawBin = (ctx, bin) => {
-	let frame = resources.spritesAtlas.bin;
-	let spritesheet = resources.sprites;
-	let rotation = 0;
-	if (bin.scaredy && (bin.facing !== 0 || editing)) {
-		let frameIndex = bin.animationFrame % 2;
-		if (editing) {
-			rotation = 0;
-			frameIndex = 1;
-		} else {
-			rotation = (Math.random() - 0.5) / 4; // covering up the fact that I don't have animation offset data (@TODO)
-		}
-		frame = resources.spritesUndercoverAtlas[`SCAREDY_${bin.facing === 1 ? "WALK_R" : "walk_l"}_${1 + frameIndex}_s3`];
-		spritesheet = resources.spritesUndercover;
-	}
-	const [left, top, width, height] = frame.bounds;
-	ctx.save();
-	ctx.translate(bin.x + bin.width / 2, bin.y + bin.height / 2);
-	ctx.rotate(rotation);
-	ctx.translate(-bin.x - bin.width / 2, -bin.y - bin.height / 2);
-	ctx.drawImage(spritesheet, left, top, width, height, bin.x + 4, bin.y + bin.height - height - 5, width, height);
-	ctx.restore();
-};
-
-const drawCrate = (ctx, bin) => {
-	const frame = resources.spritesUndercoverAtlas.HAZ_SLICKCRATE;
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.spritesUndercover, left, top, width, height, bin.x, bin.y + bin.height - height - 1, width, height);
-};
-
-const drawFire = (ctx, entity) => {
-	const frameIndex = entity.on ? Math.floor(entity.animationFrame % 8 < 4 ? entity.animationFrame % 4 : 4 - (entity.animationFrame % 4)) : 0;
-	const frame = resources.spritesAtlas[`haz_slickFire_${entity.on ? "on" : "off"}_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x + 1, entity.y + entity.height - height - 4, width, height);
-};
-
-const drawFan = (ctx, entity) => {
-	const frameIndex = entity.on ? Math.floor(entity.animationFrame % 4) : 0;
-	const frame = resources.spritesAtlas[`haz_slickFan_${entity.on ? "on" : "off"}_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x + 1, entity.y + entity.height - height - 4, width, height);
-};
-
-const drawWind = (ctx, fan, targetExtents) => {
-	if (!fan.on) {
-		return;
-	}
-	for (let i = 0, x = fan.x + 15; x < fan.x + fan.width - 15; i += 1, x += 15) {
-		let extent = 0;
-		for (let y = fan.y - 18; y > -200; y -= 18) {
-			if (extent >= targetExtents[i]) {
-				break;
-			}
-			extent += 1;
-			const frameIndex = Math.floor(fan.animationFrame % 7);
-			const frame = resources.spritesAtlas[`fanAir_1_${1 + frameIndex}`];
-			const [left, top, width, height] = frame.bounds;
-			ctx.drawImage(resources.sprites, left, top, width, height, x + 4, y - frameIndex * 2 + 8, width, height);
-		}
-	}
-};
-
-const drawLaserBeam = (ctx, laserBrick, targetExtent, hitWhat) => {
-	if (!laserBrick.on) {
-		return;
-	}
-	for (let extent = 0; extent < targetExtent; extent += 1) {
-		const x = laserBrick.x +
-			(laserBrick.facing === 1 ? laserBrick.width : -15) +
-			15 * extent * laserBrick.facing;
-		if (extent >= targetExtent) {
-			break;
-		}
-		const frameIndex = Math.floor(laserBrick.animationFrame % 3);
-		const frame = resources.spritesUndercoverAtlas[`laserbeam_1_${1 + frameIndex}`];
-		// eslint-disable-next-line prefer-const
-		let [left, top, width, height] = frame.bounds;
-		if (extent === targetExtent - 1 && laserBrick.facing === 1 && hitWhat && hitWhat.type !== "bin") {
-			// depth illusion: "go behind" things to the right
-			width -= 5;
-		}
-		ctx.drawImage(resources.spritesUndercover, left, top, width, height, x + 4, laserBrick.y, width, height);
-	}
-};
-
-const drawTeleportEffect = (ctx, leftX, bottomY, frameIndex) => {
-	const frameName = `transEfx_${1 + frameIndex}`;
-	const frame = resources.spritesUndercoverAtlas[frameName];
-	const [left, top, width, height] = frame.bounds;
-	const offsetX = 5;
-	const offsetY = 2;
-	ctx.globalAlpha = 0.5;
-	ctx.drawImage(resources.spritesUndercover, left, top, width, height, leftX + offsetX, bottomY - height + offsetY, width, height);
-	ctx.globalAlpha = 1;
-	// @TODO: check timings and frame offsets, and the animation should start before junkbot teleports
-};
-
-
-const drawJump = (ctx, entity) => {
-	let animName = "dormant";
-	let animLength = 1;
-	if (entity.active) {
-		animName = "active";
-		animLength = 5;
-	}
-	const frameIndex = Math.floor(entity.animationFrame % animLength);
-	const frame = resources.spritesAtlas[`${entity.fixed ? "haz" : "brick"}_slickJump_${animName}_${frameIndex + 1}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-
-const drawShield = (ctx, entity) => {
-	const atlas = resources[entity.fixed ? "spritesAtlas" : "spritesUndercoverAtlas"];
-	const image = resources[entity.fixed ? "sprites" : "spritesUndercover"];
-	const frame = atlas[`${entity.fixed ? "HAZ" : "BRICK"}_SLICKSHIELD_${entity.used ? "OFF" : "ON"}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(image, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-
-const drawLaser = (ctx, entity) => {
-	// entity name and sprite name are confusing in regard to direction
-	const frame = resources.spritesUndercoverAtlas[`haz_slickLaser_${entity.facing === 1 ? "L" : "R"}_ON_1`];
-	const [left, top, width, height] = frame.bounds;
-	const alignRight = entity.facing === -1;
-	if (alignRight) {
-		ctx.drawImage(resources.spritesUndercover, left, top, width, height, entity.x + entity.width - width + 11, entity.y + entity.height - 1 - height, width, height);
-	} else {
-		ctx.drawImage(resources.spritesUndercover, left, top, width, height, entity.x, entity.y + entity.height - 1 - height, width, height);
-	}
-};
-
-const drawTeleport = (ctx, entity) => {
-	const on = entity.timer === 0 && !entity.blocked;
-	let frameName = `haz_slickTeleport_${on ? "on" : "off"}_1`;
-	if (entity.timer > 30) {
-		frameName = `haz_slickTeleport_active_${1 + (entity.timer % 2)}`;
-	}
-	const frame = resources.spritesUndercoverAtlas[frameName];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.spritesUndercover, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-
-const drawSwitch = (ctx, entity) => {
-	const frame = resources.spritesAtlas[`haz_slickSwitch_${entity.on ? "on" : "off"}_1`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-
-const drawPipe = (ctx, entity) => {
-	const wet = entity.timer <= 6 && entity.timer > -1; // < 7 would cause error if timer is non-integer
-	const frameIndex = Math.floor(wet ? 6 - entity.timer : 0);
-	// if (wet) {
-	// 	console.log("entity.timer", entity.timer, "frameIndex", frameIndex);
-	// }
-	const frame = resources.spritesAtlas[`haz_slickPipe_${wet ? "wet" : "dry"}_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x + 11, entity.y - 12, width, height);
-	if (showDebug) {
-		drawText(ctx, String(entity.timer), entity.x, entity.y + entity.height + 5, "white");
-	}
-};
-
-const drawDroplet = (ctx, entity) => {
-	const frameIndex = Math.floor(entity.splashing ? entity.animationFrame : 0);
-	const frame = resources.spritesAtlas[`drip_${entity.splashing ? "splashing" : "falling"}_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	// ctx.drawImage(resources.sprites, left, top, width, height, entity.x + 15, entity.y, width, height);
-	// @TODO: proper frame offsets (this is an approximation)
-	const offsetX = (-3 - entity.animationFrame) * entity.splashing;
-	const offsetY = (-15) * entity.splashing;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x + 15 + offsetX, entity.y + offsetY, width, height);
-};
-
-const drawGearbot = (ctx, entity) => {
-	const frameIndex = Math.floor(entity.animationFrame % 2);
-	const frame = resources.spritesAtlas[`gearbot_walk_${entity.facing === 1 ? "r" : "l"}_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-const drawClimbbot = (ctx, entity) => {
-	const frameIndex = Math.floor(entity.animationFrame % 6);
-	let direction = entity.facing === 1 ? "r" : "l";
-	if (entity.facingY === -1) {
-		direction = "u";
-	} else if (entity.facingY === 1) {
-		direction = "d";
-	}
-	const frame = resources.spritesAtlas[`climbbot_walk_${direction}_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x, entity.y - 6, width, height);
-};
-const drawFlybot = (ctx, entity) => {
-	const frameIndex = Math.floor(entity.animationFrame % 2);
-	const frame = resources.spritesAtlas[`flybot_${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-const drawEyebot = (ctx, entity) => {
-	const frameIndex = Math.floor(entity.animationFrame % 2);
-	const frame = resources.spritesAtlas[`eyebot_${(entity.activeTimer > 0) ? "active_" : ""}${1 + frameIndex}`];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(resources.sprites, left, top, width, height, entity.x, entity.y + entity.height - height - 1, width, height);
-};
-
-const drawJunkbot = (ctx, junkbot) => {
-	let animName;
-	let animLength = 10; // should be always set later
-	if (junkbot.dead) {
-		animName = "dead";
-	} else if (junkbot.dyingFromWater) {
-		animName = "water_die";
-	} else if (junkbot.dying) {
-		animName = "die";
-	} else if (junkbot.collectingBin) {
-		animName = "eat_start";
-		animLength = 17;
-	} else if (junkbot.gettingShield) {
-		animName = `shield_on_${junkbot.facing === 1 ? "r" : "l"}`;
-		animLength = 11;
-	} else {
-		animName = `walk_${junkbot.facing === 1 ? "r" : "l"}`;
-	}
-	if (junkbot.armored && (!junkbot.losingShield || (junkbot.animationFrame % 4 < 2))) {
-		if (animName === "eat_start") {
-			animName = "shield_eat";
-		} else if (!animName.includes("shield")) {
-			animName = `shield_${animName}`;
-		}
-	}
-	const animation = resources.junkbotAnimations[animName];
-	let frameName;
-	let offset = { x: 0, y: 0 };
-	if (animation) {
-		animLength = animation.length;
-		const t = Math.floor(junkbot.animationFrame % animLength);
-		const keyFrame = animation[t];
-		offset = keyFrame.offset;
-		frameName = keyFrame.sprite;
-		if (junkbot.isPreviewEntity && offset.x >= 5) {
-			offset = { x: 5, y: offset.y };
-		}
-	} else {
-		const t = Math.floor(junkbot.animationFrame % animLength);
-		frameName = animName === "dead" ? "minifig_dead" : `minifig_${animName}_${1 + t}`;
-	}
-	const frame = resources.spritesAtlas[frameName];
-	const [left, top, width, height] = frame.bounds;
-	ctx.drawImage(
-		resources.sprites,
-		left,
-		top,
-		width,
-		height,
-		junkbot.x - offset.x,
-		junkbot.y + junkbot.height - 1 - height - offset.y,
-		width,
-		height
-	);
-	// if (showDebug && !editing) {
-	// 	// drawText(ctx, frameName, junkbot.x, junkbot.y + 20, "white");
-	// 	drawText(ctx, `momentum:\n${junkbot.momentumX}, ${junkbot.momentumY}`, junkbot.x, junkbot.y + 20, "white");
-	// }
-};
-
 const selectionHilightCanvases = {};
 const renderSelectionHilight = (width, height, depth = 10, studsOnTop = false) => {
 	const key = `${width}x${height}x${depth} studsOnTop=${studsOnTop}`;
@@ -2400,73 +2112,6 @@ const drawSelectionHilight = (ctx, x, y, width, height, depth = 10, studsOnTop =
 	ctx.translate(0, -2 - depth);
 	ctx.drawImage(image, x, y);
 	ctx.restore();
-};
-
-const drawEntity = (ctx, entity, hilight) => {
-	switch (entity.type) {
-		case "brick":
-			drawBrick(ctx, entity);
-			break;
-		case "junkbot":
-			// aJunkbot = entity;
-			drawJunkbot(ctx, entity);
-			break;
-		case "gearbot":
-			drawGearbot(ctx, entity);
-			break;
-		case "climbbot":
-			drawClimbbot(ctx, entity);
-			break;
-		case "flybot":
-			drawFlybot(ctx, entity);
-			break;
-		case "eyebot":
-			drawEyebot(ctx, entity);
-			break;
-		case "bin":
-			drawBin(ctx, entity);
-			break;
-		case "crate":
-			drawCrate(ctx, entity);
-			break;
-		case "fire":
-			drawFire(ctx, entity);
-			break;
-		case "fan":
-			drawFan(ctx, entity);
-			break;
-		case "laser":
-			drawLaser(ctx, entity);
-			break;
-		case "teleport":
-			drawTeleport(ctx, entity);
-			break;
-		case "jump":
-			drawJump(ctx, entity);
-			break;
-		case "pipe":
-			drawPipe(ctx, entity);
-			break;
-		case "droplet":
-			drawDroplet(ctx, entity);
-			break;
-		case "shield":
-			drawShield(ctx, entity);
-			break;
-		case "switch":
-			drawSwitch(ctx, entity);
-			break;
-		default:
-			drawBrick(ctx, entity);
-			drawText(ctx, entity.type, entity.x, entity.y, "white");
-			break;
-	}
-	if (hilight) {
-		ctx.save();
-		ctx.globalAlpha = 0.5;
-		drawSelectionHilight(ctx, entity.x, entity.y, entity.width, entity.height, 10, entity.type === "brick");
-		ctx.restore();
-	}
 };
 
 // #endregion
@@ -2687,7 +2332,7 @@ const undo = () => {
 		// editor edit. GameEngine.undo() plays its own sound feedback internally (see onPlaySound),
 		// so no extra playSound call is needed here.
 		if (window.JunkbotWasm.undo()) {
-			const result = window.JunkbotWasm.syncEngineState(entities, wind, laserBeams, teleportEffects);
+			const result = window.JunkbotWasm.syncEngineState(entities);
 			frameCounter = result.frameCounter;
 			moves = result.moves;
 		}
@@ -3644,7 +3289,7 @@ const handleRewind = () => {
 			}
 		}
 		if (didStep) {
-			const result = window.JunkbotWasm.syncEngineState(entities, wind, laserBeams, teleportEffects);
+			const result = window.JunkbotWasm.syncEngineState(entities);
 			frameCounter = result.frameCounter;
 			moves = result.moves;
 		}
@@ -3791,7 +3436,7 @@ const simulate = (entities) => {
 		// state at the tick cadence rather than the display's raw frame rate.
 		window.JunkbotWasm.mouseMove(mouse.worldX, mouse.worldY);
 	}
-	const result = window.JunkbotWasm.engineTick(entities, wind, laserBeams, teleportEffects, idCounter, playSound, frameCounter, editing, recordDragEvent);
+	const result = window.JunkbotWasm.engineTick(entities, idCounter, playSound, frameCounter, editing, recordDragEvent);
 	frameCounter = result.frameCounter;
 	moves = result.moves;
 	if (result.collectedBin) {
@@ -3929,9 +3574,140 @@ const controlViewport = () => {
 		viewport.centerX = Math.max((currentLevel.bounds.x + 30) - canvas.width / 2 / viewport.scale, viewport.centerX);
 	}
 };
-const render = () => {
 
-	sortEntitiesForRendering(entities);
+// #region Swift renderer bridge (see RenderList.swift/RenderBridge.swift)
+//
+// Decodes the sprite table Swift built at startup (window.JunkbotWasm.renderSpriteTable()) into
+// a per-sprite-ID {sheet, name} lookup, then resolves each entry against this file's own already-
+// loaded atlases - Swift never sends pixel data or atlas bounds it doesn't need to; JS still owns
+// the actual images.
+
+const spriteSheetResourceKeys = ["sprites", "spritesUndercover", "backgrounds", "backgroundsUndercover"];
+const spriteSheetAtlasKeys = ["spritesAtlas", "spritesUndercoverAtlas", "backgroundsAtlas", "backgroundsUndercoverAtlas"];
+let spriteFrameByID = null;
+
+const buildSpriteFrameTable = () => {
+	const ptr = window.JunkbotWasm.renderSpriteTable();
+	const HEADER_WORDS = 1;
+	const RECORD_WORDS = 5;
+	const header = new Int32Array(window.wasmMemory.buffer, ptr, HEADER_WORDS);
+	const count = header[0];
+	const records = new Int32Array(window.wasmMemory.buffer, ptr, HEADER_WORDS + count * RECORD_WORDS);
+	let nameBlobLength = 0;
+	for (let id = 0; id < count; id++) {
+		const w = HEADER_WORDS + id * RECORD_WORDS;
+		nameBlobLength = Math.max(nameBlobLength, records[w + 3] + records[w + 4]);
+	}
+	const nameBlobOffset = ptr + (HEADER_WORDS + count * RECORD_WORDS) * 4;
+	const nameBytes = new Uint8Array(window.wasmMemory.buffer, nameBlobOffset, nameBlobLength);
+	const decoder = new TextDecoder("utf-8");
+
+	const table = new Array(count);
+	for (let id = 0; id < count; id++) {
+		const w = HEADER_WORDS + id * RECORD_WORDS;
+		const sheet = records[w];
+		const nameOffset = records[w + 3];
+		const nameLength = records[w + 4];
+		const name = nameLength > 0 ? decoder.decode(nameBytes.subarray(nameOffset, nameOffset + nameLength)) : "";
+		table[id] = { sheet, name };
+	}
+	return table;
+};
+
+// name -> sprite ID maps for the two background sheets, built lazily from spriteFrameByID.
+let backgroundsNameToID = null;
+let backgroundsUndercoverNameToID = null;
+const ensureDecalNameMaps = () => {
+	if (backgroundsNameToID) return;
+	spriteFrameByID ??= buildSpriteFrameTable();
+	backgroundsNameToID = new Map();
+	backgroundsUndercoverNameToID = new Map();
+	for (let id = 0; id < spriteFrameByID.length; id++) {
+		const { sheet, name } = spriteFrameByID[id];
+		if (!name) continue;
+		if (sheet === 2) backgroundsNameToID.set(name, id);
+		else if (sheet === 3) backgroundsUndercoverNameToID.set(name, id);
+	}
+};
+
+// Mirrors drawDecal's atlas fallback: prefer the Undercover sheet for Undercover levels, else
+// (or if missing there) fall back to the standard backgrounds sheet.
+const resolveDecalSpriteID = (name, game) => {
+	if (!name) return -1;
+	ensureDecalNameMaps();
+	if (game === GAME_JUNKBOT_UNDERCOVER && backgroundsUndercoverNameToID.has(name)) {
+		return backgroundsUndercoverNameToID.get(name);
+	}
+	return backgroundsNameToID.has(name) ? backgroundsNameToID.get(name) : -1;
+};
+
+const flattenDecals = (list, game) => {
+	const flat = [];
+	for (const { x, y, name } of list ?? []) {
+		flat.push(x, y, resolveDecalSpriteID(name, game));
+	}
+	return flat;
+};
+
+/// Executes `RenderCommand`s from `fromIndex` (inclusive) to `toIndex` (exclusive) in the buffer
+/// at `ptr`, mirroring RenderCommand.swift's layout and each JS draw*() function's alpha/
+/// rotation/clip handling.
+const executeRenderCommands = (ctx, ptr, fromIndex, toIndex) => {
+	const HEADER_WORDS = 4;
+	const RECORD_WORDS = 8;
+	const i32 = new Int32Array(window.wasmMemory.buffer, ptr, HEADER_WORDS + toIndex * RECORD_WORDS);
+	for (let i = fromIndex; i < toIndex; i++) {
+		const w = HEADER_WORDS + i * RECORD_WORDS;
+		const kind = i32[w];
+		const spriteID = i32[w + 1];
+		const x = i32[w + 2];
+		const y = i32[w + 3];
+		const a = i32[w + 4];
+		const b = i32[w + 5];
+		const c = i32[w + 6];
+
+		if (kind === 1) {
+			// solidRect: c is 0xRRGGBBAA.
+			const rgba = c >>> 0;
+			const alpha = (rgba & 0xff) / 255;
+			ctx.fillStyle = `rgba(${(rgba >>> 24) & 0xff}, ${(rgba >>> 16) & 0xff}, ${(rgba >>> 8) & 0xff}, ${alpha})`;
+			ctx.fillRect(x, y, a, b);
+			continue;
+		}
+
+		const frame = spriteFrameByID[spriteID];
+		if (!frame || !frame.name) {
+			continue;
+		}
+		const image = resources[spriteSheetResourceKeys[frame.sheet]];
+		const atlasFrame = resources[spriteSheetAtlasKeys[frame.sheet]][frame.name];
+		if (!image || !atlasFrame) {
+			continue;
+		}
+		const [left, top, frameWidth, frameHeight] = atlasFrame.bounds;
+		const drawWidth = c > 0 && c < frameWidth ? c : frameWidth;
+		const alpha = a / 100;
+		if (alpha !== 1) {
+			ctx.globalAlpha = alpha;
+		}
+		if (b !== 0) {
+			ctx.save();
+			ctx.translate(x + frameWidth / 2, y + frameHeight / 2);
+			ctx.rotate(b / 1000);
+			ctx.drawImage(image, left, top, drawWidth, frameHeight, -frameWidth / 2, -frameHeight / 2, drawWidth, frameHeight);
+			ctx.restore();
+		} else {
+			ctx.drawImage(image, left, top, drawWidth, frameHeight, x, y, drawWidth, frameHeight);
+		}
+		if (alpha !== 1) {
+			ctx.globalAlpha = 1;
+		}
+	}
+};
+
+// #endregion
+
+const render = () => {
 
 	const hovered = dragging.length ? [] : possibleGrabs();
 
@@ -3977,17 +3753,12 @@ const render = () => {
 	ctx.translate(-Math.floor(viewport.centerX), -Math.floor(viewport.centerY));
 	ctx.imageSmoothingEnabled = false;
 
-	drawDecal(ctx, -6, -25, currentLevel.backdropName || "bkg1", currentLevel.game);
-	if (currentLevel.backgroundDecals) {
-		for (const { x, y, name } of currentLevel.backgroundDecals) {
-			drawDecal(ctx, x - 3, y - 20, name, currentLevel.game);
-		}
-	}
-	if (currentLevel.decals) {
-		for (const { x, y, name } of currentLevel.decals) {
-			drawDecal(ctx, x - 15 * 2, y - 64, name, currentLevel.game);
-		}
-	}
+	spriteFrameByID ??= buildSpriteFrameTable();
+	const swiftRenderPtr = window.JunkbotWasm.renderWorld(editing, editing ? entities : null);
+	const swiftHeader = new Int32Array(window.wasmMemory.buffer, swiftRenderPtr, 4);
+	const swiftTotalCount = swiftHeader[0];
+	const swiftBackgroundCount = swiftHeader[1];
+	executeRenderCommands(ctx, swiftRenderPtr, 0, swiftBackgroundCount);
 	if (currentLevel.title === "Title Screen") {
 		ctx.save();
 		ctx.translate(-1, -26 + 1); // -1, -26 = offset of level top/left compared to title screen frame image; +1 = unknown
@@ -4014,8 +3785,6 @@ const render = () => {
 		return editing ? entity.selected : entity.misplaced;
 	};
 
-	const placeable = canRelease();
-
 	// ctx.save();
 	// ctx.translate(-6.5, -15);
 	// ctx.scale(0.206, 0.206);
@@ -4024,32 +3793,23 @@ const render = () => {
 
 	if (playbackLevel?.entities && showDebug) {
 		sortEntitiesForRendering(playbackLevel.entities);
+		const ghostPtr = window.JunkbotWasm.renderEntityList(playbackLevel.entities);
+		const ghostHeader = new Int32Array(window.wasmMemory.buffer, ghostPtr, 1);
 		ctx.save();
 		ctx.translate(12, -12);
-		for (const entity of playbackLevel.entities) {
-			if (entity.grabbed) {
-				ctx.globalAlpha = placeable ? 0.8 : 0.3;
-			}
-			drawEntity(ctx, entity, shouldHilight(entity));
-			ctx.globalAlpha = 1;
-		}
+		executeRenderCommands(ctx, ghostPtr, 0, ghostHeader[0]);
 		ctx.restore();
 	}
+	executeRenderCommands(ctx, swiftRenderPtr, swiftBackgroundCount, swiftTotalCount);
+	// Selection/misplaced highlighting is an editor/debug overlay Swift doesn't emit - draw
+	// just the highlight box (not the sprite, which the commands above already drew).
 	for (const entity of entities) {
-		if (entity.grabbed) {
-			ctx.globalAlpha = placeable ? 0.8 : 0.3;
+		if (shouldHilight(entity)) {
+			ctx.save();
+			ctx.globalAlpha = 0.5;
+			drawSelectionHilight(ctx, entity.x, entity.y, entity.width, entity.height, 10, entity.type === "brick");
+			ctx.restore();
 		}
-		drawEntity(ctx, entity, shouldHilight(entity));
-		ctx.globalAlpha = 1;
-	}
-	for (const { fan, extents } of wind) {
-		drawWind(ctx, fan, extents);
-	}
-	for (const { laserBrick, extent, hitWhat } of laserBeams) {
-		drawLaserBeam(ctx, laserBrick, extent, hitWhat);
-	}
-	for (const { x, y, frameIndex } of teleportEffects) {
-		drawTeleportEffect(ctx, x, y, frameIndex);
 	}
 
 	// draw connections between switches and controlled entities
@@ -4120,11 +3880,15 @@ const render = () => {
 		ctx.restore();
 	}
 
-	ctx.strokeStyle = "black";
-	ctx.lineWidth = editing ? 1 : 10000;
 	const { bounds } = currentLevel;
-	if (bounds) {
-		ctx.strokeRect(bounds.x - ctx.lineWidth / 2, bounds.y - ctx.lineWidth / 2, bounds.width + ctx.lineWidth, bounds.height + ctx.lineWidth);
+	// In play mode, the Swift path already emitted the thick masking rects as part of
+	// renderWorld's commands (executed above); only the editor's thin outline stays JS-drawn.
+	if (editing) {
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = editing ? 1 : 10000;
+		if (bounds) {
+			ctx.strokeRect(bounds.x - ctx.lineWidth / 2, bounds.y - ctx.lineWidth / 2, bounds.width + ctx.lineWidth, bounds.height + ctx.lineWidth);
+		}
 	}
 
 	if (showDebug) {
@@ -4843,21 +4607,10 @@ const initEditorUI = () => {
 			buttonCtx.clearRect(0, 0, buttonCanvas.width, buttonCanvas.height);
 			buttonCtx.save();
 			buttonCtx.translate(0, 28);
-			const prevShowDebug = showDebug;
-			showDebug = false;
-			drawEntity(buttonCtx, previewEntity);
-			if (previewEntity.type === "fan") {
-				drawWind(buttonCtx, previewEntity, [3, 3]);
-			}
-			if (previewEntity.type === "laser") {
-				drawLaserBeam(buttonCtx, previewEntity, [3, 3]);
-			}
-			if (previewEntity.type === "teleport") {
-				if (previewEntity.timer > TELEPORT_COOLDOWN - TELEPORT_EFFECT_PERIOD) {
-					drawTeleportEffect(buttonCtx, previewEntity.x + 15, previewEntity.y, previewEntity.timer % 3);
-				}
-			}
-			showDebug = prevShowDebug;
+			spriteFrameByID ??= buildSpriteFrameTable();
+			const ptr = window.JunkbotWasm.renderPreviewEntity(previewEntity);
+			const header = new Int32Array(window.wasmMemory.buffer, ptr, 1);
+			executeRenderCommands(buttonCtx, ptr, 0, header[0]);
 			buttonCtx.restore();
 		};
 		drawPreview();
@@ -4878,9 +4631,6 @@ const initEditorUI = () => {
 					showDebug,
 					currentLevel,
 					entities,
-					wind,
-					laserBeams,
-					teleportEffects,
 					entitiesByTopY,
 					entitiesByBottomY,
 					lastKeys,
@@ -4893,9 +4643,6 @@ const initEditorUI = () => {
 				showDebug = false;
 				entities = [];
 				currentLevel = { entities };
-				wind = [];
-				laserBeams = [];
-				teleportEffects = [];
 				entitiesByTopY = {};
 				entitiesByBottomY = {};
 				lastKeys = new Map();
@@ -4909,9 +4656,6 @@ const initEditorUI = () => {
 					showDebug,
 					currentLevel,
 					entities,
-					wind,
-					laserBeams,
-					teleportEffects,
 					entitiesByTopY,
 					entitiesByBottomY,
 					lastKeys,

@@ -481,12 +481,11 @@ extension GameEngine {
     }
 
     func engineTickExport(_ args: [JSValue]) -> JSValue {
-        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
-            let teleportEffects = args[3].object, let playSound = args[5].function
+        guard let entities = args[0].object, let playSound = args[2].function
         else { return .undefined }
-        let nextID = Int32(args[4].number ?? 0)
+        let nextID = Int32(args[1].number ?? 0)
         // frameCounter is now Swift-owned (incremented inside tick()/simulate()); no longer
-        // overwritten from JS's args[6] here. The result object below still reports it back so
+        // overwritten from JS's args[3] here. The result object below still reports it back so
         // JS's own `frameCounter` (used for playthrough/rewind timestamping) stays in sync.
 
         var collectedBin = false
@@ -501,7 +500,7 @@ extension GameEngine {
         // play-mode dragging moved to Swift. `recordDragEvent` persists across ticks the same way
         // `onPlaySound` does — it's set here but invoked later, from `mouseDown`/`mouseMove`/
         // `mouseUp`, which run outside of any `engineTick` call.
-        if let recordDragEvent = args[8].function {
+        if let recordDragEvent = args[5].function {
             onDragEvent = { isPickup, worldX, worldY, direction in
                 let grabType: JSString = direction == -1 ? "upward" : (direction == 1 ? "downward" : "single")
                 _ = recordDragEvent(isPickup, worldX, worldY, grabType)
@@ -515,13 +514,12 @@ extension GameEngine {
         // just-finished native release: JS's mirror is always one tick stale, so right after
         // `mouseUp` clears `draggingIndices`, this merge would still see the old `grabbed: true`
         // and re-grab the entity in Swift before this tick's sync corrects the mirror.
-        if args[7].boolean == true {
+        if args[4].boolean == true {
             mergeGrabbedEntities(from: entities)
         }
         ensureIDCounterAtLeast(nextID)
         tick()
         syncEngineEntities(to: entities)
-        syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
 
         let result = JSObject.global.Object.function!.new()
         result.frameCounter = frameCounter.jsValue
@@ -555,6 +553,27 @@ let switchType: JSString = "switch"
 let fireType: JSString = "fire"
 let shieldType: JSString = "shield"
 let jumpType: JSString = "jump"
+
+/// Matches `Sources/JunkbotCore/LevelSerialize.swift`'s `brickColorNames` (not `public`, so
+/// duplicated here) and `RenderList.swift`'s `colorIndex` switch — order is load-bearing.
+let brickColorNameStrings: [JSString] = ["white", "red", "green", "blue", "yellow", "gray"]
+
+/// `Entity.colorIndex` from a brick's JS-side `colorName` string (defaults to gray/fixed if
+/// unrecognized). Brick color otherwise never crosses the bridge — `engineEntity(from:)` and
+/// `syncEntity` only touch `x`/`y`/`width`/etc., leaving every brick's `colorIndex` at its
+/// zero-initialized default (white) unless this is called.
+func colorIndex(fromColorName object: JSObject) -> Int32 {
+    let colorName = object.colorName.jsString
+    for (index, name) in brickColorNameStrings.enumerated() where colorName == name {
+        return Int32(index)
+    }
+    return 5  // gray
+}
+
+func colorName(fromColorIndex index: Int32) -> JSString {
+    guard index >= 0, Int(index) < brickColorNameStrings.count else { return "gray" }
+    return brickColorNameStrings[Int(index)]
+}
 
 let TELEPORT_COOLDOWN: Int32 = 50
 let TELEPORT_EFFECT_PERIOD: Int32 = 20
@@ -1146,6 +1165,9 @@ func engineEntity(from object: JSObject) -> Entity {
     entity.active = boolProperty(object, "active")
     entity.activeTimer = int32Property(object, "activeTimer")
     entity.splashing = boolProperty(object, "splashing")
+    if entity.type == .brick {
+        entity.colorIndex = colorIndex(fromColorName: object)
+    }
 
     if let grabOffset = object.grabOffset.object {
         entity.grabOffsetX = int32Property(grabOffset, "x")
@@ -1177,6 +1199,7 @@ func syncEntity(_ entity: Entity, to object: JSObject) {
 
     if entity.type == .brick {
         object.widthInStuds = entity.widthInStuds.jsValue
+        object.colorName = colorName(fromColorIndex: entity.colorIndex).jsValue
     }
     if entity.type == .junkbot {
         object.armored = entity.armored.jsValue
@@ -1262,50 +1285,6 @@ func syncEngineEntities(to entitiesArray: JSObject) {
         }
     }
     entitiesArray.length = outputIndex.jsValue
-}
-
-func syncEngineEffects(entities: JSObject, wind: JSObject, laserBeams: JSObject, teleportEffects: JSObject) {
-    wind.length = .number(0)
-    let entityValues = (0..<Int(entities.length.number ?? 0)).map { entities[$0] }
-    for effect in gameEngine.wind {
-        guard effect.fanEntityIndex >= 0, effect.fanEntityIndex < gameEngine.entities.count else { continue }
-        let fanID = gameEngine.entities[effect.fanEntityIndex].id
-        guard let fan = existingEntityObject(id: fanID, in: entityValues) else { continue }
-        let entry = JSObject.global.Object.function!.new()
-        entry.fan = fan
-        var extents: [JSValue] = []
-        for i in 0..<effect.numExtents {
-            extents.append(effect.extent(at: i).jsValue)
-        }
-        entry.extents = extents.jsValue
-        _ = wind.push!(entry.jsValue)
-    }
-
-    laserBeams.length = .number(0)
-    for beam in gameEngine.laserBeams {
-        guard beam.laserEntityIndex >= 0, beam.laserEntityIndex < gameEngine.entities.count else { continue }
-        let laserID = gameEngine.entities[beam.laserEntityIndex].id
-        guard let laser = existingEntityObject(id: laserID, in: entityValues) else { continue }
-        let entry = JSObject.global.Object.function!.new()
-        entry.laserBrick = laser
-        entry.extent = beam.extent.jsValue
-        if beam.hitEntityIndex >= 0, beam.hitEntityIndex < gameEngine.entities.count {
-            let hitID = gameEngine.entities[beam.hitEntityIndex].id
-            entry.hitWhat = existingEntityObject(id: hitID, in: entityValues) ?? .undefined
-        } else {
-            entry.hitWhat = .undefined
-        }
-        _ = laserBeams.push!(entry.jsValue)
-    }
-
-    teleportEffects.length = .number(0)
-    for effect in gameEngine.teleportEffects {
-        let entry = JSObject.global.Object.function!.new()
-        entry.x = effect.x.jsValue
-        entry.y = effect.y.jsValue
-        entry.frameIndex = effect.frameIndex.jsValue
-        _ = teleportEffects.push!(entry.jsValue)
-    }
 }
 
 func engineLevelState(from level: JSObject) -> (entities: [Entity], bounds: LevelBounds?) {
@@ -1397,16 +1376,30 @@ exports.endRewind =
 // undo()/stepRewind() return true, reusing the same sync logic engineTick already uses.
 exports.syncEngineState =
     JSClosure { args in
-        guard let entities = args[0].object, let wind = args[1].object, let laserBeams = args[2].object,
-            let teleportEffects = args[3].object
-        else { return .undefined }
+        guard let entities = args[0].object else { return .undefined }
         syncEngineEntities(to: entities)
-        syncEngineEffects(entities: entities, wind: wind, laserBeams: laserBeams, teleportEffects: teleportEffects)
         let result = JSObject.global.Object.function!.new()
         result.frameCounter = gameEngine.frameCounter.jsValue
         result.moves = gameEngine.moves.jsValue
         return result.jsValue
     }.jsValue
+
+// Generic world renderer (RenderBridge.swift) — replaces src/game.js's draw* decision logic.
+// See RenderCommand.swift/RenderList.swift (JunkbotCore) for the command format and emission.
+exports.renderSpriteTable =
+    JSClosure { args in gameEngine.renderSpriteTableExport(args) }.jsValue
+
+exports.engineSetBackground =
+    JSClosure { args in gameEngine.engineSetBackgroundExport(args) }.jsValue
+
+exports.renderWorld =
+    JSClosure { args in gameEngine.renderWorldExport(args) }.jsValue
+
+exports.renderEntityList =
+    JSClosure { args in gameEngine.renderEntityListExport(args) }.jsValue
+
+exports.renderPreviewEntity =
+    JSClosure { args in gameEngine.renderPreviewEntityExport(args) }.jsValue
 
 window.JunkbotWasm = exports.jsValue
 _ = window.console.log("Swift: JunkbotWasm exported")

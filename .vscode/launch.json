@@ -59,6 +59,46 @@
             "target": "JunkbotApp",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release JunkbotApp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Debug JunkbotWASM",
+            "target": "JunkbotWASM",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug JunkbotWASM"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Release JunkbotWASM",
+            "target": "JunkbotWASM",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release JunkbotWASM"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Debug JunkbotSDL3",
+            "target": "JunkbotSDL3",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug JunkbotSDL3"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:junkbot-swift}",
+            "name": "Release JunkbotSDL3",
+            "target": "JunkbotSDL3",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release JunkbotSDL3"
         }
     ]
 }
