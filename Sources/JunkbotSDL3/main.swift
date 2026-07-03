@@ -20,7 +20,7 @@ let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
 let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
 let audioDirectory = repoRoot.appendingPathComponent("audio/sound-effects")
 
-// MARK: - Level sequencing
+// MARK: - Level catalog
 
 /// Reads a level `.txt` file as UTF-8, stripping a leading byte-order-mark if present - a few
 /// files under `levels/` (e.g. `Terrarium.txt`, `The Garage.txt`) have one, and `String.Encoding
@@ -35,57 +35,16 @@ func readLevelText(at url: URL) -> String? {
   return text
 }
 
-/// Collapses runs of whitespace to a single space, for matching titles that differ only in
-/// incidental whitespace (a couple of `levels/*.txt` files have a typo'd double space in their
-/// `title=` line, e.g. "Running  the Gauntlet" vs. `_LEVEL_LISTING.txt`'s "Running the Gauntlet").
-func normalizedTitle(_ title: String) -> String {
-  title.trimmingCharacters(in: .whitespaces).split(separator: " ").joined(separator: " ")
-}
-
-/// `_LEVEL_LISTING.txt`'s order is the source of truth for level progression, but its titles don't
-/// always match their on-disk filename 1:1 (e.g. "Caution: Fire" -> "Caution Fire.txt", punctuation
-/// stripped inconsistently) - so rather than guessing a sanitizer, every top-level `levels/*.txt`
-/// file gets parsed once at startup and matched back to the listing by its *parsed* `[info] title=`,
-/// which is always exact (modulo incidental whitespace, see `normalizedTitle`).
-func loadLevelSequence() -> [(title: String, url: URL)] {
-  let fileManager = FileManager.default
-  guard
-    let entries = try? fileManager.contentsOfDirectory(
-      at: levelsDirectory, includingPropertiesForKeys: nil)
-  else { return [] }
-
-  var urlByTitle: [String: URL] = [:]
-  for url in entries where url.pathExtension == "txt" {
-    guard let text = readLevelText(at: url) else { continue }
-    urlByTitle[normalizedTitle(Level(text: text).title)] = url
-  }
-
-  guard
-    let listingText = readLevelText(at: levelsDirectory.appendingPathComponent("_LEVEL_LISTING.txt"))
-  else { return [] }
-
-  return listingText.split(separator: "\n").compactMap { line in
-    let title = normalizedTitle(String(line))
-    guard !title.isEmpty else { return nil }
-    guard let url = urlByTitle[title] else {
-      // Pre-existing data mismatch in a few `levels/*.txt` files (their `[info] title=` doesn't
-      // match their `_LEVEL_LISTING.txt` entry, e.g. "The Garage.txt" actually contains "The
-      // Engine Room") - not something to guess a fix for here, so just skip and report it.
-      FileHandle.standardError.write(Data("Skipping unmatched level listing entry: \(title)\n".utf8))
-      return nil
-    }
-    return (title, url)
-  }
-}
-
-let levelSequence = loadLevelSequence()
-guard !levelSequence.isEmpty else {
+/// Building/basement grouping + listing, shared with any future native target
+/// (`Sources/JunkbotCore/LevelCatalog.swift`) - see the Phase 6 plan for why this replaced the
+/// old flat `loadLevelSequence`/`levelSequence` auto-play sequencing.
+let levelCatalog = LevelCatalog(repoRoot: repoRoot)
+guard !(levelCatalog.pagesByGame[.junkbot] ?? []).isEmpty else {
   FileHandle.standardError.write(Data("No levels found under \(levelsDirectory.path)\n".utf8))
   exit(1)
 }
 
 let gameEngine = GameEngine()
-var currentLevelIndex = 0
 /// World-space camera center/scale, initialized to the level's center on load and then re-centered
 /// on Junkbot every frame by `updateCamera()` (a simplified version of JS's `controlViewport`: no
 /// margin-based "only pan once near the edge" deadzone or smoothing, just clamp so the camera never
@@ -116,34 +75,6 @@ let cameraScale: Double = 1
   cameraCenterY = targetY
 }
 
-@MainActor func loadCurrentLevel() {
-  let (title, url) = levelSequence[currentLevelIndex]
-  guard let text = readLevelText(at: url) else {
-    FileHandle.standardError.write(Data("Failed to read \(url.path)\n".utf8))
-    exit(1)
-  }
-  gameEngine.loadLevel(fromText: text)
-  print("Level \(currentLevelIndex + 1)/\(levelSequence.count): \(title)")
-  musicPlayer.startRandomLevelMusic()
-
-  if let bounds = gameEngine.levelBounds {
-    cameraCenterX = Double(bounds.x) + Double(bounds.width) / 2
-    cameraCenterY = Double(bounds.y) + Double(bounds.height) / 2
-  } else if !gameEngine.entities.isEmpty {
-    let minX = gameEngine.entities.map(\.x).min() ?? 0
-    let maxX = gameEngine.entities.map { $0.x + $0.width }.max() ?? 0
-    let minY = gameEngine.entities.map(\.y).min() ?? 0
-    let maxY = gameEngine.entities.map { $0.y + $0.height }.max() ?? 0
-    cameraCenterX = Double(minX + maxX) / 2
-    cameraCenterY = Double(minY + maxY) / 2
-  }
-}
-
-@MainActor func advanceToNextLevel() {
-  currentLevelIndex = (currentLevelIndex + 1) % levelSequence.count
-  loadCurrentLevel()
-}
-
 // MARK: - SDL setup
 
 guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) else {
@@ -152,26 +83,35 @@ guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) else {
 }
 defer { SDL_Quit() }
 
-// Load the first level before creating the window, so the window's default size can match its
-// actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The window
-// stays resizable afterward for levels of other sizes (see SDL_EVENT_WINDOW_RESIZED below).
-gameEngine.loadLevel(fromText: readLevelText(at: levelSequence[currentLevelIndex].url) ?? "")
+// Load the title screen level before creating the window, so the window's default size can
+// match its actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The
+// window stays resizable afterward for levels of other sizes (see SDL_EVENT_WINDOW_RESIZED below).
+gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
 var windowWidth: Int32 = gameEngine.levelBounds.map { $0.width } ?? 900
 var windowHeight: Int32 = gameEngine.levelBounds.map { $0.height } ?? 675
 // SDL_WINDOW_RESIZABLE's macro (SDL_UINT64_C(...)) doesn't import into Swift - its raw value
 // (SDL_video.h) is 0x0000000000000020.
 let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020
-guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, windowResizableFlag)
-else {
-  FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
-  exit(1)
-}
+// Plain top-level `let`s (not `guard let`) so `window`/`renderer` are true module-level symbols
+// visible from other files (Screens.swift, TextRenderer.swift, etc.) - a `guard let` binding at
+// main.swift's top level only stays in scope for the rest of *this* file.
+let window: OpaquePointer = {
+  guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, windowResizableFlag)
+  else {
+    FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
+    exit(1)
+  }
+  return window
+}()
 defer { SDL_DestroyWindow(window) }
 
-guard let renderer = SDL_CreateRenderer(window, nil) else {
-  FileHandle.standardError.write(Data("SDL_CreateRenderer failed: \(String(cString: SDL_GetError()))\n".utf8))
-  exit(1)
-}
+let renderer: OpaquePointer = {
+  guard let renderer = SDL_CreateRenderer(window, nil) else {
+    FileHandle.standardError.write(Data("SDL_CreateRenderer failed: \(String(cString: SDL_GetError()))\n".utf8))
+    exit(1)
+  }
+  return renderer
+}()
 defer { SDL_DestroyRenderer(renderer) }
 
 // MARK: - Sprite loading
@@ -231,6 +171,10 @@ final class TextureCache {
   }
 }
 let textureCache = TextureCache(renderer: renderer)
+
+/// Bitmap-font text rendering for menu UI (title/level-select/win-lose dialogs) - see
+/// `TextRenderer.swift`/`Sources/JunkbotCore/Font.swift`.
+let textRenderer = TextRenderer(renderer: renderer, fontDirectory: repoRoot.appendingPathComponent("font"))
 
 // MARK: - Audio
 
@@ -300,6 +244,12 @@ final class SoundBoard {
     25: "drip2.ogg",
     26: "drip3.ogg",
     27: "lego-creator/undo-I0512.wav",
+    // Menu sounds (MenuSoundID in Screens.swift, disjoint from the engine's SoundID range) -
+    // buttonClick/tabSwitch/enterLevel in src/game.js's resource paths, matching the Lingo
+    // sources' SndSFX("h_button1")/("h_powerup3")/level-start sounds.
+    100: "h_button1.ogg",
+    101: "h_powerup3.ogg",
+    102: "enter_level.wav",
   ]
 
   init(mixer: OpaquePointer?, directory: URL) {
@@ -519,11 +469,13 @@ let cursorSet = CursorSet(
 /// Reused across frames to avoid per-frame allocation.
 var renderFrame = RenderFrame()
 
-@MainActor func render() {
-  _ = SDL_SetRenderDrawColor(renderer, 40, 40, 45, 255)
-  _ = SDL_RenderClear(renderer)
-
-  gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
+/// Draws the gameplay world (entities/effects/mask) at the given screen-space camera offset.
+/// Used by both `.playing` and `.title` (the title screen is itself a normal playable level, per
+/// `src/game.js`'s `showTitleScreen` - see `Screens.swift`), and reused as the frozen backdrop
+/// behind the win/lose dialogs. Returns the offset, for overlay drawing (e.g. the title screen's
+/// welcome-panel text) that needs to line up with world-space coordinates.
+@MainActor @discardableResult func renderWorld(editing: Bool) -> (offsetX: Float, offsetY: Float) {
+  gameEngine.buildRenderFrame(into: &renderFrame, editing: editing)
 
   // World-space -> screen-space: with scale 1 the camera transform is a pure translation, so
   // compute it once rather than per command.
@@ -587,22 +539,46 @@ var renderFrame = RenderFrame()
       }
     }
   }
+  return (offsetX, offsetY)
+}
+
+@MainActor func render() {
+  _ = SDL_SetRenderDrawColor(renderer, 40, 40, 45, 255)
+  _ = SDL_RenderClear(renderer)
+
+  switch currentScreen {
+  case .title:
+    let (offsetX, offsetY) = renderWorld(editing: false)
+    drawTitleScreenOverlay(offsetX: offsetX, offsetY: offsetY)
+  case .playing:
+    renderWorld(editing: false)
+    drawLevelToast()
+  case .levelSelect(let game, let page):
+    drawLevelSelectScreen(game: game, page: page)
+  case .levelWinDialog, .levelLoseDialog:
+    renderWorld(editing: false)
+    drawDialogOverlay()
+  }
 
   SDL_RenderPresent(renderer)
 }
 
 // MARK: - Game loop
 
-loadCurrentLevel()
+showTitleScreen()
 
 /// Matches `src/game.js`'s `targetFPS = 18` simulation tick rate (the game's actual logic rate,
 /// independent of display refresh rate).
 let tickIntervalNanoseconds: UInt64 = 1_000_000_000 / 18
 var lastTickTime = SDL_GetTicksNS()
-/// Brief pause after a win before loading the next level, so the win is visible for a moment
-/// rather than instantly cutting to the next level.
-let winPauseNanoseconds: UInt64 = 1_500_000_000
-var winPauseUntil: UInt64? = nil
+
+/// Whether the current screen ticks/renders the gameplay world with live drag input - both the
+/// title screen (a normal playable level with draggable bricks, per `src/game.js`'s
+/// `showTitleScreen`) and actual gameplay. Menu-only screens (level-select, win/lose dialogs)
+/// don't tick the engine or forward mouse events to `GameEngine.mouseDown`/etc.
+@MainActor func screenOwnsWorldInput() -> Bool {
+  currentScreen == .title || currentScreen == .playing
+}
 
 var running = true
 while running {
@@ -612,11 +588,29 @@ while running {
     case SDL_EVENT_QUIT.rawValue:
       running = false
     case SDL_EVENT_MOUSE_BUTTON_DOWN.rawValue:
-      handleMouseDown(x: event.button.x, y: event.button.y)
+      lastMouseScreenX = event.button.x
+      lastMouseScreenY = event.button.y
+      // Clicking dismisses the level-entry toast early (behavior_msgBox_Title.ls's mouseUp).
+      if levelToastUntil != nil {
+        dismissLevelToast()
+        break
+      }
+      // Menu buttons sit visually on top of the world (the title screen overlays Play/Credits
+      // on top of its draggable-bricks scene), so they must be hit-tested first regardless of
+      // screen - only fall through to world drag input if nothing was clicked.
+      if !handleClick(menuButtons, at: event.button.x, y: event.button.y), screenOwnsWorldInput() {
+        handleMouseDown(x: event.button.x, y: event.button.y)
+      }
     case SDL_EVENT_MOUSE_BUTTON_UP.rawValue:
-      handleMouseUp(x: event.button.x, y: event.button.y)
+      if screenOwnsWorldInput() {
+        handleMouseUp(x: event.button.x, y: event.button.y)
+      }
     case SDL_EVENT_MOUSE_MOTION.rawValue:
-      handleMouseMove(x: event.motion.x, y: event.motion.y)
+      lastMouseScreenX = event.motion.x
+      lastMouseScreenY = event.motion.y
+      if screenOwnsWorldInput() {
+        handleMouseMove(x: event.motion.x, y: event.motion.y)
+      }
     case SDL_EVENT_WINDOW_RESIZED.rawValue:
       // Mirrors the JS frontend's canvas resizing to fill the browser window (src/game.js's
       // `innerWidth`/`innerHeight` resize check) - the camera/viewport math above already
@@ -629,28 +623,34 @@ while running {
   }
 
   let now = SDL_GetTicksNS()
-  if let pauseUntil = winPauseUntil {
-    if now >= pauseUntil {
-      winPauseUntil = nil
-      advanceToNextLevel()
-    }
-  } else {
+  if let toastUntil = levelToastUntil, now >= toastUntil {
+    dismissLevelToast()
+  }
+  if screenOwnsWorldInput() {
     while now - lastTickTime >= tickIntervalNanoseconds {
       lastTickTime += tickIntervalNanoseconds
       gameEngine.tick()
-      if gameEngine.winLose() == 1 {
-        winPauseUntil = now + winPauseNanoseconds
-        // Mirrors parent_game manager.ls's endLevel calling SndMusicEnd() before the next
-        // level's SndMusicStart(); the winPauseNanoseconds gap before advanceToNextLevel()
-        // gives the fade-out sting (if any) room to actually be heard.
-        musicPlayer.stop()
-        break
+      if currentScreen == .playing {
+        let outcome = gameEngine.winLose()
+        if outcome == 1 {
+          musicPlayer.stop()
+          showLevelWinDialog()
+          break
+        } else if outcome == 2 {
+          musicPlayer.stop()
+          showLevelLoseDialog()
+          break
+        }
       }
     }
+  } else {
+    lastTickTime = now
   }
 
   updateCamera()
-  cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
+  if screenOwnsWorldInput() {
+    cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
+  }
   musicPlayer.update()
   render()
   SDL_Delay(1)
