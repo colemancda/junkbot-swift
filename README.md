@@ -1,5 +1,5 @@
-# [Janitorial Android][play Junkbot]
+# swift-junkbot
 
-An Swift remake of LEGO [Junkbot][] and [Junkbot Undercover][] games, nearly complete!
+A Swift remake of LEGO [Junkbot](https://history.jakelee.co.uk/lego-junkbot-technical-and-historical-decompiling/).
 
-[![](images/title-screen-teaser.png)][play Junkbot]
+![Preview](images/title-screen-teaser.png)
