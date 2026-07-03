@@ -637,10 +637,14 @@ while running {
       switch event.key.key {
       case SDLK_ESCAPE:
         escapePressed()
-      case SDLK_UP, SDLK_LEFT:
-        moveFocus(-1)
-      case SDLK_DOWN, SDLK_RIGHT:
-        moveFocus(1)
+      case SDLK_UP:
+        directionPressed(dx: 0, dy: -1, menuDelta: -1)
+      case SDLK_DOWN:
+        directionPressed(dx: 0, dy: 1, menuDelta: 1)
+      case SDLK_LEFT:
+        directionPressed(dx: -1, dy: 0, menuDelta: -1)
+      case SDLK_RIGHT:
+        directionPressed(dx: 1, dy: 0, menuDelta: 1)
       case SDLK_RETURN, SDLK_SPACE:
         activatePressed()
       default:
@@ -678,10 +682,14 @@ while running {
         activatePressed()
       case SDL_GAMEPAD_BUTTON_START:
         escapePressed()
-      case SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_DPAD_LEFT:
-        moveFocus(-1)
-      case SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
-        moveFocus(1)
+      case SDL_GAMEPAD_BUTTON_DPAD_UP:
+        directionPressed(dx: 0, dy: -1, menuDelta: -1)
+      case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+        directionPressed(dx: 0, dy: 1, menuDelta: 1)
+      case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+        directionPressed(dx: -1, dy: 0, menuDelta: -1)
+      case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+        directionPressed(dx: 1, dy: 0, menuDelta: 1)
       default:
         break
       }

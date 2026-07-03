@@ -96,6 +96,36 @@ let touchMouseID: UInt32 = .max
   }
 }
 
+/// Dispatches an arrow-key/d-pad press: while a brick is grabbed, it nudges the drag exactly
+/// one stud/brick-height in that direction instead of moving menu focus - useful for precise
+/// placement without depending on stick/cursor accuracy.
+@MainActor func directionPressed(dx: Int32, dy: Int32, menuDelta: Int) {
+  if gameEngine.isDragging {
+    nudgeDrag(dx: dx, dy: dy)
+  } else {
+    moveFocus(menuDelta)
+  }
+}
+
+/// Moves the dragged group by exactly one grid cell (`CELL_W`/`CELL_H`) in the given direction,
+/// by advancing the tracked mouse position and feeding it through the same
+/// `GameEngine.mouseMove` the real mouse/gamepad cursor already uses - so snapping, direction
+/// resolution, etc. all behave identically. Also warps the real cursor to match, so a
+/// subsequent click/A-release lines up with what's on screen.
+@MainActor func nudgeDrag(dx: Int32, dy: Int32) {
+  lastMouseWorldX += dx * CELL_W
+  lastMouseWorldY += dy * CELL_H
+  gameEngine.mouseMove(lastMouseWorldX, lastMouseWorldY)
+
+  let canvas = gameEngine.worldToCanvas(
+    worldX: Double(lastMouseWorldX), worldY: Double(lastMouseWorldY),
+    centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
+    canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
+  lastMouseScreenX = Float(canvas.x)
+  lastMouseScreenY = Float(canvas.y)
+  SDL_WarpMouseInWindow(window, lastMouseScreenX, lastMouseScreenY)
+}
+
 /// Activates the focused menu button if any; otherwise (gameplay/title with a controller)
 /// synthesizes a mouse press/release at the cursor so A grabs/releases bricks with the exact
 /// mouse semantics (drag direction resolution, canRelease-gated drops, toast dismissal).
