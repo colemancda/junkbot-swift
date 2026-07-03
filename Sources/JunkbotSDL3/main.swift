@@ -231,27 +231,80 @@ let textureCache = TextureCache(renderer: renderer)
 
 // MARK: - Input
 
+/// Last known mouse position in world space, kept up to date by every mouse event so the cursor
+/// (updated once per frame in the main loop, not per-event) always reflects the current hover
+/// target even on frames with no new mouse event.
+var lastMouseWorldX: Int32 = 0
+var lastMouseWorldY: Int32 = 0
+
 @MainActor func handleMouseDown(x: Float, y: Float) {
   let world = gameEngine.canvasToWorld(
     canvasX: Double(x), canvasY: Double(y),
     centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
     canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
-  gameEngine.mouseDown(Int32(world.x), Int32(world.y))
+  lastMouseWorldX = Int32(world.x)
+  lastMouseWorldY = Int32(world.y)
+  gameEngine.mouseDown(lastMouseWorldX, lastMouseWorldY)
 }
 @MainActor func handleMouseMove(x: Float, y: Float) {
   let world = gameEngine.canvasToWorld(
     canvasX: Double(x), canvasY: Double(y),
     centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
     canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
-  gameEngine.mouseMove(Int32(world.x), Int32(world.y))
+  lastMouseWorldX = Int32(world.x)
+  lastMouseWorldY = Int32(world.y)
+  gameEngine.mouseMove(lastMouseWorldX, lastMouseWorldY)
 }
 @MainActor func handleMouseUp(x: Float, y: Float) {
   let world = gameEngine.canvasToWorld(
     canvasX: Double(x), canvasY: Double(y),
     centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
     canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
-  gameEngine.mouseUp(Int32(world.x), Int32(world.y))
+  lastMouseWorldX = Int32(world.x)
+  lastMouseWorldY = Int32(world.y)
+  gameEngine.mouseUp(lastMouseWorldX, lastMouseWorldY)
 }
+
+// MARK: - Cursor
+
+/// Loads `images/cursors/cursor-*.png` into `SDL_Cursor`s (hotspot (8, 8), matching the JS
+/// frontend's `url(...) 8 8` CSS cursor declarations) and swaps the OS cursor to match
+/// `GameEngine.cursorHint` - the native-window equivalent of `render()`'s
+/// `canvas.style.cursor = ...` chain in `src/game.js`.
+final class CursorSet {
+  private var cursors: [GameEngine.CursorHint: OpaquePointer] = [:]
+  private var current: GameEngine.CursorHint = .none
+  private let defaultCursor = SDL_GetDefaultCursor()
+
+  init(cursorsDirectory: URL) {
+    let files: [(GameEngine.CursorHint, String)] = [
+      (.grabbing, "cursor-grabbing.png"),
+      (.grabEither, "cursor-grab-either.png"),
+      (.grabUpward, "cursor-grab-upward.png"),
+      (.grabDownward, "cursor-grab-downward.png"),
+      (.grab, "cursor-grab.png"),
+    ]
+    for (hint, filename) in files {
+      let url = cursorsDirectory.appendingPathComponent(filename)
+      guard let surface = IMG_Load(url.path) else { continue }
+      defer { SDL_DestroySurface(surface) }
+      guard let cursor = SDL_CreateColorCursor(surface, 8, 8) else { continue }
+      cursors[hint] = cursor
+    }
+  }
+
+  func apply(_ hint: GameEngine.CursorHint) {
+    guard hint != current else { return }
+    current = hint
+    if let cursor = cursors[hint] {
+      SDL_SetCursor(cursor)
+    } else if let defaultCursor {
+      SDL_SetCursor(defaultCursor)
+    }
+  }
+}
+let cursorSet = CursorSet(
+  cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
 
 // MARK: - Rendering
 
@@ -385,6 +438,7 @@ while running {
   }
 
   updateCamera()
+  cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
   render()
   SDL_Delay(1)
 }
