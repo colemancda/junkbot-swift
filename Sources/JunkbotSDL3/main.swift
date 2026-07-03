@@ -149,9 +149,17 @@ guard SDL_Init(SDL_INIT_VIDEO) else {
 }
 defer { SDL_Quit() }
 
-let windowWidth: Int32 = 900
-let windowHeight: Int32 = 675
-guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, 0) else {
+// Load the first level before creating the window, so the window's default size can match its
+// actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The window
+// stays resizable afterward for levels of other sizes (see SDL_EVENT_WINDOW_RESIZED below).
+gameEngine.loadLevel(fromText: readLevelText(at: levelSequence[currentLevelIndex].url) ?? "")
+var windowWidth: Int32 = gameEngine.levelBounds.map { $0.width } ?? 900
+var windowHeight: Int32 = gameEngine.levelBounds.map { $0.height } ?? 675
+// SDL_WINDOW_RESIZABLE's macro (SDL_UINT64_C(...)) doesn't import into Swift - its raw value
+// (SDL_video.h) is 0x0000000000000020.
+let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020
+guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, windowResizableFlag)
+else {
   FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
   exit(1)
 }
@@ -202,6 +210,10 @@ final class TextureCache {
       guard let surface = IMG_Load(url.path) else { continue }
       defer { SDL_DestroySurface(surface) }
       guard let texture = SDL_CreateTextureFromSurface(renderer, surface) else { continue }
+      // SDL3 defaults new textures to linear filtering, which blurs pixel art whenever a
+      // sprite isn't drawn at exact 1:1 scale (i.e. almost always, given camera zoom/offset).
+      // The JS canvas path sets `ctx.imageSmoothingEnabled = false` for the same reason.
+      _ = SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST)
       textures[spriteID] = texture
       return texture
     }
@@ -344,6 +356,12 @@ while running {
       handleMouseUp(x: event.button.x, y: event.button.y)
     case SDL_EVENT_MOUSE_MOTION.rawValue:
       handleMouseMove(x: event.motion.x, y: event.motion.y)
+    case SDL_EVENT_WINDOW_RESIZED.rawValue:
+      // Mirrors the JS frontend's canvas resizing to fill the browser window (src/game.js's
+      // `innerWidth`/`innerHeight` resize check) - the camera/viewport math above already
+      // reads `windowWidth`/`windowHeight` as plain vars, so updating them here is enough.
+      windowWidth = event.window.data1
+      windowHeight = event.window.data2
     default:
       break
     }
