@@ -178,9 +178,13 @@ let touchMouseID: UInt32 = .max
   SDL_WarpMouseInWindow(window, lastMouseScreenX, lastMouseScreenY)
 }
 
-/// Activates the focused menu button if any; otherwise (gameplay/title with a controller)
-/// synthesizes a mouse press/release at the cursor so A grabs/releases bricks with the exact
-/// mouse semantics (drag direction resolution, canRelease-gated drops, toast dismissal).
+/// Activates the focused menu button if any; otherwise, hit-tests `menuButtons` at the cursor
+/// position (mirroring `SDL_EVENT_MOUSE_BUTTON_DOWN`'s handling in main.swift) so a virtual-
+/// cursor click on a button (stick-driven, no d-pad focus set - e.g. the title screen's
+/// Play/Credits buttons) actually activates it instead of falling through to a world click;
+/// only once neither of those applies does A synthesize a mouse press/release at the cursor so
+/// it can grab/release a brick with the exact mouse semantics (drag direction resolution,
+/// canRelease-gated drops, toast dismissal).
 @MainActor func activatePressed() {
   if levelToastUntil != nil {
     dismissLevelToast()
@@ -189,6 +193,9 @@ let touchMouseID: UInt32 = .max
   if let index = focusedButtonIndex, index < menuButtons.count {
     menuButtons[index].action()
     focusedButtonIndex = nil
+    return
+  }
+  if handleClick(menuButtons, at: lastMouseScreenX, y: lastMouseScreenY) {
     return
   }
   if screenOwnsWorldInput() {
