@@ -205,6 +205,31 @@ extension GameEngine {
     return connectsCeiling != connectsFloor
   }
 
+  // MARK: - Cursor hint
+
+  /// Which grab-cursor graphic to show, mirroring `src/game.js`'s `render()` cursor-selection
+  /// chain (`canvas.style.cursor = ...`) for the play-mode (non-`editing`) case. Hosts that draw
+  /// their own cursor (e.g. JunkbotSDL3) call this every frame with the current mouse position.
+  public enum CursorHint: Equatable {
+    case none
+    case grabbing
+    case grabEither
+    case grabUpward
+    case grabDownward
+    case grab
+  }
+
+  public func cursorHint(worldX: Int32, worldY: Int32) -> CursorHint {
+    if paused { return .none }
+    if isDragging { return .grabbing }
+    guard let first = possibleGrabsAt(worldX: worldX, worldY: worldY).first else { return .none }
+    let (canDown, _, canUp, _) = possibleGrabsInDirections(startIndex: first)
+    if canDown && canUp { return .grabEither }
+    if canUp { return .grabUpward }
+    if canDown { return .grabDownward }
+    return .none
+  }
+
   /// Rounds `value` to the nearest multiple of `grid`, rounding up on exact ties.
   func snapToGrid(_ value: Int32, _ grid: Int32) -> Int32 {
     let r = value % grid
