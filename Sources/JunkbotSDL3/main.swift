@@ -90,8 +90,11 @@ gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
 var windowWidth: Int32 = gameEngine.levelBounds.map { $0.width } ?? 900
 var windowHeight: Int32 = gameEngine.levelBounds.map { $0.height } ?? 675
 // SDL_WINDOW_RESIZABLE's macro (SDL_UINT64_C(...)) doesn't import into Swift - its raw value
-// (SDL_video.h) is 0x0000000000000020.
-let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020
+// (SDL_video.h) is 0x0000000000000020. SDL_WINDOW_HIGH_PIXEL_DENSITY (0x2000) requests a
+// backing buffer that matches the display's real pixel density (e.g. 2x on Retina) instead of
+// a 1x buffer the OS then has to upscale/blur to fill the screen - without it, everything
+// rendered looks visibly softer than the original (non-Retina-aware) Director/Flash build.
+let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020 | 0x0000_0000_0000_2000
 // Plain top-level `let`s (not `guard let`) so `window`/`renderer` are true module-level symbols
 // visible from other files (Screens.swift, TextRenderer.swift, etc.) - a `guard let` binding at
 // main.swift's top level only stays in scope for the rest of *this* file.
@@ -113,6 +116,14 @@ let renderer: OpaquePointer = {
   return renderer
 }()
 defer { SDL_DestroyRenderer(renderer) }
+
+// With SDL_WINDOW_HIGH_PIXEL_DENSITY, the renderer's actual output is in real device pixels
+// (e.g. 2x on Retina) while every draw call in this codebase is written in window points -
+// logical presentation makes SDL scale points -> device pixels automatically so all existing
+// coordinate math keeps working, but now renders at full display resolution instead of a 1x
+// buffer the OS then has to blurrily upscale.
+_ = SDL_SetRenderLogicalPresentation(
+  renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX)
 
 // MARK: - Sprite loading
 
@@ -777,6 +788,10 @@ while running {
       // reads `windowWidth`/`windowHeight` as plain vars, so updating them here is enough.
       windowWidth = event.window.data1
       windowHeight = event.window.data2
+      // Keep logical presentation's logical size in lockstep with the window's point size -
+      // it doesn't track resizes automatically.
+      _ = SDL_SetRenderLogicalPresentation(
+        renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX)
     default:
       break
     }
