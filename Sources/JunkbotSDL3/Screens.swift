@@ -30,8 +30,27 @@ enum Screen: Equatable {
 @MainActor var currentGame: LevelCatalog.Game = .junkbot
 @MainActor var currentLevelEntry: LevelCatalogEntry?
 /// Rebuilt whenever `currentScreen` changes; hit-tested by the main loop's mouse-down handler
-/// (before world drag input, since menu buttons sit visually on top of the world).
-@MainActor var menuButtons: [Button] = []
+/// (before world drag input, since menu buttons sit visually on top of the world). Rebuilding
+/// clears keyboard/d-pad focus (the old index would point at a different screen's buttons).
+@MainActor var menuButtons: [Button] = [] {
+  didSet { focusedButtonIndex = nil }
+}
+
+/// Draws a focus ring around the keyboard/d-pad-focused button, on top of whatever the active
+/// screen drew - one universal indicator instead of per-screen focus styling, so every screen
+/// (title, level select rows/tabs, dialogs) gets it for free.
+@MainActor func drawFocusRing() {
+  guard let index = focusedButtonIndex, index < menuButtons.count else { return }
+  let button = menuButtons[index]
+  var outer = SDL_FRect(
+    x: button.x - 2, y: button.y - 2, w: button.width + 4, h: button.height + 4)
+  var inner = SDL_FRect(
+    x: button.x - 1, y: button.y - 1, w: button.width + 2, h: button.height + 2)
+  _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
+  _ = SDL_RenderRect(renderer, &outer)
+  _ = SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255)
+  _ = SDL_RenderRect(renderer, &inner)
+}
 /// Last mouse position in *screen* space (window pixels), tracked on every screen (unlike
 /// `lastMouseWorldX/Y`, which only updates on world-input screens) - drives the level-select
 /// row rollover highlight, mirroring `behavior_ListRoHiLite.ls`'s `mouseWithin`.

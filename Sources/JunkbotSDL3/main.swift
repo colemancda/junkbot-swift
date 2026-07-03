@@ -77,7 +77,7 @@ let cameraScale: Double = 1
 
 // MARK: - SDL setup
 
-guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) else {
+guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD) else {
   FileHandle.standardError.write(Data("SDL_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
   exit(1)
 }
@@ -559,6 +559,7 @@ var renderFrame = RenderFrame()
     renderWorld(editing: false)
     drawDialogOverlay()
   }
+  drawFocusRing()
 
   SDL_RenderPresent(renderer)
 }
@@ -579,6 +580,33 @@ var lastTickTime = SDL_GetTicksNS()
 @MainActor func screenOwnsWorldInput() -> Bool {
   currentScreen == .title || currentScreen == .playing
 }
+
+/// Backs out one screen: gameplay (or its win/lose dialog) -> level select at the current
+/// level's page, level select -> title. The HTML5 build has no Escape binding (its "Select
+/// Level" is a DOM button); this is the native equivalent, shared by the Escape key and the
+/// gamepad's Start button.
+@MainActor func escapePressed() {
+  switch currentScreen {
+  case .playing, .levelWinDialog, .levelLoseDialog:
+    soundBoard.play(MenuSoundID.buttonClick)
+    dismissLevelToast()
+    if let entry = currentLevelEntry,
+      let location = levelCatalog.location(ofLevelTitled: entry.title, game: currentGame)
+    {
+      showLevelSelectScreen(game: currentGame, page: location.page)
+    } else {
+      showLevelSelectScreen(game: currentGame, page: 0)
+    }
+  case .levelSelect:
+    soundBoard.play(MenuSoundID.buttonClick)
+    showTitleScreen()
+  case .title:
+    break
+  }
+}
+
+let gamepadState = GamepadState()
+var lastFrameTime = SDL_GetTicksNS()
 
 var running = true
 while running {
@@ -606,33 +634,60 @@ while running {
         handleMouseUp(x: event.button.x, y: event.button.y)
       }
     case SDL_EVENT_KEY_DOWN.rawValue:
-      // Escape backs out one screen: gameplay (or its win/lose dialog) -> level select at the
-      // current level's page, level select -> title. The HTML5 build has no Escape binding
-      // (its "Select Level" is a DOM button); this is the native keyboard equivalent.
-      if event.key.key == SDLK_ESCAPE {
-        switch currentScreen {
-        case .playing, .levelWinDialog, .levelLoseDialog:
-          soundBoard.play(MenuSoundID.buttonClick)
-          dismissLevelToast()
-          if let entry = currentLevelEntry,
-            let location = levelCatalog.location(ofLevelTitled: entry.title, game: currentGame)
-          {
-            showLevelSelectScreen(game: currentGame, page: location.page)
-          } else {
-            showLevelSelectScreen(game: currentGame, page: 0)
-          }
-        case .levelSelect:
-          soundBoard.play(MenuSoundID.buttonClick)
-          showTitleScreen()
-        case .title:
-          break
-        }
+      switch event.key.key {
+      case SDLK_ESCAPE:
+        escapePressed()
+      case SDLK_UP, SDLK_LEFT:
+        moveFocus(-1)
+      case SDLK_DOWN, SDLK_RIGHT:
+        moveFocus(1)
+      case SDLK_RETURN, SDLK_SPACE:
+        activatePressed()
+      default:
+        break
+      }
+    case SDL_EVENT_KEY_UP.rawValue:
+      if event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE {
+        activateReleased()
       }
     case SDL_EVENT_MOUSE_MOTION.rawValue:
       lastMouseScreenX = event.motion.x
       lastMouseScreenY = event.motion.y
+      // Touch-synthesized mouse events carry SDL_TOUCH_MOUSEID; real mouse motion takes over
+      // hover from keyboard/d-pad focus and re-shows a touch-hidden cursor. Warped (gamepad)
+      // motion also lands here but notePointingInput(.gamepad) already ran in pollSticks.
+      if event.motion.which == touchMouseID {
+        notePointingInput(.touch)
+      } else if lastPointingInput != .gamepad {
+        notePointingInput(.mouse)
+        focusedButtonIndex = nil
+      }
       if screenOwnsWorldInput() {
         handleMouseMove(x: event.motion.x, y: event.motion.y)
+      }
+    case SDL_EVENT_FINGER_DOWN.rawValue, SDL_EVENT_FINGER_MOTION.rawValue:
+      notePointingInput(.touch)
+    case SDL_EVENT_GAMEPAD_ADDED.rawValue:
+      gamepadState.handleAdded(event.gdevice.which)
+    case SDL_EVENT_GAMEPAD_REMOVED.rawValue:
+      gamepadState.handleRemoved(event.gdevice.which)
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN.rawValue:
+      notePointingInput(.gamepad)
+      switch SDL_GamepadButton(Int32(event.gbutton.button)) {
+      case SDL_GAMEPAD_BUTTON_SOUTH:  // A
+        activatePressed()
+      case SDL_GAMEPAD_BUTTON_START:
+        escapePressed()
+      case SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+        moveFocus(-1)
+      case SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+        moveFocus(1)
+      default:
+        break
+      }
+    case SDL_EVENT_GAMEPAD_BUTTON_UP.rawValue:
+      if SDL_GamepadButton(Int32(event.gbutton.button)) == SDL_GAMEPAD_BUTTON_SOUTH {
+        activateReleased()
       }
     case SDL_EVENT_WINDOW_RESIZED.rawValue:
       // Mirrors the JS frontend's canvas resizing to fill the browser window (src/game.js's
@@ -646,6 +701,8 @@ while running {
   }
 
   let now = SDL_GetTicksNS()
+  gamepadState.pollSticks(deltaSeconds: Float(now - lastFrameTime) / 1_000_000_000)
+  lastFrameTime = now
   if let toastUntil = levelToastUntil, now >= toastUntil {
     dismissLevelToast()
   }
