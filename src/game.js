@@ -5189,6 +5189,15 @@ const runTests = async () => {
 				}
 			});
 			checkTestEnd();
+			if (won || lost) {
+				// Stop advancing once the level has reached a terminal result - GameEngine's
+				// winLoseState now latches the same way (see Simulation.swift's simulate()), matching
+				// the original Lingo's one-shot win/lose event model. Without this break, further
+				// ticks could still run and flip won/lost the other way (e.g. a hazard killing
+				// Junkbot after he'd already collected the last bin), which is exactly the "both won
+				// and lost" bug this mirrors on the engine side.
+				break;
+			}
 			if (paused) {
 				if (editing) {
 					stopTests();
