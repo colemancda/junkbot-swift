@@ -218,7 +218,7 @@ extension GameEngine {
 
     if junkbot.losingShield {
       junkbot.losingShieldTime += 1
-      if junkbot.losingShieldTime > 36 {
+      if junkbot.losingShieldTime > SHIELD_DECAY_TICKS {
         junkbot.armored = false
         junkbot.losingShield = false
         junkbot.losingShieldTime = 0
@@ -342,13 +342,16 @@ extension GameEngine {
             entityX: junkbot.x + junkbot.facing * CELL_W, entityY: junkbot.y,
             entityIndex: index, filter: isNotDroplet) != nil
         if !aheadBlocked {
-          if let jbIdx = entities.firstIndex(where: { $0.id == jb.id }), !entities[jbIdx].active {
+          if let jbIdx = entities.firstIndex(where: { $0.id == jb.id }),
+            entities[jbIdx].timer <= 0
+          {
             junkbot.animationFrame = 0
             junkbot.momentumY = -3
             junkbot.momentumX = junkbot.facing * 5
             playSound(.jump)
             entities[jbIdx].active = true
             entities[jbIdx].animationFrame = 0
+            entities[jbIdx].timer = JUMP_COOLDOWN_TICKS
           }
         }
       }
@@ -414,13 +417,14 @@ extension GameEngine {
             entities[i].used = true
             playSound(.getShield)
             playSound(.getPowerup)
-          case .jump where !ground.active:
+          case .jump where ground.timer <= 0:
             junkbot.animationFrame = 0
             junkbot.momentumY = -3
             junkbot.momentumX = junkbot.facing * 5
             playSound(.jump)
             entities[i].active = true
             entities[i].animationFrame = 0
+            entities[i].timer = JUMP_COOLDOWN_TICKS
           case .teleport where ground.timer == 0 && junkbot.x == ground.x + CELL_W:
             let linkedIdx = findLinkedTeleportIndex(for: i)
             if linkedIdx >= 0 && !entities[linkedIdx].blocked {
@@ -628,7 +632,7 @@ extension GameEngine {
         if let entity = hit.entity, entity.type == .junkbot {
           entities[index].facing = dirX
           entities[index].facingY = dirY
-          entities[index].activeTimer = 110
+          entities[index].activeTimer = EYEBOT_LOCK_TICKS
         }
       }
     }
@@ -749,9 +753,13 @@ extension GameEngine {
 
   // MARK: - Simulate Jump block
 
-  /// Plays out the jump brick at `index`'s launch animation, then clears `active` (taking it off
-  /// cooldown) once it finishes.
+  /// Plays out the jump brick at `index`'s launch animation (clearing the `active` visual state
+  /// once it finishes) and counts down its separate re-launch cooldown `timer` - the original's
+  /// `last_jump` 1-second lockout (`JUMP_COOLDOWN_TICKS`) outlasts the 5-tick launch animation,
+  /// so `active` alone (the pre-fix gate) re-armed the brick ~3.6x too soon, allowing rapid
+  /// bounce chains the original prevented.
   func simulateJump(index: Int) {
+    if entities[index].timer > 0 { entities[index].timer -= 1 }
     entities[index].animationFrame += 1
     if entities[index].animationFrame >= 5 {
       entities[index].animationFrame = 0
