@@ -605,6 +605,29 @@ while running {
       if screenOwnsWorldInput() {
         handleMouseUp(x: event.button.x, y: event.button.y)
       }
+    case SDL_EVENT_KEY_DOWN.rawValue:
+      // Escape backs out one screen: gameplay (or its win/lose dialog) -> level select at the
+      // current level's page, level select -> title. The HTML5 build has no Escape binding
+      // (its "Select Level" is a DOM button); this is the native keyboard equivalent.
+      if event.key.key == SDLK_ESCAPE {
+        switch currentScreen {
+        case .playing, .levelWinDialog, .levelLoseDialog:
+          soundBoard.play(MenuSoundID.buttonClick)
+          dismissLevelToast()
+          if let entry = currentLevelEntry,
+            let location = levelCatalog.location(ofLevelTitled: entry.title, game: currentGame)
+          {
+            showLevelSelectScreen(game: currentGame, page: location.page)
+          } else {
+            showLevelSelectScreen(game: currentGame, page: 0)
+          }
+        case .levelSelect:
+          soundBoard.play(MenuSoundID.buttonClick)
+          showTitleScreen()
+        case .title:
+          break
+        }
+      }
     case SDL_EVENT_MOUSE_MOTION.rawValue:
       lastMouseScreenX = event.motion.x
       lastMouseScreenY = event.motion.y

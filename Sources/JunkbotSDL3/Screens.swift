@@ -90,7 +90,7 @@ func loadSaveData() -> SaveData {
 }
 
 @MainActor func drawMenuTexture(
-  _ name: String, x: Float, y: Float, alphaPercent: Int32 = 100
+  _ name: String, x: Float, y: Float, alphaPercent: Int32 = 100, scale: Float = 1
 ) {
   guard let texture = menuTexture(name) else { return }
   var w: Float = 0
@@ -99,7 +99,7 @@ func loadSaveData() -> SaveData {
   if alphaPercent < 100 {
     _ = SDL_SetTextureAlphaMod(texture, UInt8(max(0, min(100, alphaPercent)) * 255 / 100))
   }
-  var dst = SDL_FRect(x: x, y: y, w: w, h: h)
+  var dst = SDL_FRect(x: x, y: y, w: w * scale, h: h * scale)
   _ = SDL_RenderTexture(renderer, texture, nil, &dst)
   if alphaPercent < 100 {
     _ = SDL_SetTextureAlphaMod(texture, 255)
@@ -555,7 +555,8 @@ let loseMessages = [
     }
     if let entry = currentLevelEntry, let par = entry.par {
       if saveData.isGold(levelTitle: entry.title, par: par) {
-        drawMenuTexture("gold_award", x: panelX + panelW - 76, y: panelY + 40)
+        // gold_award.png is 165x222 - scaled to fit inside the panel's right side.
+        drawMenuTexture("gold_award", x: panelX + panelW - 96, y: panelY + 36, scale: 0.45)
       } else {
         // behavior_msgBox_Success.ls's msgbox_3 hint text.
         textRenderer.draw(
