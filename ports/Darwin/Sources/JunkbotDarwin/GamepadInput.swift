@@ -217,7 +217,12 @@ func showOSCursor() {
       case .leftArrow: directionPressed(dx: -1, dy: 0, menuDelta: -1)
       case .rightArrow: directionPressed(dx: 1, dy: 0, menuDelta: 1)
       case .spacebar, .returnOrEnter: activatePressed()
+      #if !os(macOS)
+      // On macOS, Escape is handled by a dedicated `NSEvent` monitor in `AppDelegate_macOS.swift`
+      // instead - `GCKeyboard` doesn't reliably report the Escape key there. Kept here for
+      // iOS/tvOS hardware keyboards, where no such issue is known.
       case .escape: escapePressed()
+      #endif
       default: break
       }
     }

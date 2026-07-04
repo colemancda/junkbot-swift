@@ -42,6 +42,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     view.presentScene(scene)
     window.contentView = view
     window.makeKeyAndOrderFront(nil)
+
+    // `GamepadInput.swift`'s `GCKeyboard`-routed keyDown handling (shared with iOS/tvOS) covers
+    // arrows/space/return fine, but `GCKeyboard` on macOS does not reliably report the Escape key
+    // - it's reserved/intercepted below the level GameController's HID monitoring sees. A local
+    // `NSEvent` monitor (guaranteed to see every keyDown while this app is key, independent of
+    // GameController) is the standard macOS-side workaround; `GamepadInput.swift`'s own `.escape`
+    // case is compiled out on macOS (`#if !os(macOS)`) to avoid a double-fire if that ever changes.
+    NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+      guard event.keyCode == 53 /* kVK_Escape */ else { return event }
+      Task { @MainActor in escapePressed() }
+      return nil
+    }
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
