@@ -1,5 +1,5 @@
 {
-  "originHash" : "ffaee89c95dabe2bce2ddb587803a4f3ba27e8bc3f06095a94c0c2b80d973f81",
+  "originHash" : "53b0f4c5a98c4fa9b0bb314ab547522a8c867edfc21570dd353f58fb4a1e70a0",
   "pins" : [
     {
       "identity" : "sdl",
@@ -8,42 +8,6 @@
       "state" : {
         "revision" : "7d2a624c6881925d845052501817f630b13da623",
         "version" : "3.1.0"
-      }
-    },
-    {
-      "identity" : "swift-argument-parser",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-argument-parser",
-      "state" : {
-        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
-        "version" : "1.8.2"
-      }
-    },
-    {
-      "identity" : "swift-binary-parsing",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-binary-parsing",
-      "state" : {
-        "revision" : "2655f40f579c686d44687ac4fed54c73c3c4be2e",
-        "version" : "0.0.2"
-      }
-    },
-    {
-      "identity" : "swift-lingo",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/MillerTechnologyPeru/swift-lingo.git",
-      "state" : {
-        "branch" : "master",
-        "revision" : "9480b0dfb60403273506c9ed6bbf1c02349f2804"
-      }
-    },
-    {
-      "identity" : "swift-syntax",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
-      "state" : {
-        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
-        "version" : "602.0.0"
       }
     }
   ],

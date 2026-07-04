@@ -233,10 +233,11 @@ Confirmed working end-to-end (`** BUILD SUCCEEDED **`, real `JunkbotMobile.app` 
   and transcoded `TranscodedAudio/` under `Contents/Resources/`) - this remains the one platform
   buildable/runnable without any extra platform download in this sandbox. **iOS is now fully
   build-verified** here too (see "The iOS Playground" above) - a previously-noted concern about
-  `swift-lingo`'s `LingoAST` target failing to compile for the iOS Simulator SDK ("concurrency is
-  only available in iOS 13.0.0 or newer") turned out not to reproduce against the current
-  `JunkbotMobile.swiftpm` (`platforms: [.iOS("26.0")]`, well above whatever old deployment target
-  the original iOS Xcode target used when that issue was last seen) - the build now succeeds
+  the (now-removed) `swift-lingo` dependency's `LingoAST` target failing to compile for the iOS
+  Simulator SDK ("concurrency is only available in iOS 13.0.0 or newer") turned out not to
+  reproduce against the current `JunkbotMobile.swiftpm` (`platforms: [.iOS("26.0")]`, well above
+  whatever old deployment target the original iOS Xcode target used when that issue was last
+  seen) even before `JunkbotCore` dropped the dependency entirely - the build now succeeds
   cleanly with no workaround needed.
 - **Gamepad/keyboard input and audio are implemented but not verified on real hardware** in this
   sandbox (no controller/keyboard peripheral or audio output to test against) - see "Audio" and
@@ -264,9 +265,9 @@ open Junkbot.xcodeproj              # macOS + tvOS
 open JunkbotMobile.swiftpm      # iOS (Xcode or Swift Playgrounds)
 ```
 
-Xcode will resolve the local `JunkbotCore` package dependency automatically in both cases. You'll
-be prompted once to trust `swift-lingo`'s build tool plugin (`LingoTranspilerPlugin`) - approve
-it, this is expected and not a security concern specific to this project. (From the command
-line, pass `-skipPackagePluginValidation` to `xcodebuild` to bypass the one-time interactive
-prompt - only relevant to `Junkbot.xcodeproj`, since `JunkbotMobile.swiftpm` isn't drivable
-via `xcodebuild` at all, see above.)
+Xcode will resolve the local `JunkbotCore` package dependency automatically in both cases. From
+the command line, both `Junkbot.xcodeproj` and `JunkbotMobile.swiftpm` (see "The iOS Playground"
+above for why the latter works despite being an App Playground, not an ordinary Xcode project)
+can be built with `xcodebuild ... -skipPackagePluginValidation` - `JunkbotCore` no longer depends
+on any build-tool plugin itself (the Lingo-to-Swift transpiler it used to use was removed), but
+the flag is still harmless to pass and matches the CI invocations in `.github/workflows/swift.yml`.
