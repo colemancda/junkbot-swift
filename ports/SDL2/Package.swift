@@ -5,7 +5,9 @@ let package = Package(
   name: "JunkbotSDL2Port",
   platforms: [.macOS(.v14)],
   dependencies: [
-    .package(path: "../.."),
+    // Explicit `name:` so the identity stays "junkbot-swift" even when the repo checkout
+    // directory is named something else (e.g. a git worktree).
+    .package(name: "junkbot-swift", path: "../.."),
     // 3.1.0 added `SDLEvent`/`SDLGamepad`/`SDLCursor` plus `SDL2Image`/`SDL2Mixer` products (SDL_image/
     // SDL_mixer wrappers) - this project uses the Swift wrapper types throughout instead of
     // raw `SDL_*`/`IMG_*`/`Mix_*` calls.

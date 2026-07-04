@@ -80,7 +80,7 @@ var cameraCenterX: Double = 0
 var cameraCenterY: Double = 0
 let cameraScale: Double = 1
 
-@MainActor func updateCamera() {
+@GameActor func updateCamera() {
   guard let junkbot = gameEngine.entities.first(where: { $0.type == .junkbot }) else { return }
   var targetX = Double(junkbot.x) + Double(junkbot.width) / 2
   var targetY = Double(junkbot.y) + Double(junkbot.height) / 2
@@ -171,14 +171,14 @@ let gameRenderer: GameRenderer = SDL2Renderer(renderer: renderer)
 /// top-left corner). Every mouse-event handler must convert through this before using a
 /// position for hit-testing or world math, since all of that math is written in render-space
 /// (`windowWidth`/`windowHeight`) units.
-@MainActor func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+@GameActor func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
   gameRenderer.windowToRender(x: x, y: y)
 }
 
 /// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor (which takes
 /// window-space coordinates) from a render-space position (`lastMouseScreenX/Y`, gamepad
 /// stick/d-pad nudge math).
-@MainActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+@GameActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
   gameRenderer.renderToWindow(x: x, y: y)
 }
 

@@ -8,10 +8,10 @@ import JunkbotCore
 /// Last known mouse position in world space, kept up to date by every mouse event so the cursor
 /// (updated once per frame in the main loop, not per-event) always reflects the current hover
 /// target even on frames with no new mouse event.
-@MainActor var lastMouseWorldX: Int32 = 0
-@MainActor var lastMouseWorldY: Int32 = 0
+@GameActor var lastMouseWorldX: Int32 = 0
+@GameActor var lastMouseWorldY: Int32 = 0
 
-@MainActor func handleMouseDown(x: Float, y: Float) {
+@GameActor func handleMouseDown(x: Float, y: Float) {
   let world = gameEngine.canvasToWorld(
     canvasX: Double(x), canvasY: Double(y),
     centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
@@ -21,7 +21,7 @@ import JunkbotCore
   gameEngine.mouseDown(lastMouseWorldX, lastMouseWorldY)
 }
 
-@MainActor func handleMouseMove(x: Float, y: Float) {
+@GameActor func handleMouseMove(x: Float, y: Float) {
   let world = gameEngine.canvasToWorld(
     canvasX: Double(x), canvasY: Double(y),
     centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
@@ -31,7 +31,7 @@ import JunkbotCore
   gameEngine.mouseMove(lastMouseWorldX, lastMouseWorldY)
 }
 
-@MainActor func handleMouseUp(x: Float, y: Float) {
+@GameActor func handleMouseUp(x: Float, y: Float) {
   let world = gameEngine.canvasToWorld(
     canvasX: Double(x), canvasY: Double(y),
     centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,

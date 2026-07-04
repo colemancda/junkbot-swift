@@ -71,12 +71,12 @@ let gameEngine = GameEngine()
 /// `GameRender.swift`) draws through - see `Renderer.swift`. Unlike the SDL ports (where this is
 /// a `let` built immediately from an already-created `SDL_Renderer`), SpriteKit's scene/view
 /// aren't ready until `JunkbotScene.didMove(to:)` runs, so this starts nil and is assigned there.
-@MainActor var gameRenderer: GameRenderer!
+@GameActor var gameRenderer: GameRenderer!
 
 /// World-space camera center/scale - see the identical section in `ports/SDL3`'s `main.swift`.
-@MainActor var cameraCenterX: Double = 0
-@MainActor var cameraCenterY: Double = 0
-@MainActor var cameraScale: Double = 1
+@GameActor var cameraCenterX: Double = 0
+@GameActor var cameraCenterY: Double = 0
+@GameActor var cameraScale: Double = 1
 
 /// The scene's fixed logical size in points, read by every world/camera calculation the shared
 /// files perform - set once by whichever platform entry point (`AppDelegate_macOS.swift`/
@@ -84,10 +84,10 @@ let gameEngine = GameEngine()
 /// bounds, matching `ports/SDL3`'s own `windowWidth`/`windowHeight`), and never changed
 /// afterward: `.aspectFit` scales that fixed scene uniformly to fit however large the real
 /// window/screen is, rather than this tracking the window/device size directly.
-@MainActor var windowWidth: Int32 = 900
-@MainActor var windowHeight: Int32 = 675
+@GameActor var windowWidth: Int32 = 900
+@GameActor var windowHeight: Int32 = 675
 
-@MainActor func updateCamera() {
+@GameActor func updateCamera() {
   guard let junkbot = gameEngine.entities.first(where: { $0.type == .junkbot }) else { return }
   var targetX = Double(junkbot.x) + Double(junkbot.width) / 2
   var targetY = Double(junkbot.y) + Double(junkbot.height) / 2
@@ -114,8 +114,8 @@ let gameEngine = GameEngine()
 // `ports/SDL3`'s `Input.swift`. `focusedButtonIndex` (keyboard/d-pad menu focus index) is
 // declared in the shared, symlinked `MenuFocus.swift`, not here - actually driven by
 // `GamepadInput.swift`'s `GCController`/`GCKeyboard` handling.
-@MainActor var lastPointingInput: PointingInputKind = .mouse
-@MainActor var virtualCursorVisible = false
+@GameActor var lastPointingInput: PointingInputKind = .mouse
+@GameActor var virtualCursorVisible = false
 
 // MARK: - Audio
 //
@@ -123,12 +123,12 @@ let gameEngine = GameEngine()
 // `ports/SDL3`'s SDL3_mixer-backed versions) - just instantiated here, matching the identical
 // instantiation in `ports/SDL3`'s `main.swift`.
 
-@MainActor let soundBoard = SoundBoard(directory: transcodedSoundEffectsDirectory)
-@MainActor let musicPlayer = MusicPlayer(directory: transcodedMusicDirectory)
+@GameActor let soundBoard = SoundBoard(directory: transcodedSoundEffectsDirectory)
+@GameActor let musicPlayer = MusicPlayer(directory: transcodedMusicDirectory)
 
 /// Called once from `JunkbotScene.didMove(to:)` - top-level statements (as opposed to
 /// declarations) aren't allowed outside a file literally named `main.swift`, which this isn't
 /// (an app target's entry point is `@main`, not a script file).
-@MainActor func configureGameEngineCallbacks() {
+@GameActor func configureGameEngineCallbacks() {
   gameEngine.onPlaySound = { [soundBoard] id in soundBoard.play(id) }
 }

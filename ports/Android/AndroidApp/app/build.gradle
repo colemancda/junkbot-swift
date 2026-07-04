@@ -1,32 +1,65 @@
-// Not verified - see ../../README.md, particularly the "target type" gap: this assumes
-// ../../.build/.../libJunkbotSDL3.so gets built and copied into src/main/jniLibs/<abi>/ by some
-// external step (not implemented here) before this module's build runs.
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
+
+// app/ -> AndroidApp/ -> Android/ -> ports/ -> repo root
+def repoRoot = rootDir.parentFile.parentFile.parentFile
+def stagedAssetsDir = layout.buildDirectory.dir('stagedAssets').get().asFile
+def gameAssetDirs = ['images', 'font', 'levels', 'audio']
 
 android {
     namespace 'org.junkbot.game'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
-        applicationId "org.junkbot.game"
-        minSdk 24
-        targetSdk 34
+        applicationId 'org.junkbot.game'
+        // Matches the Swift build's android28 triple (ports/Android/Makefile API_LEVEL).
+        minSdk 28
+        targetSdk 36
         versionCode 1
-        versionName "0.0.1"
+        versionName '0.0.1'
     }
 
     sourceSets {
         main {
-            // Populated by copying the repo root's images/, font/, levels/, audio/ here before
-            // building - not automated by this Gradle file yet (see ../../README.md step 5).
-            assets.srcDirs = ['src/main/assets']
+            // Populated by `make jnilibs` (game .so + SDL prebuilts + Swift runtime).
             jniLibs.srcDirs = ['src/main/jniLibs']
+            // Populated by the stageGameAssets/writeAssetManifest tasks below.
+            assets.srcDirs += stagedAssetsDir
         }
     }
+}
 
-    packagingOptions {
-        // The Swift Android SDK's runtime libraries (libswiftCore.so etc.) ship alongside the
-        // app's own .so - avoid Gradle deduplication stripping needed copies per-ABI.
-        pickFirst '**/*.so'
+dependencies {
+    // SDL's Java glue (SDLActivity & friends), extracted from the official SDL3 Android .aar by
+    // ports/Android/scripts/fetch-sdl.sh.
+    implementation files('../../Vendor/java/SDL3-android.jar')
+}
+
+// Bundle the repo's game data into the APK under assets/gameassets/**, plus a
+// "path<TAB>bytes" manifest - Android's NDK AAssetDir API can't enumerate subdirectories, so
+// the Swift side (ports/Android/Sources/JunkbotAndroid/AndroidMain.swift) reads this manifest
+// to know what to extract to internal storage on first launch.
+tasks.register('stageGameAssets', Copy) {
+    into new File(stagedAssetsDir, 'gameassets')
+    gameAssetDirs.each { dir ->
+        from(new File(repoRoot, dir)) { into dir }
     }
 }
+
+tasks.register('writeAssetManifest') {
+    dependsOn 'stageGameAssets'
+    def baseDir = new File(stagedAssetsDir, 'gameassets')
+    def manifestFile = new File(stagedAssetsDir, 'gameassets.manifest')
+    outputs.file manifestFile
+    doLast {
+        def lines = new StringBuilder()
+        baseDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+            lines.append(baseDir.toPath().relativize(f.toPath()))
+                .append('\t').append(f.length()).append('\n')
+        }
+        manifestFile.text = lines.toString()
+    }
+}
+
+preBuild.dependsOn 'writeAssetManifest'
