@@ -54,12 +54,18 @@ final class SDL2Renderer: GameRenderer {
   }
 
   func fillRect(x: Float, y: Float, w: Float, h: Float, r: UInt8, g: UInt8, b: UInt8, a: UInt8) {
+    // SDL2's renderer draw blend mode defaults to `SDL_BLENDMODE_NONE`, which ignores the alpha
+    // channel entirely and draws fully opaque - unlike SDL3, which blends draw-color alpha by
+    // default. Without this, the win/lose dialog's semi-transparent black backdrop (and any
+    // other translucent fill/stroke) renders fully opaque, hiding the world behind it.
+    _ = SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND)
     _ = SDL_SetRenderDrawColor(sdlRenderer, r, g, b, a)
     var rect = SDL_FRect(x: x, y: y, w: w, h: h)
     _ = SDL_RenderFillRectF(sdlRenderer, &rect)
   }
 
   func strokeRect(x: Float, y: Float, w: Float, h: Float, r: UInt8, g: UInt8, b: UInt8, a: UInt8) {
+    _ = SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND)
     _ = SDL_SetRenderDrawColor(sdlRenderer, r, g, b, a)
     var rect = SDL_FRect(x: x, y: y, w: w, h: h)
     _ = SDL_RenderDrawRectF(sdlRenderer, &rect)
