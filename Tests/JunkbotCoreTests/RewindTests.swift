@@ -1,3 +1,10 @@
+// Rewind (GameEngine.swift's rewindBuffer/Undo.swift) is compiled only for the
+// Web/WASM host (`#if arch(wasm32)`) - no native port uses it, and snapshotting
+// every tick was measurable overhead on constrained targets (e.g. the
+// Nintendo DS port). `swift test` builds natively, so these tests only run in
+// an actual wasm32 build, not the default `swift test` here.
+#if arch(wasm32)
+
 import Testing
 
 @testable import JunkbotCore
@@ -80,3 +87,5 @@ struct RewindTests {
     engine.endRewind()
   }
 }
+
+#endif

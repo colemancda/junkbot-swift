@@ -62,6 +62,14 @@ public final class GameEngine: @unchecked Sendable {
   var mouseDownWorldY: Int32 = 0
 
   // MARK: - Undo / rewind (see Undo.swift)
+  //
+  // Only the Web/WASM host exposes undo/rewind (game.js's Ctrl+Z and hold-Shift
+  // scrub) - no native port's UI calls any of this API. Snapshotting the full
+  // entity array every tick for the rewind ring buffer is real per-frame cost
+  // (allocation + copy-on-write array copies), so it's compiled out entirely
+  // everywhere else - most visibly needed on the Nintendo DS port, which has
+  // no CPU or RAM to spare on a feature it never surfaces.
+  #if arch(wasm32)
   /// One `EngineSnapshot` per completed move, pushed just before each drag starts (mirroring the
   /// JS editor's `undoable()`, which also snapshots before the mutation). Unbounded, like the
   /// editor's own `undos` stack — a level has at most a few dozen moves, trivial memory.
@@ -73,6 +81,7 @@ public final class GameEngine: @unchecked Sendable {
   var rewindBuffer: [EngineSnapshot?] = Array(repeating: nil, count: 600)
   var isRewinding: Bool = false
   var wasPausedBeforeRewind: Bool = false
+  #endif
 
   // MARK: - Background layers (see RenderList.swift)
   /// Sprite ID of the level's backdrop image, `-1` if none/not yet provided. Set via
@@ -173,9 +182,11 @@ public final class GameEngine: @unchecked Sendable {
     levelTitle = ""
     levelHint = ""
     levelPar = Int.max
+    #if arch(wasm32)
     undoStack.removeAll(keepingCapacity: true)
     rewindBuffer = Array(repeating: nil, count: rewindBuffer.count)
     isRewinding = false
+    #endif
     backdropSpriteID = -1
     backgroundDecals.removeAll(keepingCapacity: true)
     decals.removeAll(keepingCapacity: true)
