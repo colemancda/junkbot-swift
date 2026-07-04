@@ -22,7 +22,7 @@ let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
 let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
 /// Where the `.caf`-transcoded audio assets live: written by `Scripts/transcode-audio.sh` at
 /// build time for the Xcode targets (macOS/tvOS Run Script build phases), or checked in directly
-/// under `JunkbotPlayground.swiftpm/Sources/JunkbotPlayground/TranscodedAudio/` for the iOS
+/// under `JunkbotMobile.swiftpm/Sources/JunkbotMobile/TranscodedAudio/` for the iOS
 /// Playground (SwiftPM plugins run sandboxed with no opt-out, and `afconvert` can't decode Ogg
 /// Vorbis from inside that sandbox, so this has to be transcoded manually ahead of time there
 /// instead - see that package's `Package.swift`) - see `Audio.swift`'s doc comment for why the

@@ -7,7 +7,7 @@ import UIKit
 /// (`GameViewController.swift`, shared with the tvOS Xcode target) in a
 /// `UIViewControllerRepresentable` rather than duplicating its SpriteKit setup.
 @main
-struct JunkbotPlaygroundApp: App {
+struct JunkbotMobileApp: App {
   var body: some Scene {
     WindowGroup {
       GameView()

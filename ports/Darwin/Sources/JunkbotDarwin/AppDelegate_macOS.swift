@@ -4,7 +4,7 @@ import SpriteKit
 
 /// macOS-only: creates the window/`SKView`/`JunkbotScene`. Not shared with iOS/tvOS - see
 /// `AppDelegate_tvOS.swift` for the UIKit equivalent (tvOS only now - iOS moved to
-/// `JunkbotPlayground.swiftpm`, see `ports/Darwin/README.md`).
+/// `JunkbotMobile.swiftpm`, see `ports/Darwin/README.md`).
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
   var window: NSWindow!

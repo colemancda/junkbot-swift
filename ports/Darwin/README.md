@@ -5,7 +5,7 @@ SpriteKit, not SDL3" below for how this replaced the port's original SDL3-on-App
 plan:
 
 - **`Junkbot.xcodeproj`** - `Junkbot-macOS` and `Junkbot-tvOS` app targets.
-- **`JunkbotPlayground.swiftpm`** - an iOS **App Playground** (opens in both Xcode 15+ and the
+- **`JunkbotMobile.swiftpm`** - an iOS **App Playground** (opens in both Xcode 15+ and the
   Swift Playgrounds app). iOS used to be a third Xcode target here (`Junkbot-iOS`) - moved out
   to its own Playground so it can be opened/run directly in Swift Playgrounds on iPad, not just
   Xcode. See "The iOS Playground" below.
@@ -14,7 +14,7 @@ plan:
 
 - **Shared with `ports/SDL3`/`ports/SDL2`** (file references pointing directly at
   `../SDL3/Sources/JunkbotSDL3/*.swift` in `Junkbot.xcodeproj`; symlinks in
-  `JunkbotPlayground.swiftpm`, the same technique `ports/SDL2` already uses to share files with
+  `JunkbotMobile.swiftpm`, the same technique `ports/SDL2` already uses to share files with
   `ports/SDL3`): `Screens.swift`, `TextRenderer.swift`, `GameRender.swift` (per-frame world/menu
   rendering - `renderWorld`/`render`/`VirtualCursor`/`TextureCache`), `GameInput.swift`
   (mouse/touch-to-world coordinate handling - `handleMouseDown/Move/Up`), `MenuFocus.swift`
@@ -22,13 +22,13 @@ plan:
   `activatePressed`/`activateReleased` - extracted from `ports/SDL3`'s `Input.swift` since none
   of it touches SDL/GameController directly). `Renderer.swift` (the `GameRenderer` protocol),
   `Color.swift`, and `Button.swift` moved into `Sources/JunkbotCore` itself (they had zero
-  SDL-specific imports) - both this project and `JunkbotPlayground.swiftpm` get them for free via
+  SDL-specific imports) - both this project and `JunkbotMobile.swiftpm` get them for free via
   `import JunkbotCore`, no file reference/symlink needed anymore. `main.swift`/`Input.swift` are
   **not** shared - both are genuinely SDL-specific (the blocking SDL event loop, raw SDL gamepad
   polling); Darwin has its own `GamepadInput.swift` instead (see below) providing the same
   `hideOSCursor`/`warpCursor`/`notePointingInput` seam `MenuFocus.swift` calls into.
 - **Darwin-only** (`Sources/JunkbotDarwin/`, shared between `Junkbot.xcodeproj` and
-  `JunkbotPlayground.swiftpm` via symlinks into the latter): `SpriteKitRenderer.swift` (the
+  `JunkbotMobile.swiftpm` via symlinks into the latter): `SpriteKitRenderer.swift` (the
   `GameRenderer` conformance - see below), `GameShell.swift` (the globals every shared file
   expects a port to provide: `repoRoot`, `gameEngine`, camera state, `levelCatalog` - the Darwin
   equivalent of the top of `ports/SDL3`'s `main.swift`), `Audio.swift` (real `SoundBoard`/
@@ -43,14 +43,14 @@ plan:
   above).
 - `images/`, `font/`, `levels/`: Xcode **folder references** (blue folders, preserving
   subdirectory nesting) in `Junkbot.xcodeproj`'s Copy Bundle Resources phase; plain symlinks into
-  `JunkbotPlayground.swiftpm/Sources/JunkbotPlayground/` declared as `resources:` in its
+  `JunkbotMobile.swiftpm/Sources/JunkbotMobile/` declared as `resources:` in its
   `Package.swift` (SwiftPM resource paths can't escape the target directory with `../`, unlike
   Xcode's folder references, so the symlinks have to live inside `Sources/` itself). Either way,
   `Bundle.main.resourceURL` (`GameShell.swift`'s `repoRoot`) sees the exact same layout the SDL
   ports read via plain paths. `audio/` is deliberately **not** bundled raw on Darwin - see
   "Audio" below.
 - `Junkbot.xcodeproj` uses a local Swift Package reference to the repo root, consuming the
-  `JunkbotCore` product. `JunkbotPlayground.swiftpm` instead picks its `JunkbotCore` dependency
+  `JunkbotCore` product. `JunkbotMobile.swiftpm` instead picks its `JunkbotCore` dependency
   conditionally in `Package.swift` based on `#if os(macOS)`: a local `path: "../.."` dependency
   when the manifest is parsed on a Mac (Xcode - edits to `Sources/JunkbotCore` show up
   immediately), or `.package(url: "https://github.com/colemancda/junkbot-swift.git", branch:
@@ -133,7 +133,7 @@ so audio is transcoded to Core Audio Format (`.caf`) instead of shipping a third
   *original* `audio` folder reference if one existed at the same path; the raw `audio` folder
   reference was removed from Copy Bundle Resources entirely once this landed, since only the
   transcoded `.caf` files are actually read at runtime.
-- `JunkbotPlayground.swiftpm`: originally used a `Plugins/TranscodeAudioPlugin` SwiftPM
+- `JunkbotMobile.swiftpm`: originally used a `Plugins/TranscodeAudioPlugin` SwiftPM
   build-tool plugin (`prebuildCommand`) to invoke the same script at build time - **removed**,
   since SwiftPM always runs plugins sandboxed with no opt-out, and `afconvert` cannot decode Ogg
   Vorbis from inside that sandbox (confirmed: the identical `afconvert` invocation that works
@@ -141,7 +141,7 @@ so audio is transcoded to Core Audio Format (`.caf`) instead of shipping a third
   file" when run from inside the plugin's subprocess; every `.ogg`-sourced sound was silently
   missing, only the handful of already-`.wav` ones transcoded successfully). Instead,
   `Scripts/transcode-audio.sh` is run manually once (whenever `audio/` changes) directly into
-  `Sources/JunkbotPlayground/TranscodedAudio/`, which is checked in as real files (not a symlink,
+  `Sources/JunkbotMobile/TranscodedAudio/`, which is checked in as real files (not a symlink,
   unlike `images`/`font`/`levels`) and declared as a plain `.copy(...)` resource in
   `Package.swift` - see that file's doc comment for the exact invocation.
 
@@ -184,7 +184,7 @@ behavior.
 
 ## The iOS Playground
 
-`JunkbotPlayground.swiftpm` is an "App Playground" - a plain SwiftPM package with a special
+`JunkbotMobile.swiftpm` is an "App Playground" - a plain SwiftPM package with a special
 `Package.swift` (`import AppleProductTypes`, a `.iOSApplication` product instead of a regular
 `.executable`/`.library`) that Xcode 15+ and the Swift Playgrounds app both know how to open and
 run as a full iOS app, no separate Xcode project needed. Structure:
@@ -194,10 +194,10 @@ run as a full iOS app, no separate Xcode project needed. Structure:
   `Junkbot-iOS` target's build setting), a `JunkbotCore` dependency that's a local `path:` on
   macOS or a GitHub `url:` everywhere else (see "What's shared vs. Darwin-only" above), and
   `resources:` pointing at the symlinked asset directories.
-- `Sources/JunkbotPlayground/JunkbotPlaygroundApp.swift` - the SwiftUI `@main App`/`Scene` entry
+- `Sources/JunkbotMobile/JunkbotMobileApp.swift` - the SwiftUI `@main App`/`Scene` entry
   point (App Playgrounds boot through SwiftUI, not a `UIApplicationDelegate`), wrapping the
   shared `GameViewController` in a `UIViewControllerRepresentable`.
-- Everything else in `Sources/JunkbotPlayground/` is a symlink into either
+- Everything else in `Sources/JunkbotMobile/` is a symlink into either
   `Sources/JunkbotDarwin/` or `../SDL3/Sources/JunkbotSDL3/` (see "What's shared vs. Darwin-only"
   above) plus the four symlinked asset directories.
 
@@ -205,8 +205,8 @@ run as a full iOS app, no separate Xcode project needed. Structure:
 itself: `AppleProductTypes` is a module Xcode's own toolchain injects specifically when opening a
 `.swiftpm` App Playground; it doesn't exist for plain command-line `swift build`/`swift package
 describe` (confirmed: both fail with "no such module 'AppleProductTypes'" here), and `xcodebuild
--project JunkbotPlayground.swiftpm` doesn't recognize the bundle as a project either (App
-Playgrounds are opened via `open JunkbotPlayground.swiftpm`/double-click, which routes through
+-project JunkbotMobile.swiftpm` doesn't recognize the bundle as a project either (App
+Playgrounds are opened via `open JunkbotMobile.swiftpm`/double-click, which routes through
 Xcode's dedicated App Playground project loader, not the ordinary `-project`/`-workspace`
 flags). The package's manifest and source layout were reviewed carefully against Apple's
 documented App Playground format, but an actual build/run needs a real Xcode session (or Swift
@@ -251,12 +251,12 @@ here: AppKit/UIKit windowing, and audio/gamepad are open follow-ups either way).
 
 ```
 open Junkbot.xcodeproj              # macOS + tvOS
-open JunkbotPlayground.swiftpm      # iOS (Xcode or Swift Playgrounds)
+open JunkbotMobile.swiftpm      # iOS (Xcode or Swift Playgrounds)
 ```
 
 Xcode will resolve the local `JunkbotCore` package dependency automatically in both cases. You'll
 be prompted once to trust `swift-lingo`'s build tool plugin (`LingoTranspilerPlugin`) - approve
 it, this is expected and not a security concern specific to this project. (From the command
 line, pass `-skipPackagePluginValidation` to `xcodebuild` to bypass the one-time interactive
-prompt - only relevant to `Junkbot.xcodeproj`, since `JunkbotPlayground.swiftpm` isn't drivable
+prompt - only relevant to `Junkbot.xcodeproj`, since `JunkbotMobile.swiftpm` isn't drivable
 via `xcodebuild` at all, see above.)

@@ -2,9 +2,9 @@
 import UIKit
 import SpriteKit
 
-/// tvOS-only entry point (the iOS target moved to `JunkbotPlayground.swiftpm`, an App
+/// tvOS-only entry point (the iOS target moved to `JunkbotMobile.swiftpm`, an App
 /// Playground, which boots through a SwiftUI `App` instead of a `UIApplicationDelegate` - see
-/// that package's `JunkbotPlaygroundApp.swift`). Both share the same `GameViewController`
+/// that package's `JunkbotMobileApp.swift`). Both share the same `GameViewController`
 /// (`GameViewController.swift`) that actually hosts the `SKView`/`JunkbotScene`; only the
 /// bootstrap differs. See `AppDelegate_macOS.swift` for the AppKit equivalent.
 @main

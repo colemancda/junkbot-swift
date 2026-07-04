@@ -6,7 +6,7 @@ import AppleProductTypes
 // the `Junkbot-iOS` Xcode target that used to live in `Junkbot.xcodeproj` (now macOS + tvOS
 // only). Shares `GameShell.swift`/`GameScene.swift`/`GameViewController.swift`/
 // `SpriteKitRenderer.swift`/`GamepadInput.swift`/`Audio.swift` with the Xcode project via
-// symlinks into `Sources/JunkbotPlayground` (the same technique `ports/SDL2` already uses to
+// symlinks into `Sources/JunkbotMobile` (the same technique `ports/SDL2` already uses to
 // share files with `ports/SDL3`), and `Screens.swift`/`TextRenderer.swift`/`MenuFocus.swift`/
 // `GameRender.swift`/`GameInput.swift` from `ports/SDL3` the same way (`Button`/`Renderer`/
 // `Color` live in `JunkbotCore` itself now, no file sharing needed for those - see
@@ -20,7 +20,7 @@ import AppleProductTypes
 // targets, which aren't plugin-sandboxed - fails with "Couldn't open input file" when invoked
 // from a plugin's subprocess). So the plugin's gone; `TranscodedAudio/` below is instead
 // transcoded once manually (`Scripts/transcode-audio.sh ../../audio/sound-effects
-// Sources/JunkbotPlayground/TranscodedAudio/sound-effects`, same for `music`) and checked in as
+// Sources/JunkbotMobile/TranscodedAudio/sound-effects`, same for `music`) and checked in as
 // real files - the one asset directory that isn't a symlinked, single-source-of-truth passthrough,
 // since re-running that script is a manual step whenever `audio/` changes, not automatic.
 //
@@ -32,7 +32,7 @@ import AppleProductTypes
 // *running* this manifest (Xcode's manifest-loader process vs. Swift Playgrounds' own on-device
 // one), not the platform being built for - so on macOS this points at the local checkout (edits
 // to `Sources/JunkbotCore` show up immediately), while everywhere else it falls back to fetching
-// `JunkbotCore` straight from GitHub so the Playground can resolve and build standalone.
+// `JunkbotCore` straight from GitHub so JunkbotMobile can resolve and build standalone.
 // (`#if` can't appear directly inside an array literal in a Package.swift manifest - SwiftPM's
 // manifest parser rejects it with "expected expression in container literal" - so this has to
 // build the array via a `var`/`.append` instead of a single `dependencies: [...]` literal.)
@@ -44,12 +44,12 @@ dependencies.append(.package(url: "https://github.com/colemancda/junkbot-swift.g
 #endif
 
 let package = Package(
-  name: "JunkbotPlayground",
+  name: "JunkbotMobile",
   platforms: [.iOS("26.0")],
   products: [
     .iOSApplication(
-      name: "JunkbotPlayground",
-      targets: ["JunkbotPlayground"],
+      name: "JunkbotMobile",
+      targets: ["JunkbotMobile"],
             bundleIdentifier: "com.colemancda.junkbot",
             teamIdentifier: "4W79SG34MW",
       displayVersion: "1.0",
@@ -68,14 +68,14 @@ let package = Package(
   dependencies: dependencies,
   targets: [
     .executableTarget(
-      name: "JunkbotPlayground",
+      name: "JunkbotMobile",
       dependencies: [
         .product(name: "JunkbotCore", package: "junkbot-swift")
       ],
       resources: [
         // Symlinks into the repo-root asset directories (single source of truth, same
         // principle every other port uses) - SwiftPM resource paths can't escape the target
-        // directory with `../`, so the symlinks live inside `Sources/JunkbotPlayground` itself.
+        // directory with `../`, so the symlinks live inside `Sources/JunkbotMobile` itself.
         .copy("images"),
         .copy("font"),
         .copy("levels"),
