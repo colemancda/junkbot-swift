@@ -79,3 +79,5 @@ node_modules/
 # VS Code
 .vscode/
 .claude/
+!/ports/Darwin/JunkbotMobile.swiftpm/.swiftpm/playgrounds/*
+

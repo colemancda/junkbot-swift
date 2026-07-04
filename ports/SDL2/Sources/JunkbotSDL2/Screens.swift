@@ -1,1 +1,1 @@
-../../../SDL3/Sources/JunkbotSDL3/Screens.swift
+../../../Darwin/JunkbotMobile.swiftpm/Sources/JunkbotMobile/Screens.swift

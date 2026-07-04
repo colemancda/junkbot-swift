@@ -114,7 +114,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		106800F781E5CA9539CAC647 /* Shared (ports/SDL3/Sources/JunkbotSDL3) */ = {
+		106800F781E5CA9539CAC647 /* Shared (JunkbotMobile.swiftpm/Sources/JunkbotMobile) */ = {
 			isa = PBXGroup;
 			children = (
 				E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */,
@@ -123,8 +123,8 @@
 				B01D4F1BF8AFC96EBF664693 /* GameInput.swift */,
 				4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */,
 			);
-			name = "Shared (ports/SDL3/Sources/JunkbotSDL3)";
-			path = ../SDL3/Sources/JunkbotSDL3;
+			name = "Shared (JunkbotMobile.swiftpm/Sources/JunkbotMobile)";
+			path = JunkbotMobile.swiftpm/Sources/JunkbotMobile;
 			sourceTree = "<group>";
 		};
 		2486A7DB54665249F9F8E492 /* Frameworks */ = {
