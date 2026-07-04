@@ -57,3 +57,65 @@ jobs:
               brew install skiptools/skip/skip || (brew update && brew install skiptools/skip/skip)
               skip android sdk install --version ${{ matrix.swift }}
               ANDROID_NDK_ROOT="" skip android build --arch ${{ matrix.arch }} --target JunkbotCore
+
+  linux-sdl2:
+    name: Linux (SDL2 port)
+    runs-on: ubuntu-latest
+    container: swift:6.3.2
+    strategy:
+      matrix:
+        config: ["debug"]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Swift Version
+      run: swift --version
+    - name: Install SDL2 dependencies
+      run: apt-get update -y && apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev pkg-config
+    - name: Build
+      run: swift build --package-path ports/SDL2 -c ${{ matrix.config }} --product JunkbotSDL2
+
+  macos-sdl2:
+    name: macOS (SDL2 port)
+    runs-on: macos-26
+    strategy:
+      matrix:
+        config: ["debug"]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Swift Version
+      run: swift --version
+    - name: Install SDL2 dependencies
+      run: brew install sdl2 sdl2_image sdl2_mixer
+    - name: Build
+      run: swift build --package-path ports/SDL2 -c ${{ matrix.config }} --product JunkbotSDL2
+
+  macos-sdl3:
+    name: macOS (SDL3 port)
+    runs-on: macos-26
+    strategy:
+      matrix:
+        config: ["debug"]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Swift Version
+      run: swift --version
+    - name: Install SDL3 dependencies
+      run: brew install sdl3 sdl3_image sdl3_mixer
+    - name: Build
+      run: swift build --package-path ports/SDL3 -c ${{ matrix.config }} --product JunkbotSDL3
+
+  macos-darwin:
+    name: macOS (Darwin Xcode port)
+    runs-on: macos-26
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Xcode Version
+      run: xcodebuild -version
+    - name: Build Junkbot-macOS
+      run: |
+        xcodebuild -project ports/Darwin/Junkbot.xcodeproj -scheme Junkbot-macOS \
+          -configuration Debug -skipPackagePluginValidation build
