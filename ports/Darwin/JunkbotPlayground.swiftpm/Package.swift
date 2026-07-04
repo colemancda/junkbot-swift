@@ -11,8 +11,18 @@ import AppleProductTypes
 // `GameRender.swift`/`GameInput.swift` from `ports/SDL3` the same way (`Button`/`Renderer`/
 // `Color` live in `JunkbotCore` itself now, no file sharing needed for those - see
 // `ports/Darwin/README.md`). Assets (`images`/`font`/`levels`) are symlinked from the repo root,
-// the same single-source-of-truth principle every other port uses; `audio` is transcoded to
-// `.caf` at build time by `TranscodeAudioPlugin` below instead of being bundled raw.
+// the same single-source-of-truth principle every other port uses. `audio` is the one exception:
+// it's mostly Ogg Vorbis, which `AVAudioPlayer` can't decode, so it needs transcoding to `.caf`
+// first - this used to happen at build time via a `TranscodeAudioPlugin` build-tool plugin, but
+// SwiftPM always runs plugins sandboxed with no opt-out, and `afconvert` cannot decode Ogg Vorbis
+// from inside that sandbox (confirmed: the exact same `afconvert -f caff -d LEI16@44100` command
+// that works fine unsandboxed - and via Xcode's own Run Script build phases for the macOS/tvOS
+// targets, which aren't plugin-sandboxed - fails with "Couldn't open input file" when invoked
+// from a plugin's subprocess). So the plugin's gone; `TranscodedAudio/` below is instead
+// transcoded once manually (`Scripts/transcode-audio.sh ../../audio/sound-effects
+// Sources/JunkbotPlayground/TranscodedAudio/sound-effects`, same for `music`) and checked in as
+// real files - the one asset directory that isn't a symlinked, single-source-of-truth passthrough,
+// since re-running that script is a manual step whenever `audio/` changes, not automatic.
 //
 // `JunkbotCore` dependency: a local `path:` dependency only resolves when this manifest is
 // parsed on a machine that actually has the rest of the repo checked out next to this bundle -
@@ -57,10 +67,6 @@ let package = Package(
   ],
   dependencies: dependencies,
   targets: [
-    .plugin(
-      name: "TranscodeAudioPlugin",
-      capability: .buildTool()
-    ),
     .executableTarget(
       name: "JunkbotPlayground",
       dependencies: [
@@ -70,14 +76,13 @@ let package = Package(
         // Symlinks into the repo-root asset directories (single source of truth, same
         // principle every other port uses) - SwiftPM resource paths can't escape the target
         // directory with `../`, so the symlinks live inside `Sources/JunkbotPlayground` itself.
-        // `audio` itself is deliberately NOT listed here - almost every file under it is Ogg
-        // Vorbis, which `AVAudioPlayer` can't decode, so `TranscodeAudioPlugin` (below) transcodes
-        // it to `.caf` at build time instead of bundling the raw source files.
         .copy("images"),
         .copy("font"),
         .copy("levels"),
-      ],
-      plugins: ["TranscodeAudioPlugin"]
+        // Manually pre-transcoded `.caf` files, checked in (not a symlink) - see the doc
+        // comment above for why this can't be done at build time via a plugin.
+        .copy("TranscodedAudio"),
+      ]
     )
   ]
 )
