@@ -3,12 +3,15 @@ import Foundation
 
 /// Reads `_LEVEL_LISTING.txt` (and its Undercover counterpart) and groups the results into
 /// 15-level pages ("buildings"/"basements"), mirroring `src/game.js`'s `getLevelLists`
-/// (`levelsPerPage: 15` for both games) and `whereLevelIsInTheGame`. Foundation-gated like
-/// `LevelParse.swift`/`LevelSerialize.swift` - reachable only from native targets (SDL3, tests),
-/// tree-shaken out of the embedded-WASM build since nothing in `Sources/JunkbotWASM/main.swift`
-/// references it. Test-cases and user-created (editor) levels are out of scope here - the
-/// browser build treats those as unpaginated (`levelsPerPage: Infinity`) and this catalog only
-/// covers the two paginated games.
+/// (`levelsPerPage: 15` for both games) and `whereLevelIsInTheGame`. Unlike `LevelParse.swift`/
+/// `LevelSerialize.swift`/`LevelEntityBridge.swift` (excluded from Embedded only for an
+/// unrelated Unicode-table linking concern, not a real Foundation need), this file genuinely
+/// needs Foundation for real directory/file I/O (`URL`, `FileManager`, `String(contentsOf:)`) -
+/// there's no stdlib-only way to do that on any platform. Reachable only from native targets
+/// (SDL3, tests), tree-shaken out of the embedded-WASM build since nothing in
+/// `Sources/JunkbotWASM/main.swift` references it either way. Test-cases and user-created
+/// (editor) levels are out of scope here - the browser build treats those as unpaginated
+/// (`levelsPerPage: Infinity`) and this catalog only covers the two paginated games.
 public struct LevelCatalogEntry: Equatable, Sendable {
   public let title: String
   public let url: URL
@@ -47,9 +50,11 @@ public struct LevelCatalog: Sendable {
 
   /// Collapses runs of whitespace to a single space, for matching titles that differ only in
   /// incidental whitespace (a couple of level files have a typo'd double space in their `title=`
-  /// line versus their `_LEVEL_LISTING.txt` entry).
+  /// line versus their `_LEVEL_LISTING.txt` entry). Plain stdlib `split` (default
+  /// `omittingEmptySubsequences: true`) already drops leading/trailing spaces too - no separate
+  /// Foundation `CharacterSet` trim needed.
   private static func normalizedTitle(_ title: String) -> String {
-    title.trimmingCharacters(in: .whitespaces).split(separator: " ").joined(separator: " ")
+    title.split(separator: " ").joined(separator: " ")
   }
 
   /// `_LEVEL_LISTING.txt`'s order is the source of truth for level progression, but its titles

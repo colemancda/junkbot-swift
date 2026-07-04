@@ -1,5 +1,7 @@
-#if canImport(Foundation)
-import Foundation
+// Pure stdlib (no Foundation) - gated out of the embedded-WASM build because it depends on
+// `Level` (`LevelParse.swift`, itself excluded for its `.lowercased()` Unicode-table concern),
+// not because this file itself needs Foundation.
+#if !hasFeature(Embedded)
 
 /// Converts a parsed `Level` (see `LevelParse.swift`) into live `GameEngine` state, so the
 /// `Level`/`LevelPart` model — otherwise only used for text I/O — is actually usable to drive the
