@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gameList>
+  <game>
+    <path>./Junkbot.sh</path>
+    <name>Junkbot</name>
+    <desc>A puzzle-platformer where you rearrange bricks to guide a robot janitor through a LEGO warehouse, avoiding hazards and rogue gearbots along the way.</desc>
+    <developer>LEGO Media / Media Design Interactive (original); this project (native port)</developer>
+    <publisher>LEGO</publisher>
+    <genre>Puzzle / Platformer</genre>
+    <image>./junkbot/cover.png</image>
+  </game>
+</gameList>
