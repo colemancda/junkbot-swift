@@ -1,5 +1,3 @@
-import CSDL3
-import CSDL3Image
 import Foundation
 import JunkbotCore
 
@@ -42,14 +40,12 @@ enum Screen: Equatable {
 @MainActor func drawFocusRing() {
   guard let index = focusedButtonIndex, index < menuButtons.count else { return }
   let button = menuButtons[index]
-  var outer = SDL_FRect(
-    x: button.x - 2, y: button.y - 2, w: button.width + 4, h: button.height + 4)
-  var inner = SDL_FRect(
-    x: button.x - 1, y: button.y - 1, w: button.width + 2, h: button.height + 2)
-  _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
-  _ = SDL_RenderRect(renderer, &outer)
-  _ = SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255)
-  _ = SDL_RenderRect(renderer, &inner)
+  gameRenderer.strokeRect(
+    x: button.x - 2, y: button.y - 2, w: button.width + 4, h: button.height + 4,
+    r: 0, g: 0, b: 0, a: 255)
+  gameRenderer.strokeRect(
+    x: button.x - 1, y: button.y - 1, w: button.width + 2, h: button.height + 2,
+    r: 255, g: 255, b: 255, a: 255)
 }
 /// Last mouse position in *screen* space (window pixels), tracked on every screen (unlike
 /// `lastMouseWorldX/Y`, which only updates on world-input screens) - drives the level-select
@@ -96,14 +92,12 @@ func loadSaveData() -> SaveData {
 /// Lazily-loaded `images/menus/*.png` textures, keyed by filename stem - the menu screens'
 /// equivalent of the sprite `TextureCache` (which is keyed by generated sprite ID and scans the
 /// sprite/background directories, neither of which covers `images/menus/`).
-@MainActor var menuTextures: [String: UnsafeMutablePointer<SDL_Texture>] = [:]
-@MainActor func menuTexture(_ name: String) -> UnsafeMutablePointer<SDL_Texture>? {
+@MainActor var menuTextures: [String: OpaquePointer] = [:]
+@MainActor func menuTexture(_ name: String) -> OpaquePointer? {
   if let cached = menuTextures[name] { return cached }
   let url = repoRoot.appendingPathComponent("images/menus/\(name).png")
-  guard let surface = IMG_Load(url.path) else { return nil }
-  defer { SDL_DestroySurface(surface) }
-  guard let texture = SDL_CreateTextureFromSurface(renderer, surface) else { return nil }
-  _ = SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST)
+  guard let texture = gameRenderer.loadTexture(atPath: url.path) else { return nil }
+  gameRenderer.setTextureNearestScaling(texture)
   menuTextures[name] = texture
   return texture
 }
@@ -112,26 +106,21 @@ func loadSaveData() -> SaveData {
 /// by their own dimensions (matching CSS block flow) instead of assuming a fixed size.
 @MainActor func menuTextureSize(_ name: String) -> (width: Float, height: Float) {
   guard let texture = menuTexture(name) else { return (0, 0) }
-  var w: Float = 0
-  var h: Float = 0
-  _ = SDL_GetTextureSize(texture, &w, &h)
-  return (w, h)
+  return gameRenderer.textureSize(texture)
 }
 
 @MainActor func drawMenuTexture(
   _ name: String, x: Float, y: Float, alphaPercent: Int32 = 100, scale: Float = 1
 ) {
   guard let texture = menuTexture(name) else { return }
-  var w: Float = 0
-  var h: Float = 0
-  _ = SDL_GetTextureSize(texture, &w, &h)
+  let (w, h) = gameRenderer.textureSize(texture)
   if alphaPercent < 100 {
-    _ = SDL_SetTextureAlphaMod(texture, UInt8(max(0, min(100, alphaPercent)) * 255 / 100))
+    gameRenderer.setTextureAlpha(texture, percent: alphaPercent)
   }
-  var dst = SDL_FRect(x: x, y: y, w: w * scale, h: h * scale)
-  _ = SDL_RenderTexture(renderer, texture, nil, &dst)
+  gameRenderer.drawTexture(
+    texture, src: nil, dstX: x, dstY: y, dstW: w * scale, dstH: h * scale, rotationDegrees: nil)
   if alphaPercent < 100 {
-    _ = SDL_SetTextureAlphaMod(texture, 255)
+    gameRenderer.setTextureAlpha(texture, percent: nil)
   }
 }
 
@@ -182,7 +171,7 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
   menuButtons = []
   // Show the "LEVEL N: TITLE" toast, paused, like both originals.
   gameEngine.setPaused(true)
-  levelToastUntil = SDL_GetTicksNS() + levelToastNanoseconds
+  levelToastUntil = currentTicksNanoseconds() + levelToastNanoseconds
 }
 
 /// Draws the level-entry toast (building icon + "LEVEL N: TITLE"), centered near the top -
@@ -204,11 +193,11 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
   } else if let page = location?.page {
     textRenderer.draw(
       "Basement \(page + 1)", x: Int32(panelX) + 16, y: Int32(panelY) + 20,
-      color: SDL_Color(r: 255, g: 255, b: 255, a: 255), scale: 2)
+      color: .white, scale: 2)
   }
   textRenderer.draw(
     "Level \(levelNumber): \(entry.title)", x: Int32(panelX) + 16, y: Int32(panelY) + 58,
-    color: SDL_Color(r: 255, g: 255, b: 255, a: 255), scale: 2)
+    color: .white, scale: 2)
 }
 
 // MARK: - Shared menu drawing
@@ -216,16 +205,9 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
 /// A simple beveled panel, standing in for the original's bitmap dialog frames (whose exact
 /// frame art isn't among the preserved menu images).
 @MainActor func drawPanel(x: Float, y: Float, w: Float, h: Float) {
-  _ = SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND)
-  var shadow = SDL_FRect(x: x + 4, y: y + 4, w: w, h: h)
-  _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 120)
-  _ = SDL_RenderFillRect(renderer, &shadow)
-  var body = SDL_FRect(x: x, y: y, w: w, h: h)
-  _ = SDL_SetRenderDrawColor(renderer, 168, 168, 168, 255)
-  _ = SDL_RenderFillRect(renderer, &body)
-  var border = body
-  _ = SDL_SetRenderDrawColor(renderer, 60, 60, 60, 255)
-  _ = SDL_RenderRect(renderer, &border)
+  gameRenderer.fillRect(x: x + 4, y: y + 4, w: w, h: h, r: 0, g: 0, b: 0, a: 120)
+  gameRenderer.fillRect(x: x, y: y, w: w, h: h, r: 168, g: 168, b: 168, a: 255)
+  gameRenderer.strokeRect(x: x, y: y, w: w, h: h, r: 60, g: 60, b: 60, a: 255)
 }
 
 /// True when `index` (into `menuButtons`) is either under the mouse or the current d-pad/
@@ -241,18 +223,17 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
 /// as a hover for visual purposes.
 @MainActor func drawButton(_ button: Button, label: String, index: Int) {
   let hovered = isHighlighted(index)
-  var body = SDL_FRect(x: button.x, y: button.y, w: button.width, h: button.height)
-  _ = SDL_SetRenderDrawColor(
-    renderer, hovered ? 220 : 190, hovered ? 220 : 190, hovered ? 200 : 170, 255)
-  _ = SDL_RenderFillRect(renderer, &body)
-  _ = SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255)
-  _ = SDL_RenderRect(renderer, &body)
+  gameRenderer.fillRect(
+    x: button.x, y: button.y, w: button.width, h: button.height,
+    r: hovered ? 220 : 190, g: hovered ? 220 : 190, b: hovered ? 200 : 170, a: 255)
+  gameRenderer.strokeRect(
+    x: button.x, y: button.y, w: button.width, h: button.height, r: 40, g: 40, b: 40, a: 255)
   let size = textRenderer.measure(label)
   textRenderer.draw(
     label,
     x: Int32(button.x + (button.width - Float(size.width)) / 2),
     y: Int32(button.y + (button.height - Float(size.height)) / 2),
-    color: SDL_Color(r: 0, g: 0, b: 0, a: 255))
+    color: .black)
 }
 
 /// Menu sound IDs, disjoint from `Types.swift`'s engine `SoundID` range (0-27) - played through
@@ -288,7 +269,7 @@ enum MenuSoundID {
     }),
     Button(x: 16, y: 48, width: 120, height: 24, action: {
       soundBoard.play(MenuSoundID.buttonClick)
-      _ = SDL_OpenURL("https://github.com/colemancda/junkbot-swift")
+      openExternalURL("https://github.com/colemancda/junkbot-swift")
     }),
   ]
 }
@@ -302,13 +283,11 @@ enum MenuSoundID {
 
   drawMenuTexture("loading_bkg_frame", x: 40 + offsetX, y: 181 + offsetY)
 
-  let black = SDL_Color(r: 0, g: 0, b: 0, a: 255)
-  let white = SDL_Color(r: 255, g: 255, b: 255, a: 255)
-  let lines: [(String, SDL_Color, Int32, Int32)] = [
-    ("Welcome to the factory", black, 114, 192),
-    ("Try moving the colored bricks", white, 72, 210),
-    ("with the mouse", white, 163, 228),
-    ("before you play the game", black, 103, 246),
+  let lines: [(String, Color, Int32, Int32)] = [
+    ("Welcome to the factory", .black, 114, 192),
+    ("Try moving the colored bricks", .white, 72, 210),
+    ("with the mouse", .white, 163, 228),
+    ("before you play the game", .black, 103, 246),
   ]
   for (text, color, x, y) in lines {
     textRenderer.draw(text, x: Int32(offsetX) + x, y: Int32(offsetY) + y, color: color, scale: 2)
@@ -387,16 +366,13 @@ let levelSelectRowsLeft: Float = 11
 
 @MainActor func drawLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
   // Page background (#7c857c).
-  _ = SDL_SetRenderDrawColor(renderer, 0x7C, 0x85, 0x7C, 255)
-  _ = SDL_RenderClear(renderer)
+  gameRenderer.clear(r: 0x7C, g: 0x85, b: 0x7C, a: 255)
 
   // Tab strip: #33CCFF sky with the bottom 32px in #33CC33 grass (the CSS's inset box-shadow).
-  var sky = SDL_FRect(x: 0, y: 0, w: Float(windowWidth), h: tabStripHeight - 32)
-  _ = SDL_SetRenderDrawColor(renderer, 0x33, 0xCC, 0xFF, 255)
-  _ = SDL_RenderFillRect(renderer, &sky)
-  var grass = SDL_FRect(x: 0, y: tabStripHeight - 32, w: Float(windowWidth), h: 32)
-  _ = SDL_SetRenderDrawColor(renderer, 0x33, 0xCC, 0x33, 255)
-  _ = SDL_RenderFillRect(renderer, &grass)
+  gameRenderer.fillRect(
+    x: 0, y: 0, w: Float(windowWidth), h: tabStripHeight - 32, r: 0x33, g: 0xCC, b: 0xFF, a: 255)
+  gameRenderer.fillRect(
+    x: 0, y: tabStripHeight - 32, w: Float(windowWidth), h: 32, r: 0x33, g: 0xCC, b: 0x33, a: 255)
 
   // Tabs, unselected first then the selected one on top (CSS z-index on .selected). Each is
   // custom/tab.png bottom-aligned, with the buidling_tab_N text image 2px above the bottom and
@@ -404,14 +380,12 @@ let levelSelectRowsLeft: Float = 11
   // opacity plus a 1px black baseline (the CSS's inset shadow on :not(.selected)).
   let pages = levelCatalog.pagesByGame[game] ?? []
   let stride = tabStride(game: game)
-  let black = SDL_Color(r: 0, g: 0, b: 0, a: 255)
   func drawTab(_ tabIndex: Int, selected: Bool) {
     let x = Float(tabIndex) * stride
     drawMenuTexture("custom/tab", x: x, y: tabStripHeight - 22)
     if !selected {
-      var baseline = SDL_FRect(x: x, y: tabStripHeight - 1, w: tabImageWidth, h: 1)
-      _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
-      _ = SDL_RenderFillRect(renderer, &baseline)
+      gameRenderer.fillRect(
+        x: x, y: tabStripHeight - 1, w: tabImageWidth, h: 1, r: 0, g: 0, b: 0, a: 255)
     }
     if game == .junkbot {
       // Matches the CSS block flow exactly: `.level-group-tab` is bottom-aligned in the 74px
@@ -436,7 +410,7 @@ let levelSelectRowsLeft: Float = 11
       textRenderer.draw(
         label, x: Int32(x + (tabImageWidth - Float(size.width)) / 2),
         y: Int32(tabStripHeight) - 16,
-        color: selected ? black : SDL_Color(r: 255, g: 255, b: 255, a: 255))
+        color: selected ? .black : .white)
     }
   }
   for tabIndex in 0..<pages.count where tabIndex != page {
@@ -455,11 +429,11 @@ let levelSelectRowsLeft: Float = 11
 
   // List panel: #808080 with a 1px black outline (the CSS box-shadow).
   let listHeight = listPadY * 2 + Float(entries.count) * levelSelectRowHeight
-  var listPanel = SDL_FRect(x: 0, y: tabStripHeight, w: Float(windowWidth), h: listHeight)
-  _ = SDL_SetRenderDrawColor(renderer, 0x80, 0x80, 0x80, 255)
-  _ = SDL_RenderFillRect(renderer, &listPanel)
-  _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
-  _ = SDL_RenderRect(renderer, &listPanel)
+  gameRenderer.fillRect(
+    x: 0, y: tabStripHeight, w: Float(windowWidth), h: listHeight, r: 0x80, g: 0x80, b: 0x80,
+    a: 255)
+  gameRenderer.strokeRect(
+    x: 0, y: tabStripHeight, w: Float(windowWidth), h: listHeight, r: 0, g: 0, b: 0, a: 255)
 
   // Row buttons start after Main (index 0) and the tabs (indices 1...pages.count) in
   // menuButtons - used below to also highlight the d-pad/keyboard-focused row.
@@ -479,11 +453,10 @@ let levelSelectRowsLeft: Float = 11
   // doesn't move on its own, so if it was last resting over some row before the user switched
   // to d-pad navigation, mouseHoveredRow would otherwise incorrectly keep "winning" forever.
   if let highlightedRow = focusedRow ?? mouseHoveredRow {
-    var bar = SDL_FRect(
+    gameRenderer.fillRect(
       x: levelSelectRowsLeft, y: levelSelectRowsTop + Float(highlightedRow) * levelSelectRowHeight,
-      w: Float(windowWidth) - levelSelectRowsLeft * 2, h: levelSelectRowHeight)
-    _ = SDL_SetRenderDrawColor(renderer, 0xBF, 0xC0, 0xBF, 255)
-    _ = SDL_RenderFillRect(renderer, &bar)
+      w: Float(windowWidth) - levelSelectRowsLeft * 2, h: levelSelectRowHeight,
+      r: 0xBF, g: 0xC0, b: 0xBF, a: 255)
   }
 
   for (rowIndex, entry) in entries.enumerated() {
@@ -493,21 +466,19 @@ let levelSelectRowsLeft: Float = 11
     let isGold = saveData.isGold(levelTitle: entry.title, par: entry.par)
 
     // #CCCCCC separators: top border on the first row, bottom border on every row (the CSS).
-    _ = SDL_SetRenderDrawColor(renderer, 0xCC, 0xCC, 0xCC, 255)
     if rowIndex == 0 {
-      var top = SDL_FRect(
-        x: levelSelectRowsLeft, y: rowY, w: Float(windowWidth) - levelSelectRowsLeft * 2, h: 1)
-      _ = SDL_RenderFillRect(renderer, &top)
+      gameRenderer.fillRect(
+        x: levelSelectRowsLeft, y: rowY, w: Float(windowWidth) - levelSelectRowsLeft * 2, h: 1,
+        r: 0xCC, g: 0xCC, b: 0xCC, a: 255)
     }
-    var bottom = SDL_FRect(
+    gameRenderer.fillRect(
       x: levelSelectRowsLeft, y: rowY + levelSelectRowHeight - 1,
-      w: Float(windowWidth) - levelSelectRowsLeft * 2, h: 1)
-    _ = SDL_RenderFillRect(renderer, &bottom)
+      w: Float(windowWidth) - levelSelectRowsLeft * 2, h: 1, r: 0xCC, g: 0xCC, b: 0xCC, a: 255)
 
     // Columns at the CSS's own offsets within the list padding: ordinal 2, checkbox 35,
     // gold check 48, title 63, score right-aligned.
     textRenderer.draw(
-      "\(page * 15 + rowIndex + 1)", x: Int32(levelSelectRowsLeft) + 2, y: textY, color: black)
+      "\(page * 15 + rowIndex + 1)", x: Int32(levelSelectRowsLeft) + 2, y: textY, color: .black)
     drawMenuTexture(
       completed ? "checkbox_on" : "checkbox_off", x: levelSelectRowsLeft + 35,
       y: rowY + levelSelectRowHeight - 5 - 10)
@@ -515,13 +486,13 @@ let levelSelectRowsLeft: Float = 11
       drawMenuTexture(
         "check_light", x: levelSelectRowsLeft + 48, y: rowY + levelSelectRowHeight - 5 - 8)
     }
-    textRenderer.draw(entry.title, x: Int32(levelSelectRowsLeft) + 63, y: textY, color: black)
+    textRenderer.draw(entry.title, x: Int32(levelSelectRowsLeft) + 63, y: textY, color: .black)
     if let moves = saveData.bestMoves[entry.title] {
       let movesText = "\(moves)"
       let size = textRenderer.measure(movesText)
       textRenderer.draw(
         movesText, x: windowWidth - Int32(levelSelectRowsLeft) - size.width - 5, y: textY,
-        color: black)
+        color: .black)
     }
   }
 }
@@ -591,12 +562,9 @@ let loseMessages = [
 }
 
 @MainActor func drawDialogOverlay() {
-  var dim = SDL_FRect(x: 0, y: 0, w: Float(windowWidth), h: Float(windowHeight))
-  _ = SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND)
-  _ = SDL_SetRenderDrawColor(renderer, 0, 0, 0, 140)
-  _ = SDL_RenderFillRect(renderer, &dim)
+  gameRenderer.fillRect(
+    x: 0, y: 0, w: Float(windowWidth), h: Float(windowHeight), r: 0, g: 0, b: 0, a: 140)
 
-  let white = SDL_Color(r: 0, g: 0, b: 0, a: 255)
   let centerX = Float(windowWidth) / 2
   let panelW: Float = 360
   let panelH: Float = 170
@@ -609,12 +577,12 @@ let loseMessages = [
     let heading = "Level Complete!"
     let headingSize = textRenderer.measure(heading)
     textRenderer.draw(
-      heading, x: Int32(centerX) - headingSize.width, y: Int32(panelY) + 16, color: white,
+      heading, x: Int32(centerX) - headingSize.width, y: Int32(panelY) + 16, color: .black,
       scale: 2)
     var detailY = Int32(panelY) + 44
     if winDialogImprovedRecord {
       textRenderer.draw(
-        "Best: \(gameEngine.moves) moves", x: Int32(panelX) + 16, y: detailY, color: white)
+        "Best: \(gameEngine.moves) moves", x: Int32(panelX) + 16, y: detailY, color: .black)
       detailY += 14
     }
     if let entry = currentLevelEntry, let par = entry.par {
@@ -625,7 +593,7 @@ let loseMessages = [
         // behavior_msgBox_Success.ls's msgbox_3 hint text.
         textRenderer.draw(
           "Beat this level in \(par) moves or fewer\nto get the gold award",
-          x: Int32(panelX) + 16, y: detailY, color: white)
+          x: Int32(panelX) + 16, y: detailY, color: .black)
       }
     }
     drawButton(menuButtons[0], label: "Select Level", index: 0)
@@ -638,7 +606,7 @@ let loseMessages = [
     let messageSize = textRenderer.measure(loseDialogMessage)
     textRenderer.draw(
       loseDialogMessage, x: Int32(centerX) - messageSize.width / 2, y: Int32(panelY) + 76,
-      color: white)
+      color: .black)
     drawButton(menuButtons[0], label: "Select Level", index: 0)
     drawButton(menuButtons[1], label: "Retry", index: 1)
 
