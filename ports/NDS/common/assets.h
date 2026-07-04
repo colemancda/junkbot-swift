@@ -14,8 +14,12 @@
 
 extern const uint8_t sprites_bin[];
 extern const uint32_t sprites_bin_size;
+extern const uint8_t audio_bin[];
+extern const uint32_t audio_bin_size;
 
 static inline const void *nds_asset_sprites_bin(void) { return sprites_bin; }
 static inline uint32_t nds_asset_sprites_bin_size(void) { return sprites_bin_size; }
+static inline const void *nds_asset_audio_bin(void) { return audio_bin; }
+static inline uint32_t nds_asset_audio_bin_size(void) { return audio_bin_size; }
 
 #endif // SWIFT_NDS_ASSETS_H

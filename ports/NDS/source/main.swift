@@ -56,9 +56,14 @@ func flipBuffers() {
   bgSetMapBase(bg, bgGetMapBase(bg) == 8 ? 0 : 8)
 }
 
+// MARK: - Audio
+
+soundEnable()
+
 // MARK: - Engine + level loading
 
 let gameEngine = GameEngine()
+gameEngine.onPlaySound = { id in playSound(id) }
 
 var currentLevelIndex = 0
 /// World-space coordinate of the viewport's (top screen's) top-left pixel.

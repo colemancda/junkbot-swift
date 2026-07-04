@@ -20,6 +20,13 @@
 # entity-builder Swift, so the DS binary never parses level text -- the same
 # split the embedded-WASM build uses, where the level parser stays excluded
 # behind `#if !hasFeature(Embedded)`.
+#
+# Sound effects are similarly pre-converted at build time (tools/gen_audio.py)
+# from the repo's Ogg Vorbis/WAV sources to signed 8-bit PCM, played directly
+# by libnds/calico's soundPlaySample - no on-device decoder, no maxmod
+# soundbank. That conversion step shells out to macOS's `afconvert` to decode
+# Ogg Vorbis, so (in addition to everything above) this build currently
+# requires macOS.
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
@@ -57,17 +64,11 @@ NDSDEFS		:=	-DARM9 -D__NDS__ -I$(COMMON) \
 CFLAGS		:=	-g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) \
 			$(NDSDEFS)
 
-# The Embedded stdlib's armv4t static libraries. Even without the level text
-# parser, enough String machinery remains reachable (e.g. StaticString/String
-# grapheme handling) that the Unicode data tables must be linked.
-SWIFT_EMBEDDED_LIBDIR := $(shell $(SWIFTC) -print-target-info -target arm64-apple-macosx14.0 2>/dev/null | sed -n 's/.*"runtimeResourcePath": "\(.*\)".*/\1/p')/embedded/armv4t-none-none-eabi
-
 LDFLAGS		:=	-specs=$(CALICO)/share/ds9.specs -g $(ARCH) \
 			-Wl,-Map,$(TARGET).map -Wl,--gc-sections \
-			-L$(LIBNDS)/lib -L$(CALICO)/lib \
-			-L$(SWIFT_EMBEDDED_LIBDIR)
+			-L$(LIBNDS)/lib -L$(CALICO)/lib
 
-LIBS		:=	-lswiftUnicodeDataTables -lnds9 -lcalico_ds9 -lm
+LIBS		:=	-lnds9 -lcalico_ds9 -lm
 
 #---------------------------------------------------------------------------------
 # Embedded Swift flags. The prebuilt Embedded stdlib ships an armv4t slice but
@@ -90,14 +91,22 @@ SWIFTFLAGS	:=	-target armv4t-none-none-eabi \
 # level index) is emitted into $(BUILD) by tools/gen_assets.py alongside the
 # asset blobs it describes.
 #---------------------------------------------------------------------------------
-CORE_SWIFT	:=	$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/*.swift) \
+# Font.swift is SDL-only bitmap-text layout (nothing on this port calls it);
+# LevelCatalog.swift is Foundation-only text-catalog scanning (already
+# `#if canImport(Foundation)`-gated, but Embedded Swift can still typecheck the
+# non-Foundation half unless dropped here too). Both are dead weight this
+# port's cruder devkitARM link doesn't strip on its own the way the WASM
+# build's linker does; excluding them saves real ROM budget.
+CORE_EXCLUDE	:=	Font.swift LevelCatalog.swift
+CORE_SWIFT	:=	$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_EXCLUDE)), \
+			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/*.swift)) \
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
 PORT_SWIFT	:=	$(wildcard source/*.swift)
-GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift
-GEN_BINS	:=	$(BUILD)/sprites.bin
+GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift $(BUILD)/AudioAssets.swift
+GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin
 
 OFILES		:=	$(BUILD)/junkbot.swift.o $(BUILD)/shim.o \
-			$(BUILD)/sprites_bin.o
+			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o
 
 ARM7_ELF	:=	$(CALICO)/bin/ds7_maine.elf
 
@@ -118,7 +127,18 @@ $(BUILD)/assets.stamp: tools/gen_assets.py \
 	python3 tools/gen_assets.py $(REPO_ROOT) $(BUILD)
 	@touch $@
 
-$(GEN_BINS) $(BUILD)/SpriteAssets.swift: $(BUILD)/assets.stamp
+$(BUILD)/sprites.bin $(BUILD)/SpriteAssets.swift: $(BUILD)/assets.stamp
+
+# Audio conversion: each SoundID's clip (audio/sound-effects/, macOS's afconvert
+# decodes the repo's Ogg Vorbis sources) -> signed 8bpp PCM mono blob + Swift
+# offset/length/rate table, for libnds/calico's soundPlaySample (no maxmod
+# soundbank - see tools/gen_audio.py and source/Audio.swift).
+$(BUILD)/audio.stamp: tools/gen_audio.py | $(BUILD)
+	@echo generating audio assets
+	python3 tools/gen_audio.py $(REPO_ROOT) $(BUILD)
+	@touch $@
+
+$(BUILD)/audio.bin $(BUILD)/AudioAssets.swift: $(BUILD)/audio.stamp
 
 # Level conversion: every campaign level, pre-parsed through JunkbotCore's own
 # parser + entity bridge on the host and frozen as entity-builder Swift.
