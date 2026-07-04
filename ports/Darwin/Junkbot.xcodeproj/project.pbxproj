@@ -67,7 +67,6 @@
 		71665DDCD5EBC42503E7AA6E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		7ABC53CD87E62119ECA82612 /* images */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = images; path = ../images; sourceTree = "<group>"; };
 		94A403FA606439DE250287F4 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
-		A8C243E478D71F657B914323 /* Junkbot-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Junkbot-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A99B9377644C8F5F421E559B /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
 		B01D4F1BF8AFC96EBF664693 /* GameInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameInput.swift; sourceTree = "<group>"; };
 		B2A0B482D4732EC2C47E1087 /* AppDelegate_iOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_iOS.swift; sourceTree = "<group>"; };
@@ -84,17 +83,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		0D3E5F2255868BA7EE976643 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B323CCD6B6D38188A7A3F3D1 /* Foundation.framework in Frameworks */,
-				3DAB749F505A8940AB531BE6 /* JunkbotCore in Frameworks */,
-				5609179CC7BBF417E07CA0A8 /* SpriteKit.framework in Frameworks */,
-				6A6B274D80BB90EF67F95E9C /* UIKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D5ED16D62C5221148A3E9064 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -123,7 +111,6 @@
 			isa = PBXGroup;
 			children = (
 				F8321DEA8E5A972F75D29128 /* Junkbot-macOS.app */,
-				A8C243E478D71F657B914323 /* Junkbot-iOS.app */,
 				DCA10430D63931E5188B9F0C /* Junkbot-tvOS.app */,
 			);
 			name = Products;
@@ -219,26 +206,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		014B061075BE6BE8AB2FF4EC /* Junkbot-iOS */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6384C6301E33005A23995465 /* Build configuration list for PBXNativeTarget "Junkbot-iOS" */;
-			buildPhases = (
-				592A70A90C2FA9D8E2E02335 /* Sources */,
-				0D3E5F2255868BA7EE976643 /* Frameworks */,
-				3CD489A9E30183474A19B764 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "Junkbot-iOS";
-			packageProductDependencies = (
-				BEAFA819E49AEC9EDAFAEBA7 /* JunkbotCore */,
-			);
-			productName = "Junkbot-iOS";
-			productReference = A8C243E478D71F657B914323 /* Junkbot-iOS.app */;
-			productType = "com.apple.product-type.application";
-		};
 		10A4DE1CCE080DE532C98987 /* Junkbot-tvOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C4D4675259F4C6D83551F539 /* Build configuration list for PBXNativeTarget "Junkbot-tvOS" */;
@@ -307,24 +274,12 @@
 			projectRoot = "";
 			targets = (
 				64E7D9D07BB884F2FBF4614D /* Junkbot-macOS */,
-				014B061075BE6BE8AB2FF4EC /* Junkbot-iOS */,
 				10A4DE1CCE080DE532C98987 /* Junkbot-tvOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		3CD489A9E30183474A19B764 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C4FA3AB67568B5791C0AAD1F /* images in Resources */,
-				AC9AB139B733155B16FE7D99 /* font in Resources */,
-				147453362D84CDD405052D43 /* levels in Resources */,
-				F61FA1E703C52C565E5D0E33 /* audio in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		591499601692F9DEC96878C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -362,21 +317,6 @@
 				2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */,
 				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
 				631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		592A70A90C2FA9D8E2E02335 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B8F3450BEECC32A70D59328B /* Screens.swift in Sources */,
-				554FC4FB94B2E22A77C0AAE9 /* TextRenderer.swift in Sources */,
-				4B0E7B8D51693B55A73963CB /* GameRender.swift in Sources */,
-				A32F9AD2C13DFF7497F2F6C1 /* GameInput.swift in Sources */,
-				F5A195A41F6AE38213BBABD5 /* SpriteKitRenderer.swift in Sources */,
-				B7531BC598A2D39771C23A75 /* GameShell.swift in Sources */,
-				4E66BABC8AF08D92C32F37E7 /* GameScene.swift in Sources */,
-				7BB29FCEBC8A19A5679FDCFC /* AppDelegate_iOS.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -617,15 +557,6 @@
 			buildConfigurations = (
 				8E331094282CDD61C6CBFD9D /* Release */,
 				6FEA7C65D5E75D2BA22B03E9 /* Debug */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		6384C6301E33005A23995465 /* Build configuration list for PBXNativeTarget "Junkbot-iOS" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				85011AF830887775375F40A6 /* Release */,
-				E06C11B840C8B88605DEAB43 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

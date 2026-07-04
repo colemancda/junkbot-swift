@@ -1,33 +1,49 @@
 # Junkbot Darwin port (macOS/iOS/tvOS)
 
-`Junkbot.xcodeproj` has three app targets (`Junkbot-macOS`, `Junkbot-iOS`, `Junkbot-tvOS`), all
-rendering through **SpriteKit** rather than SDL - see "Why SpriteKit, not SDL3" below for how
-this replaced the port's original SDL3-on-Apple-platforms plan.
+Two separate projects, both rendering through **SpriteKit** rather than SDL - see "Why
+SpriteKit, not SDL3" below for how this replaced the port's original SDL3-on-Apple-platforms
+plan:
+
+- **`Junkbot.xcodeproj`** - `Junkbot-macOS` and `Junkbot-tvOS` app targets.
+- **`JunkbotPlayground.swiftpm`** - an iOS **App Playground** (opens in both Xcode 15+ and the
+  Swift Playgrounds app). iOS used to be a third Xcode target here (`Junkbot-iOS`) - moved out
+  to its own Playground so it can be opened/run directly in Swift Playgrounds on iPad, not just
+  Xcode. See "The iOS Playground" below.
 
 ## What's shared vs. Darwin-only
 
 - **Shared with `ports/SDL3`/`ports/SDL2`** (file references pointing directly at
-  `../SDL3/Sources/JunkbotSDL3/*.swift` - no copy, no symlink; Xcode supports referencing files
-  outside the project directory natively): `Renderer.swift` (the `GameRenderer` protocol),
-  `Color.swift`, `Button.swift`, `Screens.swift`, `TextRenderer.swift`, `GameRender.swift`
-  (per-frame world/menu rendering - `renderWorld`/`render`/`VirtualCursor`/`TextureCache`),
-  `GameInput.swift` (mouse/touch-to-world coordinate handling - `handleMouseDown/Move/Up`).
+  `../SDL3/Sources/JunkbotSDL3/*.swift` in `Junkbot.xcodeproj`; symlinks in
+  `JunkbotPlayground.swiftpm`, the same technique `ports/SDL2` already uses to share files with
+  `ports/SDL3`): `Screens.swift`, `TextRenderer.swift`, `GameRender.swift` (per-frame world/menu
+  rendering - `renderWorld`/`render`/`VirtualCursor`/`TextureCache`), `GameInput.swift`
+  (mouse/touch-to-world coordinate handling - `handleMouseDown/Move/Up`). `Renderer.swift` (the
+  `GameRenderer` protocol), `Color.swift`, and `Button.swift` moved into `Sources/JunkbotCore`
+  itself (they had zero SDL-specific imports) - both this project and `JunkbotPlayground.swiftpm`
+  get them for free via `import JunkbotCore`, no file reference/symlink needed anymore.
   `main.swift`/`Input.swift` are **not** shared - both are genuinely SDL-specific (the blocking
   SDL event loop, SDL gamepad polling), unlike what the project's very first Darwin scaffold
   assumed when it included them as shared references.
-- **Darwin-only** (`Sources/JunkbotDarwin/`): `SpriteKitRenderer.swift` (the `GameRenderer`
-  conformance - see below), `GameShell.swift` (the globals every shared file expects a port to
-  provide: `repoRoot`, `gameEngine`, camera state, `levelCatalog`, sound/music stand-ins - the
-  Darwin equivalent of the top of `ports/SDL3`'s `main.swift`), `GameScene.swift` (the `SKScene`
-  subclass driving `gameEngine.tick()`/`render()` from SpriteKit's own `update(_:)` callback,
-  plus mouse/touch input), `AppDelegate_macOS.swift` (AppKit window/`SKView` setup, macOS target
-  only), `AppDelegate_iOS.swift` (UIKit window/`SKView` setup, iOS **and** tvOS targets - their
-  lifecycle APIs are close enough to share one file).
-- `images/`, `font/`, `levels/`, `audio/` as Xcode **folder references** (blue folders,
-  preserving subdirectory nesting) in each target's Copy Bundle Resources phase -
+- **Darwin-only** (`Sources/JunkbotDarwin/`, shared between `Junkbot.xcodeproj` and
+  `JunkbotPlayground.swiftpm` via symlinks into the latter): `SpriteKitRenderer.swift` (the
+  `GameRenderer` conformance - see below), `GameShell.swift` (the globals every shared file
+  expects a port to provide: `repoRoot`, `gameEngine`, camera state, `levelCatalog`, sound/music
+  stand-ins - the Darwin equivalent of the top of `ports/SDL3`'s `main.swift`), `GameScene.swift`
+  (the `SKScene` subclass driving `gameEngine.tick()`/`render()` from SpriteKit's own `update(_:)`
+  callback, plus mouse/touch input), `GameViewController.swift` (hosts the `SKView`/`JunkbotScene`
+  - shared between the tvOS target's `AppDelegate_tvOS.swift`, which sets it as
+  `window.rootViewController` directly, and the iOS Playground's SwiftUI `App`, which wraps it in
+  a `UIViewControllerRepresentable` instead), `AppDelegate_macOS.swift` (AppKit window/`SKView`
+  setup, macOS target only), `AppDelegate_tvOS.swift` (tvOS-only now - see above).
+- `images/`, `font/`, `levels/`, `audio/`: Xcode **folder references** (blue folders, preserving
+  subdirectory nesting) in `Junkbot.xcodeproj`'s Copy Bundle Resources phase; plain symlinks into
+  `JunkbotPlayground.swiftpm/Sources/JunkbotPlayground/` declared as `resources:` in its
+  `Package.swift` (SwiftPM resource paths can't escape the target directory with `../`, unlike
+  Xcode's folder references, so the symlinks have to live inside `Sources/` itself). Either way,
   `Bundle.main.resourceURL` (`GameShell.swift`'s `repoRoot`) sees the exact same layout the SDL
   ports read via plain paths.
-- A local Swift Package reference to the repo root, consuming the `JunkbotCore` product.
+- A local Swift Package reference to the repo root, consuming the `JunkbotCore` product (both
+  projects).
 
 ## SpriteKit as a rendering-only backend
 
@@ -43,7 +59,8 @@ this replaced the port's original SDL3-on-Apple-platforms plan.
   top of a fundamentally retained scene graph, via node churn rather than a persistent node
   hierarchy.
 - **Texture handles**: `GameRenderer`'s texture type is `OpaquePointer` (chosen for SDL2's opaque
-  C-struct import limitation - see `Renderer.swift`'s doc comment). SpriteKit has no such
+  C-struct import limitation - see `Sources/JunkbotCore/GameRenderer.swift`'s doc comment).
+  SpriteKit has no such
   constraint (`SKTexture` is a perfectly nameable Swift class), so textures are tracked in a side
   table keyed by a small integer handle, and `OpaquePointer(bitPattern:)` wraps that integer
   purely to satisfy the protocol's type signature - the bit pattern is never dereferenced, only
@@ -64,6 +81,36 @@ this replaced the port's original SDL3-on-Apple-platforms plan.
   actual call site is already on the main actor (`GameScene.swift`'s `update(_:)`, all of
   `GameRender.swift`), so this is a real fix, not a suppression.
 
+## The iOS Playground
+
+`JunkbotPlayground.swiftpm` is an "App Playground" - a plain SwiftPM package with a special
+`Package.swift` (`import AppleProductTypes`, a `.iOSApplication` product instead of a regular
+`.executable`/`.library`) that Xcode 15+ and the Swift Playgrounds app both know how to open and
+run as a full iOS app, no separate Xcode project needed. Structure:
+
+- `Package.swift` - the `.iOSApplication` product (landscape-only via
+  `supportedInterfaceOrientations: [.landscapeLeft, .landscapeRight]`, matching the old
+  `Junkbot-iOS` target's build setting), a local path dependency on the repo root for
+  `JunkbotCore`, and `resources:` pointing at the symlinked asset directories.
+- `Sources/JunkbotPlayground/JunkbotPlaygroundApp.swift` - the SwiftUI `@main App`/`Scene` entry
+  point (App Playgrounds boot through SwiftUI, not a `UIApplicationDelegate`), wrapping the
+  shared `GameViewController` in a `UIViewControllerRepresentable`.
+- Everything else in `Sources/JunkbotPlayground/` is a symlink into either
+  `Sources/JunkbotDarwin/` or `../SDL3/Sources/JunkbotSDL3/` (see "What's shared vs. Darwin-only"
+  above) plus the four symlinked asset directories.
+
+**Not verified in this sandbox** - and likely not verifiable outside of Xcode/Swift Playgrounds
+itself: `AppleProductTypes` is a module Xcode's own toolchain injects specifically when opening a
+`.swiftpm` App Playground; it doesn't exist for plain command-line `swift build`/`swift package
+describe` (confirmed: both fail with "no such module 'AppleProductTypes'" here), and `xcodebuild
+-project JunkbotPlayground.swiftpm` doesn't recognize the bundle as a project either (App
+Playgrounds are opened via `open JunkbotPlayground.swiftpm`/double-click, which routes through
+Xcode's dedicated App Playground project loader, not the ordinary `-project`/`-workspace`
+flags). The package's manifest and source layout were reviewed carefully against Apple's
+documented App Playground format, but an actual build/run needs a real Xcode session (or Swift
+Playgrounds on iPad) to confirm - flagged here for whoever picks that up, consistent with this
+file's existing iOS/tvOS verification gaps below.
+
 ## Known gaps (not attempted this pass)
 
 - **No gamepad/keyboard menu navigation** (the SDL ports' Phase 7 feature) - `GameShell.swift`
@@ -75,24 +122,19 @@ this replaced the port's original SDL3-on-Apple-platforms plan.
   playback (`AVAudioPlayer`/`AVAudioEngine`, or SpriteKit's own `SKAction.playSoundFileNamed`)
   is a real follow-up - wiring the full `SoundID`/`MenuSoundID` tables was out of scope for the
   rendering-migration work this pass focused on.
-- **iOS/tvOS builds are structurally sound but not fully build-verified in this environment.**
-  `xcodebuild -list` resolves the package graph and lists all three targets/schemes correctly.
-  The **macOS** target was fully built (`xcodebuild build`, Debug) and run (`Junkbot-macOS.app`
+- **tvOS is structurally sound but not build-verified in this environment** (no tvOS
+  simulator/platform installed here - `xcodebuild` reports "tvOS 26.5 is not installed"). The
+  **macOS** target was fully built (`xcodebuild build`, Debug) and run (`Junkbot-macOS.app`
   launched, stayed alive with no crash, correctly saw its bundled `images/font/levels/audio`
   folders under `Contents/Resources/`) - this is the one platform buildable/runnable without a
-  simulator in this sandbox. An iOS Simulator build attempt hit a **pre-existing, unrelated**
-  issue: the `swift-lingo` package dependency (`JunkbotCore`'s `LingoTranspilerPlugin`) fails to
-  compile for the iOS Simulator SDK here ("concurrency is only available in iOS 13.0.0 or
-  newer") - this happens inside `swift-lingo`'s own `LingoAST` target, before any of this
-  project's own Darwin/shared code is even reached, so it's a package-compatibility gap
-  independent of the SpriteKit migration. Not investigated further this pass (would mean digging
-  into `swift-lingo`'s own `Package.swift` platform declarations) - flagged here for whoever
-  picks up real iOS/tvOS device or simulator testing.
-- **Landscape-only iOS lock** is applied as a build setting
-  (`INFOPLIST_KEY_UISupportedInterfaceOrientations` = landscape-left/right, both phone and iPad
-  idioms, on the `Junkbot-iOS` target only - `GENERATE_INFOPLIST_FILE = YES` means there's no
-  checked-in `Info.plist` to edit directly) plus `GameViewController.supportedInterfaceOrientations`
-  in `AppDelegate_iOS.swift`. Not verified on a real device/simulator, for the reason above.
+  simulator in this sandbox. A prior iOS Simulator build attempt (back when iOS was still an
+  Xcode target here) hit a **pre-existing, unrelated** issue worth knowing about regardless of
+  which iOS project you're using: `JunkbotCore`'s `swift-lingo` dependency
+  (`LingoTranspilerPlugin`) fails to compile for the iOS Simulator SDK ("concurrency is only
+  available in iOS 13.0.0 or newer") inside `swift-lingo`'s own `LingoAST` target, before any of
+  this project's own code is even reached - a package-compatibility gap independent of anything
+  in this repo, not investigated further (would mean digging into `swift-lingo`'s own
+  `Package.swift` platform declarations).
 
 ## Why SpriteKit, not SDL3
 
@@ -108,13 +150,16 @@ no vendoring needed) was far less work than solving the SDL3_image/SDL3_mixer XC
 and this port never needs SDL's audio/windowing/gamepad pieces anyway (those stay platform-native
 here: AppKit/UIKit windowing, and audio/gamepad are open follow-ups either way).
 
-## Opening the project
+## Opening the projects
 
 ```
-open Junkbot.xcodeproj
+open Junkbot.xcodeproj              # macOS + tvOS
+open JunkbotPlayground.swiftpm      # iOS (Xcode or Swift Playgrounds)
 ```
 
-Xcode will resolve the local `JunkbotCore` package dependency automatically. You'll be prompted
-once to trust `swift-lingo`'s build tool plugin (`LingoTranspilerPlugin`) - approve it, this is
-expected and not a security concern specific to this project. (From the command line, pass
-`-skipPackagePluginValidation` to `xcodebuild` to bypass the one-time interactive prompt.)
+Xcode will resolve the local `JunkbotCore` package dependency automatically in both cases. You'll
+be prompted once to trust `swift-lingo`'s build tool plugin (`LingoTranspilerPlugin`) - approve
+it, this is expected and not a security concern specific to this project. (From the command
+line, pass `-skipPackagePluginValidation` to `xcodebuild` to bypass the one-time interactive
+prompt - only relevant to `Junkbot.xcodeproj`, since `JunkbotPlayground.swiftpm` isn't drivable
+via `xcodebuild` at all, see above.)
