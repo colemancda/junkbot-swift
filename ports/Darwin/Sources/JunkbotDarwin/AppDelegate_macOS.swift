@@ -23,13 +23,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let contentRect = NSRect(x: 0, y: 0, width: 900, height: 675)
+    // Load the title screen level before creating the window, so the window's default (and
+    // minimum) size can match its actual bounds instead of an arbitrary fixed guess - matching
+    // `ports/SDL3`'s `main.swift` exactly (including its 900x675 fallback for when bounds aren't
+    // available). `GameScene.swift`'s `didMove(to:)` calls `showTitleScreen()` afterward, which
+    // loads it again as part of the real screen-state setup - the same double-load `ports/SDL3`
+    // itself already does, not a redundancy introduced here.
+    gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
+    let initialWidth = CGFloat(gameEngine.levelBounds.map { $0.width } ?? 900)
+    let initialHeight = CGFloat(gameEngine.levelBounds.map { $0.height } ?? 675)
+    let contentRect = NSRect(x: 0, y: 0, width: initialWidth, height: initialHeight)
     window = NSWindow(
       contentRect: contentRect,
       styleMask: [.titled, .closable, .miniaturizable, .resizable],
       backing: .buffered, defer: false)
     window.title = "Junkbot"
     window.center()
+    // Don't allow shrinking below the default size - matches `ports/SDL3`'s
+    // `window.setMinimumSize(width:height:)` call.
+    window.minSize = contentRect.size
     // Without this, AppKit only sends `mouseMoved`/`mouseDragged` events while a button is held -
     // `GameScene.swift`'s `mouseMoved` override (menu-hover, focus-clearing, input-kind tracking)
     // needs plain hover motion too.
