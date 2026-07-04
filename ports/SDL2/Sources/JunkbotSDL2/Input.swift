@@ -9,14 +9,10 @@ import JunkbotCore
 // button just synthesizes the same code paths a mouse click takes.
 
 // MARK: - Input-kind tracking (cursor visibility)
-
-/// Which kind of pointing input the user touched last. Touch hides the OS cursor; mouse or
-/// gamepad shows it.
-enum PointingInputKind {
-  case mouse
-  case gamepad
-  case touch
-}
+//
+// `PointingInputKind` itself lives in `Sources/JunkbotCore/PointingInputKind.swift`, shared with
+// `ports/SDL3`'s `Input.swift` and `ports/Darwin`'s `GameShell.swift` (this file used to have its
+// own stale duplicate declaration here from before that move - removed).
 
 @MainActor var lastPointingInput: PointingInputKind = .mouse
 
@@ -120,103 +116,33 @@ let touchMouseID: UInt32 = .max
     let newY = max(0, min(Float(windowHeight) - 1, lastMouseScreenY + y * cursorSpeed * deltaSeconds))
     lastMouseScreenX = newX
     lastMouseScreenY = newY
-    suppressNextMouseMotionAsSynthetic = true
-    // SDL_WarpMouseInWindow takes window-space (point) coordinates, which differ from the
-    // render-space units used everywhere else in this file once
-    // SDL_LOGICAL_PRESENTATION_INTEGER_SCALE introduces letterboxing.
-    let windowPoint = renderToWindowPoint(x: newX, y: newY)
-    SDL_WarpMouseInWindow(window, Int32(windowPoint.x), Int32(windowPoint.y))
+    warpCursor(x: newX, y: newY)
     handleMouseMove(x: newX, y: newY)
   }
 }
 
 // MARK: - Menu focus (keyboard / d-pad navigation)
+//
+// The portable logic (`focusedButtonIndex`, `moveFocus`, `directionPressed`, `nudgeDrag`,
+// `activatePressed`, `activateReleased`) now lives in the shared, symlinked `MenuFocus.swift`
+// (identical across `ports/SDL3`/`ports/SDL2`/`ports/Darwin`). It calls back into these two
+// SDL-specific neutral wrappers instead of raw `SDL_*` calls directly, the same pattern
+// `main.swift`'s `currentTicksNanoseconds()`/`openExternalURL(_:)` already use.
 
-/// Index into `menuButtons` of the keyboard/d-pad-focused button, or nil when the mouse owns
-/// hover. Cleared on screen changes (menuButtons rebuilds) and on real mouse motion.
-@MainActor var focusedButtonIndex: Int?
-
-@MainActor func moveFocus(_ delta: Int) {
-  guard !menuButtons.isEmpty else { return }
-  if let current = focusedButtonIndex {
-    focusedButtonIndex = (current + delta + menuButtons.count) % menuButtons.count
-  } else {
-    // First navigation press with no focus: start at the top rather than jumping by delta.
-    focusedButtonIndex = 0
-  }
+/// Hides the OS cursor - called by `directionPressed` when d-pad/arrow input moves menu focus
+/// (the focus ring is the indicator there, not the cursor).
+func hideOSCursor() {
+  _ = SDL_HideCursor()
 }
 
-/// Dispatches an arrow-key/d-pad press: while a brick is grabbed, it nudges the drag exactly
-/// one stud/brick-height in that direction instead of moving menu focus - useful for precise
-/// placement without depending on stick/cursor accuracy.
-///
-/// Cursor visibility differs between the two: nudging a brick keeps the cursor visible (it's
-/// the drag handle - the player needs to see where it'll land), but menu/item navigation hides
-/// it, since the focus ring is the indicator there and a static cursor left over a menu item
-/// would be a confusing, meaningless leftover once you start moving focus with the d-pad/arrows.
-@MainActor func directionPressed(dx: Int32, dy: Int32, menuDelta: Int) {
-  if gameEngine.isDragging {
-    notePointingInput(.gamepad)
-    virtualCursorVisible = true
-    nudgeDrag(dx: dx, dy: dy)
-  } else {
-    _ = SDL_HideCursor()
-    virtualCursorVisible = false
-    moveFocus(menuDelta)
-  }
-}
-
-/// Moves the dragged group by exactly one grid cell (`CELL_W`/`CELL_H`) in the given direction,
-/// by advancing the tracked mouse position and feeding it through the same
-/// `GameEngine.mouseMove` the real mouse/gamepad cursor already uses - so snapping, direction
-/// resolution, etc. all behave identically. Also warps the real cursor to match, so a
-/// subsequent click/A-release lines up with what's on screen.
-@MainActor func nudgeDrag(dx: Int32, dy: Int32) {
-  lastMouseWorldX += dx * CELL_W
-  lastMouseWorldY += dy * CELL_H
-  gameEngine.mouseMove(lastMouseWorldX, lastMouseWorldY)
-
-  let canvas = gameEngine.worldToCanvas(
-    worldX: Double(lastMouseWorldX), worldY: Double(lastMouseWorldY),
-    centerX: cameraCenterX, centerY: cameraCenterY, scale: cameraScale,
-    canvasWidth: Double(windowWidth), canvasHeight: Double(windowHeight))
-  lastMouseScreenX = Float(canvas.x)
-  lastMouseScreenY = Float(canvas.y)
+/// Warps the real OS cursor to a render-space position and marks the next `SDL_MOUSEMOTION` as
+/// synthetic (so it isn't mistaken for genuine mouse hardware movement) - called by `nudgeDrag`
+/// after advancing the tracked mouse position by one grid cell.
+@MainActor func warpCursor(x: Float, y: Float) {
   suppressNextMouseMotionAsSynthetic = true
   // SDL_WarpMouseInWindow takes window-space (point) coordinates, which differ from the
   // render-space units used everywhere else in this file once
   // SDL_LOGICAL_PRESENTATION_INTEGER_SCALE introduces letterboxing.
-  let windowPoint = renderToWindowPoint(x: lastMouseScreenX, y: lastMouseScreenY)
+  let windowPoint = renderToWindowPoint(x: x, y: y)
   SDL_WarpMouseInWindow(window, Int32(windowPoint.x), Int32(windowPoint.y))
-}
-
-/// Activates the focused menu button if any; otherwise, hit-tests `menuButtons` at the cursor
-/// position (mirroring `SDL_MOUSEBUTTONDOWN`'s handling in main.swift) so a virtual-
-/// cursor click on a button (stick-driven, no d-pad focus set - e.g. the title screen's
-/// Play/Credits buttons) actually activates it instead of falling through to a world click;
-/// only once neither of those applies does A synthesize a mouse press/release at the cursor so
-/// it can grab/release a brick with the exact mouse semantics (drag direction resolution,
-/// canRelease-gated drops, toast dismissal).
-@MainActor func activatePressed() {
-  if levelToastUntil != nil {
-    dismissLevelToast()
-    return
-  }
-  if let index = focusedButtonIndex, index < menuButtons.count {
-    menuButtons[index].action()
-    focusedButtonIndex = nil
-    return
-  }
-  if handleClick(menuButtons, at: lastMouseScreenX, y: lastMouseScreenY) {
-    return
-  }
-  if screenOwnsWorldInput() {
-    handleMouseDown(x: lastMouseScreenX, y: lastMouseScreenY)
-  }
-}
-
-@MainActor func activateReleased() {
-  if screenOwnsWorldInput(), focusedButtonIndex == nil {
-    handleMouseUp(x: lastMouseScreenX, y: lastMouseScreenY)
-  }
 }
