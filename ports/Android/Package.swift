@@ -16,7 +16,7 @@ let package = Package(
     // Headers/libs for these three come from the official SDL3*-devel-*-android.zip release
     // assets (libsdl-org/SDL, SDL_image, SDL_mixer releases), extracted under
     // ports/Android/Vendor/ - see README.md for the exact layout expected here. Unlike
-    // ports/Linux's CSDL3 (Homebrew/pkgConfig-based), there's no pkg-config on Android, so these
+    // ports/SDL3's CSDL3 (Homebrew/pkgConfig-based), there's no pkg-config on Android, so these
     // rely on explicit header/library search paths set on the consuming target below instead.
     .systemLibrary(name: "CSDL3"),
     .systemLibrary(name: "CSDL3Image"),

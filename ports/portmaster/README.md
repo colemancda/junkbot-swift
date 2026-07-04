@@ -3,8 +3,8 @@
 A native port of Junkbot, a LEGO puzzle-platformer, packaged for PortMaster.
 
 Two binaries are bundled per architecture: one built against SDL3/SDL3_image/SDL3_mixer
-(`ports/Linux`) and one built against the older SDL2/SDL2_image/SDL2_mixer family
-(`ports/LinuxSDL2`). `Junkbot.sh` detects at launch time which SDL3 libraries are actually
+(`ports/SDL3`) and one built against the older SDL2/SDL2_image/SDL2_mixer family
+(`ports/SDL2`). `Junkbot.sh` detects at launch time which SDL3 libraries are actually
 present on the device (present on newer firmwares like ROCKNIX; not yet on most others) and
 picks the matching binary, falling back to the SDL2 build automatically - no separate port
 submission needed per SDL version.
@@ -20,7 +20,7 @@ submission needed per SDL version.
 This directory holds the PortMaster distribution templates (`port.json`, `gameinfo.xml`,
 `Junkbot.sh`, `junkbot.gptk`) and the `Makefile` that builds and assembles them. Run
 `make package` from here to:
-1. Build `ports/Linux` (SDL3) and `ports/LinuxSDL2` (SDL2) in release mode.
+1. Build `ports/SDL3` and `ports/SDL2` in release mode.
 2. Assemble a ready-to-submit port folder at `.build-package/junkbot/` containing both release
    binaries (`junkbot3.<arch>`, `junkbot2.<arch>`), bundled assets, and these template files.
 

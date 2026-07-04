@@ -10,12 +10,12 @@ the official SDL3 Android release assets) or explicitly flagged as unverified/be
 - `Package.swift` — the Swift side. Depends on the root `junkbot-swift` package (for
   `JunkbotCore`) and `swift-android-sdk/swift-android-native` (for `AndroidFileManager`/
   `AndroidContext`/JNI bootstrap — confirmed real, see its README on GitHub).
-- `Sources/JunkbotSDL3` — a **symlink** to `../../Linux/Sources/JunkbotSDL3`. This is the same
-  Swift source `ports/Linux` and `ports/Darwin` use; nothing here duplicates it. It still says
+- `Sources/JunkbotSDL3` — a **symlink** to `../../SDL3/Sources/JunkbotSDL3`. This is the same
+  Swift source `ports/SDL3` and `ports/Darwin` use; nothing here duplicates it. It still says
   `import CSDL3`/`CSDL3Image`/`CSDL3Mixer` unchanged — this package just provides its own
   Android-specific versions of those three modules.
 - `Sources/CSDL3`, `CSDL3Image`, `CSDL3Mixer` — thin module maps, same pattern as
-  `ports/Linux`'s, but pointing at the Android NDK build of SDL3 instead of Homebrew.
+  `ports/SDL3`'s, but pointing at the Android NDK build of SDL3 instead of Homebrew.
 - `Vendor/` (not created yet) — where the official prebuilt Android SDL3 libraries go. Download
   `SDL3-devel-<version>-android.zip`, `SDL3_image-devel-<version>-android.zip`,
   `SDL3_mixer-devel-<version>-android.zip` from the respective `libsdl-org` GitHub releases,
@@ -29,7 +29,7 @@ the official SDL3 Android release assets) or explicitly flagged as unverified/be
 
 ## Known, unresolved gap: target type
 
-`JunkbotSDL3` is declared as an `executableTarget` here, matching `ports/Linux`'s shape, for
+`JunkbotSDL3` is declared as an `executableTarget` here, matching `ports/SDL3`'s shape, for
 consistency. **This is very likely wrong for Android specifically.** An Android app needs a
 loadable shared library (`.so`, `dlopen`'d by the JVM via `System.loadLibrary`), not a standalone
 executable with a `main.swift`-style top-level entry point. Getting this right will likely mean:

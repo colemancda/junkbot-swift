@@ -1,4 +1,4 @@
-.PHONY: all clean serve codegen linux portmaster
+.PHONY: all clean serve codegen sdl3 sdl2 portmaster
 
 # Web (WASM) build - delegates to ports/Web, whose own Makefile does the actual
 # `swift package ... js --product JunkbotWASM` build and copies the result to web/Package/
@@ -17,9 +17,13 @@ clean:
 codegen:
 	python3 tools/generate_render_tables.py
 
-# Linux (SDL3, dev build) - delegates to ports/Linux.
-linux:
-	$(MAKE) -C ports/Linux build
+# SDL3 dev build - delegates to ports/SDL3.
+sdl3:
+	$(MAKE) -C ports/SDL3 build
+
+# SDL2 dev build - delegates to ports/SDL2.
+sdl2:
+	$(MAKE) -C ports/SDL2 build
 
 # Portmaster package (both SDL3 and SDL2 binaries) - delegates to ports/portmaster.
 portmaster:

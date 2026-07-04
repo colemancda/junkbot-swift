@@ -1,7 +1,7 @@
 /// Backend-agnostic drawing primitives - the seam between the shared game-shell code
 /// (`main.swift`'s `renderWorld`/`render`, `Screens.swift`'s menu drawing, `TextRenderer.swift`,
-/// the virtual-cursor drawing) and whichever SDL major version actually renders it. `ports/Linux`
-/// implements this against SDL3 (`SDL3Renderer.swift`); `ports/LinuxSDL2` implements it against
+/// the virtual-cursor drawing) and whichever SDL major version actually renders it. `ports/SDL3`
+/// implements this against SDL3 (`SDL3Renderer.swift`); `ports/SDL2` implements it against
 /// SDL2 (`SDL2Renderer.swift`) - the two SDL C APIs disagree on almost every render call's exact
 /// name/argument shape (`SDL_RenderTexture` vs `SDL_RenderCopyF`, float vs. integer source
 /// rects, `SDL_FColor` vs `SDL_Color`, etc.), so this protocol is what lets the actual game/menu

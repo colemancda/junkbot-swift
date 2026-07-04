@@ -2,13 +2,13 @@
 
 `Junkbot.xcodeproj` has three app targets (`Junkbot-macOS`, `Junkbot-iOS`, `Junkbot-tvOS`)
 sharing:
-- The same Swift source as `ports/Linux` — file references pointing directly at
-  `../Linux/Sources/JunkbotSDL3/*.swift` (no copy, no symlink; Xcode supports referencing files
+- The same Swift source as `ports/SDL3` — file references pointing directly at
+  `../SDL3/Sources/JunkbotSDL3/*.swift` (no copy, no symlink; Xcode supports referencing files
   outside the project directory natively).
 - `images/`, `font/`, `levels/`, `audio/` as Xcode **folder references** (blue folders,
   preserving subdirectory nesting) in each target's Copy Bundle Resources phase, so
-  `Bundle.main.resourceURL` sees the exact same layout the Linux port reads via plain paths (see
-  `repoRoot`'s Apple-platform branch in `ports/Linux/Sources/JunkbotSDL3/main.swift`).
+  `Bundle.main.resourceURL` sees the exact same layout the SDL3 port reads via plain paths (see
+  `repoRoot`'s Apple-platform branch in `ports/SDL3/Sources/JunkbotSDL3/main.swift`).
 - A local Swift Package reference to the repo root, consuming the `JunkbotCore` product.
 
 **Validated**: `xcodebuild -list -project Junkbot.xcodeproj` resolves the package graph
@@ -26,7 +26,7 @@ source still says `import CSDL3`/`CSDL3Image`/`CSDL3Mixer` unchanged, so a full 
 with "no such module" until this is wired up. Here's what was investigated and why it isn't
 already done:
 
-- Homebrew's SDL3 (used by `ports/Linux`) is a macOS-host-only dylib - unusable for iOS/tvOS
+- Homebrew's SDL3 (used by `ports/SDL3`) is a macOS-host-only dylib - unusable for iOS/tvOS
   device or simulator builds.
 - SDL3 itself has no official SwiftPM package.
 - `KevinVitale/SwiftSDL` (github.com/KevinVitale/SwiftSDL) vendors a prebuilt `SDL3.xcframework`

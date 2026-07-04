@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-  name: "JunkbotLinux",
+  name: "JunkbotSDL3Port",
   platforms: [.macOS(.v14)],
   dependencies: [
     .package(path: "../..")
