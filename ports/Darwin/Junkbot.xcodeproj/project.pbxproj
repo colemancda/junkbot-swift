@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -15,6 +15,7 @@
 		1EF74139078942C159051F64 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = D5211C6EA65765510BAFF083 /* JunkbotCore */; };
 		2189918BCF1E0990F43A3A33 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
 		21E8103FFA7CE0FDE6396A2C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 286E503B2E4868136B5FFAE0 /* Foundation.framework */; };
+		292A3D3E7EFB7F723BEA7A84 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C55B46A59424E0DB53E587 /* GameViewController.swift */; };
 		2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
 		334C563939ED2C6E1035676C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
 		34F49106E3D7E47680C544C3 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A403FA606439DE250287F4 /* SpriteKit.framework */; };
@@ -27,7 +28,6 @@
 		70B4A03C67495B53584D7663 /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
 		739FD37E738A260F597ABB5E /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
 		7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */; };
-		292A3D3E7EFB7F723BEA7A84 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C55B46A59424E0DB53E587 /* GameViewController.swift */; };
 		8FBDE6E6645466B3726FF02D /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
 		90F5B9DCC79643FCCC2D4AA9 /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
 		912DE7A95E8968CA2B005875 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 684AC0DE31432A873EFAC6DE /* SpriteKit.framework */; };
@@ -60,11 +60,11 @@
 		71665DDCD5EBC42503E7AA6E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		7ABC53CD87E62119ECA82612 /* images */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = images; path = ../images; sourceTree = "<group>"; };
 		94A403FA606439DE250287F4 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
+		A2C55B46A59424E0DB53E587 /* GameViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
 		A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GamepadInput.swift; sourceTree = "<group>"; };
 		A99B9377644C8F5F421E559B /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
 		B01D4F1BF8AFC96EBF664693 /* GameInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameInput.swift; sourceTree = "<group>"; };
 		B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_tvOS.swift; sourceTree = "<group>"; };
-		A2C55B46A59424E0DB53E587 /* GameViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
 		C786F84ECF2F6E04A100A222 /* Audio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Audio.swift; sourceTree = "<group>"; };
 		CBEAF26A80A6A4F478587CB4 /* GameRender.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameRender.swift; sourceTree = "<group>"; };
 		D513603962F39E61145181F0 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -269,11 +269,9 @@
 				Base,
 			);
 			mainGroup = 4D829C39FFBBFA76517373F6;
-			minimizedProjectReferenceProxies = 0;
 			packageReferences = (
-				EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */,
+				EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference "../.." */,
 			);
-			preferredProjectObjectVersion = 77;
 			productRefGroup = 0AFDCFE5427484C61BEB88BC /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -456,8 +454,13 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/Junkbot-macOS-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				INFOPLIST_KEY_CFBundleDisplayName = Junkbot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.macos;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
@@ -472,8 +475,13 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/Junkbot-macOS-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				INFOPLIST_KEY_CFBundleDisplayName = Junkbot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.macos;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
@@ -486,12 +494,17 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				INFOPLIST_KEY_CFBundleDisplayName = Junkbot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.tvos;
 				SDKROOT = appletvos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 17.0;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -556,12 +569,17 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				INFOPLIST_KEY_CFBundleDisplayName = Junkbot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.tvos;
 				SDKROOT = appletvos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 17.0;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -598,7 +616,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */ = {
+		EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../..;
 		};
@@ -607,12 +625,12 @@
 /* Begin XCSwiftPackageProductDependency section */
 		D5211C6EA65765510BAFF083 /* JunkbotCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */;
+			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference "../.." */;
 			productName = JunkbotCore;
 		};
 		F86720B9FF38C0EB2E297369 /* JunkbotCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */;
+			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference "../.." */;
 			productName = JunkbotCore;
 		};
 /* End XCSwiftPackageProductDependency section */
