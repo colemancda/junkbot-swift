@@ -1,61 +1,112 @@
 # Junkbot Darwin port (macOS/iOS/tvOS)
 
-`Junkbot.xcodeproj` has three app targets (`Junkbot-macOS`, `Junkbot-iOS`, `Junkbot-tvOS`)
-sharing:
-- The same Swift source as `ports/SDL3` — file references pointing directly at
-  `../SDL3/Sources/JunkbotSDL3/*.swift` (no copy, no symlink; Xcode supports referencing files
-  outside the project directory natively).
+`Junkbot.xcodeproj` has three app targets (`Junkbot-macOS`, `Junkbot-iOS`, `Junkbot-tvOS`), all
+rendering through **SpriteKit** rather than SDL - see "Why SpriteKit, not SDL3" below for how
+this replaced the port's original SDL3-on-Apple-platforms plan.
+
+## What's shared vs. Darwin-only
+
+- **Shared with `ports/SDL3`/`ports/SDL2`** (file references pointing directly at
+  `../SDL3/Sources/JunkbotSDL3/*.swift` - no copy, no symlink; Xcode supports referencing files
+  outside the project directory natively): `Renderer.swift` (the `GameRenderer` protocol),
+  `Color.swift`, `Button.swift`, `Screens.swift`, `TextRenderer.swift`, `GameRender.swift`
+  (per-frame world/menu rendering - `renderWorld`/`render`/`VirtualCursor`/`TextureCache`),
+  `GameInput.swift` (mouse/touch-to-world coordinate handling - `handleMouseDown/Move/Up`).
+  `main.swift`/`Input.swift` are **not** shared - both are genuinely SDL-specific (the blocking
+  SDL event loop, SDL gamepad polling), unlike what the project's very first Darwin scaffold
+  assumed when it included them as shared references.
+- **Darwin-only** (`Sources/JunkbotDarwin/`): `SpriteKitRenderer.swift` (the `GameRenderer`
+  conformance - see below), `GameShell.swift` (the globals every shared file expects a port to
+  provide: `repoRoot`, `gameEngine`, camera state, `levelCatalog`, sound/music stand-ins - the
+  Darwin equivalent of the top of `ports/SDL3`'s `main.swift`), `GameScene.swift` (the `SKScene`
+  subclass driving `gameEngine.tick()`/`render()` from SpriteKit's own `update(_:)` callback,
+  plus mouse/touch input), `AppDelegate_macOS.swift` (AppKit window/`SKView` setup, macOS target
+  only), `AppDelegate_iOS.swift` (UIKit window/`SKView` setup, iOS **and** tvOS targets - their
+  lifecycle APIs are close enough to share one file).
 - `images/`, `font/`, `levels/`, `audio/` as Xcode **folder references** (blue folders,
-  preserving subdirectory nesting) in each target's Copy Bundle Resources phase, so
-  `Bundle.main.resourceURL` sees the exact same layout the SDL3 port reads via plain paths (see
-  `repoRoot`'s Apple-platform branch in `ports/SDL3/Sources/JunkbotSDL3/main.swift`).
+  preserving subdirectory nesting) in each target's Copy Bundle Resources phase -
+  `Bundle.main.resourceURL` (`GameShell.swift`'s `repoRoot`) sees the exact same layout the SDL
+  ports read via plain paths.
 - A local Swift Package reference to the repo root, consuming the `JunkbotCore` product.
 
-**Validated**: `xcodebuild -list -project Junkbot.xcodeproj` resolves the package graph
-(`JunkbotCore` + its `swift-lingo` dependency) and lists all three targets/schemes correctly —
-confirmed structurally sound. A full build was *not* completed in the environment this was
-authored in (no iOS/tvOS SDK build of SDL3_image/SDL3_mixer available, see below) — the first
-`xcodebuild build` attempt got as far as Xcode's one-time build-tool-plugin trust prompt for
-`swift-lingo`'s `LingoTranspilerPlugin` (expected — approve it once by opening the project in
-Xcode's GUI, or accept the equivalent CLI prompt).
+## SpriteKit as a rendering-only backend
 
-## Known, unresolved gap: SDL3 on Apple platforms
+`SpriteKitRenderer.swift` implements the same `GameRenderer` protocol `SDL3Renderer`/
+`SDL2Renderer` implement, using SpriteKit purely as an immediate-mode blitter:
 
-**This project does not yet link against SDL3, SDL3_image, or SDL3_mixer at all.** The shared
-source still says `import CSDL3`/`CSDL3Image`/`CSDL3Mixer` unchanged, so a full build will fail
-with "no such module" until this is wired up. Here's what was investigated and why it isn't
-already done:
+- **No `SKPhysicsBody`/`SKPhysicsWorld` anywhere.** `GameEngine`/`JunkbotCore` remains the sole
+  simulation authority, exactly as on every other port - `GameScene.swift`'s `update(_:)` only
+  ever calls `gameEngine.tick()`.
+- Each draw call (`fillRect`/`drawTexture`/`fillTriangle`/etc.) adds a fresh `SKNode` to the
+  scene; `clear()` removes every node added by the previous frame. This reimplements the same
+  "redraw the whole command list every frame" model `SDL3Renderer`/`SDL2Renderer` already use, on
+  top of a fundamentally retained scene graph, via node churn rather than a persistent node
+  hierarchy.
+- **Texture handles**: `GameRenderer`'s texture type is `OpaquePointer` (chosen for SDL2's opaque
+  C-struct import limitation - see `Renderer.swift`'s doc comment). SpriteKit has no such
+  constraint (`SKTexture` is a perfectly nameable Swift class), so textures are tracked in a side
+  table keyed by a small integer handle, and `OpaquePointer(bitPattern:)` wraps that integer
+  purely to satisfy the protocol's type signature - the bit pattern is never dereferenced, only
+  round-tripped back through `Int(bitPattern:)` to look the texture up.
+- **Coordinate system**: SpriteKit is Y-up with the origin at the scene's bottom-left; the
+  `GameRenderer` protocol (and every other backend) is Y-down, origin top-left. `flippedY(_:
+  height:)` converts at every draw call, including inside `SKTexture(rect:in:)` sub-region
+  clipping math (which is itself Y-up relative to the *texture's* own height, not the scene's).
+  `windowToRender`/`renderToWindow` use `SKView.convert(_:to:)`/`convert(_:from:)`, which already
+  applies SpriteKit's own scene-scaling/letterboxing transform, plus the same Y-flip.
+- `setTextureAlpha`/`setTextureColor` are stored in per-handle side tables and applied when a
+  node is actually created in `drawTexture`, since SpriteKit applies alpha/color at the *node*
+  level (`SKSpriteNode.alpha`/`.color`+`.colorBlendFactor`), not the *texture* level like SDL's
+  `*AlphaMod`/`*ColorMod`.
+- **Concurrency**: `SpriteKitRenderer` is declared `@MainActor`, conforming to `GameRenderer` via
+  `@preconcurrency` (the protocol itself stays non-isolated, since `SDL3Renderer`/`SDL2Renderer`
+  need to call e.g. `destroyTexture` from a `deinit`, which can't be main-actor-isolated) - every
+  actual call site is already on the main actor (`GameScene.swift`'s `update(_:)`, all of
+  `GameRender.swift`), so this is a real fix, not a suppression.
 
-- Homebrew's SDL3 (used by `ports/SDL3`) is a macOS-host-only dylib - unusable for iOS/tvOS
-  device or simulator builds.
-- SDL3 itself has no official SwiftPM package.
-- `KevinVitale/SwiftSDL` (github.com/KevinVitale/SwiftSDL) vendors a prebuilt `SDL3.xcframework`
-  for macOS/iOS/tvOS via a `.binaryTarget`, which is exactly the right *technique* - **but its
-  own C-import wrapper target (`CSDL`) is not declared as a public product** in its
-  `Package.swift` (only `SwiftSDL` and a test-bench executable are). Depending on SwiftSDL as a
-  package dependency does **not** give you an importable `CSDL3`/`CSDL` module - only its
-  higher-level Swift API (`SwiftSDL`), which this codebase doesn't use.
-- `SDL3_image`/`SDL3_mixer` have no ready-made Apple XCFramework anywhere (checked their GitHub
-  releases directly - only Windows/mingw/Android/source assets exist).
+## Known gaps (not attempted this pass)
 
-### What actually needs to happen here
+- **No gamepad/keyboard menu navigation** (the SDL ports' Phase 7 feature) - `GameShell.swift`
+  declares `focusedButtonIndex`/`lastPointingInput`/`virtualCursorVisible` (required by the
+  shared `Screens.swift`/`GameRender.swift`) but nothing ever sets them away from their
+  mouse/no-focus defaults. Touch/mouse hit-testing (`GameScene.swift`) works standalone without
+  needing them.
+- **No audio.** `SoundBoard`/`MusicPlayer` in `GameShell.swift` are silent stand-ins. Real
+  playback (`AVAudioPlayer`/`AVAudioEngine`, or SpriteKit's own `SKAction.playSoundFileNamed`)
+  is a real follow-up - wiring the full `SoundID`/`MenuSoundID` tables was out of scope for the
+  rendering-migration work this pass focused on.
+- **iOS/tvOS builds are structurally sound but not fully build-verified in this environment.**
+  `xcodebuild -list` resolves the package graph and lists all three targets/schemes correctly.
+  The **macOS** target was fully built (`xcodebuild build`, Debug) and run (`Junkbot-macOS.app`
+  launched, stayed alive with no crash, correctly saw its bundled `images/font/levels/audio`
+  folders under `Contents/Resources/`) - this is the one platform buildable/runnable without a
+  simulator in this sandbox. An iOS Simulator build attempt hit a **pre-existing, unrelated**
+  issue: the `swift-lingo` package dependency (`JunkbotCore`'s `LingoTranspilerPlugin`) fails to
+  compile for the iOS Simulator SDK here ("concurrency is only available in iOS 13.0.0 or
+  newer") - this happens inside `swift-lingo`'s own `LingoAST` target, before any of this
+  project's own Darwin/shared code is even reached, so it's a package-compatibility gap
+  independent of the SpriteKit migration. Not investigated further this pass (would mean digging
+  into `swift-lingo`'s own `Package.swift` platform declarations) - flagged here for whoever
+  picks up real iOS/tvOS device or simulator testing.
+- **Landscape-only iOS lock** is applied as a build setting
+  (`INFOPLIST_KEY_UISupportedInterfaceOrientations` = landscape-left/right, both phone and iPad
+  idioms, on the `Junkbot-iOS` target only - `GENERATE_INFOPLIST_FILE = YES` means there's no
+  checked-in `Info.plist` to edit directly) plus `GameViewController.supportedInterfaceOrientations`
+  in `AppDelegate_iOS.swift`. Not verified on a real device/simulator, for the reason above.
 
-1. Vendor `SDL3.xcframework` yourself - either build it from source via the Xcode project
-   template in SDL3's own repo (`Xcode/SDL/`, which has a script to produce an xcframework), or
-   extract it from a `SwiftSDL` checkout's `Dependencies/SDL3.xcframework` (check that package's
-   license/redistribution terms before doing this).
-2. Do the same for `SDL3_image`/`SDL3_mixer` - these will need a **from-source** Xcode/CMake
-   build, since no one ships a ready Apple XCFramework for them.
-3. Add each `.xcframework` as a `.binaryTarget`-equivalent in this Xcode project (or wrap it as a
-   proper Swift package the way SwiftSDL does), with a small C target/module map named exactly
-   `CSDL3`/`CSDL3Image`/`CSDL3Mixer` (matching what the shared Swift source already imports) that
-   exposes the XCFramework's headers - mirroring `SwiftSDL`'s own "CSDL" wrapper technique, just
-   under names that match this project's existing imports instead of introducing new ones.
-4. Link each of the three app targets against all three.
+## Why SpriteKit, not SDL3
 
-This is real, non-trivial platform work that needs a Mac with the iOS/tvOS SDKs and time to
-build SDL_image/SDL_mixer from source - it wasn't attempted further here since it can't be
-verified without doing exactly that build.
+An earlier pass tried to bring SDL3 to Apple platforms (see git history for the original
+"Known, unresolved gap: SDL3 on Apple platforms" section this replaced) and found real blockers:
+Homebrew's SDL3 is macOS-host-only, SDL3 has no official SwiftPM package, and neither
+`SDL3_image` nor `SDL3_mixer` ship a ready Apple XCFramework anywhere - `KevinVitale/SwiftSDL`
+vendors an `SDL3.xcframework` but doesn't expose an importable C module for it as a public
+product. None of that mattered by the time this project (SDL3/SDL2 desktop, Web/WASM, this
+Darwin port) already had a `GameRenderer` protocol seam cleanly separating rendering from
+simulation - reimplementing that one seam against SpriteKit (which ships with every Apple SDK,
+no vendoring needed) was far less work than solving the SDL3_image/SDL3_mixer XCFramework gap,
+and this port never needs SDL's audio/windowing/gamepad pieces anyway (those stay platform-native
+here: AppKit/UIKit windowing, and audio/gamepad are open follow-ups either way).
 
 ## Opening the project
 
@@ -65,4 +116,5 @@ open Junkbot.xcodeproj
 
 Xcode will resolve the local `JunkbotCore` package dependency automatically. You'll be prompted
 once to trust `swift-lingo`'s build tool plugin (`LingoTranspilerPlugin`) - approve it, this is
-expected and not a security concern specific to this project.
+expected and not a security concern specific to this project. (From the command line, pass
+`-skipPackagePluginValidation` to `xcodebuild` to bypass the one-time interactive prompt.)
