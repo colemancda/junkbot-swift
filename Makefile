@@ -3,8 +3,8 @@
 # Web (WASM) build - delegates to ports/Web, whose own Makefile does the actual
 # `swift package ... js --product JunkbotWASM` build and copies the result to web/Package/
 # (relative to repo root) so index.html's `./web/Package/index.js` import keeps working
-# unchanged. Kept as `make all`/`make serve` here so existing muscle memory and
-# .claude/launch.json's dev-server configs don't need to change.
+# unchanged. Kept as `make all`/`make serve` here so existing muscle memory and local
+# dev-server configs don't need to change.
 all:
 	$(MAKE) -C ports/Web all
 

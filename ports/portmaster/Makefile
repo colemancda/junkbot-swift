@@ -5,10 +5,13 @@ PACKAGE_DIR  := .build-package/junkbot
 
 # Builds both the SDL3 (ports/SDL3) and SDL2 (ports/SDL2) release binaries - see
 # Junkbot.sh, which picks between them at launch time based on which SDL3 libraries are
-# actually present on the device.
+# actually present on the device. Statically links the Swift stdlib/runtime
+# (--static-swift-stdlib) so the packaged binaries run on a Portmaster handheld's Linux
+# image without depending on a system-installed Swift runtime (which these devices don't
+# have) - ordinary `make -C ports/SDL3 build` dev builds stay dynamically linked.
 build:
-	$(MAKE) -C $(REPO_ROOT)/ports/SDL3 build
-	$(MAKE) -C $(REPO_ROOT)/ports/SDL2 build
+	$(MAKE) -C $(REPO_ROOT)/ports/SDL3 build SWIFT_BUILD_FLAGS=--static-swift-stdlib
+	$(MAKE) -C $(REPO_ROOT)/ports/SDL2 build SWIFT_BUILD_FLAGS=--static-swift-stdlib
 
 # Assembles a PortMaster-shaped port folder at .build-package/junkbot/ following
 # portmaster.games/packaging.html: outer folder has port.json/README.md/gameinfo.xml/the
