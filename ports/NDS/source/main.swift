@@ -132,6 +132,7 @@ func loadLevel(_ index: Int) {
   }
   clampScroll()
   showLevelInfo()
+  startRandomLevelMusic()
   frameDirty = true
 }
 
@@ -222,6 +223,7 @@ while pmMainLoop() {
     let outcome = gameEngine.winLose()
     if outcome != 0 {
       winLoseLatch = outcome
+      stopMusic()
       consolePrint("\u{1b}[10;0H\u{1b}[K")
       consolePrint(
         outcome == 1

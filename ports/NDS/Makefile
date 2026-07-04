@@ -21,12 +21,14 @@
 # split the embedded-WASM build uses, where the level parser stays excluded
 # behind `#if !hasFeature(Embedded)`.
 #
-# Sound effects are similarly pre-converted at build time (tools/gen_audio.py)
-# from the repo's Ogg Vorbis/WAV sources to signed 8-bit PCM, played directly
-# by libnds/calico's soundPlaySample - no on-device decoder, no maxmod
-# soundbank. That conversion step shells out to macOS's `afconvert` to decode
-# Ogg Vorbis, so (in addition to everything above) this build currently
-# requires macOS.
+# Sound effects and music are similarly pre-converted at build time
+# (tools/gen_audio.py, tools/gen_music.py) from the repo's Ogg Vorbis/WAV
+# sources to signed 8-bit PCM, played directly by libnds/calico's
+# soundPlaySample - no on-device decoder, no maxmod soundbank/streaming
+# (music is one hardware-looped clip per level, not a real streaming player -
+# see source/Audio.swift). That conversion step shells out to macOS's
+# `afconvert` to decode Ogg Vorbis, so (in addition to everything above) this
+# build currently requires macOS.
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
@@ -102,11 +104,12 @@ CORE_SWIFT	:=	$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/*.swift)) \
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
 PORT_SWIFT	:=	$(wildcard source/*.swift)
-GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift $(BUILD)/AudioAssets.swift
-GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin
+GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift $(BUILD)/AudioAssets.swift \
+			$(BUILD)/MusicAssets.swift
+GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin
 
 OFILES		:=	$(BUILD)/junkbot.swift.o $(BUILD)/shim.o \
-			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o
+			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o $(BUILD)/music_bin.o
 
 ARM7_ELF	:=	$(CALICO)/bin/ds7_maine.elf
 
@@ -139,6 +142,16 @@ $(BUILD)/audio.stamp: tools/gen_audio.py | $(BUILD)
 	@touch $@
 
 $(BUILD)/audio.bin $(BUILD)/AudioAssets.swift: $(BUILD)/audio.stamp
+
+# Music conversion: one loopable clip per level-music group (audio/music/,
+# downsampled to 8kHz to fit budget) -> signed 8bpp PCM mono blob + Swift
+# per-group offset/length table (see tools/gen_music.py and source/Audio.swift).
+$(BUILD)/music.stamp: tools/gen_music.py | $(BUILD)
+	@echo generating music assets
+	python3 tools/gen_music.py $(REPO_ROOT) $(BUILD)
+	@touch $@
+
+$(BUILD)/music.bin $(BUILD)/MusicAssets.swift: $(BUILD)/music.stamp
 
 # Level conversion: every campaign level, pre-parsed through JunkbotCore's own
 # parser + entity bridge on the host and frozen as entity-builder Swift.
