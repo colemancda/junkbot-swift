@@ -9,7 +9,7 @@
   "attr": {
     "title": "Junkbot",
     "porter": [
-      "TODO: your name/handle"
+      "colemancda"
     ],
     "desc": "A native port of the Junkbot LEGO puzzle-platformer.",
     "desc_md": null,
@@ -27,9 +27,8 @@
     "availability": "full",
     "reqs": [],
     "arch": [
-      "aarch64",
-      "x86_64"
+      "aarch64"
     ],
-    "min_glibc": ""
+    "min_glibc": "2.35"
   }
 }
