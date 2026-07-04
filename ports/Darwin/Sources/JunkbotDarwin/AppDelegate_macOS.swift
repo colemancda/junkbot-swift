@@ -58,6 +58,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // `GameScene.swift`'s `mouseMoved` override (menu-hover, focus-clearing, input-kind tracking)
     // needs plain hover motion too.
     window.acceptsMouseMovedEvents = true
+    // Opts this window into the standard green-button/⌃⌘F fullscreen transition, and - combined
+    // with actually entering fullscreen below - is what lets macOS 15's automatic Game Mode
+    // engage at all: Game Mode requires both a game-category `LSApplicationCategoryType`
+    // (`Junkbot-macOS-Info.plist` already sets `public.app-category.puzzle-games`) *and* the app
+    // actually running fullscreen with no other visible windows - neither alone is enough.
+    window.collectionBehavior.insert(.fullScreenPrimary)
 
     let view = SKView(frame: contentRect)
     view.ignoresSiblingOrder = true
@@ -75,6 +81,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     view.presentScene(scene)
     window.contentView = view
     window.makeKeyAndOrderFront(nil)
+    // Launch straight into fullscreen rather than requiring the user to click the window's
+    // fullscreen button manually - `.aspectFit`'s scale-to-fit presentation already looks right
+    // at any size, so there's no windowed-only content to lose. Dispatched to the next run-loop
+    // turn since `toggleFullScreen(nil)` needs the window already on screen (from
+    // `makeKeyAndOrderFront` above) to animate correctly.
+    DispatchQueue.main.async { [self] in
+      window.toggleFullScreen(nil)
+    }
 
     // `GamepadInput.swift`'s `GCKeyboard`-routed keyDown handling (shared with iOS/tvOS) covers
     // arrows/space/return fine, but `GCKeyboard` on macOS does not reliably report the Escape key
