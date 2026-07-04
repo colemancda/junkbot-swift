@@ -4,16 +4,18 @@
 # Build system modeled on MillerTechnologyPeru/swift-embedded-nds's common.mk:
 # the ARM9 binary is JunkbotCore (the shared engine, compiled straight from
 # ../../Sources/JunkbotCore) plus this port's source/, targeting
-# armv4t-none-none-eabi (the prebuilt Embedded stdlib's closest slice to the
-# DS's ARM946E-S), linked against calico-based libnds, and packaged with
-# ndstool using calico's prebuilt ARM7.
+# armv5te-none-none-eabi (an exact match for the DS's ARM946E-S, not just the
+# armv4t-backwards-compatible slice release toolchains ship), linked against
+# calico-based libnds, and packaged with ndstool using calico's prebuilt ARM7.
 #
 # Prerequisites:
 #   - devkitPro with devkitARM, libnds, calico, ndstool, bin2s
 #     (export DEVKITPRO=/opt/devkitpro, DEVKITARM=$DEVKITPRO/devkitARM)
-#   - A Swift toolchain whose Embedded stdlib ships an armv4t-none-none-eabi
-#     slice (swift.org 6.3.2 release or a recent main snapshot). Override with
-#     `make SWIFTC=/path/to/swiftc` if the default `swiftc` lacks it.
+#   - A Swift toolchain whose Embedded stdlib ships an armv5te-none-none-eabi
+#     slice. Release toolchains (as of 6.3.2) only ship armv4t; a recent
+#     `main` development snapshot is needed for the armv5te slice this
+#     Makefile targets. Override with `make SWIFTC=/path/to/swiftc` to point
+#     at one.
 #
 # Levels are pre-parsed at build time on the host (tools/LevelDump, which runs
 # JunkbotCore's real text parser + entity bridge natively) into generated
@@ -73,10 +75,10 @@ LDFLAGS		:=	-specs=$(CALICO)/share/ds9.specs -g $(ARCH) \
 LIBS		:=	-lnds9 -lcalico_ds9 -lm
 
 #---------------------------------------------------------------------------------
-# Embedded Swift flags. The prebuilt Embedded stdlib ships an armv4t slice but
-# no armv5te slice; armv4t code runs fine on the ARM946E-S.
+# Embedded Swift flags, targeting armv5te-none-none-eabi (needs a toolchain
+# whose Embedded stdlib ships that slice - see the prerequisites note above).
 #---------------------------------------------------------------------------------
-SWIFTFLAGS	:=	-target armv4t-none-none-eabi \
+SWIFTFLAGS	:=	-target armv5te-none-none-eabi \
 			-enable-experimental-feature Embedded \
 			-wmo -Osize \
 			-module-name Junkbot \
