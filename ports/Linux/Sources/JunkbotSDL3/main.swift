@@ -6,17 +6,28 @@ import JunkbotCore
 
 // MARK: - Repo-relative paths
 
-/// Locates the directory containing `images/`, `font/`, `levels/`, `audio/`. Two strategies,
-/// tried in order:
-/// 1. Executable-relative: siblings of the binary itself - this is how a packaged Portmaster
+/// Locates the directory containing `images/`, `font/`, `levels/`, `audio/`. Strategies, tried
+/// in order:
+/// 1. Apple platforms (macOS/iOS/tvOS, via `ports/Darwin`'s Xcode project): the app bundle's own
+///    `Resources` directory - `images/`/`font/`/`levels/`/`audio/` are added as Xcode folder
+///    references (preserving their subdirectory structure) so they land there directly under
+///    `Bundle.main.resourceURL`, matching how a packaged .app/.ipa actually ships assets.
+/// 2. Executable-relative: siblings of the binary itself - this is how a packaged Portmaster
 ///    port is actually laid out (binary + asset dirs copied into the same folder, see
-///    `ports/Linux/packaging/`), and the only one that works once the binary is relocated
+///    `ports/Linux/packaging/`), and the only one that works once a Linux binary is relocated
 ///    off this dev machine.
-/// 2. Dev-time `#filePath` fallback: this file's own compile-time source path, walked up to the
+/// 3. Dev-time `#filePath` fallback: this file's own compile-time source path, walked up to the
 ///    repo root (same trick `Tests/JunkbotCoreTests/LevelTests.swift` uses) - lets `swift run`/
 ///    `.build/debug/JunkbotSDL3` keep working during development, where the built binary sits
 ///    under `.build/...`, nowhere near the real asset directories.
 let repoRoot: URL = {
+  #if canImport(Darwin)
+  if let resourceURL = Bundle.main.resourceURL,
+    FileManager.default.fileExists(atPath: resourceURL.appendingPathComponent("levels").path)
+  {
+    return resourceURL
+  }
+  #endif
   let executableDirectory = URL(fileURLWithPath: CommandLine.arguments[0])
     .resolvingSymlinksInPath()
     .deletingLastPathComponent()
