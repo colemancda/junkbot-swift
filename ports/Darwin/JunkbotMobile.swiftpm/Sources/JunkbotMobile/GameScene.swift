@@ -59,6 +59,11 @@ final class JunkbotScene: SKScene {
       lastTickTime = now
     }
     updateCamera()
+    #if os(macOS)
+    if lastPointingInput == .mouse, screenOwnsWorldInput() {
+      cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
+    }
+    #endif
     musicPlayer.update()
     render()
   }

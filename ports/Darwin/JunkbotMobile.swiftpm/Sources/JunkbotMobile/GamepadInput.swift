@@ -48,6 +48,40 @@ func showOSCursor() {
   }
 }
 
+#if os(macOS)
+/// Swaps the real macOS pointer to a grab-hand image while hovering a grabbable brick - the
+/// mouse-input counterpart of `VirtualCursor` (`GameRender.swift`), which only ever draws for
+/// gamepad input (`lastPointingInput == .gamepad`). Mirrors `ports/SDL3`'s `CursorSet`
+/// (`main.swift`) exactly: the same `images/cursors/cursor-*.png` files at the same `(8, 8)`
+/// hotspot, matching the browser build's `url(...) 8 8` CSS cursor declarations.
+final class NSCursorSet {
+  private var cursors: [GameEngine.CursorHint: NSCursor] = [:]
+  private var current: GameEngine.CursorHint = .none
+
+  init(cursorsDirectory: URL) {
+    let files: [(GameEngine.CursorHint, String)] = [
+      (.grabbing, "cursor-grabbing.png"),
+      (.grabEither, "cursor-grab-either.png"),
+      (.grabUpward, "cursor-grab-upward.png"),
+      (.grabDownward, "cursor-grab-downward.png"),
+      (.grab, "cursor-grab.png"),
+    ]
+    for (hint, filename) in files {
+      let url = cursorsDirectory.appendingPathComponent(filename)
+      guard let image = NSImage(contentsOfFile: url.path) else { continue }
+      cursors[hint] = NSCursor(image: image, hotSpot: NSPoint(x: 8, y: 8))
+    }
+  }
+
+  func apply(_ hint: GameEngine.CursorHint) {
+    guard hint != current else { return }
+    current = hint
+    (cursors[hint] ?? NSCursor.arrow).set()
+  }
+}
+@MainActor let cursorSet = NSCursorSet(cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
+#endif
+
 /// Moves the tracked cursor position directly - unlike SDL's `SDL_WarpMouseInWindow`, there's no
 /// real OS cursor to warp on iOS/tvOS, and warping the actual mouse position on macOS isn't
 /// available to an ordinary app anyway. `lastMouseScreenX/Y` (read by `GameRender.swift`'s
