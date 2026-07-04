@@ -2,8 +2,6 @@
 
 A Swift remake of LEGO [Junkbot](https://history.jakelee.co.uk/lego-junkbot-technical-and-historical-decompiling/).
 
-![Preview](images/title-screen-teaser.png)
-
 <img width="1180" height="820" alt="Screenshot 2026-07-04 at 10 43 38 AM" src="https://github.com/user-attachments/assets/bf0c2a6d-6833-4f9a-8ade-b36490b05d22" />
 
 ## Ports
