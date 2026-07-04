@@ -1,9 +1,11 @@
 import CSDL2
 import CSDL2Image
 import Foundation
+import JunkbotCore
 
-/// `GameRenderer` implemented against SDL2's `SDL_Render*`/`IMG_*` API. See `Renderer.swift` for
-/// why this seam exists. Where SDL2's API shape genuinely differs from SDL3's (float vs. integer
+/// `GameRenderer` implemented against SDL2's `SDL_Render*`/`IMG_*` API. See
+/// `JunkbotCore/GameRenderer.swift` for why this seam exists. Where SDL2's API shape genuinely
+/// differs from SDL3's (float vs. integer
 /// source rects, `SDL_RenderCopyF` vs `SDL_RenderTexture`, `SDL_Color` vs `SDL_FColor` vertex
 /// colors, `SDL_QueryTexture` vs `SDL_GetTextureSize`), that difference is absorbed entirely
 /// here - nothing above this file needs to know about it.

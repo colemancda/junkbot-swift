@@ -1,9 +1,10 @@
 import CSDL3
 import CSDL3Image
 import Foundation
+import JunkbotCore
 
-/// `GameRenderer` implemented against SDL3's `SDL_Render*`/`IMG_*` API. See `Renderer.swift` for
-/// why this seam exists.
+/// `GameRenderer` implemented against SDL3's `SDL_Render*`/`IMG_*` API. See
+/// `JunkbotCore/GameRenderer.swift` for why this seam exists.
 final class SDL3Renderer: GameRenderer {
   let sdlRenderer: OpaquePointer
 

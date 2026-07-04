@@ -96,15 +96,13 @@ let gameEngine = GameEngine()
 }
 
 // MARK: - Input-kind (required by `GameRender.swift`'s `render()`, never actually a gamepad here)
+//
+// `PointingInputKind` itself now lives in `Sources/JunkbotCore/PointingInputKind.swift`, shared
+// with `ports/SDL3`'s `Input.swift`.
 
 /// Touch/mouse-only port - no gamepad support yet (a real follow-up, not attempted this pass;
 /// see `ports/Darwin/README.md`). Always `.mouse`/`.touch` so `GameRender.swift`'s virtual-cursor
 /// branch (`lastPointingInput == .gamepad`) never fires and the OS/finger pointer is what's seen.
-enum PointingInputKind {
-  case mouse
-  case gamepad
-  case touch
-}
 @MainActor var lastPointingInput: PointingInputKind = .mouse
 @MainActor var virtualCursorVisible = false
 

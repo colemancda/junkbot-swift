@@ -9,14 +9,9 @@ import JunkbotCore
 // button just synthesizes the same code paths a mouse click takes.
 
 // MARK: - Input-kind tracking (cursor visibility)
-
-/// Which kind of pointing input the user touched last. Touch hides the OS cursor; mouse or
-/// gamepad shows it.
-enum PointingInputKind {
-  case mouse
-  case gamepad
-  case touch
-}
+//
+// `PointingInputKind` itself now lives in `Sources/JunkbotCore/PointingInputKind.swift`, shared
+// with `ports/Darwin`'s `GameShell.swift`.
 
 @MainActor var lastPointingInput: PointingInputKind = .mouse
 
