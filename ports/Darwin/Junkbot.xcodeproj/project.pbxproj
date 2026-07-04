@@ -7,53 +7,43 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		147453362D84CDD405052D43 /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
+		152EA5995C9C9C6B110D1845 /* MenuFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */; };
 		18D26B5957FD09484257240C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
 		18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
 		1B6F3BFF58CA2CD13B2E4179 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
 		1C7934037DC924DB297410D6 /* font in Resources */ = {isa = PBXBuildFile; fileRef = D9009696D9CE05B4ACA7A84D /* font */; };
-		1DBB284EE0FB6ABFB5A4473C /* audio in Resources */ = {isa = PBXBuildFile; fileRef = D3FA2F5296F7AE377949B1A9 /* audio */; };
 		1EF74139078942C159051F64 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = D5211C6EA65765510BAFF083 /* JunkbotCore */; };
 		2189918BCF1E0990F43A3A33 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
 		21E8103FFA7CE0FDE6396A2C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 286E503B2E4868136B5FFAE0 /* Foundation.framework */; };
 		2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
 		334C563939ED2C6E1035676C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
 		34F49106E3D7E47680C544C3 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A403FA606439DE250287F4 /* SpriteKit.framework */; };
-		3DAB749F505A8940AB531BE6 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = BEAFA819E49AEC9EDAFAEBA7 /* JunkbotCore */; };
 		4448E734A34F1A6B1E84CE10 /* SpriteKitRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */; };
-		4B0E7B8D51693B55A73963CB /* GameRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEAF26A80A6A4F478587CB4 /* GameRender.swift */; };
-		4E66BABC8AF08D92C32F37E7 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
+		4D06A20495E6C50F9E76D516 /* MenuFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */; };
 		51D5EEEE15094922E8774138 /* GameRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEAF26A80A6A4F478587CB4 /* GameRender.swift */; };
-		554FC4FB94B2E22A77C0AAE9 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
-		5609179CC7BBF417E07CA0A8 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A99B9377644C8F5F421E559B /* SpriteKit.framework */; };
 		56E5019EBBE00CCE64BAAF93 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2686A242A10DB985CE6BA08 /* UIKit.framework */; };
 		631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */; };
-		6A6B274D80BB90EF67F95E9C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D513603962F39E61145181F0 /* UIKit.framework */; };
+		6BF1CE85D95DC21956B7CCEE /* GamepadInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */; };
 		70B4A03C67495B53584D7663 /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
 		739FD37E738A260F597ABB5E /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
-		7BB29FCEBC8A19A5679FDCFC /* AppDelegate_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0B482D4732EC2C47E1087 /* AppDelegate_iOS.swift */; };
-		7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0B482D4732EC2C47E1087 /* AppDelegate_iOS.swift */; };
+		7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */; };
 		8FBDE6E6645466B3726FF02D /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
 		90F5B9DCC79643FCCC2D4AA9 /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
 		912DE7A95E8968CA2B005875 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 684AC0DE31432A873EFAC6DE /* SpriteKit.framework */; };
 		959CD4E53BF5DE386E4AA4B8 /* GameRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEAF26A80A6A4F478587CB4 /* GameRender.swift */; };
-		996537568B02AEBAFF6F1511 /* audio in Resources */ = {isa = PBXBuildFile; fileRef = D3FA2F5296F7AE377949B1A9 /* audio */; };
 		9A0281724423EAE25FA2969A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 71665DDCD5EBC42503E7AA6E /* Cocoa.framework */; };
 		9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
-		A32F9AD2C13DFF7497F2F6C1 /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
-		AC9AB139B733155B16FE7D99 /* font in Resources */ = {isa = PBXBuildFile; fileRef = D9009696D9CE05B4ACA7A84D /* font */; };
 		AF47BCD7C94989952E1BE5DF /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
-		B323CCD6B6D38188A7A3F3D1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 48DFF4D42ADCCB706DA0DC93 /* Foundation.framework */; };
-		B7531BC598A2D39771C23A75 /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
-		B8F3450BEECC32A70D59328B /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
-		C4FA3AB67568B5791C0AAD1F /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
+		C2613056D83422AC4550578A /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C786F84ECF2F6E04A100A222 /* Audio.swift */; };
 		D010B2569820B3548176DEF5 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
+		D59B2C8D2724F77938240E8D /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C786F84ECF2F6E04A100A222 /* Audio.swift */; };
+		D9CA2A3436368DBD1038EAEC /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 710A11C4FFE084BB86074DF8 /* GameController.framework */; };
 		DF4E924609CA7E170346FB3B /* font in Resources */ = {isa = PBXBuildFile; fileRef = D9009696D9CE05B4ACA7A84D /* font */; };
 		E1819A9D0C62ADB8B1C3AEE6 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = F86720B9FF38C0EB2E297369 /* JunkbotCore */; };
 		F11043C8FF0EA094270F8C2B /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
+		F1A1080354675B773EC593FE /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E494E35EB768F3928863BF16 /* GameController.framework */; };
 		F3D0BDDBC8B5B06FB595132F /* SpriteKitRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */; };
-		F5A195A41F6AE38213BBABD5 /* SpriteKitRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */; };
-		F61FA1E703C52C565E5D0E33 /* audio in Resources */ = {isa = PBXBuildFile; fileRef = D3FA2F5296F7AE377949B1A9 /* audio */; };
+		F8562D8447D1D905F9E409D6 /* GamepadInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,22 +52,26 @@
 		286E503B2E4868136B5FFAE0 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		28D166B8DC14C501136B5EC9 /* GameShell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameShell.swift; sourceTree = "<group>"; };
 		48DFF4D42ADCCB706DA0DC93 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuFocus.swift; sourceTree = "<group>"; };
 		66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_macOS.swift; sourceTree = "<group>"; };
 		684AC0DE31432A873EFAC6DE /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
+		710A11C4FFE084BB86074DF8 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
 		71665DDCD5EBC42503E7AA6E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		7ABC53CD87E62119ECA82612 /* images */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = images; path = ../images; sourceTree = "<group>"; };
 		94A403FA606439DE250287F4 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
+		A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GamepadInput.swift; sourceTree = "<group>"; };
 		A99B9377644C8F5F421E559B /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
 		B01D4F1BF8AFC96EBF664693 /* GameInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameInput.swift; sourceTree = "<group>"; };
-		B2A0B482D4732EC2C47E1087 /* AppDelegate_iOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_iOS.swift; sourceTree = "<group>"; };
+		B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_tvOS.swift; sourceTree = "<group>"; };
+		C786F84ECF2F6E04A100A222 /* Audio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Audio.swift; sourceTree = "<group>"; };
 		CBEAF26A80A6A4F478587CB4 /* GameRender.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameRender.swift; sourceTree = "<group>"; };
-		D3FA2F5296F7AE377949B1A9 /* audio */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = audio; path = ../audio; sourceTree = "<group>"; };
 		D513603962F39E61145181F0 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		D9009696D9CE05B4ACA7A84D /* font */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = font; path = ../font; sourceTree = "<group>"; };
 		DA2FF96610A7B608B6819333 /* TextRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextRenderer.swift; sourceTree = "<group>"; };
 		DCA10430D63931E5188B9F0C /* Junkbot-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Junkbot-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E028F9E26A0BC48651D4803F /* levels */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = levels; path = ../levels; sourceTree = "<group>"; };
 		E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Screens.swift; sourceTree = "<group>"; };
+		E494E35EB768F3928863BF16 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
 		F2686A242A10DB985CE6BA08 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		F8321DEA8E5A972F75D29128 /* Junkbot-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Junkbot-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -90,6 +84,7 @@
 				9A0281724423EAE25FA2969A /* Cocoa.framework in Frameworks */,
 				E1819A9D0C62ADB8B1C3AEE6 /* JunkbotCore in Frameworks */,
 				912DE7A95E8968CA2B005875 /* SpriteKit.framework in Frameworks */,
+				F1A1080354675B773EC593FE /* GameController.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,6 +96,7 @@
 				1EF74139078942C159051F64 /* JunkbotCore in Frameworks */,
 				34F49106E3D7E47680C544C3 /* SpriteKit.framework in Frameworks */,
 				56E5019EBBE00CCE64BAAF93 /* UIKit.framework in Frameworks */,
+				D9CA2A3436368DBD1038EAEC /* GameController.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -123,6 +119,7 @@
 				DA2FF96610A7B608B6819333 /* TextRenderer.swift */,
 				CBEAF26A80A6A4F478587CB4 /* GameRender.swift */,
 				B01D4F1BF8AFC96EBF664693 /* GameInput.swift */,
+				4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */,
 			);
 			name = "Shared (ports/SDL3/Sources/JunkbotSDL3)";
 			path = ../SDL3/Sources/JunkbotSDL3;
@@ -155,7 +152,9 @@
 				28D166B8DC14C501136B5EC9 /* GameShell.swift */,
 				0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */,
 				66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */,
-				B2A0B482D4732EC2C47E1087 /* AppDelegate_iOS.swift */,
+				B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */,
+				C786F84ECF2F6E04A100A222 /* Audio.swift */,
+				A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */,
 			);
 			name = "Darwin (ports/Darwin/Sources/JunkbotDarwin)";
 			path = Sources/JunkbotDarwin;
@@ -178,7 +177,6 @@
 				7ABC53CD87E62119ECA82612 /* images */,
 				D9009696D9CE05B4ACA7A84D /* font */,
 				E028F9E26A0BC48651D4803F /* levels */,
-				D3FA2F5296F7AE377949B1A9 /* audio */,
 			);
 			name = Assets;
 			path = ..;
@@ -189,6 +187,7 @@
 			children = (
 				71665DDCD5EBC42503E7AA6E /* Cocoa.framework */,
 				684AC0DE31432A873EFAC6DE /* SpriteKit.framework */,
+				E494E35EB768F3928863BF16 /* GameController.framework */,
 			);
 			name = "OS X";
 			sourceTree = "<group>";
@@ -199,6 +198,7 @@
 				286E503B2E4868136B5FFAE0 /* Foundation.framework */,
 				94A403FA606439DE250287F4 /* SpriteKit.framework */,
 				F2686A242A10DB985CE6BA08 /* UIKit.framework */,
+				710A11C4FFE084BB86074DF8 /* GameController.framework */,
 			);
 			name = tvOS;
 			sourceTree = "<group>";
@@ -210,6 +210,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C4D4675259F4C6D83551F539 /* Build configuration list for PBXNativeTarget "Junkbot-tvOS" */;
 			buildPhases = (
+				4E660C5F27F7AFEDEA06B0CE /* Transcode Audio (ogg/wav -> caf) */,
 				DF02FB39D724222AF1F9D827 /* Sources */,
 				F19D7D1AECD5DF75F24E96B8 /* Frameworks */,
 				DBF0B20BCAAE5EBEC3D287BB /* Resources */,
@@ -230,6 +231,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3C229B8E85B8322BAF5F99E5 /* Build configuration list for PBXNativeTarget "Junkbot-macOS" */;
 			buildPhases = (
+				EB4FF36BC198F2E4F4702CB4 /* Transcode Audio (ogg/wav -> caf) */,
 				5097BC8543E1B8DD53CBC0CB /* Sources */,
 				D5ED16D62C5221148A3E9064 /* Frameworks */,
 				591499601692F9DEC96878C4 /* Resources */,
@@ -287,7 +289,6 @@
 				739FD37E738A260F597ABB5E /* images in Resources */,
 				DF4E924609CA7E170346FB3B /* font in Resources */,
 				8FBDE6E6645466B3726FF02D /* levels in Resources */,
-				1DBB284EE0FB6ABFB5A4473C /* audio in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -298,11 +299,49 @@
 				2189918BCF1E0990F43A3A33 /* images in Resources */,
 				1C7934037DC924DB297410D6 /* font in Resources */,
 				AF47BCD7C94989952E1BE5DF /* levels in Resources */,
-				996537568B02AEBAFF6F1511 /* audio in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4E660C5F27F7AFEDEA06B0CE /* Transcode Audio (ogg/wav -> caf) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Transcode Audio (ogg/wav -> caf)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/sound-effects\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/sound-effects\"\n\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/music\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/music\"\n";
+		};
+		EB4FF36BC198F2E4F4702CB4 /* Transcode Audio (ogg/wav -> caf) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Transcode Audio (ogg/wav -> caf)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/sound-effects\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/sound-effects\"\n\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/music\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/music\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5097BC8543E1B8DD53CBC0CB /* Sources */ = {
@@ -317,6 +356,9 @@
 				2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */,
 				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
 				631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */,
+				D59B2C8D2724F77938240E8D /* Audio.swift in Sources */,
+				F8562D8447D1D905F9E409D6 /* GamepadInput.swift in Sources */,
+				4D06A20495E6C50F9E76D516 /* MenuFocus.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,7 +373,10 @@
 				F3D0BDDBC8B5B06FB595132F /* SpriteKitRenderer.swift in Sources */,
 				70B4A03C67495B53584D7663 /* GameShell.swift in Sources */,
 				9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */,
-				7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_iOS.swift in Sources */,
+				7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */,
+				C2613056D83422AC4550578A /* Audio.swift in Sources */,
+				6BF1CE85D95DC21956B7CCEE /* GamepadInput.swift in Sources */,
+				152EA5995C9C9C6B110D1845 /* MenuFocus.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -413,24 +458,6 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
-		};
-		85011AF830887775375F40A6 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				"INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad" = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.ios;
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
 		};
 		8E331094282CDD61C6CBFD9D /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -517,23 +544,6 @@
 			};
 			name = Release;
 		};
-		E06C11B840C8B88605DEAB43 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				"INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad" = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.ios;
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
 		E785E7EFC4E9AA852844472C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -589,11 +599,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		BEAFA819E49AEC9EDAFAEBA7 /* JunkbotCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */;
-			productName = JunkbotCore;
-		};
 		D5211C6EA65765510BAFF083 /* JunkbotCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */;
