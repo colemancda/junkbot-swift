@@ -101,7 +101,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		106800F781E5CA9539CAC647 /* Shared (ports/Linux/Sources/JunkbotSDL3) */ = {
+		106800F781E5CA9539CAC647 /* Shared (ports/SDL3/Sources/JunkbotSDL3) */ = {
 			isa = PBXGroup;
 			children = (
 				EB6FBFCD08A46DCA6095F972 /* main.swift */,
@@ -110,8 +110,8 @@
 				F24C9A138D10F746A441537C /* Button.swift */,
 				DA2FF96610A7B608B6819333 /* TextRenderer.swift */,
 			);
-			name = "Shared (ports/Linux/Sources/JunkbotSDL3)";
-			path = ../Linux/Sources/JunkbotSDL3;
+			name = "Shared (ports/SDL3/Sources/JunkbotSDL3)";
+			path = ../SDL3/Sources/JunkbotSDL3;
 			sourceTree = "<group>";
 		};
 		2486A7DB54665249F9F8E492 /* Frameworks */ = {
@@ -137,7 +137,7 @@
 			children = (
 				0AFDCFE5427484C61BEB88BC /* Products */,
 				2486A7DB54665249F9F8E492 /* Frameworks */,
-				106800F781E5CA9539CAC647 /* Shared (ports/Linux/Sources/JunkbotSDL3) */,
+				106800F781E5CA9539CAC647 /* Shared (ports/SDL3/Sources/JunkbotSDL3) */,
 				8B3289B816DDA459B2474F03 /* Assets */,
 			);
 			sourceTree = "<group>";
