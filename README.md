@@ -16,8 +16,8 @@ under `ports/`:
 | [`ports/SDL3`](ports/SDL3) | ✅ Working | Same as SDL2, against SDL3/SDL3_image/SDL3_mixer. |
 | [`ports/Darwin`](ports/Darwin) | ✅ Working | SpriteKit-based native app: `Junkbot-macOS`/`Junkbot-tvOS` (`Junkbot.xcodeproj`) and `JunkbotMobile` (`JunkbotMobile.swiftpm`, a Swift Playgrounds App Playground for iOS). All three build in CI; macOS is confirmed running end-to-end. |
 | [`ports/portmaster`](ports/portmaster) | 🚧 Packaging scaffold | Bundles the SDL2/SDL3 builds for [PortMaster](https://portmaster.games/) handheld distribution; not yet tested on real hardware. |
-| [`ports/Android`](ports/Android) | 🚧 Scaffold only | Package/Gradle project skeleton; not compiled or run yet. |
-| [`ports/NDS`](ports/NDS) | ✅ Working | Embedded Swift ARM9 build; whole game on the scrollable bottom (touch) screen, D-pad scroll, stylus drag. |
+| [`ports/Android`](ports/Android) | ✅ Working | Cross-compiled Swift (`JunkbotCore` + the SDL3 game code shared with `ports/SDL3`) in a Java `SDLActivity` shell. Verified end-to-end on an emulator: title screen, level loading, sprite rendering, touch input. |
+| [`ports/NDS`](ports/NDS) | ✅ Working | Nintendo DS build in Embedded Swift (armv5te), no maxmod/streaming. Verified end-to-end in melonDS: touch-drag gameplay on the bottom screen, sound effects/music, and a bitmap-font info panel on the top screen. |
 | [`ports/3DS`](ports/3DS) | ✅ Builds | Embedded Swift ARM11 build; same scrollable-bottom-screen design as `ports/NDS`. Builds and links end-to-end; not yet run on real hardware or an emulator. |
 
 See each port's own README (where present) for build details, and root `.github/workflows/` for

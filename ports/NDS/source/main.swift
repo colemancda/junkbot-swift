@@ -23,28 +23,22 @@ import CNDS
 // KEY_TOUCH is BIT(14) -- the function-like BIT macro isn't imported.
 let KEY_TOUCH: UInt32 = 1 << 14
 
-// MARK: - Console (top screen) helpers
-
-func consolePrint(_ s: StaticString) {
-  nds_print_len(UnsafeRawPointer(s.utf8Start).assumingMemoryBound(to: CChar.self),
-    Int32(s.utf8CodeUnitCount))
-}
-
-func consoleClearScreen() { consolePrint("\u{1b}[2J") }
-
 // MARK: - Video setup
 //
-// Main engine: MODE_5 bitmap BG on the bottom LCD, double-buffered by
-// flipping the bitmap base between the two halves of VRAM A+B (the
-// double_buffer libnds example's setup). Sub engine: the demo console, which
-// lands on the top LCD because of lcdMainOnBottom().
+// Both engines run MODE_5 bitmap BGs: the main engine double-buffered (flipping
+// between the two halves of VRAM A+B, the double_buffer libnds example's
+// setup) for the bottom/touch screen's 60Hz world redraws, the sub engine
+// single-buffered (redrawn in place, on demand - see TextRenderer.swift) for
+// the top screen's info panel, which only changes on a level load or a moves-
+// counter/win-lose update. lcdMainOnBottom() puts the main engine's output on
+// the bottom (touch) LCD and the sub engine's on top.
 
 videoSetMode(MODE_5_2D.rawValue)
+videoSetModeSub(MODE_5_2D.rawValue)
 lcdMainOnBottom()
 vramSetPrimaryBanks(
   VRAM_A_MAIN_BG_0x06000000, VRAM_B_MAIN_BG_0x06020000,
   VRAM_C_SUB_BG, VRAM_D_LCD)
-consoleDemoInit()
 
 let bg = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0)
 /// The buffer currently being drawn into (the one NOT displayed).
@@ -54,6 +48,13 @@ func flipBuffers() {
   backBuffer = bgGetGfxPtr(bg)!
   // Each map base is 16KB; a 256x256x16bpp screen is 128KB = 8 bases.
   bgSetMapBase(bg, bgGetMapBase(bg) == 8 ? 0 : 8)
+}
+
+let topBg = bgInitSub(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0)
+let topBuffer = bgGetGfxPtr(topBg)!
+
+func clearTopScreen() {
+  dmaFillHalfWords(topScreenBackgroundColor, topBuffer, UInt32(screenWidth * screenHeight) * 2)
 }
 
 // MARK: - Audio
@@ -88,26 +89,48 @@ func clampScroll() {
   }
 }
 
+/// Fixed screen regions redrawn independently: the header (level title, changes only on load)
+/// stays untouched while the moves counter updates every tick it changes.
+let statusLineY: Int32 = 170
+
 func drawStatusLine() {
-  // Row 21, after a clear-to-end-of-line: "Moves: N (par M)".
-  consolePrint("\u{1b}[21;0H\u{1b}[K Moves: ")
-  nds_printf_1i("%d", gameEngine.moves)
+  clearRect(x: 0, y: statusLineY, width: screenWidth, height: fontGlyphHeight + 3, into: topBuffer)
+  var x = drawText(
+    " Moves: ", x: 6, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
+  x = drawInt(gameEngine.moves, x: x, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
   let par = embeddedLevels[currentLevelIndex].par
   if par != Int32.max {
-    nds_printf_1i("  (par %d)", par)
+    x = drawText(
+      "  (par ", x: x, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
+    x = drawInt(par, x: x, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
+    drawText(")", x: x, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
   }
   lastShownMoves = gameEngine.moves
 }
 
 func showLevelInfo() {
-  consoleClearScreen()
-  consolePrint("\u{1b}[0;0H JUNKBOT  level ")
-  nds_printf_2i("%d/%d", Int32(currentLevelIndex + 1), Int32(embeddedLevels.count))
-  consolePrint("\n\n ")
-  consolePrint(embeddedLevels[currentLevelIndex].title)
-  consolePrint("\n\n ")
-  consolePrint(embeddedLevels[currentLevelIndex].hint)
-  consolePrint("\u{1b}[19;0H D-pad scroll   stylus drag\n L/R level  START restart")
+  clearTopScreen()
+  var x = drawText(
+    " JUNKBOT  LEVEL ", x: 6, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
+  x = drawInt(
+    Int32(currentLevelIndex + 1), x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
+  x = drawText("/", x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
+  drawInt(
+    Int32(embeddedLevels.count), x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
+
+  let afterTitle = drawWrappedText(
+    embeddedLevels[currentLevelIndex].title, x: 6, y: 26, maxWidth: screenWidth - 12, scale: 2,
+    color: topScreenTextColor, into: topBuffer)
+  drawWrappedText(
+    embeddedLevels[currentLevelIndex].hint, x: 6, y: afterTitle + 6, maxWidth: screenWidth - 12,
+    scale: 1, color: topScreenTextColor, into: topBuffer)
+
+  drawText(
+    "D-PAD SCROLL  STYLUS DRAG", x: 6, y: 148, scale: 1, color: topScreenTextColor,
+    into: topBuffer)
+  drawText(
+    "L/R LEVEL  START RESTART", x: 6, y: 158, scale: 1, color: topScreenTextColor,
+    into: topBuffer)
   drawStatusLine()
 }
 
@@ -224,11 +247,13 @@ while pmMainLoop() {
     if outcome != 0 {
       winLoseLatch = outcome
       stopMusic()
-      consolePrint("\u{1b}[10;0H\u{1b}[K")
-      consolePrint(
-        outcome == 1
-          ? "\u{1b}[10;6H*** YOU WIN! ***" : "\u{1b}[10;5H*** TRY AGAIN ***")
-      consolePrint("\u{1b}[12;3Hpress A or tap to continue")
+      clearRect(x: 0, y: 82, width: screenWidth, height: 44, into: topBuffer)
+      drawText(
+        outcome == 1 ? " *** YOU WIN! ***" : " *** TRY AGAIN ***", x: 6, y: 84, scale: 2,
+        color: topScreenTextColor, into: topBuffer)
+      drawText(
+        "press A or tap to continue", x: 6, y: 108, scale: 1, color: topScreenTextColor,
+        into: topBuffer)
     }
     if gameEngine.moves != lastShownMoves {
       drawStatusLine()

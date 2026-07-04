@@ -28,8 +28,11 @@
 # sources to signed 8-bit PCM, played directly by libnds/calico's
 # soundPlaySample - no on-device decoder, no maxmod soundbank/streaming
 # (music is one hardware-looped clip per level, not a real streaming player -
-# see source/Audio.swift). That conversion step shells out to macOS's
-# `afconvert` to decode Ogg Vorbis, so (in addition to everything above) this
+# see source/Audio.swift). The top screen's bitmap font is likewise
+# pre-converted (tools/gen_font.py) from font/font.png into an ASCII-byte
+# glyph table - see source/TextRenderer.swift for why that isn't just
+# Sources/JunkbotCore/Font.swift's own API. These conversion steps shell out
+# to macOS's `afconvert`/`sips`, so (in addition to everything above) this
 # build currently requires macOS.
 #---------------------------------------------------------------------------------
 .SUFFIXES:
@@ -107,11 +110,12 @@ CORE_SWIFT	:=	$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
 PORT_SWIFT	:=	$(wildcard source/*.swift)
 GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift $(BUILD)/AudioAssets.swift \
-			$(BUILD)/MusicAssets.swift
-GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin
+			$(BUILD)/MusicAssets.swift $(BUILD)/FontAssets.swift
+GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin $(BUILD)/font.bin
 
 OFILES		:=	$(BUILD)/junkbot.swift.o $(BUILD)/shim.o \
-			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o $(BUILD)/music_bin.o
+			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o $(BUILD)/music_bin.o \
+			$(BUILD)/font_bin.o
 
 ARM7_ELF	:=	$(CALICO)/bin/ds7_maine.elf
 
@@ -154,6 +158,17 @@ $(BUILD)/music.stamp: tools/gen_music.py | $(BUILD)
 	@touch $@
 
 $(BUILD)/music.bin $(BUILD)/MusicAssets.swift: $(BUILD)/music.stamp
+
+# Font conversion: font/font.png (the same proportional bitmap font every
+# other port draws) -> a 1bpp atlas blob + ASCII-byte-indexed Swift glyph
+# table, for the top screen's info panel (see tools/gen_font.py and
+# source/TextRenderer.swift).
+$(BUILD)/font.stamp: tools/gen_font.py $(REPO_ROOT)/font/font.png | $(BUILD)
+	@echo generating font assets
+	python3 tools/gen_font.py $(REPO_ROOT) $(BUILD)
+	@touch $@
+
+$(BUILD)/font.bin $(BUILD)/FontAssets.swift: $(BUILD)/font.stamp
 
 # Level conversion: every campaign level, pre-parsed through JunkbotCore's own
 # parser + entity bridge on the host and frozen as entity-builder Swift.

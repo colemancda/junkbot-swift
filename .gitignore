@@ -80,6 +80,10 @@ fastlane/test_output
 # Finder
 .DS_Store
 
+# Python
+__pycache__/
+*.pyc
+
 # Node JS
 node_modules/
 
