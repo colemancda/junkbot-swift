@@ -107,8 +107,8 @@ jobs:
     - name: Build
       run: swift build --package-path ports/SDL3 -c ${{ matrix.config }} --product JunkbotSDL3
 
-  macos-darwin:
-    name: macOS (Darwin Xcode port)
+  darwin-macos:
+    name: macOS (Xcode)
     runs-on: macos-26
     steps:
     - name: Checkout
@@ -119,3 +119,38 @@ jobs:
       run: |
         xcodebuild -project ports/Darwin/Junkbot.xcodeproj -scheme Junkbot-macOS \
           -configuration Debug -skipPackagePluginValidation build
+
+  darwin-tvos:
+    name: tvOS (Xcode)
+    runs-on: macos-26
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Xcode Version
+      run: xcodebuild -version
+    - name: Download tvOS platform
+      run: xcodebuild -downloadPlatform tvOS
+    - name: Build Junkbot-tvOS
+      run: |
+        xcodebuild -project ports/Darwin/Junkbot.xcodeproj -scheme Junkbot-tvOS \
+          -configuration Debug -destination "generic/platform=tvOS Simulator" \
+          -skipPackagePluginValidation build
+
+  darwin-ios:
+    name: iOS (Swift Playground)
+    runs-on: macos-26
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Xcode Version
+      run: xcodebuild -version
+    - name: Build JunkbotMobile
+      # No `-project`: this is a `.swiftpm` App Playground, not an Xcode project/workspace -
+      # `xcodebuild` auto-detects it from the current directory, the same way it auto-detects a
+      # plain `Package.swift`. Confirmed working this way (previously undocumented/unverified -
+      # `ports/Darwin/README.md` used to claim this couldn't be driven from the command line at
+      # all, based only on `-project <bundle>.swiftpm` not working, which is a different thing).
+      run: |
+        cd ports/Darwin/JunkbotMobile.swiftpm
+        xcodebuild build -scheme JunkbotMobile -destination "generic/platform=iOS Simulator" \
+          -skipPackagePluginValidation

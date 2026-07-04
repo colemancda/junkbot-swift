@@ -5,9 +5,3 @@
 /// builds both for native platforms (used by `JunkbotCoreTests` and the SDL3-based `JunkbotSDL3`
 /// native app) and for the embedded-Swift WASM target consumed by `JunkbotWASM`, which bridges it
 /// to the browser.
-///
-/// The `Internal`/`catalog`/`dynamic`/`editor`/`loading`/`play`/`screens_by_peter` subdirectories
-/// and `DirectorStubs.swift` are auto-generated/scaffolding for the Lingo-to-Swift transpiler
-/// (`LingoTranspilerPlugin`, from the `swift-lingo` dependency) and are not part of the hand-written
-/// game logic described above.
-import LingoRuntime

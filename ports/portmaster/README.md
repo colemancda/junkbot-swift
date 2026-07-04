@@ -40,9 +40,8 @@ first, then re-run `make package`.
 - [ ] Add a `screenshot.png` (≥640×480, 4:3, real gameplay — not the title screen).
 - [ ] Add a `cover.png` (used by `gameinfo.xml`).
 - [ ] Fill in `licenses/` with the license text for every bundled dependency (SDL2, SDL3,
-      SDL2_image, SDL3_image, SDL2_mixer, SDL3_mixer, swift-lingo, and this project's own
-      license) — required by PortMaster's packaging guidelines and not something this scaffold
-      can fill in for you.
+      SDL2_image, SDL3_image, SDL2_mixer, SDL3_mixer, and this project's own license) — required
+      by PortMaster's packaging guidelines and not something this scaffold can fill in for you.
 - [ ] Test the SDL3->SDL2 fallback logic in `Junkbot.sh` on both a device that has SDL3
       system-wide (e.g. ROCKNIX) and one that only has SDL2, to confirm the right binary gets
       picked on each - not verifiable in this dev environment.

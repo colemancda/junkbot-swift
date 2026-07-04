@@ -6,6 +6,5 @@ before submitting:
 - `SDL3.txt` — https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt (zlib license)
 - `SDL3_image.txt` — https://github.com/libsdl-org/SDL_image/blob/main/LICENSE.txt (zlib license)
 - `SDL3_mixer.txt` — https://github.com/libsdl-org/SDL_mixer/blob/main/LICENSE.txt (zlib license)
-- `swift-lingo.txt` — the license from https://github.com/MillerTechnologyPeru/swift-lingo
 - `junkbot.txt` — this project's own license (add a top-level LICENSE file to the repo if it
   doesn't have one yet, and copy it here)

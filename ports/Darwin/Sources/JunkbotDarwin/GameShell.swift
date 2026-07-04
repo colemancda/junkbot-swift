@@ -20,10 +20,13 @@ let spritesDirectory = repoRoot.appendingPathComponent("images/sprites")
 let spritesUndercoverDirectory = spritesDirectory.appendingPathComponent("Undercover Exclusive")
 let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
 let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
-/// Where `Scripts/transcode-audio.sh` (Xcode Run Script build phase) / `TranscodeAudioPlugin`
-/// (the iOS Playground's SwiftPM build-tool plugin) write the `.caf`-transcoded audio assets -
-/// see `Audio.swift`'s doc comment for why the checked-in `audio/` originals (mostly Ogg Vorbis)
-/// can't be played directly via `AVAudioPlayer`.
+/// Where the `.caf`-transcoded audio assets live: written by `Scripts/transcode-audio.sh` at
+/// build time for the Xcode targets (macOS/tvOS Run Script build phases), or checked in directly
+/// under `JunkbotMobile.swiftpm/Sources/JunkbotMobile/TranscodedAudio/` for the iOS
+/// Playground (SwiftPM plugins run sandboxed with no opt-out, and `afconvert` can't decode Ogg
+/// Vorbis from inside that sandbox, so this has to be transcoded manually ahead of time there
+/// instead - see that package's `Package.swift`) - see `Audio.swift`'s doc comment for why the
+/// checked-in `audio/` originals (mostly Ogg Vorbis) can't be played directly via `AVAudioPlayer`.
 let transcodedSoundEffectsDirectory = repoRoot.appendingPathComponent("TranscodedAudio/sound-effects")
 let transcodedMusicDirectory = repoRoot.appendingPathComponent("TranscodedAudio/music")
 
@@ -75,8 +78,12 @@ let gameEngine = GameEngine()
 @MainActor var cameraCenterY: Double = 0
 @MainActor var cameraScale: Double = 1
 
-/// The scene's own logical size in points - updated by `JunkbotScene.didChangeSize`, read by
-/// every world/camera calculation the shared files perform.
+/// The scene's fixed logical size in points, read by every world/camera calculation the shared
+/// files perform - set once by whichever platform entry point (`AppDelegate_macOS.swift`/
+/// `GameViewController.swift`) constructs the scene (from the title screen level's actual
+/// bounds, matching `ports/SDL3`'s own `windowWidth`/`windowHeight`), and never changed
+/// afterward: `.aspectFit` scales that fixed scene uniformly to fit however large the real
+/// window/screen is, rather than this tracking the window/device size directly.
 @MainActor var windowWidth: Int32 = 900
 @MainActor var windowHeight: Int32 = 675
 

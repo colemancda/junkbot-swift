@@ -7,20 +7,11 @@ let package = Package(
   products: [
     .library(name: "JunkbotCore", targets: ["JunkbotCore"])
   ],
-  dependencies: [
-    .package(url: "https://github.com/MillerTechnologyPeru/swift-lingo.git", branch: "master"),
-  ],
   targets: [
     .target(
       name: "JunkbotCore",
-      dependencies: [
-        .product(name: "LingoRuntime", package: "swift-lingo")
-      ],
       swiftSettings: [
         .enableUpcomingFeature("ApproachableConcurrency")
-      ],
-      plugins: [
-        .plugin(name: "LingoTranspilerPlugin", package: "swift-lingo")
       ]
     ),
     .testTarget(

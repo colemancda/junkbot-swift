@@ -4,17 +4,22 @@
 # <output>/sound-effects/undercover/laser_hit.caf, etc.).
 #
 # Why: almost every asset under audio/ is Ogg Vorbis, a format AVFoundation/AVAudioPlayer can't
-# decode - but macOS's built-in `afconvert` tool CAN decode .ogg (confirmed empirically; Ogg
-# Vorbis is not an Apple-documented supported afconvert input format, but the codec component is
-# present on this OS). Transcoding once at build time (rather than shipping a third-party Ogg
-# decoder, or checking in duplicate pre-converted assets) keeps the checked-in .ogg/.wav files
-# under audio/ as the single source of truth, matching the project's existing principle for
-# images/font/levels.
+# decode - but macOS's built-in `afconvert` tool CAN decode .ogg when run unsandboxed (confirmed
+# empirically; Ogg Vorbis is not an Apple-documented supported afconvert input format, but the
+# codec component is present on this OS).
 #
-# Shared between `Junkbot.xcodeproj`'s Run Script build phases (macOS/tvOS targets) and
-# `JunkbotPlayground.swiftpm`'s TranscodeAudioPlugin (iOS) - both just invoke this script with
-# different source/output directories, so the actual transcoding logic lives in exactly one
-# place.
+# `Junkbot.xcodeproj`'s Run Script build phases (macOS/tvOS targets) invoke this script directly
+# at build time - Xcode Run Script phases aren't sandboxed, so this works there. iOS is different:
+# `JunkbotPlayground.swiftpm` used to invoke this same script via a `TranscodeAudioPlugin`
+# SwiftPM build-tool plugin, but SwiftPM always runs plugins sandboxed with no opt-out, and
+# `afconvert` fails to decode Ogg Vorbis from inside that sandbox (the exact same command that
+# works fine here fails with "Couldn't open input file" when invoked from a plugin's subprocess -
+# confirmed, not theoretical). So for iOS this script is instead run manually, once, whenever
+# `audio/` changes, with its output checked into
+# `JunkbotPlayground.swiftpm/Sources/JunkbotPlayground/TranscodedAudio/` directly (see that
+# package's `Package.swift` for the exact invocation) - the one asset directory for that target
+# that isn't a symlinked, always-fresh passthrough to the repo-root `audio/` single source of
+# truth, unlike images/font/levels.
 #
 # Usage: transcode-audio.sh <source-audio-dir> <output-dir>
 # Skips re-converting a file whose .caf output is already newer than its source, so incremental
