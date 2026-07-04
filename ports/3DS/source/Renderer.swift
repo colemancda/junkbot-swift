@@ -21,13 +21,17 @@ let screenHeight: Int32 = 240
 let spritePixels: UnsafePointer<UInt16> =
   ctru_asset_sprites_bin()!.assumingMemoryBound(to: UInt16.self)
 
-/// RGB555 (bit15 set) -> 3DS RGB565.
+/// RGB555 (bit15 set) -> 3DS RGB565. RGB565 packs as rrrrr gggggg bbbbb
+/// (b at bits 0-4, g at bits 5-10, r at bits 11-15, per libctru's own
+/// `RGB565` macro) -- the 5-bit green needs widening to 6 bits by
+/// replicating its low bit, same as any 555->565 upconvert.
 @inline(__always)
 func rgb565(fromRGB555 rgb555: UInt16) -> UInt16 {
   let r = (rgb555 >> 10) & 0x1F
   let g = (rgb555 >> 5) & 0x1F
   let b = rgb555 & 0x1F
-  return (r << 11) | (g << 6) | (b << 1) | (g >> 4)
+  let g6 = (g << 1) | (g >> 4)
+  return (r << 11) | (g6 << 5) | b
 }
 
 /// Ordered-dither test for translucent draws (the engine emits alpha as a
