@@ -40,6 +40,8 @@ let package = Package(
     .iOSApplication(
       name: "JunkbotPlayground",
       targets: ["JunkbotPlayground"],
+            bundleIdentifier: "com.colemancda.junkbot",
+            teamIdentifier: "4W79SG34MW",
       displayVersion: "1.0",
       bundleVersion: "1",
       iconAssetName: nil,
