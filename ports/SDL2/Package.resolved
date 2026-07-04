@@ -1,6 +1,15 @@
 {
-  "originHash" : "58f7579a97b372f95b3c9e545cc1d3fe7fbc5718cb0e9118ac02dfa440d456e1",
+  "originHash" : "a984c9a7b0c7715d60a55b8b53e6b4ed3224d9b3dd1294c20015bee2ce26995b",
   "pins" : [
+    {
+      "identity" : "sdl",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/PureSwift/SDL",
+      "state" : {
+        "revision" : "dfe91b20c0efc95854701549a7171263d16909ef",
+        "version" : "3.0.0"
+      }
+    },
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",
