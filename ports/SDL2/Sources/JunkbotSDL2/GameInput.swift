@@ -1,1 +1,1 @@
-../../../SDL3/Sources/JunkbotSDL3/GameInput.swift
+../../../Darwin/JunkbotMobile.swiftpm/Sources/JunkbotMobile/GameInput.swift

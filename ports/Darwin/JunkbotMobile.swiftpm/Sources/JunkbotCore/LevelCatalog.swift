@@ -68,9 +68,15 @@ public struct LevelCatalog: Sendable {
   /// that's what the browser build's level-select list shows.
   private static func loadEntries(directory: URL) -> [LevelCatalogEntry] {
     let fileManager = FileManager.default
+    // `resolvingSymlinksInPath()`: `contentsOfDirectory(at:)` throws ENOTDIR ("Not a directory")
+    // on this toolchain's Foundation when `directory` resolves through a symlinked path
+    // component - confirmed `ls`/`opendir` handle the exact same symlinked path fine, so this is
+    // a real Foundation-specific quirk, not a genuinely-missing directory. `levels/` (and
+    // `images/`/`font/`/`Sources/JunkbotCore`) are symlinks at the repo root since the Darwin
+    // Playground restructuring (their real contents live under `JunkbotMobile.swiftpm/`).
     guard
       let files = try? fileManager.contentsOfDirectory(
-        at: directory, includingPropertiesForKeys: nil)
+        at: directory.resolvingSymlinksInPath(), includingPropertiesForKeys: nil)
     else { return [] }
 
     var byTitle: [String: (url: URL, par: Int?)] = [:]
