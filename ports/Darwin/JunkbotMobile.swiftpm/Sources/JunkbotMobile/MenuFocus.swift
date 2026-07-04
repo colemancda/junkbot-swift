@@ -10,9 +10,9 @@ import JunkbotCore
 
 /// Index into `menuButtons` of the keyboard/d-pad-focused button, or nil when the mouse owns
 /// hover. Cleared on screen changes (menuButtons rebuilds) and on real mouse motion.
-@MainActor var focusedButtonIndex: Int?
+nonisolated(unsafe) var focusedButtonIndex: Int?
 
-@MainActor func moveFocus(_ delta: Int) {
+func moveFocus(_ delta: Int) {
   guard !menuButtons.isEmpty else { return }
   if let current = focusedButtonIndex {
     focusedButtonIndex = (current + delta + menuButtons.count) % menuButtons.count
@@ -30,7 +30,7 @@ import JunkbotCore
 /// the drag handle - the player needs to see where it'll land), but menu/item navigation hides
 /// it, since the focus ring is the indicator there and a static cursor left over a menu item
 /// would be a confusing, meaningless leftover once you start moving focus with the d-pad/arrows.
-@MainActor func directionPressed(dx: Int32, dy: Int32, menuDelta: Int) {
+func directionPressed(dx: Int32, dy: Int32, menuDelta: Int) {
   if gameEngine.isDragging {
     notePointingInput(.gamepad)
     virtualCursorVisible = true
@@ -47,7 +47,7 @@ import JunkbotCore
 /// `GameEngine.mouseMove` the real mouse/gamepad cursor already uses - so snapping, direction
 /// resolution, etc. all behave identically. Also warps the real cursor to match, so a
 /// subsequent click/A-release lines up with what's on screen.
-@MainActor func nudgeDrag(dx: Int32, dy: Int32) {
+func nudgeDrag(dx: Int32, dy: Int32) {
   lastMouseWorldX += dx * CELL_W
   lastMouseWorldY += dy * CELL_H
   gameEngine.mouseMove(lastMouseWorldX, lastMouseWorldY)
@@ -68,7 +68,7 @@ import JunkbotCore
 /// only once neither of those applies does A synthesize a mouse press/release at the cursor so
 /// it can grab/release a brick with the exact mouse semantics (drag direction resolution,
 /// canRelease-gated drops, toast dismissal).
-@MainActor func activatePressed() {
+func activatePressed() {
   if levelToastUntil != nil {
     dismissLevelToast()
     return
@@ -86,7 +86,7 @@ import JunkbotCore
   }
 }
 
-@MainActor func activateReleased() {
+func activateReleased() {
   if screenOwnsWorldInput(), focusedButtonIndex == nil {
     handleMouseUp(x: lastMouseScreenX, y: lastMouseScreenY)
   }

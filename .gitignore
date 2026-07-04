@@ -81,3 +81,11 @@ node_modules/
 .claude/
 !/ports/Darwin/JunkbotMobile.swiftpm/.swiftpm/playgrounds/*
 
+
+# Android port vendored SDL prebuilts (ports/Android/scripts/fetch-sdl.sh) and Gradle output
+ports/Android/Vendor/
+ports/Android/AndroidApp/.gradle/
+ports/Android/AndroidApp/build/
+ports/Android/AndroidApp/app/build/
+ports/Android/AndroidApp/app/src/main/jniLibs/
+ports/Android/AndroidApp/local.properties

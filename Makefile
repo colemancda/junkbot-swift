@@ -1,4 +1,4 @@
-.PHONY: all clean serve codegen sdl3 sdl2 portmaster
+.PHONY: all clean serve codegen sdl3 sdl2 portmaster android
 
 # Web (WASM) build - delegates to ports/Web, whose own Makefile does the actual
 # `swift package ... js --product JunkbotWASM` build and copies the result to web/Package/
@@ -28,3 +28,8 @@ sdl2:
 # Portmaster package (both SDL3 and SDL2 binaries) - delegates to ports/portmaster.
 portmaster:
 	$(MAKE) -C ports/portmaster package
+
+# Android debug APK - delegates to ports/Android. First run needs `make -C ports/Android vendor`
+# once to download the SDL3 Android prebuilts (see ports/Android/README.md).
+android:
+	$(MAKE) -C ports/Android apk

@@ -13,7 +13,7 @@ import JunkbotCore
 // `PointingInputKind` itself now lives in `Sources/JunkbotCore/PointingInputKind.swift`, shared
 // with `ports/Darwin`'s `GameShell.swift`.
 
-@MainActor var lastPointingInput: PointingInputKind = .mouse
+nonisolated(unsafe) var lastPointingInput: PointingInputKind = .mouse
 
 /// Whether the gamepad-driven virtual cursor (`VirtualCursor.draw`, main.swift) should be drawn
 /// right now - distinct from `lastPointingInput == .gamepad`, since d-pad *menu-focus*
@@ -23,15 +23,15 @@ import JunkbotCore
 /// gamepad-driven visibility (`pollSticks`, `directionPressed`) - not by `notePointingInput`,
 /// which only fires on an input *kind* change and would miss later same-kind visibility changes
 /// (e.g. stick movement resuming after menu navigation hid it).
-@MainActor var virtualCursorVisible = false
+nonisolated(unsafe) var virtualCursorVisible = false
 
 /// Set right before every programmatic `window.warpMouse(to:)` call (gamepad stick, d-pad
 /// nudge) and consumed by the next mouse-motion event, so that one synthetic event isn't
 /// mistaken for genuine mouse hardware movement (which must always show the cursor - see
 /// `main.swift`'s motion handler).
-@MainActor var suppressNextMouseMotionAsSynthetic = false
+nonisolated(unsafe) var suppressNextMouseMotionAsSynthetic = false
 
-@MainActor func notePointingInput(_ kind: PointingInputKind) {
+func notePointingInput(_ kind: PointingInputKind) {
   guard kind != lastPointingInput else { return }
   lastPointingInput = kind
   switch kind {
@@ -53,7 +53,7 @@ import JunkbotCore
 /// One active controller (last plugged-in wins), with per-frame left-stick polling that moves
 /// the cursor at constant velocity. Polling (rather than reacting to axis-motion events) gives
 /// smooth movement independent of the event delivery rate.
-@MainActor final class GamepadState {
+final class GamepadState {
   /// Reassigning this releases (and, via `SDLGamepad`'s own `deinit`, closes) any
   /// previously-open gamepad automatically - no manual close-before-open needed.
   private var gamepad: SDLGamepad?
@@ -126,7 +126,7 @@ func hideOSCursor() {
 /// Warps the real OS cursor to a render-space position and marks the next mouse-motion event as
 /// synthetic (so it isn't mistaken for genuine mouse hardware movement) - called by `nudgeDrag`
 /// after advancing the tracked mouse position by one grid cell.
-@MainActor func warpCursor(x: Float, y: Float) {
+func warpCursor(x: Float, y: Float) {
   suppressNextMouseMotionAsSynthetic = true
   // `warpMouse` takes window-space (point) coordinates, which differ from the render-space
   // units used everywhere else in this file once `.integerScale` presentation introduces
