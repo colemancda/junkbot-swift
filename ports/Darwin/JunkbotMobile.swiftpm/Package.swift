@@ -8,41 +8,37 @@ import AppleProductTypes
 // `SpriteKitRenderer.swift`/`GamepadInput.swift`/`Audio.swift` with the Xcode project via
 // symlinks into `Sources/JunkbotMobile` (the same technique `ports/SDL2` already uses to
 // share files with `ports/SDL3`), and `Screens.swift`/`TextRenderer.swift`/`MenuFocus.swift`/
-// `GameRender.swift`/`GameInput.swift` from `ports/SDL3` the same way (`Button`/`Renderer`/
-// `Color` live in `JunkbotCore` itself now, no file sharing needed for those - see
-// `ports/Darwin/README.md`). Assets (`images`/`font`/`levels`) are symlinked from the repo root,
-// the same single-source-of-truth principle every other port uses. `audio` is the one exception:
-// it's mostly Ogg Vorbis, which `AVAudioPlayer` can't decode, so it needs transcoding to `.caf`
-// first - this used to happen at build time via a `TranscodeAudioPlugin` build-tool plugin, but
-// SwiftPM always runs plugins sandboxed with no opt-out, and `afconvert` cannot decode Ogg Vorbis
-// from inside that sandbox (confirmed: the exact same `afconvert -f caff -d LEI16@44100` command
-// that works fine unsandboxed - and via Xcode's own Run Script build phases for the macOS/tvOS
-// targets, which aren't plugin-sandboxed - fails with "Couldn't open input file" when invoked
-// from a plugin's subprocess). So the plugin's gone; `TranscodedAudio/` below is instead
-// transcoded once manually (`Scripts/transcode-audio.sh ../../audio/sound-effects
+// `GameRender.swift`/`GameInput.swift` from `ports/SDL3` the same way. Assets (`images`/`font`/
+// `levels`) are symlinked from the repo root, the same single-source-of-truth principle every
+// other port uses. `audio` is the one exception: it's mostly Ogg Vorbis, which `AVAudioPlayer`
+// can't decode, so it needs transcoding to `.caf` first - this used to happen at build time via
+// a `TranscodeAudioPlugin` build-tool plugin, but SwiftPM always runs plugins sandboxed with no
+// opt-out, and `afconvert` cannot decode Ogg Vorbis from inside that sandbox (confirmed: the
+// exact same `afconvert -f caff -d LEI16@44100` command that works fine unsandboxed - and via
+// Xcode's own Run Script build phases for the macOS/tvOS targets, which aren't plugin-sandboxed -
+// fails with "Couldn't open input file" when invoked from a plugin's subprocess). So the plugin's
+// gone; `TranscodedAudio/` below is instead transcoded once manually
+// (`Scripts/transcode-audio.sh ../../audio/sound-effects
 // Sources/JunkbotMobile/TranscodedAudio/sound-effects`, same for `music`) and checked in as
 // real files - the one asset directory that isn't a symlinked, single-source-of-truth passthrough,
 // since re-running that script is a manual step whenever `audio/` changes, not automatic.
 //
-// `JunkbotCore` dependency: a local `path:` dependency only resolves when this manifest is
-// parsed on a machine that actually has the rest of the repo checked out next to this bundle -
-// true when opened via Xcode on a Mac, false in the Swift Playgrounds app on iPad/iPhone (it
-// only has this `.swiftpm` bundle itself, sandboxed, with no sibling `ports/`/`Sources/`
-// directories to resolve `../..` against). `#if os(macOS)` here checks the platform actually
-// *running* this manifest (Xcode's manifest-loader process vs. Swift Playgrounds' own on-device
-// one), not the platform being built for - so on macOS this points at the local checkout (edits
-// to `Sources/JunkbotCore` show up immediately), while everywhere else it falls back to fetching
-// `JunkbotCore` straight from GitHub so JunkbotMobile can resolve and build standalone.
-// (`#if` can't appear directly inside an array literal in a Package.swift manifest - SwiftPM's
-// manifest parser rejects it with "expected expression in container literal" - so this has to
-// build the array via a `var`/`.append` instead of a single `dependencies: [...]` literal.)
-var dependencies: [Package.Dependency] = []
-#if os(macOS)
-dependencies.append(.package(path: "../../.."))
-#else
-dependencies.append(.package(url: "https://github.com/colemancda/junkbot-swift.git", from: "0.1.0"))
-#endif
-
+// `JunkbotCore`: a plain local target here (`Sources/JunkbotCore`), symlinked in its entirety to
+// the repo root's `Sources/JunkbotCore` - not a separate package product. This replaces an
+// earlier approach that depended on `JunkbotCore` as an external package (a local `path:`
+// dependency on macOS, falling back to `.package(url: "https://github.com/colemancda/
+// junkbot-swift.git", from: "0.1.0")` everywhere else, since Swift Playgrounds on iPad/iPhone
+// only has this `.swiftpm` bundle itself with no sibling `ports/`/`Sources/` directories a
+// `path:` dependency could resolve against). That approach had a real, confirmed-in-practice
+// failure mode: resolving `junkbot-swift` as a remote package means fetching a *tagged release*
+// and parsing *that tag's* `Package.swift`, whose declared `swift-tools-version` Swift
+// Playgrounds' bundled toolchain might not support (confirmed: existing tags declared 6.3, and
+// Swift Playgrounds on a real device failed to resolve dependencies at all with "incompatible
+// tools version"). A local target has no separate manifest to parse at all, sidestepping that
+// entirely - the only remaining requirement is that this `.swiftpm` bundle is opened from
+// *within* a full clone of the repo (so the symlink target actually resolves), which is exactly
+// how this was being opened on-device already (via a git-backed Files.app file provider), not
+// downloaded as a standalone bundle in isolation.
 let package = Package(
   name: "JunkbotMobile",
   platforms: [.iOS("26.0")],
@@ -50,27 +46,32 @@ let package = Package(
     .iOSApplication(
       name: "JunkbotMobile",
       targets: ["JunkbotMobile"],
-            bundleIdentifier: "com.colemancda.junkbot",
-            teamIdentifier: "4W79SG34MW",
+      bundleIdentifier: "com.colemancda.junkbot",
+      teamIdentifier: "4W79SG34MW",
       displayVersion: "1.0",
       bundleVersion: "1",
-            supportedDeviceFamilies: [
-                .phone,
-                .pad
-            ],
-            supportedInterfaceOrientations: [
-                .landscapeLeft,
-                .landscapeRight
-            ],
-            appCategory: .puzzleGames
+      supportedDeviceFamilies: [
+        .phone,
+        .pad
+      ],
+      supportedInterfaceOrientations: [
+        .landscapeLeft,
+        .landscapeRight
+      ],
+      appCategory: .puzzleGames
     )
   ],
-  dependencies: dependencies,
   targets: [
+    .target(
+      name: "JunkbotCore",
+      swiftSettings: [
+        .enableUpcomingFeature("ApproachableConcurrency")
+      ]
+    ),
     .executableTarget(
       name: "JunkbotMobile",
       dependencies: [
-        .product(name: "JunkbotCore", package: "junkbot-swift")
+        "JunkbotCore"
       ],
       resources: [
         // Symlinks into the repo-root asset directories (single source of truth, same
