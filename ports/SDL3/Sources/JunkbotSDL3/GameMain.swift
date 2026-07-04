@@ -445,6 +445,16 @@ public func junkbotMain() {
   // platform, so it's harmless to always set.
   _ = SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1")
 
+  // "Low latency" audio on Android means AAudio opens its stream in exclusive-MMAP mode, which
+  // is markedly unstable on the emulator's `ranchu` audio HAL - confirmed on-device: it degrades
+  // into a continuous stream of `pcm_writei`/`I/O error` failures (silencing all audio, not just
+  // this app's) after the emulator has been running for a while, recovering only with a full
+  // emulator restart, and recurring again within minutes. Disabling it trades a small amount of
+  // audio latency (still fully audible, just not the absolute-lowest-latency path) for reliable
+  // playback on both the emulator and any real device with a similarly flaky MMAP driver. No-op
+  // on every other platform.
+  _ = SDL_SetHint(SDL_HINT_ANDROID_LOW_LATENCY_AUDIO, "0")
+
   do {
     try SDL.initialize(subSystems: [.video, .audio, .gamepad])
   } catch {
