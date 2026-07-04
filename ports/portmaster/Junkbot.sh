@@ -26,8 +26,8 @@ export XDG_DATA_HOME="$CONFDIR"
 cd "$GAMEDIR/junkbot"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Two binaries are bundled: junkbot3.${DEVICE_ARCH} (built against SDL3/SDL3_image/SDL3_mixer)
-# and junkbot2.${DEVICE_ARCH} (the same game built against the older SDL2 family). Most
+# Two binaries are bundled: junkbot-sdl3.${DEVICE_ARCH} (built against SDL3/SDL3_image/SDL3_mixer)
+# and junkbot-sdl2.${DEVICE_ARCH} (the same game built against the older SDL2 family). Most
 # PortMaster-supported firmwares still only ship SDL2 system-wide; newer ones (e.g. ROCKNIX)
 # ship SDL3 too. Rather than requiring two separate port submissions, detect which SDL3 shared
 # libraries are actually present on THIS device at launch time and pick the matching binary -
@@ -52,10 +52,21 @@ has_library() {
   return 1
 }
 
+SDL3_BINARY="junkbot-sdl3.${DEVICE_ARCH}"
+SDL2_BINARY="junkbot-sdl2.${DEVICE_ARCH}"
+
 if has_library "libSDL3.so" && has_library "libSDL3_image.so" && has_library "libSDL3_mixer.so"; then
-  BINARY="junkbot3.${DEVICE_ARCH}"
+  BINARY="$SDL3_BINARY"
 else
-  BINARY="junkbot2.${DEVICE_ARCH}"
+  BINARY="$SDL2_BINARY"
+  # This device will never be able to run the SDL3 binary (its libraries aren't present
+  # and don't appear at runtime), so it's just dead weight on a handheld's limited
+  # storage - delete it the first time we confirm we're falling back to SDL2. Only ever
+  # removes the *other* binary, never the one about to be launched.
+  if [ -f "$SDL3_BINARY" ]; then
+    echo "SDL3 not found on this device - removing unused $SDL3_BINARY to save space"
+    rm -f "$SDL3_BINARY"
+  fi
 fi
 echo "Using $BINARY"
 

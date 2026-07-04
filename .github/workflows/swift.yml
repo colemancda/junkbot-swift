@@ -239,7 +239,7 @@ jobs:
     - name: Build and package port
       run: make -C ports/portmaster zip
     - name: Verify archive contents
-      run: unzip -l ports/portmaster/.build-package/junkbot.zip | grep -E 'junkbot[23]\.aarch64|Junkbot\.sh|port\.json'
+      run: unzip -l ports/portmaster/.build-package/junkbot.zip | grep -E 'junkbot-sdl[23]\.aarch64|Junkbot\.sh|port\.json'
     - name: Upload port archive
       uses: actions/upload-artifact@v4
       with:

@@ -28,7 +28,7 @@ running, `make package` from here will:
    the container (native-speed on Apple Silicon; Linux build products go to a separate
    `.build-linux-aarch64` scratch dir so they never collide with host dev builds).
 3. Assemble a ready-to-submit port folder at `.build-package/junkbot/` containing both
-   release binaries (`junkbot3.aarch64`, `junkbot2.aarch64`), bundled assets, and these
+   release binaries (`junkbot-sdl3.aarch64`, `junkbot-sdl2.aarch64`), bundled assets, and these
    template files.
 
 `make zip` additionally produces `.build-package/junkbot.zip` (the artifact named by

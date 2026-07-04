@@ -59,9 +59,9 @@ package: docker-build
 	cp junkbot.gptk $(PACKAGE_DIR)/junkbot/junkbot.gptk
 	cp -r licenses/. $(PACKAGE_DIR)/junkbot/licenses/
 	cp $(REPO_ROOT)/ports/SDL3/$(SCRATCH_DIR)/release/JunkbotSDL3 \
-		$(PACKAGE_DIR)/junkbot/junkbot3.$(TARGET_ARCH)
+		$(PACKAGE_DIR)/junkbot/junkbot-sdl3.$(TARGET_ARCH)
 	cp $(REPO_ROOT)/ports/SDL2/$(SCRATCH_DIR)/release/JunkbotSDL2 \
-		$(PACKAGE_DIR)/junkbot/junkbot2.$(TARGET_ARCH)
+		$(PACKAGE_DIR)/junkbot/junkbot-sdl2.$(TARGET_ARCH)
 	cp -r $(REPO_ROOT)/images $(PACKAGE_DIR)/junkbot/images
 	cp -r $(REPO_ROOT)/font $(PACKAGE_DIR)/junkbot/font
 	cp -r $(REPO_ROOT)/levels $(PACKAGE_DIR)/junkbot/levels
