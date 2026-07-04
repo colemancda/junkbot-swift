@@ -201,33 +201,43 @@ run as a full iOS app, no separate Xcode project needed. Structure:
   `Sources/JunkbotDarwin/` or `../SDL3/Sources/JunkbotSDL3/` (see "What's shared vs. Darwin-only"
   above) plus the four symlinked asset directories.
 
-**Not verified in this sandbox** - and likely not verifiable outside of Xcode/Swift Playgrounds
-itself: `AppleProductTypes` is a module Xcode's own toolchain injects specifically when opening a
-`.swiftpm` App Playground; it doesn't exist for plain command-line `swift build`/`swift package
-describe` (confirmed: both fail with "no such module 'AppleProductTypes'" here), and `xcodebuild
--project JunkbotMobile.swiftpm` doesn't recognize the bundle as a project either (App
-Playgrounds are opened via `open JunkbotMobile.swiftpm`/double-click, which routes through
-Xcode's dedicated App Playground project loader, not the ordinary `-project`/`-workspace`
-flags). The package's manifest and source layout were reviewed carefully against Apple's
-documented App Playground format, but an actual build/run needs a real Xcode session (or Swift
-Playgrounds on iPad) to confirm - flagged here for whoever picks that up, consistent with this
-file's existing iOS/tvOS verification gaps below.
+**Build-verified via `xcodebuild` on the command line** (previously assumed not to be possible -
+corrected here): `AppleProductTypes` is a module Xcode's own toolchain injects specifically when
+opening a `.swiftpm` App Playground, so it doesn't exist for plain command-line `swift build`/
+`swift package describe` (confirmed: both fail with "no such module 'AppleProductTypes'"), and
+`xcodebuild -project JunkbotMobile.swiftpm` doesn't recognize the bundle as a project either -
+but `xcodebuild` **does** auto-detect a `.swiftpm` App Playground from the current directory the
+same way it auto-detects a plain `Package.swift`, with no `-project`/`-workspace` flag at all:
+
+```sh
+cd ports/Darwin/JunkbotMobile.swiftpm
+xcodebuild build -scheme JunkbotMobile -destination "generic/platform=iOS Simulator" \
+  -skipPackagePluginValidation
+```
+
+Confirmed working end-to-end (`** BUILD SUCCEEDED **`, real `JunkbotMobile.app` produced under
+`Debug-iphonesimulator/`) - this is what CI now uses (see root `.github/workflows/swift.yml`'s
+`darwin-ios` job).
 
 ## Known gaps (not attempted this pass)
 
-- **tvOS is structurally sound but not build-verified in this environment** (no tvOS
-  simulator/platform installed here - `xcodebuild` reports "tvOS 26.5 is not installed"). The
+- **tvOS is structurally sound and confirmed buildable, but not build-verified end-to-end in
+  this sandbox**: the tvOS *SDK* is installed (`xcodebuild -showsdks` lists `appletvos26.5`), but
+  no destination is eligible without the separate tvOS *platform*/simulator runtime, which
+  `xcodebuild -downloadPlatform tvOS` confirms is a real, working ~3.76GB download (kicked off
+  successfully here, just not completed - too large/slow for this sandbox's time budget). CI
+  (`darwin-tvos` in `.github/workflows/swift.yml`) runs that download step before building, since
+  GitHub's runner image can't be assumed to have every platform pre-installed either. The
   **macOS** target was fully built (`xcodebuild build`, Debug) and run (`Junkbot-macOS.app`
-  launched, stayed alive with no crash, correctly saw its bundled `images/font/levels`
-  folders and transcoded `TranscodedAudio/` under `Contents/Resources/`) - this is the one
-  platform buildable/runnable without a simulator in this sandbox. A prior iOS Simulator build
-  attempt (back when iOS was still an Xcode target here) hit a **pre-existing, unrelated** issue
-  worth knowing about regardless of which iOS project you're using: `JunkbotCore`'s `swift-lingo`
-  dependency (`LingoTranspilerPlugin`) fails to compile for the iOS Simulator SDK ("concurrency
-  is only available in iOS 13.0.0 or newer") inside `swift-lingo`'s own `LingoAST` target, before
-  any of this project's own code is even reached - a package-compatibility gap independent of
-  anything in this repo, not investigated further (would mean digging into `swift-lingo`'s own
-  `Package.swift` platform declarations).
+  launched, stayed alive with no crash, correctly saw its bundled `images/font/levels` folders
+  and transcoded `TranscodedAudio/` under `Contents/Resources/`) - this remains the one platform
+  buildable/runnable without any extra platform download in this sandbox. **iOS is now fully
+  build-verified** here too (see "The iOS Playground" above) - a previously-noted concern about
+  `swift-lingo`'s `LingoAST` target failing to compile for the iOS Simulator SDK ("concurrency is
+  only available in iOS 13.0.0 or newer") turned out not to reproduce against the current
+  `JunkbotMobile.swiftpm` (`platforms: [.iOS("26.0")]`, well above whatever old deployment target
+  the original iOS Xcode target used when that issue was last seen) - the build now succeeds
+  cleanly with no workaround needed.
 - **Gamepad/keyboard input and audio are implemented but not verified on real hardware** in this
   sandbox (no controller/keyboard peripheral or audio output to test against) - see "Audio" and
   "Gamepad + keyboard input" above for what was verified instead (clean builds, smoke-test runs,
