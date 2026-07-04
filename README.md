@@ -17,6 +17,8 @@ under `ports/`:
 | [`ports/Darwin`](ports/Darwin) | ✅ Working | SpriteKit-based native app: `Junkbot-macOS`/`Junkbot-tvOS` (`Junkbot.xcodeproj`) and `JunkbotMobile` (`JunkbotMobile.swiftpm`, a Swift Playgrounds App Playground for iOS). All three build in CI; macOS is confirmed running end-to-end. |
 | [`ports/portmaster`](ports/portmaster) | 🚧 Packaging scaffold | Bundles the SDL2/SDL3 builds for [PortMaster](https://portmaster.games/) handheld distribution; not yet tested on real hardware. |
 | [`ports/Android`](ports/Android) | 🚧 Scaffold only | Package/Gradle project skeleton; not compiled or run yet. |
+| [`ports/NDS`](ports/NDS) | ✅ Working | Embedded Swift ARM9 build; whole game on the scrollable bottom (touch) screen, D-pad scroll, stylus drag. |
+| [`ports/3DS`](ports/3DS) | ✅ Builds | Embedded Swift ARM11 build; same scrollable-bottom-screen design as `ports/NDS`. Builds and links end-to-end; not yet run on real hardware or an emulator. |
 
 See each port's own README (where present) for build details, and root `.github/workflows/` for
 what's verified in CI.

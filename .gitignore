@@ -37,6 +37,8 @@ web/Package/
 *.elf
 *.map
 *.nds
+*.3dsx
+*.smdh
 *.o
 *.bin
 *.dia
