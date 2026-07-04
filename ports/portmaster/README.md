@@ -34,6 +34,11 @@ running, `make package` from here will:
 `make zip` additionally produces `.build-package/junkbot.zip` (the artifact named by
 `port.json`). `make docker-build` runs just the cross-compile step.
 
+CI also builds this on every push: the `portmaster` job in
+`.github/workflows/swift.yml` runs `make zip` on GitHub's native arm64 runner
+(`ubuntu-24.04-arm`) and uploads the archive as the `junkbot-portmaster-aarch64`
+workflow artifact.
+
 The binaries statically link the Swift runtime (`--static-swift-stdlib`) so no Swift
 installation is needed on the device; glibc is still linked dynamically, hence
 `min_glibc: 2.35` (jammy's) in `port.json`. Only aarch64 is packaged for now - an x86_64
