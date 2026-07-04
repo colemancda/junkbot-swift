@@ -1,0 +1,32 @@
+// Not verified - see ../../README.md, particularly the "target type" gap: this assumes
+// ../../.build/.../libJunkbotSDL3.so gets built and copied into src/main/jniLibs/<abi>/ by some
+// external step (not implemented here) before this module's build runs.
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'org.junkbot.game'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "org.junkbot.game"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "0.0.1"
+    }
+
+    sourceSets {
+        main {
+            // Populated by copying the repo root's images/, font/, levels/, audio/ here before
+            // building - not automated by this Gradle file yet (see ../../README.md step 5).
+            assets.srcDirs = ['src/main/assets']
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+
+    packagingOptions {
+        // The Swift Android SDK's runtime libraries (libswiftCore.so etc.) ship alongside the
+        // app's own .so - avoid Gradle deduplication stripping needed copies per-ABI.
+        pickFirst '**/*.so'
+    }
+}

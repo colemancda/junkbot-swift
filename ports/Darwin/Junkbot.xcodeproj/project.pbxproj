@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		152EA5995C9C9C6B110D1845 /* MenuFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */; };
+		18D26B5957FD09484257240C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
+		18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
+		1B6F3BFF58CA2CD13B2E4179 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
+		1C7934037DC924DB297410D6 /* font in Resources */ = {isa = PBXBuildFile; fileRef = D9009696D9CE05B4ACA7A84D /* font */; };
+		1EF74139078942C159051F64 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = D5211C6EA65765510BAFF083 /* JunkbotCore */; };
+		2189918BCF1E0990F43A3A33 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
+		21E8103FFA7CE0FDE6396A2C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 286E503B2E4868136B5FFAE0 /* Foundation.framework */; };
+		2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
+		334C563939ED2C6E1035676C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
+		34F49106E3D7E47680C544C3 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A403FA606439DE250287F4 /* SpriteKit.framework */; };
+		4448E734A34F1A6B1E84CE10 /* SpriteKitRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */; };
+		4D06A20495E6C50F9E76D516 /* MenuFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */; };
+		51D5EEEE15094922E8774138 /* GameRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEAF26A80A6A4F478587CB4 /* GameRender.swift */; };
+		56E5019EBBE00CCE64BAAF93 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2686A242A10DB985CE6BA08 /* UIKit.framework */; };
+		631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */; };
+		6BF1CE85D95DC21956B7CCEE /* GamepadInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */; };
+		70B4A03C67495B53584D7663 /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
+		739FD37E738A260F597ABB5E /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
+		7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */; };
+		8FBDE6E6645466B3726FF02D /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
+		90F5B9DCC79643FCCC2D4AA9 /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
+		912DE7A95E8968CA2B005875 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 684AC0DE31432A873EFAC6DE /* SpriteKit.framework */; };
+		959CD4E53BF5DE386E4AA4B8 /* GameRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEAF26A80A6A4F478587CB4 /* GameRender.swift */; };
+		9A0281724423EAE25FA2969A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 71665DDCD5EBC42503E7AA6E /* Cocoa.framework */; };
+		9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
+		AF47BCD7C94989952E1BE5DF /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
+		C2613056D83422AC4550578A /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C786F84ECF2F6E04A100A222 /* Audio.swift */; };
+		D010B2569820B3548176DEF5 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
+		D59B2C8D2724F77938240E8D /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C786F84ECF2F6E04A100A222 /* Audio.swift */; };
+		D9CA2A3436368DBD1038EAEC /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 710A11C4FFE084BB86074DF8 /* GameController.framework */; };
+		DF4E924609CA7E170346FB3B /* font in Resources */ = {isa = PBXBuildFile; fileRef = D9009696D9CE05B4ACA7A84D /* font */; };
+		E1819A9D0C62ADB8B1C3AEE6 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = F86720B9FF38C0EB2E297369 /* JunkbotCore */; };
+		F11043C8FF0EA094270F8C2B /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
+		F1A1080354675B773EC593FE /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E494E35EB768F3928863BF16 /* GameController.framework */; };
+		F3D0BDDBC8B5B06FB595132F /* SpriteKitRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */; };
+		F8562D8447D1D905F9E409D6 /* GamepadInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpriteKitRenderer.swift; sourceTree = "<group>"; };
+		0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		286E503B2E4868136B5FFAE0 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		28D166B8DC14C501136B5EC9 /* GameShell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameShell.swift; sourceTree = "<group>"; };
+		48DFF4D42ADCCB706DA0DC93 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuFocus.swift; sourceTree = "<group>"; };
+		66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_macOS.swift; sourceTree = "<group>"; };
+		684AC0DE31432A873EFAC6DE /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
+		710A11C4FFE084BB86074DF8 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
+		71665DDCD5EBC42503E7AA6E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		7ABC53CD87E62119ECA82612 /* images */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = images; path = ../images; sourceTree = "<group>"; };
+		94A403FA606439DE250287F4 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
+		A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GamepadInput.swift; sourceTree = "<group>"; };
+		A99B9377644C8F5F421E559B /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SpriteKit.framework; sourceTree = DEVELOPER_DIR; };
+		B01D4F1BF8AFC96EBF664693 /* GameInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameInput.swift; sourceTree = "<group>"; };
+		B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_tvOS.swift; sourceTree = "<group>"; };
+		C786F84ECF2F6E04A100A222 /* Audio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Audio.swift; sourceTree = "<group>"; };
+		CBEAF26A80A6A4F478587CB4 /* GameRender.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameRender.swift; sourceTree = "<group>"; };
+		D513603962F39E61145181F0 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		D9009696D9CE05B4ACA7A84D /* font */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = font; path = ../font; sourceTree = "<group>"; };
+		DA2FF96610A7B608B6819333 /* TextRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextRenderer.swift; sourceTree = "<group>"; };
+		DCA10430D63931E5188B9F0C /* Junkbot-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Junkbot-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		E028F9E26A0BC48651D4803F /* levels */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = levels; path = ../levels; sourceTree = "<group>"; };
+		E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Screens.swift; sourceTree = "<group>"; };
+		E494E35EB768F3928863BF16 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
+		F2686A242A10DB985CE6BA08 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		F8321DEA8E5A972F75D29128 /* Junkbot-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Junkbot-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D5ED16D62C5221148A3E9064 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A0281724423EAE25FA2969A /* Cocoa.framework in Frameworks */,
+				E1819A9D0C62ADB8B1C3AEE6 /* JunkbotCore in Frameworks */,
+				912DE7A95E8968CA2B005875 /* SpriteKit.framework in Frameworks */,
+				F1A1080354675B773EC593FE /* GameController.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F19D7D1AECD5DF75F24E96B8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				21E8103FFA7CE0FDE6396A2C /* Foundation.framework in Frameworks */,
+				1EF74139078942C159051F64 /* JunkbotCore in Frameworks */,
+				34F49106E3D7E47680C544C3 /* SpriteKit.framework in Frameworks */,
+				56E5019EBBE00CCE64BAAF93 /* UIKit.framework in Frameworks */,
+				D9CA2A3436368DBD1038EAEC /* GameController.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0AFDCFE5427484C61BEB88BC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F8321DEA8E5A972F75D29128 /* Junkbot-macOS.app */,
+				DCA10430D63931E5188B9F0C /* Junkbot-tvOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		106800F781E5CA9539CAC647 /* Shared (ports/SDL3/Sources/JunkbotSDL3) */ = {
+			isa = PBXGroup;
+			children = (
+				E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */,
+				DA2FF96610A7B608B6819333 /* TextRenderer.swift */,
+				CBEAF26A80A6A4F478587CB4 /* GameRender.swift */,
+				B01D4F1BF8AFC96EBF664693 /* GameInput.swift */,
+				4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */,
+			);
+			name = "Shared (ports/SDL3/Sources/JunkbotSDL3)";
+			path = ../SDL3/Sources/JunkbotSDL3;
+			sourceTree = "<group>";
+		};
+		2486A7DB54665249F9F8E492 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				97759135072FF4AEB2E2332F /* OS X */,
+				355123E831A662649A36DB24 /* iOS */,
+				9D64A688C89C04C82F79C47A /* tvOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		355123E831A662649A36DB24 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				48DFF4D42ADCCB706DA0DC93 /* Foundation.framework */,
+				A99B9377644C8F5F421E559B /* SpriteKit.framework */,
+				D513603962F39E61145181F0 /* UIKit.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		42CCE698C034E505D405B378 /* Darwin (ports/Darwin/Sources/JunkbotDarwin) */ = {
+			isa = PBXGroup;
+			children = (
+				0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */,
+				28D166B8DC14C501136B5EC9 /* GameShell.swift */,
+				0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */,
+				66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */,
+				B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */,
+				C786F84ECF2F6E04A100A222 /* Audio.swift */,
+				A2CB5CFCF4EF45C91DE54AFA /* GamepadInput.swift */,
+			);
+			name = "Darwin (ports/Darwin/Sources/JunkbotDarwin)";
+			path = Sources/JunkbotDarwin;
+			sourceTree = "<group>";
+		};
+		4D829C39FFBBFA76517373F6 = {
+			isa = PBXGroup;
+			children = (
+				0AFDCFE5427484C61BEB88BC /* Products */,
+				2486A7DB54665249F9F8E492 /* Frameworks */,
+				106800F781E5CA9539CAC647 /* Shared (ports/SDL3/Sources/JunkbotSDL3) */,
+				8B3289B816DDA459B2474F03 /* Assets */,
+				42CCE698C034E505D405B378 /* Darwin (ports/Darwin/Sources/JunkbotDarwin) */,
+			);
+			sourceTree = "<group>";
+		};
+		8B3289B816DDA459B2474F03 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				7ABC53CD87E62119ECA82612 /* images */,
+				D9009696D9CE05B4ACA7A84D /* font */,
+				E028F9E26A0BC48651D4803F /* levels */,
+			);
+			name = Assets;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		97759135072FF4AEB2E2332F /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				71665DDCD5EBC42503E7AA6E /* Cocoa.framework */,
+				684AC0DE31432A873EFAC6DE /* SpriteKit.framework */,
+				E494E35EB768F3928863BF16 /* GameController.framework */,
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		9D64A688C89C04C82F79C47A /* tvOS */ = {
+			isa = PBXGroup;
+			children = (
+				286E503B2E4868136B5FFAE0 /* Foundation.framework */,
+				94A403FA606439DE250287F4 /* SpriteKit.framework */,
+				F2686A242A10DB985CE6BA08 /* UIKit.framework */,
+				710A11C4FFE084BB86074DF8 /* GameController.framework */,
+			);
+			name = tvOS;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		10A4DE1CCE080DE532C98987 /* Junkbot-tvOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4D4675259F4C6D83551F539 /* Build configuration list for PBXNativeTarget "Junkbot-tvOS" */;
+			buildPhases = (
+				4E660C5F27F7AFEDEA06B0CE /* Transcode Audio (ogg/wav -> caf) */,
+				DF02FB39D724222AF1F9D827 /* Sources */,
+				F19D7D1AECD5DF75F24E96B8 /* Frameworks */,
+				DBF0B20BCAAE5EBEC3D287BB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Junkbot-tvOS";
+			packageProductDependencies = (
+				D5211C6EA65765510BAFF083 /* JunkbotCore */,
+			);
+			productName = "Junkbot-tvOS";
+			productReference = DCA10430D63931E5188B9F0C /* Junkbot-tvOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		64E7D9D07BB884F2FBF4614D /* Junkbot-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3C229B8E85B8322BAF5F99E5 /* Build configuration list for PBXNativeTarget "Junkbot-macOS" */;
+			buildPhases = (
+				EB4FF36BC198F2E4F4702CB4 /* Transcode Audio (ogg/wav -> caf) */,
+				5097BC8543E1B8DD53CBC0CB /* Sources */,
+				D5ED16D62C5221148A3E9064 /* Frameworks */,
+				591499601692F9DEC96878C4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Junkbot-macOS";
+			packageProductDependencies = (
+				F86720B9FF38C0EB2E297369 /* JunkbotCore */,
+			);
+			productName = "Junkbot-macOS";
+			productReference = F8321DEA8E5A972F75D29128 /* Junkbot-macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BECD4C8916FBF7A09E2F7CBA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 74D5B4D8F6BD6F4F34CBD465 /* Build configuration list for PBXProject "Junkbot" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4D829C39FFBBFA76517373F6;
+			minimizedProjectReferenceProxies = 0;
+			packageReferences = (
+				EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0AFDCFE5427484C61BEB88BC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				64E7D9D07BB884F2FBF4614D /* Junkbot-macOS */,
+				10A4DE1CCE080DE532C98987 /* Junkbot-tvOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		591499601692F9DEC96878C4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				739FD37E738A260F597ABB5E /* images in Resources */,
+				DF4E924609CA7E170346FB3B /* font in Resources */,
+				8FBDE6E6645466B3726FF02D /* levels in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DBF0B20BCAAE5EBEC3D287BB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2189918BCF1E0990F43A3A33 /* images in Resources */,
+				1C7934037DC924DB297410D6 /* font in Resources */,
+				AF47BCD7C94989952E1BE5DF /* levels in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4E660C5F27F7AFEDEA06B0CE /* Transcode Audio (ogg/wav -> caf) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Transcode Audio (ogg/wav -> caf)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/sound-effects\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/sound-effects\"\n\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/music\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/music\"\n";
+		};
+		EB4FF36BC198F2E4F4702CB4 /* Transcode Audio (ogg/wav -> caf) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Transcode Audio (ogg/wav -> caf)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/sound-effects\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/sound-effects\"\n\"$SRCROOT/Scripts/transcode-audio.sh\" \"$SRCROOT/../../audio/music\" \"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/music\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5097BC8543E1B8DD53CBC0CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F11043C8FF0EA094270F8C2B /* Screens.swift in Sources */,
+				1B6F3BFF58CA2CD13B2E4179 /* TextRenderer.swift in Sources */,
+				51D5EEEE15094922E8774138 /* GameRender.swift in Sources */,
+				334C563939ED2C6E1035676C /* GameInput.swift in Sources */,
+				4448E734A34F1A6B1E84CE10 /* SpriteKitRenderer.swift in Sources */,
+				2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */,
+				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
+				631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */,
+				D59B2C8D2724F77938240E8D /* Audio.swift in Sources */,
+				F8562D8447D1D905F9E409D6 /* GamepadInput.swift in Sources */,
+				4D06A20495E6C50F9E76D516 /* MenuFocus.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF02FB39D724222AF1F9D827 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				90F5B9DCC79643FCCC2D4AA9 /* Screens.swift in Sources */,
+				D010B2569820B3548176DEF5 /* TextRenderer.swift in Sources */,
+				959CD4E53BF5DE386E4AA4B8 /* GameRender.swift in Sources */,
+				18D26B5957FD09484257240C /* GameInput.swift in Sources */,
+				F3D0BDDBC8B5B06FB595132F /* SpriteKitRenderer.swift in Sources */,
+				70B4A03C67495B53584D7663 /* GameShell.swift in Sources */,
+				9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */,
+				7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */,
+				C2613056D83422AC4550578A /* Audio.swift in Sources */,
+				6BF1CE85D95DC21956B7CCEE /* GamepadInput.swift in Sources */,
+				152EA5995C9C9C6B110D1845 /* MenuFocus.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		656812EAB3A6F446BB08AEA5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		6FEA7C65D5E75D2BA22B03E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(SRCROOT)/Junkbot-macOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.macos;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		8E331094282CDD61C6CBFD9D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(SRCROOT)/Junkbot-macOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.macos;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		BF5B74ACC3C7DCB9161DF3C9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.tvos;
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C558A15C8FFB5917A13CBD44 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		E785E7EFC4E9AA852844472C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.junkbot.game.tvos;
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3C229B8E85B8322BAF5F99E5 /* Build configuration list for PBXNativeTarget "Junkbot-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8E331094282CDD61C6CBFD9D /* Release */,
+				6FEA7C65D5E75D2BA22B03E9 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		74D5B4D8F6BD6F4F34CBD465 /* Build configuration list for PBXProject "Junkbot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				656812EAB3A6F446BB08AEA5 /* Debug */,
+				C558A15C8FFB5917A13CBD44 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C4D4675259F4C6D83551F539 /* Build configuration list for PBXNativeTarget "Junkbot-tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BF5B74ACC3C7DCB9161DF3C9 /* Release */,
+				E785E7EFC4E9AA852844472C /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D5211C6EA65765510BAFF083 /* JunkbotCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */;
+			productName = JunkbotCore;
+		};
+		F86720B9FF38C0EB2E297369 /* JunkbotCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EFBC60B3496BA5D9D3772759 /* XCLocalSwiftPackageReference ".." */;
+			productName = JunkbotCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = BECD4C8916FBF7A09E2F7CBA /* Project object */;
+}

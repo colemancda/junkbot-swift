@@ -1,5 +1,7 @@
-#if canImport(Foundation)
-import Foundation
+// Pure stdlib (no Foundation) - gated out of the embedded-WASM build for the same reason as
+// `LevelParse.swift` (transitively reachable from it, and shares its `.lowercased()`-adjacent
+// Unicode-table concern via `Level`), not because this file itself needs Foundation.
+#if !hasFeature(Embedded)
 
 extension PartState {
     /// The canonical raw text for this state (inverse of `PartState.init(_:)`). Note this isn't

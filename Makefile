@@ -1,26 +1,30 @@
-SWIFT_SDK    ?= swift-6.3.2-RELEASE_wasm-embedded
-SWIFT        := swift
-BUILD_OUTPUT := .build/plugins/PackageToJS/outputs/Package
-WEB_PACKAGE  := web/Package
+.PHONY: all clean serve codegen sdl3 sdl2 portmaster
 
-.PHONY: all clean serve codegen
+# Web (WASM) build - delegates to ports/Web, whose own Makefile does the actual
+# `swift package ... js --product JunkbotWASM` build and copies the result to web/Package/
+# (relative to repo root) so index.html's `./web/Package/index.js` import keeps working
+# unchanged. Kept as `make all`/`make serve` here so existing muscle memory and local
+# dev-server configs don't need to change.
+all:
+	$(MAKE) -C ports/Web all
+
+serve:
+	$(MAKE) -C ports/Web serve
+
+clean:
+	$(MAKE) -C ports/Web clean
 
 codegen:
 	python3 tools/generate_render_tables.py
 
-all:
-	@echo "▶ Building Swift WASM…"
-	$(SWIFT) package \
-	    --swift-sdk $(SWIFT_SDK) \
-	    js --product JunkbotWASM -c release
-	@echo "▶ Copying package output to web/Package/…"
-	rm -rf $(WEB_PACKAGE)
-	cp -r $(BUILD_OUTPUT) $(WEB_PACKAGE)
-	@echo "✓ Done."
+# SDL3 dev build - delegates to ports/SDL3.
+sdl3:
+	$(MAKE) -C ports/SDL3 build
 
-clean:
-	rm -rf node_modules .build $(WEB_PACKAGE)
+# SDL2 dev build - delegates to ports/SDL2.
+sdl2:
+	$(MAKE) -C ports/SDL2 build
 
-serve:
-	@echo "▶ Open http://localhost:8080/"
-	python3 -m http.server 8080
+# Portmaster package (both SDL3 and SDL2 binaries) - delegates to ports/portmaster.
+portmaster:
+	$(MAKE) -C ports/portmaster package

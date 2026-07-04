@@ -1,5 +1,7 @@
-#if canImport(Foundation)
-import Foundation
+// Pure stdlib (no Foundation) - gated out of the embedded-WASM build because `.lowercased()`
+// pulls in Unicode normalization tables that don't link under Embedded Swift (a real, previously
+// confirmed failure mode in this project), not because this file itself needs Foundation.
+#if !hasFeature(Embedded)
 
 extension Level {
 

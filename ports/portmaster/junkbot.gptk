@@ -1,0 +1,7 @@
+# JunkbotSDL3 reads the gamepad NATIVELY via SDL3's own gamepad APIs (see
+# Sources/JunkbotSDL3/Input.swift - left stick moves the cursor, d-pad navigates menus, A
+# activates, Start = Escape). gptokeyb is only used here for PortMaster's own exit hotkey, not
+# to remap gameplay input - do NOT add a/b/x/y/stick mappings below, or every button press will
+# fire twice (once via SDL's real joystick device, once via gptokeyb's synthetic keyboard/mouse).
+
+back = esc

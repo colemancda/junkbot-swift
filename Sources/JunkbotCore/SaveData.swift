@@ -3,9 +3,11 @@
 // 'Encodable'" / "cannot automatically synthesize 'Encodable' because '[String : Int]' does not
 // conform to 'Encodable'"). SaveData is SDL3-only anyway - the browser build has its own
 // localStorage-based persistence and never touches this type - so it's gated out of the WASM
-// build entirely, same as `LevelCatalog.swift`/`LevelParse.swift`.
-#if canImport(Foundation)
-import Foundation
+// build entirely, same as `LevelCatalog.swift`/`LevelParse.swift`. Pure stdlib otherwise -
+// `Codable` itself is a standard-library protocol, not Foundation (actual `JSONEncoder`/
+// `JSONDecoder` use lives in each native port's own main.swift, which imports Foundation itself
+// for that).
+#if !hasFeature(Embedded)
 
 /// Best-moves-per-level persistence, mirroring the *shape* of `src/game.js`'s relevant
 /// `storageKeys` (`score(levelName)`) - storage-mechanism-agnostic: the browser build keys
