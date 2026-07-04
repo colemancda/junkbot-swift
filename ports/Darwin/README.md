@@ -84,8 +84,13 @@ plan:
   `GameRenderer` protocol (and every other backend) is Y-down, origin top-left. `flippedY(_:
   height:)` converts at every draw call, including inside `SKTexture(rect:in:)` sub-region
   clipping math (which is itself Y-up relative to the *texture's* own height, not the scene's).
-  `windowToRender`/`renderToWindow` use `SKView.convert(_:to:)`/`convert(_:from:)`, which already
-  applies SpriteKit's own scene-scaling/letterboxing transform, plus the same Y-flip.
+  `windowToRender`/`renderToWindow` only apply that Y-flip - `GameScene.swift`'s callers already
+  hand them `event.location(in: self)`/`touch.location(in: self)` (scene-space, via SpriteKit's
+  own `NSEvent`/`UITouch` extensions, already accounting for `scaleMode`/letterboxing), so no
+  further `SKView.convert(_:to:)` is needed; running an already-scene-space point back through
+  `convert(_:to:)` double-applies the transform (a real bug fixed here - harmless-looking on a
+  1:1 windowed macOS scene, badly wrong once view/scene sizes actually differ, e.g. `.resizeFill`
+  on iOS/iPadOS, which is why touch input looked "inverted"/offset there while mouse looked fine).
 - `setTextureAlpha`/`setTextureColor` are stored in per-handle side tables and applied when a
   node is actually created in `drawTexture`, since SpriteKit applies alpha/color at the *node*
   level (`SKSpriteNode.alpha`/`.color`+`.colorBlendFactor`), not the *texture* level like SDL's
@@ -111,25 +116,31 @@ fade-out stings - just built on `AVAudioPlayer` instead of `MIX_*` calls:
   `ports/SDL3`'s `!MIX_TrackPlaying(track)` check.
 
 **Almost every asset under `audio/` is Ogg Vorbis, a format `AVAudioPlayer` can't decode** -
-confirmed empirically that macOS's built-in `afconvert` tool *can* decode `.ogg` directly (not an
-Apple-documented supported input format, but the codec component is present), so audio is
-transcoded to Core Audio Format (`.caf`) at build time instead of shipping a third-party Ogg
-decoder or checking in duplicate pre-converted files:
+confirmed empirically that macOS's built-in `afconvert` tool *can* decode `.ogg` directly when run
+unsandboxed (not an Apple-documented supported input format, but the codec component is present),
+so audio is transcoded to Core Audio Format (`.caf`) instead of shipping a third-party Ogg decoder:
 
 - `Scripts/transcode-audio.sh` is the actual transcoding logic (`afconvert -f caff -d
-  LEI16@44100`, skip-if-newer for fast incremental builds, tolerant of individual file failures),
+  LEI16@44100`, skip-if-newer for fast incremental runs, tolerant of individual file failures),
   shared between both consumers below.
 - `Junkbot.xcodeproj`: a Run Script build phase on both `Junkbot-macOS` and `Junkbot-tvOS`,
-  writing into `$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/`. Named
-  `TranscodedAudio` (not `Audio`) deliberately - macOS's case-insensitive-by-default filesystem
-  means a folder named `Audio` would collide with (and get corrupted by) the *original* `audio`
-  folder reference if one existed at the same path; the raw `audio` folder reference was removed
-  from Copy Bundle Resources entirely once this landed, since only the transcoded `.caf` files
-  are actually read at runtime.
-- `JunkbotPlayground.swiftpm`: `Plugins/TranscodeAudioPlugin` is a SwiftPM build-tool plugin
-  (`prebuildCommand`, the same *kind* of mechanism `swift-lingo`'s `LingoTranspilerPlugin` -
-  already a transitive dependency via `JunkbotCore` - uses for its own dynamically-discovered
-  `.ls` file set) that invokes the identical shared script.
+  writing into `$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/TranscodedAudio/` at every
+  build. Named `TranscodedAudio` (not `Audio`) deliberately - macOS's case-insensitive-by-default
+  filesystem means a folder named `Audio` would collide with (and get corrupted by) the
+  *original* `audio` folder reference if one existed at the same path; the raw `audio` folder
+  reference was removed from Copy Bundle Resources entirely once this landed, since only the
+  transcoded `.caf` files are actually read at runtime.
+- `JunkbotPlayground.swiftpm`: originally used a `Plugins/TranscodeAudioPlugin` SwiftPM
+  build-tool plugin (`prebuildCommand`) to invoke the same script at build time - **removed**,
+  since SwiftPM always runs plugins sandboxed with no opt-out, and `afconvert` cannot decode Ogg
+  Vorbis from inside that sandbox (confirmed: the identical `afconvert` invocation that works
+  fine in the Xcode Run Script phases above - unsandboxed - failed with "Couldn't open input
+  file" when run from inside the plugin's subprocess; every `.ogg`-sourced sound was silently
+  missing, only the handful of already-`.wav` ones transcoded successfully). Instead,
+  `Scripts/transcode-audio.sh` is run manually once (whenever `audio/` changes) directly into
+  `Sources/JunkbotPlayground/TranscodedAudio/`, which is checked in as real files (not a symlink,
+  unlike `images`/`font`/`levels`) and declared as a plain `.copy(...)` resource in
+  `Package.swift` - see that file's doc comment for the exact invocation.
 
 ## Gamepad + keyboard input
 
