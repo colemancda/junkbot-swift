@@ -115,7 +115,9 @@ extension GameEngine {
   /// if resolved upward/downward via the drag gesture.
   func startDrag(indices: [Int], worldX: Int32, worldY: Int32, direction: Int32) {
     guard let first = indices.first, !entities[first].grabbed else { return }
+    #if arch(wasm32)
     undoStack.append(snapshot())
+    #endif
     draggingIndices = indices
     moves += 1
     for idx in draggingIndices {

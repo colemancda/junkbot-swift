@@ -1,3 +1,10 @@
+// Undo (GameEngine.swift's undoStack/Undo.swift) is compiled only for the
+// Web/WASM host (`#if arch(wasm32)`) - no native port uses it, and snapshotting
+// on every drag-start was measurable overhead on constrained targets (e.g. the
+// Nintendo DS port). `swift test` builds natively, so these tests only run in
+// an actual wasm32 build, not the default `swift test` here.
+#if arch(wasm32)
+
 import Testing
 
 @testable import JunkbotCore
@@ -69,3 +76,5 @@ struct UndoTests {
     #expect(engine.isDragging, "the in-progress drag should be untouched by the refused undo")
   }
 }
+
+#endif

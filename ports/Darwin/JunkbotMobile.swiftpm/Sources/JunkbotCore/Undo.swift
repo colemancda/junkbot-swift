@@ -1,3 +1,7 @@
+// Only the Web/WASM host exposes this - see GameEngine.swift's `undoStack`/
+// `rewindBuffer` declaration for why this is compiled out elsewhere.
+#if arch(wasm32)
+
 /// Play-mode undo (`undo()`) and rewind (`beginRewind`/`stepRewind`/`endRewind`), both backed by
 /// `EngineSnapshot` (see `Snapshot.swift`). This is a separate, new capability from the level
 /// editor's own undo/redo (JS-side, full-level-JSON-snapshot based, `editing`-gated) — that
@@ -75,3 +79,5 @@ extension GameEngine {
     rebuildAccelerationStructures()
   }
 }
+
+#endif

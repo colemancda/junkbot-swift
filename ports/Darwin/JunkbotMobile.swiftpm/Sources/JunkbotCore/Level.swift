@@ -1,4 +1,13 @@
 // MARK: - Level data model
+//
+// This model (and PartState.init(_:)'s `.lowercased()`) is only ever consumed by the level-text
+// parser/serializer (LevelParse.swift/LevelSerialize.swift/LevelEntityBridge.swift/
+// LevelCatalog.swift), all of which are already excluded from embedded targets for the same
+// Unicode-data-table linking concern - see those files' own notes. Gating it here too (rather
+// than just at the parser) matters for embedded targets whose linker doesn't dead-strip unused
+// code as aggressively (e.g. ports/NDS's direct devkitARM link): left in, this file's unreachable
+// `.lowercased()` call alone pulled in ~800KB of Unicode tables nothing on those targets uses.
+#if !hasFeature(Embedded)
 
 /// A level file's raw, structured contents (INI-style `.txt` format), as opposed to `GameEngine`'s
 /// live `[Entity]` array. This is the level-editor/persistence-facing model: it preserves every
@@ -191,6 +200,8 @@ public struct LevelPart: Equatable, Sendable {
         self.relationID = relationID
     }
 }
+
+#endif
 
 // MARK: - GameEngine level bounds
 

@@ -1,3 +1,7 @@
+// Only the Web/WASM host uses undo/rewind - see GameEngine.swift's `undoStack`/
+// `rewindBuffer` declaration for why this is compiled out elsewhere.
+#if arch(wasm32)
+
 /// A complete, restorable copy of `GameEngine`'s mutable simulation state at one instant, used by
 /// both per-move undo (`Undo.swift`'s `undo()`) and per-tick rewind (`stepRewind()`). `Entity` is
 /// a plain value type in a `[Entity]` array (copy-on-write), so capturing a snapshot is cheap —
@@ -26,3 +30,5 @@ struct EngineSnapshot {
   /// that would have happened originally, not a different one.
   var rngState: UInt32
 }
+
+#endif
