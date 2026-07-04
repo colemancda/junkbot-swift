@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 import PackageDescription
 import AppleProductTypes
 
@@ -28,14 +28,14 @@ import AppleProductTypes
 // build the array via a `var`/`.append` instead of a single `dependencies: [...]` literal.)
 var dependencies: [Package.Dependency] = []
 #if os(macOS)
-dependencies.append(.package(path: "../.."))
+dependencies.append(.package(path: "../../.."))
 #else
 dependencies.append(.package(url: "https://github.com/colemancda/junkbot-swift.git", branch: "main"))
 #endif
 
 let package = Package(
   name: "JunkbotPlayground",
-  platforms: [.iOS("17.0")],
+  platforms: [.iOS("26.0")],
   products: [
     .iOSApplication(
       name: "JunkbotPlayground",

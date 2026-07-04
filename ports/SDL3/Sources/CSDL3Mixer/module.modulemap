@@ -1,5 +1,0 @@
-module CSDL3Mixer [system] {
-    header "shim.h"
-    link "SDL3_mixer"
-    export *
-}

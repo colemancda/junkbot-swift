@@ -1,6 +1,7 @@
 import CSDL3
-import CSDL3Image
-import CSDL3Mixer
+import SDL3Swift
+import SDL3Image
+import SDL3Mixer
 import Foundation
 import JunkbotCore
 
@@ -107,73 +108,76 @@ let cameraScale: Double = 1
 
 // MARK: - SDL setup
 
-guard SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD) else {
-  FileHandle.standardError.write(Data("SDL_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
+do {
+  try SDL.initialize(subSystems: [.video, .audio, .gamepad])
+} catch {
+  FileHandle.standardError.write(Data("SDL.initialize failed: \(error)\n".utf8))
   exit(1)
 }
-defer { SDL_Quit() }
+defer { SDL.quit() }
 
 // Load the title screen level before creating the window, so the window's default size can
 // match its actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The
-// window stays resizable afterward for levels of other sizes (see SDL_EVENT_WINDOW_RESIZED below).
+// window stays resizable afterward for levels of other sizes (see `.windowResized` below).
 gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
 var windowWidth: Int32 = gameEngine.levelBounds.map { $0.width } ?? 900
 var windowHeight: Int32 = gameEngine.levelBounds.map { $0.height } ?? 675
-// SDL_WINDOW_RESIZABLE's macro (SDL_UINT64_C(...)) doesn't import into Swift - its raw value
-// (SDL_video.h) is 0x0000000000000020. SDL_WINDOW_HIGH_PIXEL_DENSITY (0x2000) requests a
-// backing buffer that matches the display's real pixel density (e.g. 2x on Retina) instead of
-// a 1x buffer the OS then has to upscale/blur to fill the screen - without it, everything
-// rendered looks visibly softer than the original (non-Retina-aware) Director/Flash build.
-let windowResizableFlag: SDL_WindowFlags = 0x0000_0000_0000_0020 | 0x0000_0000_0000_2000
+
 // Plain top-level `let`s (not `guard let`) so `window`/`renderer` are true module-level symbols
 // visible from other files (Screens.swift, TextRenderer.swift, etc.) - a `guard let` binding at
 // main.swift's top level only stays in scope for the rest of *this* file.
-let window: OpaquePointer = {
-  guard let window = SDL_CreateWindow("Junkbot", windowWidth, windowHeight, windowResizableFlag)
-  else {
-    FileHandle.standardError.write(Data("SDL_CreateWindow failed: \(String(cString: SDL_GetError()))\n".utf8))
+let window: SDLWindow = {
+  do {
+    let window = try SDLWindow(
+      title: "Junkbot",
+      frame: (x: .centered, y: .centered, width: Int(windowWidth), height: Int(windowHeight)),
+      // `.highPixelDensity` requests a backing buffer that matches the display's real pixel
+      // density (e.g. 2x on Retina) instead of a 1x buffer the OS then has to upscale/blur to
+      // fill the screen - without it, everything rendered looks visibly softer than the
+      // original (non-Retina-aware) Director/Flash build.
+      options: [.resizable, .highPixelDensity])
+    // Don't allow shrinking below the default size - `windowWidth`/`windowHeight` are also the
+    // fixed logical resolution the integer-scale renderer setup (below) scales up from, so a
+    // smaller window would force a sub-1x (fractional/cropped) scale instead of a clean integer one.
+    window.setMinimumSize(width: windowWidth, height: windowHeight)
+    return window
+  } catch {
+    FileHandle.standardError.write(Data("SDLWindow init failed: \(error)\n".utf8))
     exit(1)
   }
-  // Don't allow shrinking below the default size - `windowWidth`/`windowHeight` are also the
-  // fixed logical resolution `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE` scales up from, so a
-  // smaller window would force a sub-1x (fractional/cropped) scale instead of a clean integer one.
-  _ = SDL_SetWindowMinimumSize(window, windowWidth, windowHeight)
-  return window
 }()
-defer { SDL_DestroyWindow(window) }
 
-let renderer: OpaquePointer = {
-  guard let renderer = SDL_CreateRenderer(window, nil) else {
-    FileHandle.standardError.write(Data("SDL_CreateRenderer failed: \(String(cString: SDL_GetError()))\n".utf8))
+let renderer: SDLRenderer = {
+  do {
+    return try SDLRenderer(window: window)
+  } catch {
+    FileHandle.standardError.write(Data("SDLRenderer init failed: \(error)\n".utf8))
     exit(1)
   }
-  return renderer
 }()
-defer { SDL_DestroyRenderer(renderer) }
 
-// With SDL_WINDOW_HIGH_PIXEL_DENSITY, the renderer's actual output is in real device pixels
-// (e.g. 2x on Retina) while every draw call in this codebase is written in fixed logical units
+// With `.highPixelDensity`, the renderer's actual output is in real device pixels (e.g. 2x on
+// Retina) while every draw call in this codebase is written in fixed logical units
 // (`windowWidth`/`windowHeight`, set once above from the level's own bounds and never resized -
-// see SDL_EVENT_WINDOW_RESIZED below) - logical presentation makes SDL scale those logical units
-// up to the real device-pixel output automatically. INTEGER_SCALE (rather than LETTERBOX/
-// STRETCH) restricts that scaling to whole multiples (1x, 2x, 3x, ...), letterboxing any
+// see `.windowResized` below) - logical presentation makes SDL scale those logical units up to
+// the real device-pixel output automatically. `.integerScale` (rather than `.letterbox`/
+// `.stretch`) restricts that scaling to whole multiples (1x, 2x, 3x, ...), letterboxing any
 // leftover space, so resizing the window never produces a fractional/blurry scale factor.
-_ = SDL_SetRenderLogicalPresentation(
-  renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE)
+try? renderer.setLogicalSize(width: windowWidth, height: windowHeight, presentation: .integerScale)
 
 /// The `GameRenderer` every shared drawing file (`Screens.swift`, `TextRenderer.swift`, and this
 /// file's own `renderWorld`/`VirtualCursor`) draws through - see `Renderer.swift`.
-let gameRenderer: GameRenderer = SDL3Renderer(sdlRenderer: renderer)
+let gameRenderer: GameRenderer = SDL3Renderer(renderer: renderer)
 
-/// SDL3's `SDL_GetTicksNS()`/`SDL_OpenURL` wrapped as plain Swift functions so the shared,
-/// symlinked `Screens.swift` can call them without needing to `import CSDL3` itself (Swift's
-/// `import` is file-scoped, and `ports/SDL2`'s copy of this file imports `CSDL2` instead -
-/// a shared file can't statically import either one).
-func currentTicksNanoseconds() -> UInt64 { SDL_GetTicksNS() }
-func openExternalURL(_ url: String) { _ = SDL_OpenURL(url) }
+/// `SDL.ticks`/`SDL.open(url:)` wrapped as plain Swift functions so the shared, symlinked
+/// `Screens.swift` can call them without needing to `import SDL3Swift` itself (Swift's `import`
+/// is file-scoped, and `ports/SDL2`'s copy of this file imports `SDL2Swift` instead - a shared
+/// file can't statically import either one).
+func currentTicksNanoseconds() -> UInt64 { SDL.ticks }
+func openExternalURL(_ url: String) { try? SDL.open(url: url) }
 
 /// Window-space (point) coordinates, as reported by SDL mouse events, in the current logical
-/// presentation's render-space units - the two differ once `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE`
+/// presentation's render-space units - the two differ once `.integerScale` presentation
 /// introduces letterboxing (render-space (0, 0) may sit inside a black bar rather than the
 /// window's actual top-left corner). Every mouse-event handler must convert through this before
 /// using a position for hit-testing or world math, since all of that math is written in
@@ -182,47 +186,42 @@ func openExternalURL(_ url: String) { _ = SDL_OpenURL(url) }
   gameRenderer.windowToRender(x: x, y: y)
 }
 
-/// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor
-/// (`SDL_WarpMouseInWindow` takes window-space coordinates) from a render-space position
-/// (`lastMouseScreenX/Y`, gamepad stick/d-pad nudge math).
+/// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor (which takes
+/// window-space coordinates) from a render-space position (`lastMouseScreenX/Y`, gamepad
+/// stick/d-pad nudge math).
 @MainActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
   gameRenderer.renderToWindow(x: x, y: y)
 }
 
 // MARK: - Audio
 
-/// One shared `MIX_Mixer` device for both sound effects (`SoundBoard`) and background music
-/// (`MusicPlayer`) - SDL3_mixer's new "MIX_" API (a from-scratch redesign, not the old
-/// SDL2-style `Mix_*` API), which decodes both .ogg and .wav via its bundled codecs.
-let mixer: OpaquePointer? = {
-  guard MIX_Init() else {
-    FileHandle.standardError.write(Data("MIX_Init failed: \(String(cString: SDL_GetError()))\n".utf8))
+/// One shared `SDLMixer` device for both sound effects (`SoundBoard`) and background music
+/// (`MusicPlayer`) - built on `SDL3Mixer`'s wrapper around SDL3_mixer's new `MIX_` API (a
+/// from-scratch redesign, not the old SDL2-style `Mix_*` API), which decodes both .ogg and .wav
+/// via its bundled codecs.
+let mixer: SDLMixer? = {
+  do {
+    try SDL.initializeMixer()
+  } catch {
+    FileHandle.standardError.write(Data("SDL.initializeMixer failed: \(error)\n".utf8))
     return nil
   }
-  // SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK's macro (a C cast expression) doesn't import into Swift -
-  // its raw value (SDL_audio.h) is 0xFFFFFFFF.
-  let defaultPlaybackDevice: SDL_AudioDeviceID = 0xFFFF_FFFF
-  guard let mixer = MIX_CreateMixerDevice(defaultPlaybackDevice, nil) else {
-    FileHandle.standardError.write(
-      Data("MIX_CreateMixerDevice failed: \(String(cString: SDL_GetError()))\n".utf8))
+  do {
+    return try SDLMixer()
+  } catch {
+    FileHandle.standardError.write(Data("SDLMixer init failed: \(error)\n".utf8))
     return nil
   }
-  return mixer
 }()
-defer {
-  if let mixer {
-    MIX_DestroyMixer(mixer)
-  }
-  MIX_Quit()
-}
+defer { SDL.quitMixer() }
 
 /// Sound-effect playback, mirroring `src/game.js`'s `playSound(soundName)` / `hotResourcePaths`.
 /// `GameEngine.onPlaySound` is int-keyed (`Types.swift`'s `SoundID`), so this maps id ->
 /// repo-relative filename directly instead of going through JS's intermediate string-name
 /// indirection.
 final class SoundBoard {
-  private let mixer: OpaquePointer?
-  private var audioByID: [Int32: OpaquePointer] = [:]
+  private let mixer: SDLMixer?
+  private var audioByID: [Int32: SDLAudio] = [:]
 
   /// `SoundID.rawValue -> audio/sound-effects/-relative path`, matching `hotResourcePaths` in
   /// src/game.js exactly (including the two win/lose voice lines, ids 19/20 - JS handles those
@@ -265,15 +264,13 @@ final class SoundBoard {
     102: "enter_level.wav",
   ]
 
-  init(mixer: OpaquePointer?, directory: URL) {
+  init(mixer: SDLMixer?, directory: URL) {
     self.mixer = mixer
     guard let mixer else { return }
     for (id, filename) in Self.paths {
       let url = directory.appendingPathComponent(filename)
-      guard let audio = MIX_LoadAudio(mixer, url.path, false) else {
-        FileHandle.standardError.write(
-          Data("Failed to load sound effect \(url.path): \(String(cString: SDL_GetError()))\n".utf8)
-        )
+      guard let audio = try? SDLAudio(mixer: mixer, contentsOfFile: url.path) else {
+        FileHandle.standardError.write(Data("Failed to load sound effect \(url.path)\n".utf8))
         continue
       }
       audioByID[id] = audio
@@ -286,13 +283,7 @@ final class SoundBoard {
 
   func play(_ id: Int32) {
     guard let mixer, let audio = audioByID[id] else { return }
-    _ = MIX_PlayAudio(mixer, audio)
-  }
-
-  deinit {
-    for audio in audioByID.values {
-      MIX_DestroyAudio(audio)
-    }
+    try? mixer.play(audio)
   }
 }
 let soundBoard = SoundBoard(mixer: mixer, directory: audioDirectory)
@@ -326,25 +317,24 @@ final class MusicPlayer {
     Group(tracks: ["demo6_3.ogg", "demo6_5.ogg", "demo6_6.ogg"], end: "demo6_end.ogg"),
   ]
 
-  private let mixer: OpaquePointer?
+  private let mixer: SDLMixer?
   private let directory: URL
-  private let track: OpaquePointer?
-  private var audioByFilename: [String: OpaquePointer] = [:]
+  private let track: SDLAudioTrack?
+  private var audioByFilename: [String: SDLAudio] = [:]
   private var currentGroup: Group?
 
-  init(mixer: OpaquePointer?, directory: URL) {
+  init(mixer: SDLMixer?, directory: URL) {
     self.mixer = mixer
     self.directory = directory
-    track = mixer.flatMap { MIX_CreateTrack($0) }
+    track = mixer.flatMap { try? SDLAudioTrack(mixer: $0) }
   }
 
-  private func audio(for filename: String) -> OpaquePointer? {
+  private func audio(for filename: String) -> SDLAudio? {
     if let cached = audioByFilename[filename] { return cached }
     guard let mixer else { return nil }
     let url = directory.appendingPathComponent(filename)
-    guard let audio = MIX_LoadAudio(mixer, url.path, false) else {
-      FileHandle.standardError.write(
-        Data("Failed to load music track \(url.path): \(String(cString: SDL_GetError()))\n".utf8))
+    guard let audio = try? SDLAudio(mixer: mixer, contentsOfFile: url.path) else {
+      FileHandle.standardError.write(Data("Failed to load music track \(url.path)\n".utf8))
       return nil
     }
     audioByFilename[filename] = audio
@@ -362,8 +352,8 @@ final class MusicPlayer {
     guard let track, let group = currentGroup, let filename = group.tracks.randomElement(),
       let audio = audio(for: filename)
     else { return }
-    _ = MIX_SetTrackAudio(track, audio)
-    _ = MIX_PlayTrack(track, 0)
+    try? track.setAudio(audio)
+    try? track.play()
   }
 
   /// Call once per frame: whenever the currently-playing track finishes, picks a fresh random
@@ -371,7 +361,7 @@ final class MusicPlayer {
   /// multi-deep queue refill (simplified to a single track re-armed on completion instead of a
   /// backing queue, which is inaudibly different for a look-ahead this short).
   func update() {
-    guard let track, currentGroup != nil, !MIX_TrackPlaying(track) else { return }
+    guard let track, currentGroup != nil, !track.isPlaying else { return }
     playNextTrack()
   }
 
@@ -381,19 +371,10 @@ final class MusicPlayer {
     guard let track, let group = currentGroup else { return }
     currentGroup = nil
     if let end = group.end, let audio = audio(for: end) {
-      _ = MIX_SetTrackAudio(track, audio)
-      _ = MIX_PlayTrack(track, 0)
+      try? track.setAudio(audio)
+      try? track.play()
     } else {
-      _ = MIX_StopTrack(track, 0)
-    }
-  }
-
-  deinit {
-    for audio in audioByFilename.values {
-      MIX_DestroyAudio(audio)
-    }
-    if let track {
-      MIX_DestroyTrack(track)
+      try? track.stop()
     }
   }
 }
@@ -402,14 +383,13 @@ let musicPlayer = MusicPlayer(
 
 // MARK: - Cursor
 
-/// Loads `images/cursors/cursor-*.png` into `SDL_Cursor`s (hotspot (8, 8), matching the JS
+/// Loads `images/cursors/cursor-*.png` into `SDLCursor`s (hotspot (8, 8), matching the JS
 /// frontend's `url(...) 8 8` CSS cursor declarations) and swaps the OS cursor to match
 /// `GameEngine.cursorHint` - the native-window equivalent of `render()`'s
 /// `canvas.style.cursor = ...` chain in `src/game.js`.
 final class CursorSet {
-  private var cursors: [GameEngine.CursorHint: OpaquePointer] = [:]
+  private var cursors: [GameEngine.CursorHint: SDLCursor] = [:]
   private var current: GameEngine.CursorHint = .none
-  private let defaultCursor = SDL_GetDefaultCursor()
 
   init(cursorsDirectory: URL) {
     let files: [(GameEngine.CursorHint, String)] = [
@@ -421,9 +401,8 @@ final class CursorSet {
     ]
     for (hint, filename) in files {
       let url = cursorsDirectory.appendingPathComponent(filename)
-      guard let surface = IMG_Load(url.path) else { continue }
-      defer { SDL_DestroySurface(surface) }
-      guard let cursor = SDL_CreateColorCursor(surface, 8, 8) else { continue }
+      guard let surface = try? SDLSurface(contentsOfFile: url.path) else { continue }
+      guard let cursor = try? SDLCursor(surface: surface, hotspot: (x: 8, y: 8)) else { continue }
       cursors[hint] = cursor
     }
   }
@@ -431,11 +410,8 @@ final class CursorSet {
   func apply(_ hint: GameEngine.CursorHint) {
     guard hint != current else { return }
     current = hint
-    if let cursor = cursors[hint] {
-      SDL_SetCursor(cursor)
-    } else if let defaultCursor {
-      SDL_SetCursor(defaultCursor)
-    }
+    // `nil` (no custom cursor loaded for this hint) restores the default cursor automatically.
+    SDL.setCursor(cursors[hint])
   }
 }
 let cursorSet = CursorSet(
@@ -448,20 +424,20 @@ showTitleScreen()
 /// Matches `src/game.js`'s `targetFPS = 18` simulation tick rate (the game's actual logic rate,
 /// independent of display refresh rate).
 let tickIntervalNanoseconds: UInt64 = 1_000_000_000 / 18
-var lastTickTime = SDL_GetTicksNS()
+var lastTickTime = SDL.ticks
 
 let gamepadState = GamepadState()
-var lastFrameTime = SDL_GetTicksNS()
+var lastFrameTime = SDL.ticks
 
 var running = true
 while running {
-  var event = SDL_Event()
-  while SDL_PollEvent(&event) {
-    switch event.type {
-    case SDL_EVENT_QUIT.rawValue:
+  while let event = SDL.pollEvent() {
+    switch event {
+    case .quit:
       running = false
-    case SDL_EVENT_MOUSE_BUTTON_DOWN.rawValue:
-      let downPoint = windowToRenderPoint(x: event.button.x, y: event.button.y)
+
+    case .mouseButtonDown(_, let x, let y, _):
+      let downPoint = windowToRenderPoint(x: x, y: y)
       lastMouseScreenX = downPoint.x
       lastMouseScreenY = downPoint.y
       // Clicking dismisses the level-entry toast early (behavior_msgBox_Title.ls's mouseUp).
@@ -475,98 +451,109 @@ while running {
       if !handleClick(menuButtons, at: downPoint.x, y: downPoint.y), screenOwnsWorldInput() {
         handleMouseDown(x: downPoint.x, y: downPoint.y)
       }
-    case SDL_EVENT_MOUSE_BUTTON_UP.rawValue:
+
+    case .mouseButtonUp(_, let x, let y, _):
       if screenOwnsWorldInput() {
-        let upPoint = windowToRenderPoint(x: event.button.x, y: event.button.y)
+        let upPoint = windowToRenderPoint(x: x, y: y)
         handleMouseUp(x: upPoint.x, y: upPoint.y)
       }
-    case SDL_EVENT_KEY_DOWN.rawValue:
-      switch event.key.key {
-      case SDLK_ESCAPE:
+
+    case .keyDown(_, let keycode):
+      switch keycode {
+      case Keycode(rawValue: SDLK_ESCAPE):
         escapePressed()
-      case SDLK_UP:
+      case Keycode(rawValue: SDLK_UP):
         directionPressed(dx: 0, dy: -1, menuDelta: -1)
-      case SDLK_DOWN:
+      case Keycode(rawValue: SDLK_DOWN):
         directionPressed(dx: 0, dy: 1, menuDelta: 1)
-      case SDLK_LEFT:
+      case Keycode(rawValue: SDLK_LEFT):
         directionPressed(dx: -1, dy: 0, menuDelta: -1)
-      case SDLK_RIGHT:
+      case Keycode(rawValue: SDLK_RIGHT):
         directionPressed(dx: 1, dy: 0, menuDelta: 1)
-      case SDLK_RETURN, SDLK_SPACE:
+      case Keycode(rawValue: SDLK_RETURN), Keycode(rawValue: SDLK_SPACE):
         activatePressed()
       default:
         break
       }
-    case SDL_EVENT_KEY_UP.rawValue:
-      if event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE {
+
+    case .keyUp(_, let keycode):
+      if keycode == Keycode(rawValue: SDLK_RETURN) || keycode == Keycode(rawValue: SDLK_SPACE) {
         activateReleased()
       }
-    case SDL_EVENT_MOUSE_MOTION.rawValue:
-      let motionPoint = windowToRenderPoint(x: event.motion.x, y: event.motion.y)
+
+    case .mouseMotion(_, let x, let y, let which):
+      let motionPoint = windowToRenderPoint(x: x, y: y)
       lastMouseScreenX = motionPoint.x
       lastMouseScreenY = motionPoint.y
-      // Touch-synthesized mouse events carry SDL_TOUCH_MOUSEID. Programmatic warps (gamepad
-      // stick/d-pad-nudge, via SDL_WarpMouseInWindow) set suppressNextMouseMotionAsSynthetic
-      // right before warping so this one motion event is consumed without re-triggering
-      // anything - those call sites already handled input-kind/cursor-visibility themselves.
-      // Any *other* motion is genuine mouse hardware movement and must unconditionally show
-      // the cursor and hand hover back to the mouse - this can never be skipped based on
-      // `lastPointingInput`, or the cursor can get stuck hidden after gamepad/d-pad use.
-      if event.motion.which == touchMouseID {
+      // Touch-synthesized mouse events carry `MouseID.touch`. Programmatic warps (gamepad
+      // stick/d-pad-nudge) set `suppressNextMouseMotionAsSynthetic` right before warping so this
+      // one motion event is consumed without re-triggering anything - those call sites already
+      // handled input-kind/cursor-visibility themselves. Any *other* motion is genuine mouse
+      // hardware movement and must unconditionally show the cursor and hand hover back to the
+      // mouse - this can never be skipped based on `lastPointingInput`, or the cursor can get
+      // stuck hidden after gamepad/d-pad use.
+      if which == .touch {
         notePointingInput(.touch)
       } else if suppressNextMouseMotionAsSynthetic {
         suppressNextMouseMotionAsSynthetic = false
       } else {
         lastPointingInput = .mouse
-        _ = SDL_ShowCursor()
+        SDL.isCursorVisible = true
         focusedButtonIndex = nil
       }
       if screenOwnsWorldInput() {
         handleMouseMove(x: motionPoint.x, y: motionPoint.y)
       }
-    case SDL_EVENT_FINGER_DOWN.rawValue, SDL_EVENT_FINGER_MOTION.rawValue:
+
+    case .fingerDown, .fingerMotion:
       notePointingInput(.touch)
-    case SDL_EVENT_GAMEPAD_ADDED.rawValue:
-      gamepadState.handleAdded(event.gdevice.which)
-    case SDL_EVENT_GAMEPAD_REMOVED.rawValue:
-      gamepadState.handleRemoved(event.gdevice.which)
-    case SDL_EVENT_GAMEPAD_BUTTON_DOWN.rawValue:
-      switch SDL_GamepadButton(Int32(event.gbutton.button)) {
-      case SDL_GAMEPAD_BUTTON_SOUTH:  // A
+
+    case .gamepadAdded(let which):
+      gamepadState.handleAdded(which)
+
+    case .gamepadRemoved(let which):
+      gamepadState.handleRemoved(which)
+
+    case .gamepadButtonDown(_, let button):
+      switch button {
+      case .south:
         notePointingInput(.gamepad)
         activatePressed()
-      case SDL_GAMEPAD_BUTTON_START:
+      case .start:
         escapePressed()
-      case SDL_GAMEPAD_BUTTON_DPAD_UP:
+      case .dpadUp:
         directionPressed(dx: 0, dy: -1, menuDelta: -1)
-      case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+      case .dpadDown:
         directionPressed(dx: 0, dy: 1, menuDelta: 1)
-      case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+      case .dpadLeft:
         directionPressed(dx: -1, dy: 0, menuDelta: -1)
-      case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+      case .dpadRight:
         directionPressed(dx: 1, dy: 0, menuDelta: 1)
       default:
         break
       }
-    case SDL_EVENT_GAMEPAD_BUTTON_UP.rawValue:
-      if SDL_GamepadButton(Int32(event.gbutton.button)) == SDL_GAMEPAD_BUTTON_SOUTH {
+
+    case .gamepadButtonUp(_, let button):
+      if button == .south {
         activateReleased()
       }
-    case SDL_EVENT_WINDOW_RESIZED.rawValue:
+
+    case .windowResized:
       // `windowWidth`/`windowHeight` are the fixed logical canvas size set once at startup (see
-      // above) and deliberately NOT updated here - `SDL_LOGICAL_PRESENTATION_INTEGER_SCALE`
-      // needs a stable logical size to scale up by whole multiples as the window resizes
-      // (letterboxing the remainder); if this tracked the window's live size instead, the
-      // logical-to-output ratio would always be exactly 1 and "integer scaling" would be a
-      // no-op. SDL recomputes the actual integer scale factor and letterbox rect from the new
-      // window size automatically on the next present - no explicit action needed here.
+      // above) and deliberately NOT updated here - `.integerScale` presentation needs a stable
+      // logical size to scale up by whole multiples as the window resizes (letterboxing the
+      // remainder); if this tracked the window's live size instead, the logical-to-output ratio
+      // would always be exactly 1 and "integer scaling" would be a no-op. SDL recomputes the
+      // actual integer scale factor and letterbox rect from the new window size automatically on
+      // the next present - no explicit action needed here.
       break
-    default:
+
+    case .unknown:
       break
     }
   }
 
-  let now = SDL_GetTicksNS()
+  let now = SDL.ticks
   gamepadState.pollSticks(deltaSeconds: Float(now - lastFrameTime) / 1_000_000_000)
   lastFrameTime = now
   if let toastUntil = levelToastUntil, now >= toastUntil {
@@ -599,5 +586,5 @@ while running {
   }
   musicPlayer.update()
   render()
-  SDL_Delay(1)
+  SDL.delay(nanoseconds: 1_000_000)
 }
