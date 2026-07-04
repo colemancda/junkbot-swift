@@ -40,7 +40,7 @@ var dependencies: [Package.Dependency] = []
 #if os(macOS)
 dependencies.append(.package(path: "../../.."))
 #else
-dependencies.append(.package(url: "https://github.com/colemancda/junkbot-swift.git", branch: "main"))
+dependencies.append(.package(url: "https://github.com/colemancda/junkbot-swift.git", from: "0.1.0"))
 #endif
 
 let package = Package(
