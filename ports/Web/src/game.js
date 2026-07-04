@@ -1668,71 +1668,71 @@ let resources;
 // resources needed for the title screen
 // ideally this could be split more cleanly (sprite sheets are big)
 const hotResourcePaths = {
-	sprites: "/images/spritesheets/sprites.png",
-	spritesAtlas: "/images/spritesheets/sprites.json",
-	backgrounds: "/images/spritesheets/backgrounds.png",
-	backgroundsAtlas: "/images/spritesheets/backgrounds.json",
-	font: "/font/font.png",
-	turn: "/audio/sound-effects/turn1.ogg",
-	blockPickUp: "/audio/sound-effects/blockpickup.ogg",
-	// blockPickUpFromAir: "/audio/sound-effects/custom/pick-up-from-air.wav",
-	blockDrop: "/audio/sound-effects/blockdrop.ogg",
-	blockClick: "/audio/sound-effects/blockclick.ogg",
-	buttonClick: "/audio/sound-effects/h_button1.ogg",
-	titleScreenLevel: "/levels/custom/Title Screen.txt",
-	titleScreenWelcomePanel: "/images/menus/loading_bkg_frame.png",
+	sprites: "images/spritesheets/sprites.png",
+	spritesAtlas: "images/spritesheets/sprites.json",
+	backgrounds: "images/spritesheets/backgrounds.png",
+	backgroundsAtlas: "images/spritesheets/backgrounds.json",
+	font: "font/font.png",
+	turn: "audio/sound-effects/turn1.ogg",
+	blockPickUp: "audio/sound-effects/blockpickup.ogg",
+	// blockPickUpFromAir: "audio/sound-effects/custom/pick-up-from-air.wav",
+	blockDrop: "audio/sound-effects/blockdrop.ogg",
+	blockClick: "audio/sound-effects/blockclick.ogg",
+	buttonClick: "audio/sound-effects/h_button1.ogg",
+	titleScreenLevel: "levels/custom/Title Screen.txt",
+	titleScreenWelcomePanel: "images/menus/loading_bkg_frame.png",
 };
 const otherResourcePaths = {
-	levelEditorDefaultLevel: "/levels/custom/Level Editor Default Level.txt",
-	// menus: "/images/spritesheets/menus.png",
-	// menusAtlas: "/images/spritesheets/menus.json",
-	spritesUndercover: "/images/spritesheets/Undercover Exclusive/sprites.png",
-	spritesUndercoverAtlas: "/images/spritesheets/Undercover Exclusive/sprites.json",
-	backgroundsUndercover: "/images/spritesheets/Undercover Exclusive/backgrounds.png",
-	backgroundsUndercoverAtlas: "/images/spritesheets/Undercover Exclusive/backgrounds.json",
-	// menusUndercover: "/images/spritesheets/Undercover Exclusive/menus.png",
-	// menusUndercoverAtlas: "/images/spritesheets/Undercover Exclusive/menus.json",
-	tabLocked: "/audio/sound-effects/spring_1.ogg",
-	tabSwitch: "/audio/sound-effects/h_powerup3.ogg",
-	enterLevel: "/audio/sound-effects/enter_level.wav",
-	fall: "/audio/sound-effects/fall.ogg",
-	headBonk: "/audio/sound-effects/headbonk1.ogg",
-	collectBin: "/audio/sound-effects/eat1.ogg",
-	collectBin2: "/audio/sound-effects/garbage1.ogg",
-	switchClick: "/audio/sound-effects/switch_click.ogg",
-	switchOn: "/audio/sound-effects/switch_on.ogg",
-	switchOff: "/audio/sound-effects/switch_off.ogg",
-	deathByFire: "/audio/sound-effects/fire.ogg",
-	deathByWater: "/audio/sound-effects/electricity1.ogg",
-	deathByLaser: "/audio/sound-effects/undercover/laser_hit.wav",
-	deathByBot: "/audio/sound-effects/robottouch4.ogg",
-	getShield: "/audio/sound-effects/shieldon2.ogg",
-	getPowerup: "/audio/sound-effects/h_powerup1.ogg",
-	losePowerup: "/audio/sound-effects/h_powerdown3.ogg",
-	teleport: "/audio/sound-effects/undercover/teleport.wav",
-	ohYeah: "/audio/sound-effects/voice_ohyeah.ogg",
-	ouch: "/audio/sound-effects/voice_ouch.ogg",
-	uhoh: "/audio/sound-effects/voice_uhoh.ogg",
-	jump: "/audio/sound-effects/jump3.ogg",
-	fan: "/audio/sound-effects/fan.ogg",
-	drip0: "/audio/sound-effects/drip1.ogg",
-	drip1: "/audio/sound-effects/drip2.ogg",
-	drip2: "/audio/sound-effects/drip3.ogg",
-	selectStart: "/audio/sound-effects/custom/pick-up-from-air.wav",
-	selectEnd: "/audio/sound-effects/custom/select2.wav",
-	delete: "/audio/sound-effects/lego-creator/trash-I0514.wav",
-	copyPaste: "/audio/sound-effects/lego-creator/copy-I0510.wav",
-	undo: "/audio/sound-effects/lego-creator/undo-I0512.wav",
-	redo: "/audio/sound-effects/lego-creator/redo-I0513.wav",
-	insert: "/audio/sound-effects/lego-creator/insert-I0506.wav",
-	rustle0: "/audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML1.WAV",
-	rustle1: "/audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML2.WAV",
-	rustle2: "/audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML3.WAV",
-	rustle3: "/audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML4.WAV",
-	rustle4: "/audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML5.WAV",
-	rustle5: "/audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML6.WAV",
-	levelNames: "/levels/_LEVEL_LISTING.txt",
-	levelNamesUndercover: "/levels/Undercover Exclusive/_LEVEL_LISTING.txt",
+	levelEditorDefaultLevel: "levels/custom/Level Editor Default Level.txt",
+	// menus: "images/spritesheets/menus.png",
+	// menusAtlas: "images/spritesheets/menus.json",
+	spritesUndercover: "images/spritesheets/Undercover Exclusive/sprites.png",
+	spritesUndercoverAtlas: "images/spritesheets/Undercover Exclusive/sprites.json",
+	backgroundsUndercover: "images/spritesheets/Undercover Exclusive/backgrounds.png",
+	backgroundsUndercoverAtlas: "images/spritesheets/Undercover Exclusive/backgrounds.json",
+	// menusUndercover: "images/spritesheets/Undercover Exclusive/menus.png",
+	// menusUndercoverAtlas: "images/spritesheets/Undercover Exclusive/menus.json",
+	tabLocked: "audio/sound-effects/spring_1.ogg",
+	tabSwitch: "audio/sound-effects/h_powerup3.ogg",
+	enterLevel: "audio/sound-effects/enter_level.wav",
+	fall: "audio/sound-effects/fall.ogg",
+	headBonk: "audio/sound-effects/headbonk1.ogg",
+	collectBin: "audio/sound-effects/eat1.ogg",
+	collectBin2: "audio/sound-effects/garbage1.ogg",
+	switchClick: "audio/sound-effects/switch_click.ogg",
+	switchOn: "audio/sound-effects/switch_on.ogg",
+	switchOff: "audio/sound-effects/switch_off.ogg",
+	deathByFire: "audio/sound-effects/fire.ogg",
+	deathByWater: "audio/sound-effects/electricity1.ogg",
+	deathByLaser: "audio/sound-effects/undercover/laser_hit.wav",
+	deathByBot: "audio/sound-effects/robottouch4.ogg",
+	getShield: "audio/sound-effects/shieldon2.ogg",
+	getPowerup: "audio/sound-effects/h_powerup1.ogg",
+	losePowerup: "audio/sound-effects/h_powerdown3.ogg",
+	teleport: "audio/sound-effects/undercover/teleport.wav",
+	ohYeah: "audio/sound-effects/voice_ohyeah.ogg",
+	ouch: "audio/sound-effects/voice_ouch.ogg",
+	uhoh: "audio/sound-effects/voice_uhoh.ogg",
+	jump: "audio/sound-effects/jump3.ogg",
+	fan: "audio/sound-effects/fan.ogg",
+	drip0: "audio/sound-effects/drip1.ogg",
+	drip1: "audio/sound-effects/drip2.ogg",
+	drip2: "audio/sound-effects/drip3.ogg",
+	selectStart: "audio/sound-effects/custom/pick-up-from-air.wav",
+	selectEnd: "audio/sound-effects/custom/select2.wav",
+	delete: "audio/sound-effects/lego-creator/trash-I0514.wav",
+	copyPaste: "audio/sound-effects/lego-creator/copy-I0510.wav",
+	undo: "audio/sound-effects/lego-creator/undo-I0512.wav",
+	redo: "audio/sound-effects/lego-creator/redo-I0513.wav",
+	insert: "audio/sound-effects/lego-creator/insert-I0506.wav",
+	rustle0: "audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML1.WAV",
+	rustle1: "audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML2.WAV",
+	rustle2: "audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML3.WAV",
+	rustle3: "audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML4.WAV",
+	rustle4: "audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML5.WAV",
+	rustle5: "audio/sound-effects/lego-star-wars-force-awakens/LEGO_DEBRISSML6.WAV",
+	levelNames: "levels/_LEVEL_LISTING.txt",
+	levelNamesUndercover: "levels/Undercover Exclusive/_LEVEL_LISTING.txt",
 };
 const allResourcePaths = Object.fromEntries(Object.entries(hotResourcePaths).concat(Object.entries(otherResourcePaths)));
 const numRustles = 6;
@@ -2158,12 +2158,12 @@ const loadLevelByName = ({ levelName, game }) => {
 		throw new Error(`Could not find level file for level name "${levelName}"`);
 	}
 	let folder = {
-		[GAME_JUNKBOT_UNDERCOVER]: "/levels/Undercover Exclusive",
+		[GAME_JUNKBOT_UNDERCOVER]: "levels/Undercover Exclusive",
 		[GAME_JUNKBOT]: "levels",
-		[GAME_TEST_CASES]: "/levels/test-cases",
+		[GAME_TEST_CASES]: "levels/test-cases",
 	}[game];
 	if (slug === "new-employee-training") {
-		folder = "/levels/custom";
+		folder = "levels/custom";
 		fileName = "New Employee Training (1j01).txt";
 	}
 	return loadLevelFromTextFile(`${folder}/${fileName}`, game);
@@ -2258,7 +2258,7 @@ const togglePause = () => {
 };
 const updateEditingButton = () => {
 	toggleEditingButton.ariaPressed = editing;
-	toggleEditingButton.querySelector("img").src = editing ? "/images/icons/toggle-editing-edit-mode.png" : "/images/icons/toggle-editing-play-mode.png";
+	toggleEditingButton.querySelector("img").src = editing ? "images/icons/toggle-editing-edit-mode.png" : "images/icons/toggle-editing-play-mode.png";
 };
 const toggleEditing = () => {
 	if (!editing && parseRoute(location.hash).screen !== SCREEN_LEVEL) {
@@ -3719,15 +3719,15 @@ const render = () => {
 		if (editing) {
 			updateDrag(mouse);
 		}
-		canvas.style.cursor = `url("/images/cursors/cursor-grabbing.png") 8 8, grabbing`;
+		canvas.style.cursor = `url("images/cursors/cursor-grabbing.png") 8 8, grabbing`;
 	} else if (hovered.length >= 2) {
-		canvas.style.cursor = `url("/images/cursors/cursor-grab-either.png") 8 8, grab`;
+		canvas.style.cursor = `url("images/cursors/cursor-grab-either.png") 8 8, grab`;
 	} else if (hovered.upward) {
-		canvas.style.cursor = `url("/images/cursors/cursor-grab-upward.png") 8 8, grab`;
+		canvas.style.cursor = `url("images/cursors/cursor-grab-upward.png") 8 8, grab`;
 	} else if (hovered.downward) {
-		canvas.style.cursor = `url("/images/cursors/cursor-grab-downward.png") 8 8, grab`;
+		canvas.style.cursor = `url("images/cursors/cursor-grab-downward.png") 8 8, grab`;
 	} else if (hovered.length) {
-		canvas.style.cursor = `url("/images/cursors/cursor-grab.png") 8 8, grab`;
+		canvas.style.cursor = `url("images/cursors/cursor-grab.png") 8 8, grab`;
 	} else {
 		canvas.style.cursor = "default";
 	}
@@ -4163,7 +4163,7 @@ const showTitleScreen = (showIntro) => {
 		rufflePlayer.classList.toggle("metal-border", game === GAME_JUNKBOT);
 		introContainer.appendChild(rufflePlayer);
 		introContainer.classList.toggle("undercover-intro", game === GAME_JUNKBOT_UNDERCOVER);
-		const swf = game === GAME_JUNKBOT_UNDERCOVER ? "/flash/junkbot_undercover_intro.swf" : "/flash/junkbot_intro.swf";
+		const swf = game === GAME_JUNKBOT_UNDERCOVER ? "flash/junkbot_undercover_intro.swf" : "flash/junkbot_intro.swf";
 		rufflePlayer.load(swf).then(() => {
 			// Note: It may not actually be loaded!
 			// @TODO: handle failing to load the SWF somehow? more monkey-patching?
@@ -4284,9 +4284,9 @@ const showLevelSelectScreen = (game, levelGroupName) => {
 
 		const completedImg = document.createElement("img");
 		completedImg.className = "level-list-item-completed-indicator";
-		completedImg.src = completed ? "/images/menus/checkbox_on.png" : "/images/menus/checkbox_off.png";
+		completedImg.src = completed ? "images/menus/checkbox_on.png" : "images/menus/checkbox_off.png";
 		const goldAwardImg = document.createElement("img");
-		goldAwardImg.src = "/images/menus/check_light.png";
+		goldAwardImg.src = "images/menus/check_light.png";
 		goldAwardImg.hidden = true;
 		goldAwardImg.className = "level-list-item-gold-award";
 		const score = document.createElement("span");
@@ -4587,7 +4587,7 @@ const initEditorUI = () => {
 			}
 			const entity = getEntityCopy();
 			pasteEntities([entity]);
-			editorUI.style.cursor = "url(\"/images/cursors/cursor-insert.png\") 0 0, default";
+			editorUI.style.cursor = "url(\"images/cursors/cursor-insert.png\") 0 0, default";
 			if (hilitButton) {
 				hilitButton.style.borderColor = "transparent";
 			}
@@ -4914,7 +4914,7 @@ const showLevelLoseUI = () => {
 	const message = messages[Math.floor(Math.random() * messages.length)];
 	const div = document.createElement("div");
 	div.innerHTML = `
-		<img src="/images/menus/level_lose.png" draggable="false" class="level-lose-image">
+		<img src="images/menus/level_lose.png" draggable="false" class="level-lose-image">
 		<p class="level-lose-message">${message}</p>
 	`;
 	nonErrorDialogs.push(showMessageBox([div], {
@@ -5145,10 +5145,10 @@ const runTests = async () => {
 		}
 		try {
 			if (test.levelType === "json") {
-				deserializeJSON(await loadTextFile(`/levels/test-cases/${test.name}.json`));
+				deserializeJSON(await loadTextFile(`levels/test-cases/${test.name}.json`));
 				initLevel(currentLevel);
 			} else {
-				initLevel(await loadLevelFromTextFile(`/levels/test-cases/${test.name}.txt`));
+				initLevel(await loadLevelFromTextFile(`levels/test-cases/${test.name}.txt`));
 			}
 		} catch (error) {
 			test.state = "failed-to-load";
@@ -5572,8 +5572,8 @@ const loadFromHash = async () => {
 					`;
 					const { pageNumber, levelNumber } = levelLocation;
 					if (game === GAME_JUNKBOT) {
-						levelInfoContent.querySelector(".level-info-building-image").src = `/images/menus/building_icon_${pageNumber}.png`;
-						levelInfoContent.querySelector(".level-info-building-text-image").src = `/images/menus/building_text_${pageNumber}.png`;
+						levelInfoContent.querySelector(".level-info-building-image").src = `images/menus/building_icon_${pageNumber}.png`;
+						levelInfoContent.querySelector(".level-info-building-text-image").src = `images/menus/building_text_${pageNumber}.png`;
 					} else if (game === GAME_JUNKBOT_UNDERCOVER) {
 						levelInfoContent.querySelector(".level-info-header").textContent = `Basement ${pageNumber}`;
 					} else if (game === GAME_TEST_CASES) {
@@ -5624,7 +5624,7 @@ const loadFromHash = async () => {
 
 			// Note that this strategy only works if cache is enabled; make sure "Disable cache" is unchecked in devtools.
 			// Also if just this one image fails to load, I don't care, so using finally.
-			loadImage("/images/menus/ready_to_play.png").finally(() => {
+			loadImage("images/menus/ready_to_play.png").finally(() => {
 				loadStatusLoaded.hidden = false;
 				loadStatusLoading.hidden = true;
 

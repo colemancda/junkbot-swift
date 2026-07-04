@@ -20,5 +20,5 @@ clean:
 	rm -rf .build $(WEB_PACKAGE)
 
 serve:
-	@echo "▶ Open http://localhost:8080/ports/Web/index.html"
-	cd ../.. && python3 -m http.server 8080
+	@echo "▶ Open http://localhost:8080/"
+	python3 -m http.server 8080
