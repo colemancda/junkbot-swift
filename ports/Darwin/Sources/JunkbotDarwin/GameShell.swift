@@ -78,11 +78,12 @@ let gameEngine = GameEngine()
 @MainActor var cameraCenterY: Double = 0
 @MainActor var cameraScale: Double = 1
 
-/// The scene's own logical size in points - updated by `JunkbotScene.didChangeSize`/`didMove`,
-/// read by every world/camera calculation the shared files perform. With `.resizeFill`
-/// (`AppDelegate_macOS.swift`/`GameViewController.swift`), the scene's size always tracks the
-/// real window/screen size exactly (no scaling, no letterboxing), so this changes whenever the
-/// window/screen does.
+/// The scene's fixed logical size in points, read by every world/camera calculation the shared
+/// files perform - set once by whichever platform entry point (`AppDelegate_macOS.swift`/
+/// `GameViewController.swift`) constructs the scene (from the title screen level's actual
+/// bounds, matching `ports/SDL3`'s own `windowWidth`/`windowHeight`), and never changed
+/// afterward: `.aspectFit` scales that fixed scene uniformly to fit however large the real
+/// window/screen is, rather than this tracking the window/device size directly.
 @MainActor var windowWidth: Int32 = 900
 @MainActor var windowHeight: Int32 = 675
 

@@ -30,9 +30,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // loads it again as part of the real screen-state setup - the same double-load `ports/SDL3`
     // itself already does, not a redundancy introduced here.
     gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
-    let initialWidth = CGFloat(gameEngine.levelBounds.map { $0.width } ?? 900)
-    let initialHeight = CGFloat(gameEngine.levelBounds.map { $0.height } ?? 675)
-    let contentRect = NSRect(x: 0, y: 0, width: initialWidth, height: initialHeight)
+    // Assigning the *global* `windowWidth`/`windowHeight` (not just local variables) is essential
+    // here - every shared rendering/UI file (`Screens.swift`, `GameRender.swift`) reads those
+    // globals for all its positioning/scaling math, so if they stay at `GameShell.swift`'s
+    // 900x675 defaults while the scene itself is actually sized differently (e.g. 525x396 for
+    // the real Title Screen level bounds), buttons and world content get positioned/scaled for a
+    // canvas size that doesn't match the scene's real coordinate space at all.
+    windowWidth = gameEngine.levelBounds.map { $0.width } ?? 900
+    windowHeight = gameEngine.levelBounds.map { $0.height } ?? 675
+    let contentRect = NSRect(x: 0, y: 0, width: CGFloat(windowWidth), height: CGFloat(windowHeight))
     window = NSWindow(
       contentRect: contentRect,
       styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -58,11 +64,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // The view tracks the window's actual (resizable) size...
     view.autoresizingMask = [.width, .height]
     let scene = JunkbotScene(size: contentRect.size)
-    // ...and with `.resizeFill`, the *scene*'s size always matches the view's size exactly (no
-    // scaling, no letterboxing) - `GameScene.swift`'s `didChangeSize` keeps `windowWidth`/
-    // `windowHeight` in sync as the window resizes, so the game world fills the window edge to
-    // edge at every size.
-    scene.scaleMode = .resizeFill
+    // ...while the *scene* stays fixed at that same logical size - `.aspectFit` scales it
+    // uniformly (fractionally, not integer-only) to fill as much of the actual window as
+    // possible while preserving aspect ratio, matching `ports/SDL3`/`ports/SDL2`'s own
+    // fixed-logical-size + scale-to-fit presentation (`.integerScale`) instead of stretching the
+    // camera viewport to show more/less of the world as the window resizes (`.resizeFill`, tried
+    // and reverted - it left large blank areas around a small level's actual content once the
+    // window grew past the level's own bounds, since there's nothing beyond them to draw).
+    scene.scaleMode = .aspectFit
     view.presentScene(scene)
     window.contentView = view
     window.makeKeyAndOrderFront(nil)
