@@ -178,9 +178,9 @@ func currentTicksNanoseconds() -> UInt64 { SDL.ticks }
 func openExternalURL(_ url: String) { try? SDL.open(url: url) }
 
 /// Window-space (point) coordinates, as reported by SDL mouse events, in the current logical
-/// presentation's render-space units - the two differ once `.integerScale` presentation
-/// introduces letterboxing (render-space (0, 0) may sit inside a black bar rather than the
-/// window's actual top-left corner). Every mouse-event handler must convert through this before
+/// presentation's render-space units - the two differ once `.letterbox` presentation introduces
+/// letterboxing (render-space (0, 0) may sit inside a black bar rather than the window's actual
+/// top-left corner). Every mouse-event handler must convert through this before
 /// using a position for hit-testing or world math, since all of that math is written in
 /// render-space (`windowWidth`/`windowHeight`) units.
 func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
@@ -469,10 +469,12 @@ public func junkbotMain() {
   // Retina) while every draw call in this codebase is written in fixed logical units
   // (`windowWidth`/`windowHeight`, set once above from the level's own bounds and never resized -
   // see `.windowResized` below) - logical presentation makes SDL scale those logical units up to
-  // the real device-pixel output automatically. `.integerScale` (rather than `.letterbox`/
-  // `.stretch`) restricts that scaling to whole multiples (1x, 2x, 3x, ...), letterboxing any
-  // leftover space, so resizing the window never produces a fractional/blurry scale factor.
-  try? renderer.setLogicalSize(width: windowWidth, height: windowHeight, presentation: .integerScale)
+  // the real device-pixel output automatically. `.letterbox` allows any fractional scale factor
+  // (rather than `.integerScale`'s whole-multiples-only restriction), so the level fills as much
+  // of the window as it can at any size/aspect ratio, letterboxing only what the aspect ratio
+  // mismatch actually requires - `.highPixelDensity` still means that fractional factor is
+  // applied on top of the real device-pixel resolution, not a blurry upscale of a low-res buffer.
+  try? renderer.setLogicalSize(width: windowWidth, height: windowHeight, presentation: .letterbox)
 
   // First access of `mixer`/`soundBoard` (lazy) - opens the audio device.
   gameEngine.onPlaySound = { [soundBoard] id in soundBoard.play(id) }
@@ -601,12 +603,12 @@ public func junkbotMain() {
 
       case .windowResized:
         // `windowWidth`/`windowHeight` are the fixed logical canvas size set once at startup (see
-        // above) and deliberately NOT updated here - `.integerScale` presentation needs a stable
-        // logical size to scale up by whole multiples as the window resizes (letterboxing the
-        // remainder); if this tracked the window's live size instead, the logical-to-output ratio
-        // would always be exactly 1 and "integer scaling" would be a no-op. SDL recomputes the
-        // actual integer scale factor and letterbox rect from the new window size automatically on
-        // the next present - no explicit action needed here.
+        // above) and deliberately NOT updated here - `.letterbox` presentation needs a stable
+        // logical size to compute a fractional scale factor from as the window resizes; if this
+        // tracked the window's live size instead, the logical-to-output ratio would always be
+        // exactly 1 and scaling would be a no-op. SDL recomputes the actual scale factor and
+        // letterbox rect from the new window size automatically on the next present - no explicit
+        // action needed here.
         break
 
       case .unknown:
