@@ -37,7 +37,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let view = SKView(frame: contentRect)
     view.ignoresSiblingOrder = true
+    // The view tracks the window's actual (resizable) size...
+    view.autoresizingMask = [.width, .height]
     let scene = JunkbotScene(size: contentRect.size)
+    // ...and with `.resizeFill`, the *scene*'s size always matches the view's size exactly (no
+    // scaling, no letterboxing) - `GameScene.swift`'s `didChangeSize` keeps `windowWidth`/
+    // `windowHeight` in sync as the window resizes, so the game world fills the window edge to
+    // edge at every size.
     scene.scaleMode = .resizeFill
     view.presentScene(scene)
     window.contentView = view

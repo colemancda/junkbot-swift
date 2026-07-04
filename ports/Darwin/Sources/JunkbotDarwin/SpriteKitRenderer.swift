@@ -23,7 +23,6 @@ import JunkbotCore
 /// sub-region clipping.
 @MainActor final class SpriteKitRenderer: @preconcurrency GameRenderer {
   private weak var scene: SKScene?
-  private weak var view: SKView?
 
   private var texturesByHandle: [Int: SKTexture] = [:]
   private var alphaByHandle: [Int: Float] = [:]
@@ -33,9 +32,8 @@ import JunkbotCore
   /// Nodes added since the last `clear()` - removed wholesale at the start of the next frame.
   private var frameNodes: [SKNode] = []
 
-  init(scene: SKScene, view: SKView) {
+  init(scene: SKScene) {
     self.scene = scene
-    self.view = view
   }
 
   private func newHandle(for texture: SKTexture) -> OpaquePointer {
@@ -205,17 +203,22 @@ import JunkbotCore
   // MARK: - Coordinate mapping
 
   func windowToRender(x: Float, y: Float) -> (x: Float, y: Float) {
-    guard let view, let scene else { return (x, y) }
-    let scenePoint = view.convert(CGPoint(x: CGFloat(x), y: CGFloat(y)), to: scene)
-    // `convert(_:to:)` already applies SpriteKit's own scene-scaling/letterboxing transform - only
-    // the Y-up -> Y-down flip (this protocol's convention) remains.
-    return (Float(scenePoint.x), Float(scene.size.height) - Float(scenePoint.y))
+    guard let scene else { return (x, y) }
+    // `GameScene.swift`'s callers already hand this `event.location(in: self)`/
+    // `touch.location(in: self)` - SpriteKit's own `NSEvent`/`UITouch` extension converts
+    // straight into the *scene's* coordinate space (applying whatever `scaleMode`/letterboxing
+    // transform is in effect internally), so `x`/`y` here are already scene-space. Re-running
+    // them through `view.convert(_:to:)` on top of that double-applies the transform - harmless
+    // on a 1:1 windowed macOS scene (identity-ish), badly wrong once the view/scene sizes
+    // actually differ (Retina scale, `.resizeFill` on iOS/iPadOS) - only the Y-up -> Y-down flip
+    // (this protocol's convention) is still needed.
+    return (x, Float(scene.size.height) - y)
   }
 
   func renderToWindow(x: Float, y: Float) -> (x: Float, y: Float) {
-    guard let view, let scene else { return (x, y) }
-    let scenePoint = CGPoint(x: CGFloat(x), y: CGFloat(scene.size.height) - CGFloat(y))
-    let viewPoint = view.convert(scenePoint, from: scene)
-    return (Float(viewPoint.x), Float(viewPoint.y))
+    guard let scene else { return (x, y) }
+    // Inverse of `windowToRender` above - same reasoning, kept in scene space (unused on Darwin
+    // today; nothing calls it), not further converted through `view.convert(_:from:)`.
+    return (x, Float(scene.size.height) - y)
   }
 }

@@ -11,7 +11,11 @@ import SpriteKit
 /// `#if os(iOS)` guard below.
 public final class GameViewController: UIViewController {
   public override func loadView() {
-    view = SKView(frame: UIScreen.main.bounds)
+    let skView = SKView(frame: UIScreen.main.bounds)
+    // The view tracks whatever size its container (the tvOS `UIWindow` or the iOS Playground's
+    // SwiftUI-hosted controller) actually gives it...
+    skView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    view = skView
   }
 
   public override func viewDidLoad() {
@@ -19,6 +23,10 @@ public final class GameViewController: UIViewController {
     guard let skView = view as? SKView else { return }
     skView.ignoresSiblingOrder = true
     let scene = JunkbotScene(size: skView.bounds.size)
+    // ...and with `.resizeFill`, the *scene*'s size always matches the view's size exactly (no
+    // scaling, no letterboxing) - `GameScene.swift`'s `didChangeSize` keeps `windowWidth`/
+    // `windowHeight` in sync as the screen size changes, so the game world fills the screen edge
+    // to edge. See `AppDelegate_macOS.swift`'s identical comment for the macOS side of this.
     scene.scaleMode = .resizeFill
     skView.presentScene(scene)
   }

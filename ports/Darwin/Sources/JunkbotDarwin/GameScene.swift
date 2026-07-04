@@ -22,13 +22,16 @@ final class JunkbotScene: SKScene {
     didStart = true
     configureGameEngineCallbacks()
     configureKeyboardInput()
-    gameRenderer = SpriteKitRenderer(scene: self, view: view)
+    gameRenderer = SpriteKitRenderer(scene: self)
     windowWidth = Int32(size.width)
     windowHeight = Int32(size.height)
     lastTickTime = currentTicksNanoseconds()
     showTitleScreen()
   }
 
+  /// With `.resizeFill`, the scene's own size always tracks the view's actual size exactly (no
+  /// scaling/letterboxing) - this keeps `windowWidth`/`windowHeight` (read by every world/camera
+  /// calculation the shared files perform) in sync whenever the window/screen size changes.
   override func didChangeSize(_ oldSize: CGSize) {
     super.didChangeSize(oldSize)
     windowWidth = Int32(size.width)

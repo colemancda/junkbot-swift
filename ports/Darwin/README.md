@@ -88,9 +88,12 @@ plan:
   hand them `event.location(in: self)`/`touch.location(in: self)` (scene-space, via SpriteKit's
   own `NSEvent`/`UITouch` extensions, already accounting for `scaleMode`/letterboxing), so no
   further `SKView.convert(_:to:)` is needed; running an already-scene-space point back through
-  `convert(_:to:)` double-applies the transform (a real bug fixed here - harmless-looking on a
-  1:1 windowed macOS scene, badly wrong once view/scene sizes actually differ, e.g. `.resizeFill`
-  on iOS/iPadOS, which is why touch input looked "inverted"/offset there while mouse looked fine).
+  `convert(_:to:)` double-applies the transform (a real bug fixed here). Why it looked fine on
+  macOS but not iOS: `NSView`'s coordinate system is *already* bottom-left/Y-up like SpriteKit's
+  own, so the redundant re-conversion there was a near no-op; `UIView`'s is top-left/Y-down, so
+  the same redundant call introduced a real Y-flip-plus-offset error, which is why touch input on
+  iOS looked "inverted"/grabbed bricks far from the actual touch point while mouse on macOS looked
+  fine.
 - `setTextureAlpha`/`setTextureColor` are stored in per-handle side tables and applied when a
   node is actually created in `drawTexture`, since SpriteKit applies alpha/color at the *node*
   level (`SKSpriteNode.alpha`/`.color`+`.colorBlendFactor`), not the *texture* level like SDL's
