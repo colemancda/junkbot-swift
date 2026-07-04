@@ -2,7 +2,10 @@
 // Foundation (it doesn't) but because it transitively depends on `Level.init(text:)`/
 // `loadLevel(_:)`, which use full-stdlib String operations (`.lowercased()` etc.) that pull in
 // Unicode normalization tables not linkable under Embedded Swift - see those files' own notes.
-#if !hasFeature(Embedded)
+// JUNKBOT_HAS_UNICODE_TABLES: set by embedded targets that CAN link the stdlib's
+// Unicode data tables (ports/NDS links libswiftUnicodeDataTables.a for armv4t),
+// re-enabling this file where plain embedded-WASM must exclude it.
+#if !hasFeature(Embedded) || JUNKBOT_HAS_UNICODE_TABLES
 
 extension GameEngine {
 

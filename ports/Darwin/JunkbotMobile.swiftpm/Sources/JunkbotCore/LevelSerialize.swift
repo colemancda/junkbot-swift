@@ -1,7 +1,10 @@
 // Pure stdlib (no Foundation) - gated out of the embedded-WASM build for the same reason as
 // `LevelParse.swift` (transitively reachable from it, and shares its `.lowercased()`-adjacent
 // Unicode-table concern via `Level`), not because this file itself needs Foundation.
-#if !hasFeature(Embedded)
+// JUNKBOT_HAS_UNICODE_TABLES: set by embedded targets that CAN link the stdlib's
+// Unicode data tables (ports/NDS links libswiftUnicodeDataTables.a for armv4t),
+// re-enabling this file where plain embedded-WASM must exclude it.
+#if !hasFeature(Embedded) || JUNKBOT_HAS_UNICODE_TABLES
 
 extension PartState {
     /// The canonical raw text for this state (inverse of `PartState.init(_:)`). Note this isn't
