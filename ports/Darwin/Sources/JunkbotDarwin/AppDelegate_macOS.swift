@@ -42,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Don't allow shrinking below the default size - matches `ports/SDL3`'s
     // `window.setMinimumSize(width:height:)` call.
     window.minSize = contentRect.size
+    // AppKit's automatic window-state restoration would otherwise reopen the window at whatever
+    // size/position the user last left it at, silently overriding the freshly-computed initial
+    // size above on every launch after the first - SDL windows don't participate in this system
+    // at all, so disabling it here is what actually makes every launch start at the same
+    // computed size, matching `ports/SDL3`'s behavior exactly rather than just on first launch.
+    window.isRestorable = false
     // Without this, AppKit only sends `mouseMoved`/`mouseDragged` events while a button is held -
     // `GameScene.swift`'s `mouseMoved` override (menu-hover, focus-clearing, input-kind tracking)
     // needs plain hover motion too.
