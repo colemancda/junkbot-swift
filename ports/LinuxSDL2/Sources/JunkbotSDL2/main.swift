@@ -6,10 +6,10 @@ import JunkbotCore
 
 // MARK: - SDL2 compatibility shims
 //
-// These give the exact same call shape as the SDL3 API this codebase was originally written
-// against, so the rest of the file (and Screens.swift/Input.swift) needed no further changes at
-// their call sites. Swift resolves these by argument count/type, so they don't conflict with
-// the real 1-argument `SDL_ShowCursor(Int32)` imported from CSDL2.
+// Only the shims still needed for code that talks to SDL2 directly (the event loop below,
+// cursor hide/show) - the actual rendering primitives (rects/textures/etc.) now go through
+// `GameRenderer`/`SDL2Renderer.swift` instead, so `Screens.swift`/`TextRenderer.swift` (shared
+// with `ports/Linux`) never call raw `SDL_Render*` functions at all.
 
 /// SDL3's `SDL_GetTicksNS()` (nanoseconds since init) has no SDL2 equivalent - SDL2's
 /// `SDL_GetTicks64()` is millisecond-resolution. Reconstruct nanosecond precision from the
@@ -23,46 +23,12 @@ func SDL_ShowCursor() -> Int32 { SDL_ShowCursor(SDL_ENABLE) }
 
 func SDL_HideCursor() { _ = SDL_ShowCursor(SDL_DISABLE) }
 
-/// SDL3's `SDL_GetTextureSize` (float w/h) - SDL2's `SDL_QueryTexture` reports integer pixel
-/// dimensions instead.
-@discardableResult
-func SDL_GetTextureSize(
-  _ texture: OpaquePointer?, _ w: inout Float, _ h: inout Float
-) -> Bool {
-  var intW: Int32 = 0
-  var intH: Int32 = 0
-  let result = SDL_QueryTexture(texture, nil, nil, &intW, &intH)
-  w = Float(intW)
-  h = Float(intH)
-  return result == 0
-}
-
-/// SDL3's `SDL_RenderTexture` (subpixel src AND dst rects) - SDL2's float-precision copy,
-/// `SDL_RenderCopyF`, keeps the SOURCE rect as integer pixel coordinates (`SDL_Rect`); only the
-/// destination is subpixel (`SDL_FRect`). This shim keeps every call site (written against the
-/// SDL3 shape, passing an `SDL_FRect?` src) unchanged by converting src to `SDL_Rect` here.
-@discardableResult
-func SDL_RenderTexture(
-  _ renderer: OpaquePointer?, _ texture: OpaquePointer?,
-  _ srcrect: UnsafePointer<SDL_FRect>?, _ dstrect: UnsafePointer<SDL_FRect>?
-) -> Int32 {
-  guard let srcrect else { return SDL_RenderCopyF(renderer, texture, nil, dstrect) }
-  let f = srcrect.pointee
-  var intSrc = SDL_Rect(x: Int32(f.x), y: Int32(f.y), w: Int32(f.w), h: Int32(f.h))
-  return SDL_RenderCopyF(renderer, texture, &intSrc, dstrect)
-}
-
-/// SDL3's `SDL_RenderRect` (unfilled outline) -> SDL2's `SDL_RenderDrawRectF`.
-@discardableResult
-func SDL_RenderRect(_ renderer: OpaquePointer?, _ rect: UnsafePointer<SDL_FRect>?) -> Int32 {
-  SDL_RenderDrawRectF(renderer, rect)
-}
-
-/// SDL3's `SDL_RenderFillRect` (`SDL_FRect`) -> SDL2's `SDL_RenderFillRectF`.
-@discardableResult
-func SDL_RenderFillRect(_ renderer: OpaquePointer?, _ rect: UnsafePointer<SDL_FRect>?) -> Int32 {
-  SDL_RenderFillRectF(renderer, rect)
-}
+/// Wraps `SDL_GetTicksNS`/`SDL_OpenURL` as plain Swift functions so the shared, symlinked
+/// `Screens.swift` can call them without needing to `import CSDL2` itself (Swift's `import` is
+/// file-scoped, and `ports/Linux`'s copy of this file imports `CSDL3` instead - a shared file
+/// can't statically import either one).
+func currentTicksNanoseconds() -> UInt64 { SDL_GetTicksNS() }
+func openExternalURL(_ url: String) { _ = SDL_OpenURL(url) }
 
 // MARK: - Repo-relative paths
 
@@ -215,6 +181,10 @@ defer { SDL_DestroyRenderer(renderer) }
 _ = SDL_RenderSetLogicalSize(renderer, windowWidth, windowHeight)
 _ = SDL_RenderSetIntegerScale(renderer, SDL_TRUE)
 
+/// The `GameRenderer` every shared drawing file (`Screens.swift`, `TextRenderer.swift`, and this
+/// file's own `renderWorld`/`VirtualCursor`) draws through - see `Renderer.swift`.
+let gameRenderer: GameRenderer = SDL2Renderer(sdlRenderer: renderer)
+
 /// Window-space (point) coordinates, as reported by SDL mouse events, in the current logical
 /// render-space units - the two differ once the integer-scale logical size (above) introduces
 /// letterboxing (render-space (0, 0) may sit inside a black bar rather than the window's actual
@@ -222,20 +192,14 @@ _ = SDL_RenderSetIntegerScale(renderer, SDL_TRUE)
 /// position for hit-testing or world math, since all of that math is written in render-space
 /// (`windowWidth`/`windowHeight`) units.
 @MainActor func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
-  var renderX: Float = 0
-  var renderY: Float = 0
-  SDL_RenderWindowToLogical(renderer, Int32(x), Int32(y), &renderX, &renderY)
-  return (renderX, renderY)
+  gameRenderer.windowToRender(x: x, y: y)
 }
 
 /// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor
 /// (`SDL_WarpMouseInWindow` takes window-space coordinates) from a render-space position
 /// (`lastMouseScreenX/Y`, gamepad stick/d-pad nudge math).
 @MainActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
-  var windowX: Int32 = 0
-  var windowY: Int32 = 0
-  SDL_RenderLogicalToWindow(renderer, x, y, &windowX, &windowY)
-  return (Float(windowX), Float(windowY))
+  gameRenderer.renderToWindow(x: x, y: y)
 }
 
 // MARK: - Sprite loading
@@ -247,9 +211,9 @@ _ = SDL_RenderSetIntegerScale(renderer, SDL_TRUE)
 final class TextureCache {
   private var textures: [Int32: OpaquePointer] = [:]
   private var attemptedAndMissing: Set<Int32> = []
-  let renderer: OpaquePointer
+  let renderer: GameRenderer
 
-  init(renderer: OpaquePointer) {
+  init(renderer: GameRenderer) {
     self.renderer = renderer
   }
 
@@ -274,13 +238,12 @@ final class TextureCache {
     for directory in directories {
       let url = directory.appendingPathComponent("\(name).png")
       guard FileManager.default.fileExists(atPath: url.path) else { continue }
-      guard let surface = IMG_Load(url.path) else { continue }
-      defer { SDL_FreeSurface(surface) }
-      guard let texture = SDL_CreateTextureFromSurface(renderer, surface) else { continue }
-      // SDL3 defaults new textures to linear filtering, which blurs pixel art whenever a
-      // sprite isn't drawn at exact 1:1 scale (i.e. almost always, given camera zoom/offset).
-      // The JS canvas path sets `ctx.imageSmoothingEnabled = false` for the same reason.
-      _ = SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest)
+      guard let texture = renderer.loadTexture(atPath: url.path) else { continue }
+      // Both SDL3 and SDL2 default new textures to linear filtering, which blurs pixel art
+      // whenever a sprite isn't drawn at exact 1:1 scale (i.e. almost always, given camera
+      // zoom/offset). The JS canvas path sets `ctx.imageSmoothingEnabled = false` for the same
+      // reason.
+      renderer.setTextureNearestScaling(texture)
       textures[spriteID] = texture
       return texture
     }
@@ -290,15 +253,15 @@ final class TextureCache {
 
   deinit {
     for texture in textures.values {
-      SDL_DestroyTexture(texture)
+      renderer.destroyTexture(texture)
     }
   }
 }
-let textureCache = TextureCache(renderer: renderer)
+let textureCache = TextureCache(renderer: gameRenderer)
 
 /// Bitmap-font text rendering for menu UI (title/level-select/win-lose dialogs) - see
 /// `TextRenderer.swift`/`Sources/JunkbotCore/Font.swift`.
-let textRenderer = TextRenderer(renderer: renderer, fontDirectory: repoRoot.appendingPathComponent("font"))
+let textRenderer = TextRenderer(renderer: gameRenderer, fontDirectory: repoRoot.appendingPathComponent("font"))
 
 // MARK: - Audio
 //
@@ -593,10 +556,10 @@ let cursorSet = CursorSet(
 /// pointing device to route through either. Used only while `lastPointingInput == .gamepad` -
 /// mouse/touch keep using the OS cursor (or no cursor) as before.
 final class VirtualCursor {
-  private let renderer: OpaquePointer
+  private let renderer: GameRenderer
   private var textures: [GameEngine.CursorHint: OpaquePointer] = [:]
 
-  init(renderer: OpaquePointer, cursorsDirectory: URL) {
+  init(renderer: GameRenderer, cursorsDirectory: URL) {
     self.renderer = renderer
     let files: [(GameEngine.CursorHint, String)] = [
       (.grabbing, "cursor-grabbing.png"),
@@ -607,42 +570,34 @@ final class VirtualCursor {
     ]
     for (hint, filename) in files {
       let url = cursorsDirectory.appendingPathComponent(filename)
-      guard let texture = IMG_LoadTexture(renderer, url.path) else { continue }
+      guard let texture = renderer.loadTexture(atPath: url.path) else { continue }
       textures[hint] = texture
     }
   }
 
   func draw(hint: GameEngine.CursorHint, x: Float, y: Float) {
     if let texture = textures[hint] {
-      var width: Int32 = 0
-      var height: Int32 = 0
-      _ = SDL_QueryTexture(texture, nil, nil, &width, &height)
-      var dst = SDL_FRect(x: x - 8, y: y - 8, w: Float(width), h: Float(height))
-      _ = SDL_RenderCopyF(renderer, texture, nil, &dst)
+      let (width, height) = renderer.textureSize(texture)
+      renderer.drawTexture(
+        texture, src: nil, dstX: x - 8, dstY: y - 8, dstW: width, dstH: height,
+        rotationDegrees: nil)
       return
     }
     drawArrow(x: x, y: y)
   }
 
   /// Fallback arrow silhouette for `.none` (no grab image loaded for that hint) - a black outline
-  /// triangle with a white fill, drawn as two overlapping `SDL_RenderGeometry` triangles.
+  /// triangle with a white fill.
   private func drawArrow(x: Float, y: Float) {
-    func fillTriangle(_ points: [(Float, Float)], color: SDL_Color) {
-      var vertices = points.map {
-        SDL_Vertex(
-          position: SDL_FPoint(x: x + $0.0, y: y + $0.1), color: color,
-          tex_coord: SDL_FPoint(x: 0, y: 0))
-      }
-      _ = SDL_RenderGeometry(renderer, nil, &vertices, Int32(vertices.count), nil, 0)
+    func fillTriangle(_ points: [(Float, Float)], r: UInt8, g: UInt8, b: UInt8) {
+      renderer.fillTriangle(points.map { (x: x + $0.0, y: y + $0.1) }, r: r, g: g, b: b, a: 255)
     }
-    let black = SDL_Color(r: 0, g: 0, b: 0, a: 255)
-    let white = SDL_Color(r: 255, g: 255, b: 255, a: 255)
-    fillTriangle([(0, 0), (0, 16), (11, 12)], color: black)
-    fillTriangle([(1, 3), (1, 13), (9, 11)], color: white)
+    fillTriangle([(0, 0), (0, 16), (11, 12)], r: 0, g: 0, b: 0)
+    fillTriangle([(1, 3), (1, 13), (9, 11)], r: 255, g: 255, b: 255)
   }
 }
 let virtualCursor = VirtualCursor(
-  renderer: renderer, cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
+  renderer: gameRenderer, cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
 
 // MARK: - Rendering
 
@@ -670,54 +625,35 @@ var renderFrame = RenderFrame()
     switch command.kind {
     case .solidRect:
       let rgba = UInt32(bitPattern: command.c)
-      _ = SDL_SetRenderDrawColor(
-        renderer,
-        UInt8((rgba >> 24) & 0xFF), UInt8((rgba >> 16) & 0xFF), UInt8((rgba >> 8) & 0xFF),
-        UInt8(rgba & 0xFF))
-      var rect = SDL_FRect(
+      gameRenderer.fillRect(
         x: Float(command.x) + offsetX, y: Float(command.y) + offsetY,
-        w: Float(command.a), h: Float(command.b))
-      _ = SDL_RenderFillRectF(renderer, &rect)
+        w: Float(command.a), h: Float(command.b),
+        r: UInt8((rgba >> 24) & 0xFF), g: UInt8((rgba >> 16) & 0xFF), b: UInt8((rgba >> 8) & 0xFF),
+        a: UInt8(rgba & 0xFF))
 
     case .sprite:
       guard let texture = textureCache.texture(for: command.spriteID) else { continue }
       // Draw at the atlas frame's authoritative size (matching the JS renderer), not the
       // individual PNG's size, in case the two ever disagree.
-      let w = Int32(spriteWidthTable[Int(command.spriteID)])
-      let h = Int32(spriteHeightTable[Int(command.spriteID)])
-      let clip = Int32(command.c)
-      // SDL2's *CopyF variants keep the SOURCE rect as integer pixel coordinates (SDL_Rect) -
-      // only the destination rect is float/subpixel (SDL_FRect).
-      var src: SDL_Rect? = nil
-      var dstW = Float(w)
+      let w = Float(spriteWidthTable[Int(command.spriteID)])
+      let h = Float(spriteHeightTable[Int(command.spriteID)])
+      let clip = Float(command.c)
+      var src: (x: Float, y: Float, w: Float, h: Float)?
+      var dstW = w
       if clip > 0 && clip < w {
-        src = SDL_Rect(x: 0, y: 0, w: clip, h: h)
-        dstW = Float(clip)
+        src = (x: 0, y: 0, w: clip, h: h)
+        dstW = clip
       }
-      var dst = SDL_FRect(
-        x: Float(command.x) + offsetX, y: Float(command.y) + offsetY, w: dstW, h: Float(h))
 
       if command.a < 100 {
-        _ = SDL_SetTextureAlphaMod(texture, UInt8(max(0, min(100, command.a)) * 255 / 100))
+        gameRenderer.setTextureAlpha(texture, percent: command.a)
       }
-      if command.b != 0 {
-        // Milliradians -> degrees, rotating around the destination-rect center.
-        let degrees = Double(command.b) / 1000 * 180 / Double.pi
-        withUnsafeMutablePointer(to: &dst) { dstPtr in
-          if var srcRect = src {
-            _ = SDL_RenderCopyExF(
-              renderer, texture, &srcRect, dstPtr, degrees, nil, SDL_FLIP_NONE)
-          } else {
-            _ = SDL_RenderCopyExF(renderer, texture, nil, dstPtr, degrees, nil, SDL_FLIP_NONE)
-          }
-        }
-      } else if var srcRect = src {
-        _ = SDL_RenderCopyF(renderer, texture, &srcRect, &dst)
-      } else {
-        _ = SDL_RenderCopyF(renderer, texture, nil, &dst)
-      }
+      let rotationDegrees: Double? = command.b != 0 ? Double(command.b) / 1000 * 180 / Double.pi : nil
+      gameRenderer.drawTexture(
+        texture, src: src, dstX: Float(command.x) + offsetX, dstY: Float(command.y) + offsetY,
+        dstW: dstW, dstH: h, rotationDegrees: rotationDegrees)
       if command.a < 100 {
-        _ = SDL_SetTextureAlphaMod(texture, 255)
+        gameRenderer.setTextureAlpha(texture, percent: nil)
       }
     }
   }
@@ -725,8 +661,7 @@ var renderFrame = RenderFrame()
 }
 
 @MainActor func render() {
-  _ = SDL_SetRenderDrawColor(renderer, 40, 40, 45, 255)
-  _ = SDL_RenderClear(renderer)
+  gameRenderer.clear(r: 40, g: 40, b: 45, a: 255)
 
   switch currentScreen {
   case .title:
@@ -752,7 +687,7 @@ var renderFrame = RenderFrame()
     virtualCursor.draw(hint: hint, x: lastMouseScreenX, y: lastMouseScreenY)
   }
 
-  SDL_RenderPresent(renderer)
+  gameRenderer.present()
 }
 
 // MARK: - Game loop

@@ -1,5 +1,3 @@
-import CSDL3
-
 /// A minimal rect-hit-test clickable region for menu UI (title screen's Play/Credits,
 /// level-select's tabs/rows/back button, win/lose dialog buttons) - the native equivalent of
 /// `src/game.js`'s DOM `<button>`/`<a href="#...">` elements, which have no SDL analogue.
