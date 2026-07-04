@@ -13,6 +13,8 @@ let package = Package(
       teamIdentifier: "4W79SG34MW",
       displayVersion: "1.0",
       bundleVersion: "1",
+            appIcon: .placeholder(icon: .cloud),
+            accentColor: .presetColor(.orange),
       supportedDeviceFamilies: [
         .phone,
         .pad
