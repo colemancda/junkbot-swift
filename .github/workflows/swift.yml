@@ -48,6 +48,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install Swift 6.3.3 via swiftly
+        # The Android SDK artifact bundle below is only published for 6.3.3, not every patch
+        # release (6.3.2, the version bundled with this runner's Xcode, has no Android SDK bundle
+        # at all - confirmed 404) - the host compiler used to cross-compile must match the SDK
+        # bundle's version exactly, since Swift's module format isn't cross-patch-compatible
+        # (verified on-CI: "module compiled with Swift 6.3.3 cannot be imported by the Swift 6.3.2
+        # compiler"). Installing 6.3.3 via swiftly instead of relying on Xcode's bundled toolchain
+        # sidesteps that entirely.
+        run: |
+          set -eux
+          curl -fsSL -O https://download.swift.org/swiftly/darwin/swiftly.pkg
+          installer -pkg swiftly.pkg -target CurrentUserHomeDirectory
+          "$HOME/.swiftly/bin/swiftly" init --quiet-shell-followup --assume-yes
+          echo "SWIFTLY_HOME_DIR=$HOME/.swiftly" >> "$GITHUB_ENV"
+          echo "SWIFTLY_BIN_DIR=$HOME/.swiftly/bin" >> "$GITHUB_ENV"
+          echo "$HOME/.swiftly/bin" >> "$GITHUB_PATH"
+          "$HOME/.swiftly/bin/swiftly" install 6.3.3
+          "$HOME/.swiftly/bin/swiftly" use 6.3.3
       - name: Swift Version
         run: swift --version
       - name: Install Swift Android SDK
