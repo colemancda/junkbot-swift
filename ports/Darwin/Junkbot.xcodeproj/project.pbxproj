@@ -17,6 +17,8 @@
 		21E8103FFA7CE0FDE6396A2C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 286E503B2E4868136B5FFAE0 /* Foundation.framework */; };
 		292A3D3E7EFB7F723BEA7A84 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C55B46A59424E0DB53E587 /* GameViewController.swift */; };
 		2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D166B8DC14C501136B5EC9 /* GameShell.swift */; };
+		D7F05D5C1B61EA4D076442A8 /* GameActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 799030F6F7D1EFEE8AC4F52A /* GameActor.swift */; };
+		0629B113A100F1FD1ECB4231 /* GameActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 799030F6F7D1EFEE8AC4F52A /* GameActor.swift */; };
 		334C563939ED2C6E1035676C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
 		34F49106E3D7E47680C544C3 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94A403FA606439DE250287F4 /* SpriteKit.framework */; };
 		4448E734A34F1A6B1E84CE10 /* SpriteKitRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */; };
@@ -52,6 +54,7 @@
 		0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		286E503B2E4868136B5FFAE0 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		28D166B8DC14C501136B5EC9 /* GameShell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameShell.swift; sourceTree = "<group>"; };
+		799030F6F7D1EFEE8AC4F52A /* GameActor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameActor.swift; sourceTree = "<group>"; };
 		48DFF4D42ADCCB706DA0DC93 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuFocus.swift; sourceTree = "<group>"; };
 		66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate_macOS.swift; sourceTree = "<group>"; };
@@ -152,6 +155,7 @@
 			children = (
 				0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */,
 				28D166B8DC14C501136B5EC9 /* GameShell.swift */,
+				799030F6F7D1EFEE8AC4F52A /* GameActor.swift */,
 				0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */,
 				66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */,
 				B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */,
@@ -355,6 +359,7 @@
 				334C563939ED2C6E1035676C /* GameInput.swift in Sources */,
 				4448E734A34F1A6B1E84CE10 /* SpriteKitRenderer.swift in Sources */,
 				2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */,
+				D7F05D5C1B61EA4D076442A8 /* GameActor.swift in Sources */,
 				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
 				631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */,
 				D59B2C8D2724F77938240E8D /* Audio.swift in Sources */,
@@ -373,6 +378,7 @@
 				18D26B5957FD09484257240C /* GameInput.swift in Sources */,
 				F3D0BDDBC8B5B06FB595132F /* SpriteKitRenderer.swift in Sources */,
 				70B4A03C67495B53584D7663 /* GameShell.swift in Sources */,
+				0629B113A100F1FD1ECB4231 /* GameActor.swift in Sources */,
 				9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */,
 				7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */,
 				292A3D3E7EFB7F723BEA7A84 /* GameViewController.swift in Sources */,

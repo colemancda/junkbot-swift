@@ -62,11 +62,11 @@ final class TextureCache {
     }
   }
 }
-nonisolated(unsafe) let textureCache = TextureCache(renderer: gameRenderer)
+@GameActor let textureCache = TextureCache(renderer: gameRenderer)
 
 /// Bitmap-font text rendering for menu UI (title/level-select/win-lose dialogs) - see
 /// `TextRenderer.swift`/`Sources/JunkbotCore/Font.swift`.
-nonisolated(unsafe) let textRenderer = TextRenderer(renderer: gameRenderer, fontDirectory: repoRoot.appendingPathComponent("font"))
+@GameActor let textRenderer = TextRenderer(renderer: gameRenderer, fontDirectory: repoRoot.appendingPathComponent("font"))
 
 // MARK: - Virtual cursor
 
@@ -116,19 +116,19 @@ final class VirtualCursor {
     fillTriangle([(1, 3), (1, 13), (9, 11)], r: 255, g: 255, b: 255)
   }
 }
-nonisolated(unsafe) let virtualCursor = VirtualCursor(
+@GameActor let virtualCursor = VirtualCursor(
   renderer: gameRenderer, cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
 
 // MARK: - Rendering
 
 /// Reused across frames to avoid per-frame allocation.
-nonisolated(unsafe) var renderFrame = RenderFrame()
+@GameActor var renderFrame = RenderFrame()
 
 /// Whether the current screen ticks/renders the gameplay world with live drag input - both the
 /// title screen (a normal playable level with draggable bricks, per `src/game.js`'s
 /// `showTitleScreen`) and actual gameplay. Menu-only screens (level-select, win/lose dialogs)
 /// don't tick the engine or forward mouse events to `GameEngine.mouseDown`/etc.
-func screenOwnsWorldInput() -> Bool {
+@GameActor func screenOwnsWorldInput() -> Bool {
   currentScreen == .title || currentScreen == .playing
 }
 
@@ -136,7 +136,7 @@ func screenOwnsWorldInput() -> Bool {
 /// level's page, level select -> title. The HTML5 build has no Escape binding (its "Select
 /// Level" is a DOM button); this is the native equivalent, shared by the Escape key and the
 /// gamepad's Start button.
-func escapePressed() {
+@GameActor func escapePressed() {
   switch currentScreen {
   case .playing, .levelWinDialog, .levelLoseDialog:
     soundBoard.play(MenuSoundID.buttonClick)
@@ -161,7 +161,7 @@ func escapePressed() {
 /// `src/game.js`'s `showTitleScreen` - see `Screens.swift`), and reused as the frozen backdrop
 /// behind the win/lose dialogs. Returns the offset, for overlay drawing (e.g. the title screen's
 /// welcome-panel text) that needs to line up with world-space coordinates.
-@discardableResult func renderWorld(editing: Bool) -> (offsetX: Float, offsetY: Float) {
+@GameActor @discardableResult func renderWorld(editing: Bool) -> (offsetX: Float, offsetY: Float) {
   gameEngine.buildRenderFrame(into: &renderFrame, editing: editing)
 
   // World-space -> screen-space: with scale 1 the camera transform is a pure translation, so
@@ -212,7 +212,7 @@ func escapePressed() {
   return (offsetX, offsetY)
 }
 
-func render() {
+@GameActor func render() {
   gameRenderer.clear(r: 40, g: 40, b: 45, a: 255)
 
   switch currentScreen {

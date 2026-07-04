@@ -32,6 +32,11 @@ let package = Package(
     .package(url: "https://github.com/swiftlang/swift-java-jni-core", from: "0.5.1"),
   ],
   targets: [
+    // `ALooper_pollOnce` directly from the NDK header - swift-android-native's own AndroidLooper
+    // module only exposes this as `internal` at the version resolved here, so there's no public
+    // way to drive its installed executor's job queue without calling the raw C function
+    // ourselves (see AndroidMain.swift's poll loop).
+    .systemLibrary(name: "CAndroidLooper"),
     // The exact same sources as ports/SDL3's JunkbotSDL3 executable (Sources/JunkbotSDL3 is a
     // symlink into ../SDL3), minus main.swift's top-level code - library targets can't contain
     // top-level code, and Android's entry point is `SDL_main` below instead.
@@ -42,6 +47,10 @@ let package = Package(
         .product(name: "SDL3Swift", package: "SDL"),
         .product(name: "SDL3Image", package: "SDL"),
         .product(name: "SDL3Mixer", package: "SDL"),
+        // `GameActor.swift` (shared/symlinked in with the rest of Sources/JunkbotSDL3) resolves
+        // to `AndroidMainActor` here instead of the real `MainActor` - see that file's doc
+        // comment for why.
+        .product(name: "AndroidLooper", package: "swift-android-native"),
       ],
       path: "Sources/JunkbotSDL3",
       exclude: ["main.swift"]
@@ -50,10 +59,12 @@ let package = Package(
       name: "JunkbotAndroid",
       dependencies: [
         "JunkbotGame",
+        "CAndroidLooper",
         .product(name: "SDL3Swift", package: "SDL"),
         .product(name: "AndroidLogging", package: "swift-android-native"),
         .product(name: "AndroidContext", package: "swift-android-native"),
         .product(name: "AndroidFileManager", package: "swift-android-native"),
+        .product(name: "AndroidLooper", package: "swift-android-native"),
         .product(name: "SwiftJavaJNICore", package: "swift-java-jni-core"),
       ]
     ),

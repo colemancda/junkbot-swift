@@ -4,14 +4,17 @@
 // `System.loadLibrary("JunkbotAndroid")`, which triggers `JNI_OnLoad` below on the JVM main
 // thread; SDL's Java side then spins up its dedicated native thread and calls the exported
 // `SDL_main`, which extracts the APK's bundled game assets to internal storage (first launch
-// only) and hands control to the shared `junkbotMain()` game loop from ports/SDL3.
+// only), installs a real `AndroidMainActor` (see `GameActor.swift`) on this thread, and finally
+// hands control to the shared `junkbotMain()` game loop from ports/SDL3 through that actor.
 
 import Foundation
 import CSDL3
+import CAndroidLooper
 import JunkbotGame
 import AndroidLogging
 import AndroidContext
 import AndroidFileManager
+import AndroidLooper
 import SwiftJavaJNICore
 
 private let logger = AndroidLogger(tag: "Junkbot")
@@ -41,8 +44,52 @@ public func junkbotSDLMain(
     log("FATAL: bundled-asset extraction failed: \(error)")
     return 1
   }
-  junkbotMain()
-  return 0
+
+  // `AndroidMainActor` needs a native `ALooper` associated with the calling thread before it can
+  // find one via `ALooper_forThread()` - this pthread (SDL's dedicated "SDLThread") doesn't have
+  // one prepared by default, unlike a thread the JVM itself spun up as a `Looper`-backed
+  // `HandlerThread`. `Looper.currentThread(options:)` prepares and retains one - crucially, that
+  // retained reference must be kept alive (bound to `mainThreadLooper` below, never discarded)
+  // for as long as this thread runs: `Looper` is `~Copyable`, and its `deinit` calls
+  // `ALooper_release` unconditionally, so discarding the result immediately (e.g. `_ = ...`)
+  // releases the looper right back down to zero references and frees it before
+  // `setupMainLooper()` ever runs - its subsequent `ALooper_forThread()` call then returns a
+  // dangling pointer into already-freed memory, which crashes with a SIGSEGV inside
+  // `setupMainLooper()` itself (confirmed on-device - this is not a hypothetical). Once installed,
+  // `setupMainLooper()` makes `AndroidMainActor`'s looper-backed executor isolate every
+  // `@GameActor` global in the shared game code (see `GameActor.swift`) to genuinely, dynamically
+  // *this* thread - not just documented as single-threaded and hoping for the best.
+  let mainThreadLooper = Looper.currentThread(options: [])
+  guard AndroidMainActor.setupMainLooper() else {
+    log("FATAL: failed to install AndroidMainActor's looper executor on the SDL thread")
+    return 1
+  }
+
+  // Hands the actual game off to the newly-installed executor. `junkbotMain()` never returns (its
+  // own event/tick/render loop runs until the app quits), so once this job starts running it
+  // permanently occupies the executor - there's only ever this one job, so nothing else needs to
+  // interleave with it.
+  Task { @GameActor in
+    junkbotMain()
+  }
+
+  // `AndroidMainActor`'s executor only drains its job queue from a callback that fires when
+  // something actually polls this thread's looper (see `installGlobalExecutor` upstream) - but
+  // swift-android-native's own `Looper`/`Looper.Handle.pollOnce` are `internal` at the version
+  // this resolves to, so there's no public API to drive that poll ourselves. Call the raw NDK
+  // function directly instead (`CAndroidLooper`, a local shim around `<android/looper.h>`) - this
+  // is exactly what that internal wrapper would have called anyway. Nothing but the Task above
+  // ever schedules other `@GameActor` work on this process, so this loop only has to keep polling
+  // until that one job is dequeued and starts running (its `enqueue(_:)` call happens
+  // synchronously as part of creating the `Task` above, so this is normally satisfied on the very
+  // first or second iteration) - after that, control never returns here, since the job's own body
+  // (`junkbotMain()`) never returns.
+  while true {
+    var outFd: Int32 = -1
+    var outEvents: Int32 = 0
+    var outData: UnsafeMutableRawPointer?
+    _ = ALooper_pollOnce(100, &outFd, &outEvents, &outData)
+  }
 }
 
 // MARK: - Asset extraction

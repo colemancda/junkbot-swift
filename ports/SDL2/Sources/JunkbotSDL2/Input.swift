@@ -8,11 +8,11 @@ import JunkbotCore
 // hover, the level-select rollover bar, grab cursors) works unchanged, and the A button just
 // synthesizes the same code paths a mouse click takes.
 
-@MainActor var lastPointingInput: PointingInputKind = .mouse
-@MainActor var virtualCursorVisible = false
-@MainActor var suppressNextMouseMotionAsSynthetic = false
+@GameActor var lastPointingInput: PointingInputKind = .mouse
+@GameActor var virtualCursorVisible = false
+@GameActor var suppressNextMouseMotionAsSynthetic = false
 
-@MainActor func notePointingInput(_ kind: PointingInputKind) {
+@GameActor func notePointingInput(_ kind: PointingInputKind) {
   guard kind != lastPointingInput else { return }
   lastPointingInput = kind
   switch kind {
@@ -25,7 +25,7 @@ import JunkbotCore
 
 // MARK: - Gamepad
 
-@MainActor final class GamepadState {
+@GameActor final class GamepadState {
   private var gamepad: SDLGamepad?
   private let deadzone: Float = 8000 / 32767
   private let cursorSpeed: Float = 600
@@ -73,7 +73,7 @@ func hideOSCursor() {
   SDL.isCursorVisible = false
 }
 
-@MainActor func warpCursor(x: Float, y: Float) {
+@GameActor func warpCursor(x: Float, y: Float) {
   suppressNextMouseMotionAsSynthetic = true
   let windowPoint = renderToWindowPoint(x: x, y: y)
   window.warpMouse(to: windowPoint)

@@ -24,20 +24,20 @@ enum Screen: Equatable {
   case levelLoseDialog
 }
 
-nonisolated(unsafe) var currentScreen: Screen = .title
-nonisolated(unsafe) var currentGame: LevelCatalog.Game = .junkbot
-nonisolated(unsafe) var currentLevelEntry: LevelCatalogEntry?
+@GameActor var currentScreen: Screen = .title
+@GameActor var currentGame: LevelCatalog.Game = .junkbot
+@GameActor var currentLevelEntry: LevelCatalogEntry?
 /// Rebuilt whenever `currentScreen` changes; hit-tested by the main loop's mouse-down handler
 /// (before world drag input, since menu buttons sit visually on top of the world). Rebuilding
 /// clears keyboard/d-pad focus (the old index would point at a different screen's buttons).
-nonisolated(unsafe) var menuButtons: [Button] = [] {
+@GameActor var menuButtons: [Button] = [] {
   didSet { focusedButtonIndex = nil }
 }
 
 /// Draws a focus ring around the keyboard/d-pad-focused button, on top of whatever the active
 /// screen drew - one universal indicator instead of per-screen focus styling, so every screen
 /// (title, level select rows/tabs, dialogs) gets it for free.
-func drawFocusRing() {
+@GameActor func drawFocusRing() {
   guard let index = focusedButtonIndex, index < menuButtons.count else { return }
   let button = menuButtons[index]
   gameRenderer.strokeRect(
@@ -50,8 +50,8 @@ func drawFocusRing() {
 /// Last mouse position in *screen* space (window pixels), tracked on every screen (unlike
 /// `lastMouseWorldX/Y`, which only updates on world-input screens) - drives the level-select
 /// row rollover highlight, mirroring `behavior_ListRoHiLite.ls`'s `mouseWithin`.
-nonisolated(unsafe) var lastMouseScreenX: Float = -1
-nonisolated(unsafe) var lastMouseScreenY: Float = -1
+@GameActor var lastMouseScreenX: Float = -1
+@GameActor var lastMouseScreenY: Float = -1
 
 let titleScreenLevelURL = repoRoot.appendingPathComponent("levels/custom/Title Screen.txt")
 
@@ -74,7 +74,7 @@ func loadSaveData() -> SaveData {
   return decoded
 }
 
-func writeSaveData() {
+@GameActor func writeSaveData() {
   do {
     try FileManager.default.createDirectory(
       at: saveDataURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -85,15 +85,15 @@ func writeSaveData() {
   }
 }
 
-nonisolated(unsafe) var saveData = loadSaveData()
+@GameActor var saveData = loadSaveData()
 
 // MARK: - Menu image cache
 
 /// Lazily-loaded `images/menus/*.png` textures, keyed by filename stem - the menu screens'
 /// equivalent of the sprite `TextureCache` (which is keyed by generated sprite ID and scans the
 /// sprite/background directories, neither of which covers `images/menus/`).
-nonisolated(unsafe) var menuTextures: [String: OpaquePointer] = [:]
-func menuTexture(_ name: String) -> OpaquePointer? {
+@GameActor var menuTextures: [String: OpaquePointer] = [:]
+@GameActor func menuTexture(_ name: String) -> OpaquePointer? {
   if let cached = menuTextures[name] { return cached }
   let url = repoRoot.appendingPathComponent("images/menus/\(name).png")
   guard let texture = gameRenderer.loadTexture(atPath: url.path) else { return nil }
@@ -104,12 +104,12 @@ func menuTexture(_ name: String) -> OpaquePointer? {
 
 /// The image's natural pixel size, or `(0, 0)` if it failed to load - used to lay out images
 /// by their own dimensions (matching CSS block flow) instead of assuming a fixed size.
-func menuTextureSize(_ name: String) -> (width: Float, height: Float) {
+@GameActor func menuTextureSize(_ name: String) -> (width: Float, height: Float) {
   guard let texture = menuTexture(name) else { return (0, 0) }
   return gameRenderer.textureSize(texture)
 }
 
-func drawMenuTexture(
+@GameActor func drawMenuTexture(
   _ name: String, x: Float, y: Float, alphaPercent: Int32 = 100, scale: Float = 1
 ) {
   guard let texture = menuTexture(name) else { return }
@@ -130,16 +130,16 @@ func drawMenuTexture(
 /// native `behavior_msgBox_Title.ls` / HTML5 level-info-toast equivalent (Lingo holds ~2s and
 /// dismisses on click; HTML5 holds 2.5s - matching HTML5, the parity target, with Lingo's
 /// click-to-dismiss kept since it's strictly nicer and HTML5's toast is also click-through).
-nonisolated(unsafe) var levelToastUntil: UInt64?
+@GameActor var levelToastUntil: UInt64?
 let levelToastNanoseconds: UInt64 = 2_500_000_000
 
-func dismissLevelToast() {
+@GameActor func dismissLevelToast() {
   guard levelToastUntil != nil else { return }
   levelToastUntil = nil
   gameEngine.setPaused(false)
 }
 
-func centerCameraOnLevel() {
+@GameActor func centerCameraOnLevel() {
   if let bounds = gameEngine.levelBounds {
     cameraCenterX = Double(bounds.x) + Double(bounds.width) / 2
     cameraCenterY = Double(bounds.y) + Double(bounds.height) / 2
@@ -153,7 +153,7 @@ func centerCameraOnLevel() {
   }
 }
 
-func loadLevel(_ entry: LevelCatalogEntry, game: LevelCatalog.Game) {
+@GameActor func loadLevel(_ entry: LevelCatalogEntry, game: LevelCatalog.Game) {
   guard let text = readLevelText(at: entry.url) else {
     FileHandle.standardError.write(Data("Failed to read \(entry.url.path)\n".utf8))
     return
@@ -176,7 +176,7 @@ func loadLevel(_ entry: LevelCatalogEntry, game: LevelCatalog.Game) {
 
 /// Draws the level-entry toast (building icon + "LEVEL N: TITLE"), centered near the top -
 /// `behavior_msgBox_Title.ls`'s panel, simplified to the parts we have assets for.
-func drawLevelToast() {
+@GameActor func drawLevelToast() {
   guard levelToastUntil != nil, let entry = currentLevelEntry else { return }
   let location = levelCatalog.location(ofLevelTitled: entry.title, game: currentGame)
   let levelNumber = location.map { $0.page * 15 + $0.indexInPage + 1 } ?? 0
@@ -204,7 +204,7 @@ func drawLevelToast() {
 
 /// A simple beveled panel, standing in for the original's bitmap dialog frames (whose exact
 /// frame art isn't among the preserved menu images).
-func drawPanel(x: Float, y: Float, w: Float, h: Float) {
+@GameActor func drawPanel(x: Float, y: Float, w: Float, h: Float) {
   gameRenderer.fillRect(x: x + 4, y: y + 4, w: w, h: h, r: 0, g: 0, b: 0, a: 120)
   gameRenderer.fillRect(x: x, y: y, w: w, h: h, r: 168, g: 168, b: 168, a: 255)
   gameRenderer.strokeRect(x: x, y: y, w: w, h: h, r: 60, g: 60, b: 60, a: 255)
@@ -213,7 +213,7 @@ func drawPanel(x: Float, y: Float, w: Float, h: Float) {
 /// True when `index` (into `menuButtons`) is either under the mouse or the current d-pad/
 /// keyboard focus - the two are equivalent "highlighted" states and get identical visuals
 /// everywhere a button/row can be highlighted.
-func isHighlighted(_ index: Int) -> Bool {
+@GameActor func isHighlighted(_ index: Int) -> Bool {
   index == focusedButtonIndex || menuButtons[safe: index]?.contains(lastMouseScreenX, lastMouseScreenY) == true
 }
 
@@ -221,7 +221,7 @@ func isHighlighted(_ index: Int) -> Bool {
 /// art on rollover; a brightness change is the equivalent affordance with the assets we have).
 /// `index` is this button's position in `menuButtons`, used to also treat d-pad/keyboard focus
 /// as a hover for visual purposes.
-func drawButton(_ button: Button, label: String, index: Int) {
+@GameActor func drawButton(_ button: Button, label: String, index: Int) {
   let hovered = isHighlighted(index)
   gameRenderer.fillRect(
     x: button.x, y: button.y, w: button.width, h: button.height,
@@ -248,7 +248,7 @@ enum MenuSoundID {
 
 // MARK: - Title screen
 
-func showTitleScreen() {
+@GameActor func showTitleScreen() {
   currentScreen = .title
   guard let text = readLevelText(at: titleScreenLevelURL) else {
     FileHandle.standardError.write(Data("Failed to read \(titleScreenLevelURL.path)\n".utf8))
@@ -278,7 +278,7 @@ func showTitleScreen() {
 /// Screen" (`if (currentLevel.title === "Title Screen")` in `render()`), plus this screen's
 /// buttons. World-space panel/text coordinates match JS's `ctx.translate(-1, -25)` +
 /// `drawImage(panel, 41, 206)` / the four `drawText` lines.
-func drawTitleScreenOverlay(offsetX: Float, offsetY: Float) {
+@GameActor func drawTitleScreenOverlay(offsetX: Float, offsetY: Float) {
   guard gameEngine.levelTitle == "Title Screen" else { return }
 
   drawMenuTexture("loading_bkg_frame", x: 40 + offsetX, y: 181 + offsetY)
@@ -318,14 +318,14 @@ let levelSelectRowHeight: Float = 18
 let levelSelectRowsTop: Float = tabStripHeight + listPadY
 let levelSelectRowsLeft: Float = 11
 
-func tabStride(game: LevelCatalog.Game) -> Float {
+@GameActor func tabStride(game: LevelCatalog.Game) -> Float {
   let count = Float(levelCatalog.pagesByGame[game]?.count ?? 4)
   // Junkbot's 4 tabs use the CSS's exact -15px overlap; Undercover's 5 squeeze a little more
   // so the row still fits the window.
   return count <= 4 ? tabImageWidth - tabOverlap : (Float(windowWidth) - tabImageWidth - 4) / (count - 1)
 }
 
-func showLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
+@GameActor func showLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
   currentScreen = .levelSelect(game: game, page: page)
   currentGame = game
   gameEngine.setPaused(true)
@@ -364,7 +364,7 @@ func showLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
   menuButtons = buttons
 }
 
-func drawLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
+@GameActor func drawLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
   // Page background (#7c857c).
   gameRenderer.clear(r: 0x7C, g: 0x85, b: 0x7C, a: 255)
 
@@ -499,11 +499,11 @@ func drawLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
 
 // MARK: - Win / lose dialogs
 
-nonisolated(unsafe) var winDialogImprovedRecord = false
+@GameActor var winDialogImprovedRecord = false
 
-func dialogButtonY() -> Float { Float(windowHeight) / 2 + 40 }
+@GameActor func dialogButtonY() -> Float { Float(windowHeight) / 2 + 40 }
 
-func showLevelWinDialog() {
+@GameActor func showLevelWinDialog() {
   currentScreen = .levelWinDialog
   guard let entry = currentLevelEntry else { return }
   winDialogImprovedRecord = saveData.recordWin(levelTitle: entry.title, moves: Int(gameEngine.moves))
@@ -529,7 +529,7 @@ func showLevelWinDialog() {
   menuButtons = buttons
 }
 
-nonisolated(unsafe) var loseDialogMessage = ""
+@GameActor var loseDialogMessage = ""
 
 /// The original's four messages (`behavior_msgBox_Fail.ls`); the HTML5 remake dropped "There's
 /// got to be a better way." - keeping all four since the Lingo source is the more authoritative
@@ -541,7 +541,7 @@ let loseMessages = [
   "There's got to be a better way.",
 ]
 
-func showLevelLoseDialog() {
+@GameActor func showLevelLoseDialog() {
   currentScreen = .levelLoseDialog
   loseDialogMessage = loseMessages.randomElement() ?? ""
   guard let entry = currentLevelEntry else { return }
@@ -561,7 +561,7 @@ func showLevelLoseDialog() {
   ]
 }
 
-func drawDialogOverlay() {
+@GameActor func drawDialogOverlay() {
   gameRenderer.fillRect(
     x: 0, y: 0, w: Float(windowWidth), h: Float(windowHeight), r: 0, g: 0, b: 0, a: 140)
 

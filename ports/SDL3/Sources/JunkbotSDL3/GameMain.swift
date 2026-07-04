@@ -100,11 +100,11 @@ let gameEngine = GameEngine()
 /// on Junkbot every frame by `updateCamera()` (a simplified version of JS's `controlViewport`: no
 /// margin-based "only pan once near the edge" deadzone or smoothing, just clamp so the camera never
 /// shows past the level bounds).
-nonisolated(unsafe) var cameraCenterX: Double = 0
-nonisolated(unsafe) var cameraCenterY: Double = 0
+@GameActor var cameraCenterX: Double = 0
+@GameActor var cameraCenterY: Double = 0
 let cameraScale: Double = 1
 
-func updateCamera() {
+@GameActor func updateCamera() {
   guard let junkbot = gameEngine.entities.first(where: { $0.type == .junkbot }) else { return }
   var targetX = Double(junkbot.x) + Double(junkbot.width) / 2
   var targetY = Double(junkbot.y) + Double(junkbot.height) / 2
@@ -131,12 +131,12 @@ func updateCamera() {
 /// The fixed logical canvas size every draw call is written in. Defaults are only placeholders:
 /// `junkbotMain()` overwrites both from the title-screen level's actual bounds *before* the
 /// `window` global below is first touched (its initializer reads them for the default size).
-nonisolated(unsafe) var windowWidth: Int32 = 900
-nonisolated(unsafe) var windowHeight: Int32 = 675
+@GameActor var windowWidth: Int32 = 900
+@GameActor var windowHeight: Int32 = 675
 
 // Module-level `let`s (not locals of `junkbotMain()`) so `window`/`renderer` are visible from
 // other files (Screens.swift, TextRenderer.swift, etc.).
-nonisolated(unsafe) let window: SDLWindow = {
+@GameActor let window: SDLWindow = {
   do {
     let window = try SDLWindow(
       title: "Junkbot",
@@ -157,7 +157,7 @@ nonisolated(unsafe) let window: SDLWindow = {
   }
 }()
 
-nonisolated(unsafe) let renderer: SDLRenderer = {
+@GameActor let renderer: SDLRenderer = {
   do {
     return try SDLRenderer(window: window)
   } catch {
@@ -168,7 +168,7 @@ nonisolated(unsafe) let renderer: SDLRenderer = {
 
 /// The `GameRenderer` every shared drawing file (`Screens.swift`, `TextRenderer.swift`, and this
 /// file's own `renderWorld`/`VirtualCursor`) draws through - see `Renderer.swift`.
-nonisolated(unsafe) let gameRenderer: GameRenderer = SDL3Renderer(renderer: renderer)
+@GameActor let gameRenderer: GameRenderer = SDL3Renderer(renderer: renderer)
 
 /// `SDL.ticks`/`SDL.open(url:)` wrapped as plain Swift functions so the shared, symlinked
 /// `Screens.swift` can call them without needing to `import SDL3Swift` itself (Swift's `import`
@@ -183,14 +183,14 @@ func openExternalURL(_ url: String) { try? SDL.open(url: url) }
 /// top-left corner). Every mouse-event handler must convert through this before
 /// using a position for hit-testing or world math, since all of that math is written in
 /// render-space (`windowWidth`/`windowHeight`) units.
-func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+@GameActor func windowToRenderPoint(x: Float, y: Float) -> (x: Float, y: Float) {
   gameRenderer.windowToRender(x: x, y: y)
 }
 
 /// The inverse of `windowToRenderPoint` - needed wherever code warps the OS cursor (which takes
 /// window-space coordinates) from a render-space position (`lastMouseScreenX/Y`, gamepad
 /// stick/d-pad nudge math).
-func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
+@GameActor func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
   gameRenderer.renderToWindow(x: x, y: y)
 }
 
@@ -200,7 +200,7 @@ func renderToWindowPoint(x: Float, y: Float) -> (x: Float, y: Float) {
 /// (`MusicPlayer`) - built on `SDL3Mixer`'s wrapper around SDL3_mixer's new `MIX_` API (a
 /// from-scratch redesign, not the old SDL2-style `Mix_*` API), which decodes both .ogg and .wav
 /// via its bundled codecs.
-nonisolated(unsafe) let mixer: SDLMixer? = {
+@GameActor let mixer: SDLMixer? = {
   do {
     try SDL.initializeMixer()
   } catch {
@@ -286,7 +286,7 @@ final class SoundBoard {
     try? mixer.play(audio)
   }
 }
-nonisolated(unsafe) let soundBoard = SoundBoard(mixer: mixer, directory: audioDirectory)
+@GameActor let soundBoard = SoundBoard(mixer: mixer, directory: audioDirectory)
 
 /// Background music, reconstructing `Sources/JunkbotCore/Internal/movie_Sound Code.ls`'s
 /// playlist model (`SndMusicStart`/`SndMusicEnd`/`SndCheckPlaylist`) as closely as the available
@@ -377,7 +377,7 @@ final class MusicPlayer {
     }
   }
 }
-nonisolated(unsafe) let musicPlayer = MusicPlayer(
+@GameActor let musicPlayer = MusicPlayer(
   mixer: mixer, directory: repoRoot.appendingPathComponent("audio/music"))
 
 // MARK: - Cursor
@@ -413,7 +413,7 @@ final class CursorSet {
     SDL.setCursor(cursors[hint])
   }
 }
-nonisolated(unsafe) let cursorSet = CursorSet(
+@GameActor let cursorSet = CursorSet(
   cursorsDirectory: repoRoot.appendingPathComponent("images/cursors"))
 
 // MARK: - Entry point + game loop
@@ -422,17 +422,18 @@ nonisolated(unsafe) let cursorSet = CursorSet(
 /// event/tick/render loop until quit. Called from `main.swift` top-level code on desktop, and
 /// from `SDL_main` (running on SDL's dedicated Android thread) in ports/Android.
 ///
-/// Deliberately not `@MainActor` (nor is anything else in this file/Input.swift/GameRender.swift/
-/// MenuFocus.swift/Screens.swift/GameInput.swift, shared with ports/Darwin): on desktop this
-/// always runs on the process's real main thread anyway, so the annotation added nothing beyond
-/// documentation. On Android it actively breaks things - SDL runs `SDL_main` on its own dedicated
-/// pthread, never the process's real first thread (which stays busy servicing the JVM/UI Looper),
-/// and Swift Concurrency's `MainActor` executor on Linux/Android is backed by libdispatch's
-/// literal "com.apple.main-thread" queue - touching `@MainActor` state from any other thread trips
-/// a hard `dispatch_assert_queue` runtime trap (`BUG IN CLIENT OF LIBDISPATCH`), not just a
-/// compile-time isolation error. The game is single-threaded regardless (one thread does all
-/// input/tick/render, on every platform), so the isolation checking bought nothing real.
-public func junkbotMain() {
+/// `@GameActor` (see `GameActor.swift`), not literally `@MainActor`: on every platform except
+/// Android those are the same actor, so this is just documentation there. On Android they aren't
+/// - SDL's `SDLActivity` always runs `SDL_main` on its own dedicated pthread, never the process's
+/// real first thread (which stays busy servicing the JVM/UI Looper), and Swift Concurrency's real
+/// `MainActor` executor on Linux/Android is hard-bound to libdispatch's literal
+/// "com.apple.main-thread" queue - touching `@MainActor` state from any other thread trips a
+/// `dispatch_assert_queue` runtime trap (`BUG IN CLIENT OF LIBDISPATCH`), not just a compile-time
+/// isolation error. `GameActor` resolves to `AndroidMainActor` there instead - a real, independent
+/// global actor whose executor `AndroidMain.swift` installs on the SDL thread before this ever
+/// runs, giving the same single-writer isolation guarantee anchored to the thread that's actually
+/// running the game loop.
+@GameActor public func junkbotMain() {
   guard !(levelCatalog.pagesByGame[.junkbot] ?? []).isEmpty else {
     FileHandle.standardError.write(Data("No levels found under \(levelsDirectory.path)\n".utf8))
     exit(1)

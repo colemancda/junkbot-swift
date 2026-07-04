@@ -1,0 +1,4 @@
+module CAndroidLooper [system] {
+    header "shim.h"
+    export *
+}
