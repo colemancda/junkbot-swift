@@ -44,10 +44,15 @@ let package = Package(
             teamIdentifier: "4W79SG34MW",
       displayVersion: "1.0",
       bundleVersion: "1",
-      iconAssetName: nil,
-      accentColorAssetName: nil,
-      supportedDeviceFamilies: [.phone, .pad],
-      supportedInterfaceOrientations: [.landscapeLeft, .landscapeRight]
+            supportedDeviceFamilies: [
+                .phone,
+                .pad
+            ],
+            supportedInterfaceOrientations: [
+                .landscapeLeft,
+                .landscapeRight
+            ],
+            appCategory: .puzzleGames
     )
   ],
   dependencies: dependencies,
