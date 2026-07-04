@@ -9,7 +9,7 @@ import JunkbotCore
 // Only the shims still needed for code that talks to SDL2 directly (the event loop below,
 // cursor hide/show) - the actual rendering primitives (rects/textures/etc.) now go through
 // `GameRenderer`/`SDL2Renderer.swift` instead, so `Screens.swift`/`TextRenderer.swift` (shared
-// with `ports/Linux`) never call raw `SDL_Render*` functions at all.
+// with `ports/SDL3`) never call raw `SDL_Render*` functions at all.
 
 /// SDL3's `SDL_GetTicksNS()` (nanoseconds since init) has no SDL2 equivalent - SDL2's
 /// `SDL_GetTicks64()` is millisecond-resolution. Reconstruct nanosecond precision from the
@@ -25,7 +25,7 @@ func SDL_HideCursor() { _ = SDL_ShowCursor(SDL_DISABLE) }
 
 /// Wraps `SDL_GetTicksNS`/`SDL_OpenURL` as plain Swift functions so the shared, symlinked
 /// `Screens.swift` can call them without needing to `import CSDL2` itself (Swift's `import` is
-/// file-scoped, and `ports/Linux`'s copy of this file imports `CSDL3` instead - a shared file
+/// file-scoped, and `ports/SDL3`'s copy of this file imports `CSDL3` instead - a shared file
 /// can't statically import either one).
 func currentTicksNanoseconds() -> UInt64 { SDL_GetTicksNS() }
 func openExternalURL(_ url: String) { _ = SDL_OpenURL(url) }
