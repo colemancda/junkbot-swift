@@ -17,7 +17,16 @@ struct TranscodeAudioPlugin: BuildToolPlugin {
     let scriptPath = context.package.directory.appending(subpath: "../Scripts/transcode-audio.sh")
     let audioDirectory = context.package.directory.appending(
       subpath: "Sources/JunkbotPlayground/audio")
-    let outputDirectory = context.pluginWorkDirectory
+    // `GameShell.swift`'s `transcodedSoundEffectsDirectory`/`transcodedMusicDirectory` expect
+    // `TranscodedAudio/sound-effects`/`TranscodedAudio/music` inside the app bundle - matching
+    // the Xcode Run Script build phase's own output paths for the macOS/tvOS targets exactly
+    // (`$BUILT_PRODUCTS_DIR/.../TranscodedAudio/sound-effects`). A generated resource's bundle
+    // path is computed relative to the *declared* `outputFilesDirectory`, not relative to
+    // wherever the script happens to write - so both commands below declare the shared
+    // `pluginWorkDirectory` itself as the root (one level above the actual `TranscodedAudio`
+    // folder the script writes into), which is what preserves the `TranscodedAudio/...` prefix
+    // in the final bundle instead of it being stripped away.
+    let transcodedRoot = context.pluginWorkDirectory.appending(subpath: "TranscodedAudio")
 
     return [
       .prebuildCommand(
@@ -25,18 +34,18 @@ struct TranscodeAudioPlugin: BuildToolPlugin {
         executable: scriptPath,
         arguments: [
           audioDirectory.appending(subpath: "sound-effects").string,
-          outputDirectory.appending(subpath: "sound-effects").string,
+          transcodedRoot.appending(subpath: "sound-effects").string,
         ],
-        outputFilesDirectory: outputDirectory.appending(subpath: "sound-effects")
+        outputFilesDirectory: context.pluginWorkDirectory
       ),
       .prebuildCommand(
         displayName: "Transcode music (ogg -> caf)",
         executable: scriptPath,
         arguments: [
           audioDirectory.appending(subpath: "music").string,
-          outputDirectory.appending(subpath: "music").string,
+          transcodedRoot.appending(subpath: "music").string,
         ],
-        outputFilesDirectory: outputDirectory.appending(subpath: "music")
+        outputFilesDirectory: context.pluginWorkDirectory
       ),
     ]
   }
