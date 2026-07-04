@@ -14,12 +14,8 @@
 
 extern const uint8_t sprites_bin[];
 extern const uint32_t sprites_bin_size;
-extern const uint8_t levels_bin[];
-extern const uint32_t levels_bin_size;
 
 static inline const void *nds_asset_sprites_bin(void) { return sprites_bin; }
 static inline uint32_t nds_asset_sprites_bin_size(void) { return sprites_bin_size; }
-static inline const void *nds_asset_levels_bin(void) { return levels_bin; }
-static inline uint32_t nds_asset_levels_bin_size(void) { return levels_bin_size; }
 
 #endif // SWIFT_NDS_ASSETS_H

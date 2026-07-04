@@ -15,10 +15,11 @@
 #     slice (swift.org 6.3.2 release or a recent main snapshot). Override with
 #     `make SWIFTC=/path/to/swiftc` if the default `swiftc` lacks it.
 #
-# Unlike the embedded-WASM build, this target CAN link full-Unicode String
-# support (libswiftUnicodeDataTables.a ships for armv4t), so the on-device
-# build re-enables the level text parser via -D JUNKBOT_HAS_UNICODE_TABLES --
-# see Sources/JunkbotCore/LevelParse.swift's gate.
+# Levels are pre-parsed at build time on the host (tools/LevelDump, which runs
+# JunkbotCore's real text parser + entity bridge natively) into generated
+# entity-builder Swift, so the DS binary never parses level text -- the same
+# split the embedded-WASM build uses, where the level parser stays excluded
+# behind `#if !hasFeature(Embedded)`.
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
@@ -45,9 +46,6 @@ PREFIX		:=	$(DEVKITARM)/bin/arm-none-eabi-
 CC		:=	$(PREFIX)gcc
 LD		:=	$(PREFIX)gcc
 
-# The Embedded stdlib's armv4t static libraries (unicode data tables live here).
-SWIFT_EMBEDDED_LIBDIR := $(shell $(SWIFTC) -print-target-info -target arm64-apple-macosx14.0 2>/dev/null | sed -n 's/.*"runtimeResourcePath": "\(.*\)".*/\1/p')/embedded/armv4t-none-none-eabi
-
 #---------------------------------------------------------------------------------
 # code generation -- ARM946E-S / armv5te, soft float, no FPU.
 #---------------------------------------------------------------------------------
@@ -58,6 +56,11 @@ NDSDEFS		:=	-DARM9 -D__NDS__ -I$(COMMON) \
 
 CFLAGS		:=	-g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) \
 			$(NDSDEFS)
+
+# The Embedded stdlib's armv4t static libraries. Even without the level text
+# parser, enough String machinery remains reachable (e.g. StaticString/String
+# grapheme handling) that the Unicode data tables must be linked.
+SWIFT_EMBEDDED_LIBDIR := $(shell $(SWIFTC) -print-target-info -target arm64-apple-macosx14.0 2>/dev/null | sed -n 's/.*"runtimeResourcePath": "\(.*\)".*/\1/p')/embedded/armv4t-none-none-eabi
 
 LDFLAGS		:=	-specs=$(CALICO)/share/ds9.specs -g $(ARCH) \
 			-Wl,-Map,$(TARGET).map -Wl,--gc-sections \
@@ -73,7 +76,6 @@ LIBS		:=	-lswiftUnicodeDataTables -lnds9 -lcalico_ds9 -lm
 SWIFTFLAGS	:=	-target armv4t-none-none-eabi \
 			-enable-experimental-feature Embedded \
 			-wmo -Osize \
-			-D JUNKBOT_HAS_UNICODE_TABLES \
 			-module-name Junkbot \
 			-Xcc -DARM9 -Xcc -D__NDS__ \
 			-Xcc -march=armv5te -Xcc -mfloat-abi=soft \
@@ -92,10 +94,10 @@ CORE_SWIFT	:=	$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/*.swift) \
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
 PORT_SWIFT	:=	$(wildcard source/*.swift)
 GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift
-GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/levels.bin
+GEN_BINS	:=	$(BUILD)/sprites.bin
 
 OFILES		:=	$(BUILD)/junkbot.swift.o $(BUILD)/shim.o \
-			$(BUILD)/sprites_bin.o $(BUILD)/levels_bin.o
+			$(BUILD)/sprites_bin.o
 
 ARM7_ELF	:=	$(CALICO)/bin/ds7_maine.elf
 
@@ -107,17 +109,26 @@ all: $(TARGET).nds
 $(BUILD):
 	@mkdir -p $@
 
-# Asset generation: sprite PNGs -> RGB555+A1 blob + Swift offset table;
-# level .txt files (in _LEVEL_LISTING.txt order) -> UTF-8 blob + Swift index.
-# One invocation produces all four outputs; a stamp file stands in for the
+# Sprite conversion: PNGs -> 8bpp palette-index blob + Swift offset/palette
+# tables. One invocation produces both outputs; a stamp file stands in for the
 # group because macOS's default make 3.81 predates grouped (`&:`) targets.
 $(BUILD)/assets.stamp: tools/gen_assets.py \
 		$(REPO_ROOT)/Sources/JunkbotCore/Generated/SpriteTable.swift | $(BUILD)
-	@echo generating assets
+	@echo generating sprite assets
 	python3 tools/gen_assets.py $(REPO_ROOT) $(BUILD)
 	@touch $@
 
-$(GEN_BINS) $(GEN_SWIFT): $(BUILD)/assets.stamp
+$(GEN_BINS) $(BUILD)/SpriteAssets.swift: $(BUILD)/assets.stamp
+
+# Level conversion: every campaign level, pre-parsed through JunkbotCore's own
+# parser + entity bridge on the host and frozen as entity-builder Swift.
+# (Level .txt files can't be listed as prerequisites -- their names contain
+# spaces, which make cannot escape -- so touch the listing or `make clean`
+# after editing a level in place.)
+$(BUILD)/LevelAssets.swift: tools/LevelDump/Sources/LevelDump/main.swift \
+		$(REPO_ROOT)/levels $(REPO_ROOT)/levels/_LEVEL_LISTING.txt | $(BUILD)
+	@echo generating level assets
+	swift run -c release --package-path tools/LevelDump LevelDump $(REPO_ROOT) $@
 
 # bin2s: asset blob -> assembly -> object
 $(BUILD)/%_bin.s: $(BUILD)/%.bin

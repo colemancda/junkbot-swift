@@ -30,13 +30,6 @@ func consolePrint(_ s: StaticString) {
     Int32(s.utf8CodeUnitCount))
 }
 
-func consolePrint(_ s: String) {
-  var bytes: [CChar] = []
-  bytes.reserveCapacity(s.utf8.count)
-  for b in s.utf8 { bytes.append(CChar(bitPattern: b)) }
-  bytes.withUnsafeBufferPointer { nds_print_len($0.baseAddress, Int32($0.count)) }
-}
-
 func consoleClearScreen() { consolePrint("\u{1b}[2J") }
 
 // MARK: - Video setup
@@ -67,16 +60,6 @@ func flipBuffers() {
 
 let gameEngine = GameEngine()
 
-let levelBytes: UnsafePointer<UInt8> =
-  nds_asset_levels_bin()!.assumingMemoryBound(to: UInt8.self)
-
-func levelText(_ index: Int) -> String {
-  let level = embeddedLevels[index]
-  let buffer = UnsafeBufferPointer(
-    start: levelBytes + Int(level.offset), count: Int(level.length))
-  return String(decoding: buffer, as: UTF8.self)
-}
-
 var currentLevelIndex = 0
 /// World-space coordinate of the viewport's (top screen's) top-left pixel.
 var scrollX: Int32 = 0
@@ -104,8 +87,9 @@ func drawStatusLine() {
   // Row 21, after a clear-to-end-of-line: "Moves: N (par M)".
   consolePrint("\u{1b}[21;0H\u{1b}[K Moves: ")
   nds_printf_1i("%d", gameEngine.moves)
-  if gameEngine.levelPar != Int.max {
-    nds_printf_1i("  (par %d)", Int32(truncatingIfNeeded: gameEngine.levelPar))
+  let par = embeddedLevels[currentLevelIndex].par
+  if par != Int32.max {
+    nds_printf_1i("  (par %d)", par)
   }
   lastShownMoves = gameEngine.moves
 }
@@ -115,20 +99,22 @@ func showLevelInfo() {
   consolePrint("\u{1b}[0;0H JUNKBOT  level ")
   nds_printf_2i("%d/%d", Int32(currentLevelIndex + 1), Int32(embeddedLevels.count))
   consolePrint("\n\n ")
-  consolePrint(gameEngine.levelTitle)
+  consolePrint(embeddedLevels[currentLevelIndex].title)
   consolePrint("\n\n ")
-  consolePrint(gameEngine.levelHint)
+  consolePrint(embeddedLevels[currentLevelIndex].hint)
   consolePrint("\u{1b}[19;0H D-pad scroll   stylus drag\n L/R level  START restart")
-  // TEMP debug: entity/render counts + scroll origin.
-  nds_printf_2i("\u{1b}[15;0H ent=%d cmd=%d", Int32(gameEngine.entities.count),
-    Int32(renderFrame.commands.count))
-  nds_printf_2i(" scr=%d,%d", scrollX, scrollY)
   drawStatusLine()
 }
 
 func loadLevel(_ index: Int) {
   currentLevelIndex = index
-  gameEngine.loadLevel(fromText: levelText(index))
+  // Levels are pre-parsed on the host into entity-builder code (see
+  // tools/LevelDump) -- no level text exists on-device.
+  let level = embeddedLevels[index]
+  gameEngine.loadLevelState(
+    entities: level.makeEntities(), levelBounds: level.bounds, nextID: 0)
+  gameEngine.setBackground(
+    backdropSpriteID: level.backdropSpriteID, backgroundDecals: [], decals: [])
   winLoseLatch = 0
   // Start the viewport centered on Junkbot (the SDL port's camera does the
   // same on load); after this, scrolling is fully manual per the port design.

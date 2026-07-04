@@ -1,10 +1,7 @@
 // Pure stdlib (no Foundation) - gated out of the embedded-WASM build because `.lowercased()`
 // pulls in Unicode normalization tables that don't link under Embedded Swift (a real, previously
 // confirmed failure mode in this project), not because this file itself needs Foundation.
-// JUNKBOT_HAS_UNICODE_TABLES: set by embedded targets that CAN link the stdlib's
-// Unicode data tables (ports/NDS links libswiftUnicodeDataTables.a for armv4t),
-// re-enabling this file where plain embedded-WASM must exclude it.
-#if !hasFeature(Embedded) || JUNKBOT_HAS_UNICODE_TABLES
+#if !hasFeature(Embedded)
 
 extension Level {
 
