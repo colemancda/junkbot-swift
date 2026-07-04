@@ -36,8 +36,8 @@ func openExternalURL(_ url: String) { _ = SDL_OpenURL(url) }
 /// tried in order:
 /// 1. Executable-relative: siblings of the binary itself - this is how a packaged Portmaster
 ///    port is actually laid out (binary + asset dirs copied into the same folder, see
-///    `ports/Linux/packaging/`), and the only one that works once the binary is relocated
-///    off this dev machine.
+///    `ports/portmaster/`), and the only one that works once the binary is relocated off
+///    this dev machine.
 /// 2. Dev-time `#filePath` fallback: this file's own compile-time source path, walked up to the
 ///    repo root (same trick `Tests/JunkbotCoreTests/LevelTests.swift` uses) - lets `swift run`/
 ///    `.build/debug/JunkbotSDL3` keep working during development, where the built binary sits

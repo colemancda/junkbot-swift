@@ -14,8 +14,8 @@ import JunkbotCore
 ///    `Bundle.main.resourceURL`, matching how a packaged .app/.ipa actually ships assets.
 /// 2. Executable-relative: siblings of the binary itself - this is how a packaged Portmaster
 ///    port is actually laid out (binary + asset dirs copied into the same folder, see
-///    `ports/Linux/packaging/`), and the only one that works once a Linux binary is relocated
-///    off this dev machine.
+///    `ports/portmaster/`), and the only one that works once a Linux binary is relocated off
+///    this dev machine.
 /// 3. Dev-time `#filePath` fallback: this file's own compile-time source path, walked up to the
 ///    repo root (same trick `Tests/JunkbotCoreTests/LevelTests.swift` uses) - lets `swift run`/
 ///    `.build/debug/JunkbotSDL3` keep working during development, where the built binary sits
