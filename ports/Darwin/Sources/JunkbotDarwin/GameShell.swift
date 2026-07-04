@@ -20,7 +20,12 @@ let spritesDirectory = repoRoot.appendingPathComponent("images/sprites")
 let spritesUndercoverDirectory = spritesDirectory.appendingPathComponent("Undercover Exclusive")
 let backgroundsDirectory = repoRoot.appendingPathComponent("images/backgrounds")
 let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent("Undercover Exclusive")
-let audioDirectory = repoRoot.appendingPathComponent("audio/sound-effects")
+/// Where `Scripts/transcode-audio.sh` (Xcode Run Script build phase) / `TranscodeAudioPlugin`
+/// (the iOS Playground's SwiftPM build-tool plugin) write the `.caf`-transcoded audio assets -
+/// see `Audio.swift`'s doc comment for why the checked-in `audio/` originals (mostly Ogg Vorbis)
+/// can't be played directly via `AVAudioPlayer`.
+let transcodedSoundEffectsDirectory = repoRoot.appendingPathComponent("TranscodedAudio/sound-effects")
+let transcodedMusicDirectory = repoRoot.appendingPathComponent("TranscodedAudio/music")
 
 /// Reads a level `.txt` file as UTF-8, stripping a leading byte-order-mark if present - see the
 /// identical helper in `ports/SDL3/Sources/JunkbotSDL3/main.swift` for why this is needed.
@@ -95,41 +100,24 @@ let gameEngine = GameEngine()
   cameraCenterY = targetY
 }
 
-// MARK: - Input-kind (required by `GameRender.swift`'s `render()`, never actually a gamepad here)
+// MARK: - Input-kind (required by `GameRender.swift`'s `render()`, and by the shared
+// `MenuFocus.swift`)
 //
-// `PointingInputKind` itself now lives in `Sources/JunkbotCore/PointingInputKind.swift`, shared
-// with `ports/SDL3`'s `Input.swift`.
-
-/// Touch/mouse-only port - no gamepad support yet (a real follow-up, not attempted this pass;
-/// see `ports/Darwin/README.md`). Always `.mouse`/`.touch` so `GameRender.swift`'s virtual-cursor
-/// branch (`lastPointingInput == .gamepad`) never fires and the OS/finger pointer is what's seen.
+// `PointingInputKind` itself lives in `Sources/JunkbotCore/PointingInputKind.swift`, shared with
+// `ports/SDL3`'s `Input.swift`. `focusedButtonIndex` (keyboard/d-pad menu focus index) is
+// declared in the shared, symlinked `MenuFocus.swift`, not here - actually driven by
+// `GamepadInput.swift`'s `GCController`/`GCKeyboard` handling.
 @MainActor var lastPointingInput: PointingInputKind = .mouse
 @MainActor var virtualCursorVisible = false
 
-/// Keyboard/d-pad menu focus index (`Screens.swift`'s `menuButtons` `didSet` clears this on every
-/// screen change) - always nil here, since this port has no keyboard/gamepad navigation yet (a
-/// real follow-up, not attempted this pass; see `ports/Darwin/README.md`). Touch/mouse hit-testing
-/// (`GameScene.swift`) doesn't use it.
-@MainActor var focusedButtonIndex: Int?
+// MARK: - Audio
+//
+// `SoundBoard`/`MusicPlayer` themselves live in `Audio.swift` (AVAudioPlayer-backed, mirroring
+// `ports/SDL3`'s SDL3_mixer-backed versions) - just instantiated here, matching the identical
+// instantiation in `ports/SDL3`'s `main.swift`.
 
-// MARK: - Audio (not yet implemented - see ports/Darwin/README.md)
-
-/// Stand-ins so `GameEngine.onPlaySound`/`Screens.swift`'s menu-sound calls have something to
-/// call - real playback (AVAudioPlayer/AVAudioEngine) is a documented follow-up, not attempted
-/// this pass (SpriteKit's own `SKAction.playSoundFileNamed` would be the simplest path, but
-/// wiring the full `SoundID`/`MenuSoundID` tables was out of scope for the rendering-migration
-/// work this pass is focused on).
-final class SoundBoard {
-  func play(_ id: Int32) {}
-}
-@MainActor let soundBoard = SoundBoard()
-
-final class MusicPlayer {
-  func startRandomLevelMusic() {}
-  func stop() {}
-  func update() {}
-}
-@MainActor let musicPlayer = MusicPlayer()
+@MainActor let soundBoard = SoundBoard(directory: transcodedSoundEffectsDirectory)
+@MainActor let musicPlayer = MusicPlayer(directory: transcodedMusicDirectory)
 
 /// Called once from `JunkbotScene.didMove(to:)` - top-level statements (as opposed to
 /// declarations) aren't allowed outside a file literally named `main.swift`, which this isn't

@@ -13,11 +13,15 @@ final class JunkbotScene: SKScene {
   private let tickIntervalNanoseconds: UInt64 = 1_000_000_000 / 18
   private var lastTickTime: UInt64 = 0
   private var didStart = false
+  /// For `gamepadState.pollSticks(deltaSeconds:)` - SpriteKit's `update(_:)` only gives an
+  /// absolute timestamp, not a per-frame delta the way SDL's own frame timer does.
+  private var lastFrameTime: TimeInterval?
 
   override func didMove(to view: SKView) {
     guard !didStart else { return }
     didStart = true
     configureGameEngineCallbacks()
+    configureKeyboardInput()
     gameRenderer = SpriteKitRenderer(scene: self, view: view)
     windowWidth = Int32(size.width)
     windowHeight = Int32(size.height)
@@ -33,6 +37,10 @@ final class JunkbotScene: SKScene {
 
   override func update(_ currentTime: TimeInterval) {
     guard didStart else { return }
+    let deltaSeconds = lastFrameTime.map { Float(currentTime - $0) } ?? 0
+    lastFrameTime = currentTime
+    gamepadState.pollSticks(deltaSeconds: deltaSeconds)
+
     let now = currentTicksNanoseconds()
     if screenOwnsWorldInput() {
       while now - lastTickTime >= tickIntervalNanoseconds {
@@ -98,6 +106,7 @@ final class JunkbotScene: SKScene {
   #if canImport(UIKit)
   override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
     guard let touch = touches.first else { return }
+    notePointingInput(.touch)
     pointDown(at: touch.location(in: self))
   }
   override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -110,13 +119,21 @@ final class JunkbotScene: SKScene {
   }
   #else
   override func mouseDown(with event: NSEvent) {
+    notePointingInput(.mouse)
+    focusedButtonIndex = nil
     pointDown(at: event.location(in: self))
   }
   override func mouseDragged(with event: NSEvent) {
+    notePointingInput(.mouse)
     pointMoved(to: event.location(in: self))
   }
   override func mouseUp(with event: NSEvent) {
     pointUp(at: event.location(in: self))
+  }
+  override func mouseMoved(with event: NSEvent) {
+    notePointingInput(.mouse)
+    focusedButtonIndex = nil
+    pointMoved(to: event.location(in: self))
   }
   #endif
 }

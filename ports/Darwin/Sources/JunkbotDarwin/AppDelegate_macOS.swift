@@ -3,8 +3,8 @@ import Cocoa
 import SpriteKit
 
 /// macOS-only: creates the window/`SKView`/`JunkbotScene`. Not shared with iOS/tvOS - see
-/// `AppDelegate_iOS.swift` for the UIKit equivalent (used by both those targets, whose lifecycle
-/// APIs are identical for this app's needs).
+/// `AppDelegate_tvOS.swift` for the UIKit equivalent (tvOS only now - iOS moved to
+/// `JunkbotPlayground.swiftpm`, see `ports/Darwin/README.md`).
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
   var window: NSWindow!
@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       backing: .buffered, defer: false)
     window.title = "Junkbot"
     window.center()
+    // Without this, AppKit only sends `mouseMoved`/`mouseDragged` events while a button is held -
+    // `GameScene.swift`'s `mouseMoved` override (menu-hover, focus-clearing, input-kind tracking)
+    // needs plain hover motion too.
+    window.acceptsMouseMovedEvents = true
 
     let view = SKView(frame: contentRect)
     view.ignoresSiblingOrder = true
