@@ -9,7 +9,7 @@
 
 /// One placed background decal, with its name already resolved to a sprite ID at level-load time
 /// (by the JS host via `engineSetBackground`, or natively via `spriteIDForName`).
-public struct DecalInstance {
+public struct DecalInstance: Sendable {
   public var x: Int32
   public var y: Int32
   public var spriteID: Int32
