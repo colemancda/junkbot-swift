@@ -19,6 +19,19 @@ final class SDL3Renderer: GameRenderer {
   private var texturesByHandle: [Int: SDLTexture] = [:]
   private var nextHandle = 1
 
+  /// A 1x1 opaque-white texture, tinted via color/alpha modulation and stretched over a
+  /// destination rect to draw solid-color fills - see `fillRect`'s doc comment for why this
+  /// exists instead of `SDL_RenderFillRect`/`SDL_RenderRect`.
+  private lazy var solidTexture: SDLTexture? = {
+    guard let texture = try? SDLTexture(
+      renderer: renderer, format: .argb8888, access: .static, width: 1, height: 1)
+    else { return nil }
+    try? texture.setBlendMode([.alpha])
+    var white: UInt32 = 0xFFFF_FFFF
+    withUnsafeMutableBytes(of: &white) { try? texture.update(pixels: $0.baseAddress!, pitch: 4) }
+    return texture
+  }()
+
   init(renderer: SDLRenderer) {
     self.renderer = renderer
   }
@@ -71,16 +84,25 @@ final class SDL3Renderer: GameRenderer {
     renderer.present()
   }
 
+  /// Draws through `solidTexture` (tinted/stretched over the dest rect) rather than
+  /// `SDL_RenderFillRect` - on the Android SDL3 renderer, solid-color primitives silently draw
+  /// nothing under `.integerScale` logical-presentation letterboxing (confirmed on-device: every
+  /// UI panel/button background that used `SDL_RenderFillRect` rendered invisible, while
+  /// everything drawn as a texture - sprites, PNG panels, glyph text - was unaffected), so
+  /// primitives can't be trusted here even though they work fine on desktop.
   func fillRect(x: Float, y: Float, w: Float, h: Float, r: UInt8, g: UInt8, b: UInt8, a: UInt8) {
-    try? renderer.setDrawBlendMode([.alpha])
-    try? renderer.setDrawColor(red: r, green: g, blue: b, alpha: a)
-    try? renderer.fill(rect: SDL_FRect(x: x, y: y, w: w, h: h))
+    guard let solidTexture else { return }
+    try? solidTexture.setColorModulation(red: r, green: g, blue: b)
+    try? solidTexture.setAlphaModulation(a)
+    try? renderer.copy(solidTexture, destination: SDL_FRect(x: x, y: y, w: w, h: h))
   }
 
+  /// Four hairline `fillRect` calls instead of `SDL_RenderRect` - see `fillRect`'s doc comment.
   func strokeRect(x: Float, y: Float, w: Float, h: Float, r: UInt8, g: UInt8, b: UInt8, a: UInt8) {
-    try? renderer.setDrawBlendMode([.alpha])
-    try? renderer.setDrawColor(red: r, green: g, blue: b, alpha: a)
-    try? renderer.draw(rect: SDL_FRect(x: x, y: y, w: w, h: h))
+    fillRect(x: x, y: y, w: w, h: 1, r: r, g: g, b: b, a: a)
+    fillRect(x: x, y: y + h - 1, w: w, h: 1, r: r, g: g, b: b, a: a)
+    fillRect(x: x, y: y, w: 1, h: h, r: r, g: g, b: b, a: a)
+    fillRect(x: x + w - 1, y: y, w: 1, h: h, r: r, g: g, b: b, a: a)
   }
 
   func drawTexture(
