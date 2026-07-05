@@ -40,6 +40,7 @@ web/Package/
 *.nds
 *.3dsx
 *.smdh
+*.z64
 *.o
 *.bin
 *.dia
@@ -100,4 +101,7 @@ ports/Android/AndroidApp/build/
 ports/Android/AndroidApp/app/build/
 ports/Android/AndroidApp/app/src/main/jniLibs/
 ports/Android/AndroidApp/local.properties
-!/ports/Darwin/JunkbotMobile.swiftpm/.swiftpm/playgrounds/*
+
+# N64 port: Embedded Swift runtime archives ports/N64/build.sh copies in from
+# the custom mips-none-none-elf toolchain, not checked in.
+/ports/N64/swift-libs/

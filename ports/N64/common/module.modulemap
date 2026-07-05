@@ -1,0 +1,6 @@
+// Exposes this port's shim (not libdragon's own headers -- see n64_umbrella.h's
+// doc comment) to Swift as `import CN64`.
+module CN64 {
+    header "n64_umbrella.h"
+    export *
+}
