@@ -47,6 +47,14 @@ n64_init()
 let gameEngine = GameEngine()
 gameEngine.onPlaySound = { id in playSound(id) }
 
+/// `junkbotCampaignLevels` (`Sources/JunkbotCore/Generated/JunkbotLevelData.swift`, shared with
+/// every port) - this v1 port only ships the base Junkbot campaign (Undercover Exclusive is
+/// untested here), so it excludes `UndercoverLevelData.swift`/`LevelData.swift` entirely (see
+/// compile-swift.sh's GENERATED_EXCLUDE) rather than filter a combined array containing both at
+/// runtime - unlike an unreferenced top-level declaration, entries that are merely unused
+/// *within* an array this port does reference can't be stripped.
+let junkbotLevels = junkbotCampaignLevels
+
 var currentLevelIndex = 0
 /// World-space coordinate of the viewport's top-left pixel.
 var scrollX: Int32 = 0
@@ -98,7 +106,7 @@ func drawHUD(into buffer: UnsafeMutablePointer<UInt16>, strideElements: Int32) {
   var x = drawText(" LVL ", x: 2, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
   x = drawInt(Int32(currentLevelIndex + 1), x: x, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
   x = drawText("/", x: x, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
-  x = drawInt(Int32(embeddedLevels.count), x: x, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
+  x = drawInt(Int32(junkbotLevels.count), x: x, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
   x = drawText("  MOVES ", x: x, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
   drawInt(gameEngine.moves, x: x, y: 2, scale: 1, color: hudTextColor, strideElements: strideElements, into: buffer)
 
@@ -117,8 +125,9 @@ hudDrawHook = drawHUD(into:strideElements:)
 func loadLevel(_ index: Int) {
   currentLevelIndex = index
   // Levels are pre-parsed on the host into entity-builder code (see
-  // tools/LevelDump) -- no level text exists on-device.
-  let level = embeddedLevels[index]
+  // Sources/JunkbotCore/Generated/JunkbotLevelData.swift, produced by the
+  // repo root's `make codegen`) -- no level text exists on-device.
+  let level = junkbotLevels[index]
   gameEngine.loadLevelState(
     entities: level.makeEntities(), levelBounds: level.bounds, nextID: 0)
   gameEngine.setBackground(
@@ -158,7 +167,7 @@ while true {
   if pressed & BTN_L != 0, currentLevelIndex > 0 {
     loadLevel(currentLevelIndex - 1)
   }
-  if pressed & BTN_R != 0, currentLevelIndex + 1 < embeddedLevels.count {
+  if pressed & BTN_R != 0, currentLevelIndex + 1 < junkbotLevels.count {
     loadLevel(currentLevelIndex + 1)
   }
   if pressed & BTN_START != 0 {
@@ -168,7 +177,7 @@ while true {
   // Win/lose prompt: A advances.
   if winLoseLatch != 0 {
     if pressed & BTN_A != 0 {
-      if winLoseLatch == 1, currentLevelIndex + 1 < embeddedLevels.count {
+      if winLoseLatch == 1, currentLevelIndex + 1 < junkbotLevels.count {
         loadLevel(currentLevelIndex + 1)
       } else {
         loadLevel(currentLevelIndex)

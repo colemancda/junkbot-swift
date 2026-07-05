@@ -31,7 +31,16 @@ COMMON=common
 # Same CORE_EXCLUDE as ports/3DS/ports/NDS, and for the same reason (real ROM
 # budget: their Unicode/case-mapping data tables cost ~800KB neither of those
 # ports' -- nor this one's -- 4MB RDRAM budget can spare).
+#
+# UndercoverLevelData.swift/LevelData.swift are excluded for the same reason:
+# this v1 port only ships the base Junkbot campaign (source/main.swift
+# references `junkbotCampaignLevels` from JunkbotLevelData.swift directly),
+# and once anything references a generated level array, the *whole* array
+# (every entry's entity-builder closure, used or not) becomes reachable --
+# there's no way to keep just the referenced elements. Matches ports/NDS's
+# GENERATED_EXCLUDE exactly (see its Makefile's comment).
 CORE_EXCLUDE=(Font.swift LevelCatalog.swift)
+GENERATED_EXCLUDE=(UndercoverLevelData.swift LevelData.swift)
 
 core_swift=()
 for f in "$REPO_ROOT"/Sources/JunkbotCore/*.swift; do
@@ -42,12 +51,19 @@ for f in "$REPO_ROOT"/Sources/JunkbotCore/*.swift; do
   done
   [ "$skip" = 0 ] && core_swift+=("$f")
 done
-core_swift+=("$REPO_ROOT"/Sources/JunkbotCore/Generated/*.swift)
+for f in "$REPO_ROOT"/Sources/JunkbotCore/Generated/*.swift; do
+  base="$(basename "$f")"
+  skip=0
+  for ex in "${GENERATED_EXCLUDE[@]}"; do
+    [ "$base" = "$ex" ] && skip=1
+  done
+  [ "$skip" = 0 ] && core_swift+=("$f")
+done
 
 port_swift=(source/*.swift)
 gen_swift=(
   "$BUILD_DIR/SpriteAssets.swift" "$BUILD_DIR/AudioAssets.swift" "$BUILD_DIR/MusicAssets.swift"
-  "$BUILD_DIR/FontAssets.swift" "$BUILD_DIR/LevelAssets.swift"
+  "$BUILD_DIR/FontAssets.swift"
 )
 
 echo "Compiling Swift code with host compiler..."

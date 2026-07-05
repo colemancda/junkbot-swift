@@ -45,11 +45,13 @@ fi
 export LLC
 
 echo "Step 1: Generating build-time assets..."
+# Levels are NOT generated here: Sources/JunkbotCore/Generated/JunkbotLevelData.swift
+# is shared with every port and produced by the repo root's `make codegen`
+# (tools/LevelDump) -- run that after editing any levels/*.txt file.
 python3 tools/gen_assets.py "$REPO_ROOT" "$BUILD_DIR"
 python3 tools/gen_audio.py "$REPO_ROOT" "$BUILD_DIR"
 python3 tools/gen_music.py "$REPO_ROOT" "$BUILD_DIR"
 python3 tools/gen_font.py "$REPO_ROOT" "$BUILD_DIR"
-swift run -c release --package-path tools/LevelDump LevelDump "$REPO_ROOT" "$BUILD_DIR/LevelAssets.swift"
 
 echo "Step 2: Compiling Swift on host system..."
 ./compile-swift.sh
@@ -61,14 +63,15 @@ fi
 echo "✅ Swift compilation successful"
 
 # The runtime archives Junkbot's Embedded Swift object links against
-# (libswiftEmbeddedPlatformPOSIX/ExclusivitySingleThreaded/UnicodeDataTables)
+# (libswiftEmbeddedPlatformPOSIX/ExclusivitySingleThreaded -- not
+# UnicodeDataTables, see the Makefile's comment on why that one's dropped)
 # ship alongside SWIFTC's own lib/ tree but the libdragon Makefile expects
 # them at swift-libs/mips-none-none-elf/ -- copy them in if missing (this step
 # is manual/undocumented in the swift-embedded-nintendo-64 reference this port
 # is modeled on).
 SWIFT_LIB_SRC="$(dirname "$(dirname "$SWIFTC")")/lib/swift/embedded/mips-none-none-elf"
 mkdir -p swift-libs/mips-none-none-elf
-for lib in libswiftEmbeddedPlatformPOSIX.a libswiftExclusivitySingleThreaded.a libswiftUnicodeDataTables.a; do
+for lib in libswiftEmbeddedPlatformPOSIX.a libswiftExclusivitySingleThreaded.a; do
   if [ ! -f "swift-libs/mips-none-none-elf/$lib" ]; then
     if [ ! -f "$SWIFT_LIB_SRC/$lib" ]; then
       echo "✗ Missing $lib -- expected at $SWIFT_LIB_SRC/$lib (does SWIFTC ship an Embedded mips-none-none-elf slice?)"
