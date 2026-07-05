@@ -1,6 +1,7 @@
 #if canImport(UIKit)
 import UIKit
 import SpriteKit
+import JunkbotCore
 
 /// Hosts the one `SKView`/`JunkbotScene` this app ever presents - shared between the tvOS
 /// Xcode target's `AppDelegate_tvOS.swift` (sets this directly as `window.rootViewController`)
@@ -27,7 +28,7 @@ public final class GameViewController: UIViewController {
     // `main.swift` and `AppDelegate_macOS.swift`'s identical logic (see that file's doc comment).
     // `GameScene.swift`'s `didMove(to:)` calls `showTitleScreen()` afterward, which loads it
     // again as part of the real screen-state setup - not a redundancy introduced here.
-    gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
+    gameEngine.loadLevel(titleScreenLevel)
     windowWidth = gameEngine.levelBounds.map { $0.width } ?? 900
     windowHeight = gameEngine.levelBounds.map { $0.height } ?? 675
     let scene = JunkbotScene(size: CGSize(width: CGFloat(windowWidth), height: CGFloat(windowHeight)))

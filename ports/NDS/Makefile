@@ -17,11 +17,13 @@
 #     Makefile targets. Override with `make SWIFTC=/path/to/swiftc` to point
 #     at one.
 #
-# Levels are pre-parsed at build time on the host (tools/LevelDump, which runs
-# JunkbotCore's real text parser + entity bridge natively) into generated
-# entity-builder Swift, so the DS binary never parses level text -- the same
-# split the embedded-WASM build uses, where the level parser stays excluded
-# behind `#if !hasFeature(Embedded)`.
+# Levels are pre-parsed at build time on the host, shared with every other port
+# (root tools/LevelDump, run via the repo root's `make codegen`), which runs
+# JunkbotCore's real text parser + entity bridge natively and freezes the
+# result as Sources/JunkbotCore/Generated/LevelData.swift - the DS binary
+# never parses level text, same as the embedded-WASM build, where the level
+# parser stays excluded behind `#if !hasFeature(Embedded)`. Run `make codegen`
+# from the repo root after editing any `levels/*.txt` file.
 #
 # Sound effects and music are similarly pre-converted at build time
 # (tools/gen_audio.py, tools/gen_music.py) from the repo's Ogg Vorbis/WAV
@@ -104,12 +106,24 @@ SWIFTFLAGS	:=	-target armv5te-none-none-eabi \
 # non-Foundation half unless dropped here too). Both are dead weight this
 # port's cruder devkitARM link doesn't strip on its own the way the WASM
 # build's linker does; excluding them saves real ROM budget.
-CORE_EXCLUDE	:=	Font.swift LevelCatalog.swift
+#
+# UndercoverLevelData.swift/LevelData.swift are excluded for the same
+# ROM-budget reason: this v1 port only ships the base Junkbot campaign (see
+# source/main.swift), and once anything references a generated level array,
+# the *whole* array (every entry's entity-builder closure, used or not)
+# becomes reachable - there's no way to keep just the referenced elements. So
+# rather than reference the combined `embeddedLevels` (both campaigns) and
+# only ever read the Junkbot entries, this port references
+# `junkbotCampaignLevels` (JunkbotLevelData.swift) directly and excludes the
+# other two files entirely, matching Font.swift/LevelCatalog.swift's pattern.
+CORE_EXCLUDE		:=	Font.swift LevelCatalog.swift
+GENERATED_EXCLUDE	:=	UndercoverLevelData.swift LevelData.swift
 CORE_SWIFT	:=	$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_EXCLUDE)), \
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/*.swift)) \
-			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
+			$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/Generated/,$(GENERATED_EXCLUDE)), \
+			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift))
 PORT_SWIFT	:=	$(wildcard source/*.swift)
-GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift $(BUILD)/AudioAssets.swift \
+GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/AudioAssets.swift \
 			$(BUILD)/MusicAssets.swift $(BUILD)/FontAssets.swift
 GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin $(BUILD)/font.bin
 
@@ -169,16 +183,6 @@ $(BUILD)/font.stamp: tools/gen_font.py $(REPO_ROOT)/font/font.png | $(BUILD)
 	@touch $@
 
 $(BUILD)/font.bin $(BUILD)/FontAssets.swift: $(BUILD)/font.stamp
-
-# Level conversion: every campaign level, pre-parsed through JunkbotCore's own
-# parser + entity bridge on the host and frozen as entity-builder Swift.
-# (Level .txt files can't be listed as prerequisites -- their names contain
-# spaces, which make cannot escape -- so touch the listing or `make clean`
-# after editing a level in place.)
-$(BUILD)/LevelAssets.swift: tools/LevelDump/Sources/LevelDump/main.swift \
-		$(REPO_ROOT)/levels $(REPO_ROOT)/levels/_LEVEL_LISTING.txt | $(BUILD)
-	@echo generating level assets
-	swift run -c release --package-path tools/LevelDump LevelDump $(REPO_ROOT) $@
 
 # bin2s: asset blob -> assembly -> object
 $(BUILD)/%_bin.s: $(BUILD)/%.bin

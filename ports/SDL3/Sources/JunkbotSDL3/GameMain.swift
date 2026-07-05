@@ -77,23 +77,10 @@ let audioDirectory = repoRoot.appendingPathComponent("audio/sound-effects")
 
 // MARK: - Level catalog
 
-/// Reads a level `.txt` file as UTF-8, stripping a leading byte-order-mark if present - a few
-/// files under `levels/` (e.g. `Terrarium.txt`, `The Garage.txt`) have one, and `String.Encoding
-/// .utf8` decoding doesn't strip it automatically, which left a stray `\u{FEFF}` glued to the
-/// `[info]` line and broke that file's section parsing entirely (silently, since `Level(text:)`
-/// isn't throwing - it would just fail to find `[info]` and produce an all-default/empty `Level`).
-func readLevelText(at url: URL) -> String? {
-  guard var text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-  if text.hasPrefix("\u{FEFF}") {
-    text.removeFirst()
-  }
-  return text
-}
-
-/// Building/basement grouping + listing, shared with any future native target
-/// (`Sources/JunkbotCore/LevelCatalog.swift`) - see the Phase 6 plan for why this replaced the
-/// old flat `loadLevelSequence`/`levelSequence` auto-play sequencing.
-let levelCatalog = LevelCatalog(repoRoot: repoRoot)
+/// Every level is pre-parsed at build time (`tools/LevelDump`, via `make codegen`) into
+/// `Sources/JunkbotCore/Generated/LevelData.swift`, so this only builds the in-memory pagination
+/// index - no file I/O, no level-text parsing at runtime.
+let levelCatalog = EmbeddedLevelCatalog()
 
 let gameEngine = GameEngine()
 /// World-space camera center/scale, initialized to the level's center on load and then re-centered
@@ -467,7 +454,7 @@ final class CursorSet {
   // Load the title screen level before creating the window, so the window's default size can
   // match its actual bounds (no letterboxing on startup) instead of an arbitrary fixed guess. The
   // window stays resizable afterward for levels of other sizes (see `.windowResized` below).
-  gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
+  gameEngine.loadLevel(titleScreenLevel)
   if let bounds = gameEngine.levelBounds {
     windowWidth = bounds.width
     windowHeight = bounds.height

@@ -30,19 +30,10 @@ let backgroundsUndercoverDirectory = backgroundsDirectory.appendingPathComponent
 let transcodedSoundEffectsDirectory = repoRoot.appendingPathComponent("TranscodedAudio/sound-effects")
 let transcodedMusicDirectory = repoRoot.appendingPathComponent("TranscodedAudio/music")
 
-/// Reads a level `.txt` file as UTF-8, stripping a leading byte-order-mark if present - see the
-/// identical helper in `ports/SDL3/Sources/JunkbotSDL3/main.swift` for why this is needed.
-func readLevelText(at url: URL) -> String? {
-  guard var text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-  if text.hasPrefix("\u{FEFF}") {
-    text.removeFirst()
-  }
-  return text
-}
-
-/// Building/basement grouping + listing - shared with every native target
-/// (`Sources/JunkbotCore/LevelCatalog.swift`).
-let levelCatalog = LevelCatalog(repoRoot: repoRoot)
+/// Every level is pre-parsed at build time (`tools/LevelDump`, via `make codegen`) into
+/// `Sources/JunkbotCore/Generated/LevelData.swift`, so this only builds the in-memory pagination
+/// index - no file I/O, no level-text parsing at runtime.
+let levelCatalog = EmbeddedLevelCatalog()
 
 // MARK: - Neutral wrapper functions for the shared, symlinked files
 

@@ -1,6 +1,7 @@
 #if os(macOS)
 import Cocoa
 import SpriteKit
+import JunkbotCore
 
 /// macOS-only: creates the window/`SKView`/`JunkbotScene`. Not shared with iOS/tvOS - see
 /// `AppDelegate_tvOS.swift` for the UIKit equivalent (tvOS only now - iOS moved to
@@ -29,7 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // available). `GameScene.swift`'s `didMove(to:)` calls `showTitleScreen()` afterward, which
     // loads it again as part of the real screen-state setup - the same double-load `ports/SDL3`
     // itself already does, not a redundancy introduced here.
-    gameEngine.loadLevel(fromText: readLevelText(at: titleScreenLevelURL) ?? "")
+    gameEngine.loadLevel(titleScreenLevel)
     // Assigning the *global* `windowWidth`/`windowHeight` (not just local variables) is essential
     // here - every shared rendering/UI file (`Screens.swift`, `GameRender.swift`) reads those
     // globals for all its positioning/scaling math, so if they stay at `GameShell.swift`'s

@@ -18,15 +18,15 @@ import JunkbotCore
 /// deliberately NOT reproduced - the HTML5 remake (the parity target) never implemented them.
 enum Screen: Equatable {
   case title
-  case levelSelect(game: LevelCatalog.Game, page: Int)
+  case levelSelect(game: Game, page: Int)
   case playing
   case levelWinDialog
   case levelLoseDialog
 }
 
 @GameActor var currentScreen: Screen = .title
-@GameActor var currentGame: LevelCatalog.Game = .junkbot
-@GameActor var currentLevelEntry: LevelCatalogEntry?
+@GameActor var currentGame: Game = .junkbot
+@GameActor var currentLevelEntry: EmbeddedLevelEntry?
 /// Rebuilt whenever `currentScreen` changes; hit-tested by the main loop's mouse-down handler
 /// (before world drag input, since menu buttons sit visually on top of the world). Rebuilding
 /// clears keyboard/d-pad focus (the old index would point at a different screen's buttons).
@@ -52,8 +52,6 @@ enum Screen: Equatable {
 /// row rollover highlight, mirroring `behavior_ListRoHiLite.ls`'s `mouseWithin`.
 @GameActor var lastMouseScreenX: Float = -1
 @GameActor var lastMouseScreenY: Float = -1
-
-let titleScreenLevelURL = repoRoot.appendingPathComponent("levels/custom/Title Screen.txt")
 
 // MARK: - Save data
 
@@ -153,14 +151,10 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
   }
 }
 
-@GameActor func loadLevel(_ entry: LevelCatalogEntry, game: LevelCatalog.Game) {
-  guard let text = readLevelText(at: entry.url) else {
-    FileHandle.standardError.write(Data("Failed to read \(entry.url.path)\n".utf8))
-    return
-  }
+@GameActor func loadLevel(_ entry: EmbeddedLevelEntry, game: Game) {
   currentLevelEntry = entry
   currentGame = game
-  gameEngine.loadLevel(fromText: text)
+  gameEngine.loadLevel(entry.level)
   print("Level: \(entry.title)")
   soundBoard.play(MenuSoundID.enterLevel)
   musicPlayer.startRandomLevelMusic()
@@ -250,11 +244,7 @@ enum MenuSoundID {
 
 @GameActor func showTitleScreen() {
   currentScreen = .title
-  guard let text = readLevelText(at: titleScreenLevelURL) else {
-    FileHandle.standardError.write(Data("Failed to read \(titleScreenLevelURL.path)\n".utf8))
-    return
-  }
-  gameEngine.loadLevel(fromText: text)
+  gameEngine.loadLevel(titleScreenLevel)
   centerCameraOnLevel()
   musicPlayer.startRandomLevelMusic()
 
@@ -318,14 +308,14 @@ let levelSelectRowHeight: Float = 18
 let levelSelectRowsTop: Float = tabStripHeight + listPadY
 let levelSelectRowsLeft: Float = 11
 
-@GameActor func tabStride(game: LevelCatalog.Game) -> Float {
+@GameActor func tabStride(game: Game) -> Float {
   let count = Float(levelCatalog.pagesByGame[game]?.count ?? 4)
   // Junkbot's 4 tabs use the CSS's exact -15px overlap; Undercover's 5 squeeze a little more
   // so the row still fits the window.
   return count <= 4 ? tabImageWidth - tabOverlap : (Float(windowWidth) - tabImageWidth - 4) / (count - 1)
 }
 
-@GameActor func showLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
+@GameActor func showLevelSelectScreen(game: Game, page: Int) {
   currentScreen = .levelSelect(game: game, page: page)
   currentGame = game
   gameEngine.setPaused(true)
@@ -364,7 +354,7 @@ let levelSelectRowsLeft: Float = 11
   menuButtons = buttons
 }
 
-@GameActor func drawLevelSelectScreen(game: LevelCatalog.Game, page: Int) {
+@GameActor func drawLevelSelectScreen(game: Game, page: Int) {
   // Page background (#7c857c).
   gameRenderer.clear(r: 0x7C, g: 0x85, b: 0x7C, a: 255)
 

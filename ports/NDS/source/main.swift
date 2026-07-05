@@ -66,6 +66,14 @@ soundEnable()
 let gameEngine = GameEngine()
 gameEngine.onPlaySound = { id in playSound(id) }
 
+/// `junkbotCampaignLevels` (`Sources/JunkbotCore/Generated/JunkbotLevelData.swift`, shared with
+/// every port) - this v1 port only ships the base Junkbot campaign (Undercover Exclusive is
+/// untested here - see ports/NDS/README.md), so it excludes `UndercoverLevelData.swift`/
+/// `LevelData.swift` entirely (see the Makefile's CORE_EXCLUDE) rather than filter a combined
+/// array containing both at runtime - unlike an unreferenced top-level declaration, entries
+/// that are merely unused *within* an array this port does reference can't be stripped.
+let junkbotLevels = junkbotCampaignLevels
+
 var currentLevelIndex = 0
 /// World-space coordinate of the viewport's (top screen's) top-left pixel.
 var scrollX: Int32 = 0
@@ -98,7 +106,7 @@ func drawStatusLine() {
   var x = drawText(
     " Moves: ", x: 6, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
   x = drawInt(gameEngine.moves, x: x, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
-  let par = embeddedLevels[currentLevelIndex].par
+  let par = junkbotLevels[currentLevelIndex].par
   if par != Int32.max {
     x = drawText(
       "  (par ", x: x, y: statusLineY, scale: 1, color: topScreenTextColor, into: topBuffer)
@@ -116,13 +124,13 @@ func showLevelInfo() {
     Int32(currentLevelIndex + 1), x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
   x = drawText("/", x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
   drawInt(
-    Int32(embeddedLevels.count), x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
+    Int32(junkbotLevels.count), x: x, y: 6, scale: 2, color: topScreenTextColor, into: topBuffer)
 
   let afterTitle = drawWrappedText(
-    embeddedLevels[currentLevelIndex].title, x: 6, y: 26, maxWidth: screenWidth - 12, scale: 2,
+    junkbotLevels[currentLevelIndex].title, x: 6, y: 26, maxWidth: screenWidth - 12, scale: 2,
     color: topScreenTextColor, into: topBuffer)
   drawWrappedText(
-    embeddedLevels[currentLevelIndex].hint, x: 6, y: afterTitle + 6, maxWidth: screenWidth - 12,
+    junkbotLevels[currentLevelIndex].hint, x: 6, y: afterTitle + 6, maxWidth: screenWidth - 12,
     scale: 1, color: topScreenTextColor, into: topBuffer)
 
   drawText(
@@ -137,8 +145,9 @@ func showLevelInfo() {
 func loadLevel(_ index: Int) {
   currentLevelIndex = index
   // Levels are pre-parsed on the host into entity-builder code (see
-  // tools/LevelDump) -- no level text exists on-device.
-  let level = embeddedLevels[index]
+  // Sources/JunkbotCore/Generated/JunkbotLevelData.swift, produced by the repo
+  // root's `make codegen`) -- no level text exists on-device.
+  let level = junkbotLevels[index]
   gameEngine.loadLevelState(
     entities: level.makeEntities(), levelBounds: level.bounds, nextID: 0)
   gameEngine.setBackground(
@@ -183,7 +192,7 @@ while pmMainLoop() {
   if pressed & KEY_L != 0, currentLevelIndex > 0 {
     loadLevel(currentLevelIndex - 1)
   }
-  if pressed & KEY_R != 0, currentLevelIndex + 1 < embeddedLevels.count {
+  if pressed & KEY_R != 0, currentLevelIndex + 1 < junkbotLevels.count {
     loadLevel(currentLevelIndex + 1)
   }
   if pressed & KEY_START != 0 {
@@ -193,7 +202,7 @@ while pmMainLoop() {
   // Win/lose prompt: A or a fresh stylus tap advances.
   if winLoseLatch != 0 {
     if pressed & (KEY_A | KEY_TOUCH) != 0 {
-      if winLoseLatch == 1, currentLevelIndex + 1 < embeddedLevels.count {
+      if winLoseLatch == 1, currentLevelIndex + 1 < junkbotLevels.count {
         loadLevel(currentLevelIndex + 1)
       } else {
         loadLevel(currentLevelIndex)

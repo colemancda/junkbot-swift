@@ -7,11 +7,14 @@ import Foundation
 /// `LevelSerialize.swift`/`LevelEntityBridge.swift` (excluded from Embedded only for an
 /// unrelated Unicode-table linking concern, not a real Foundation need), this file genuinely
 /// needs Foundation for real directory/file I/O (`URL`, `FileManager`, `String(contentsOf:)`) -
-/// there's no stdlib-only way to do that on any platform. Reachable only from native targets
-/// (SDL3, tests), tree-shaken out of the embedded-WASM build since nothing in
-/// `Sources/JunkbotWASM/main.swift` references it either way. Test-cases and user-created
-/// (editor) levels are out of scope here - the browser build treats those as unpaginated
-/// (`levelsPerPage: Infinity`) and this catalog only covers the two paginated games.
+/// there's no stdlib-only way to do that on any platform. No port loads levels through this at
+/// runtime any more (see `EmbeddedLevelCatalog`) - its only remaining consumer is
+/// `tools/LevelDump`, which uses it (at build time, on the host) to enumerate and paginate every
+/// level exactly once, matching `src/game.js`'s own pagination, before freezing the result as
+/// `Generated/LevelData.swift`. Kept here rather than deleted since its round-trip is exercised
+/// by tests and it's what regenerates that file if `levels/*.txt` ever changes. Test-cases and
+/// user-created (editor) levels are out of scope here - the browser build treats those as
+/// unpaginated (`levelsPerPage: Infinity`) and this catalog only covers the two paginated games.
 public struct LevelCatalogEntry: Equatable, Sendable {
   public let title: String
   public let url: URL
@@ -25,11 +28,6 @@ public struct LevelCatalogEntry: Equatable, Sendable {
 }
 
 public struct LevelCatalog: Sendable {
-  public enum Game: Equatable, Sendable {
-    case junkbot
-    case junkbotUndercover
-  }
-
   /// 15-level pages, in listing order; the last page of a game may be shorter (Undercover's
   /// listing has 61 entries, not a multiple of 15 - see `Project X`, alone on page 5).
   public let pagesByGame: [Game: [[LevelCatalogEntry]]]

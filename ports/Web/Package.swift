@@ -5,7 +5,9 @@ let package = Package(
   name: "JunkbotWeb",
   platforms: [.macOS(.v14)],
   dependencies: [
-    .package(path: "../.."),
+    // Explicit `name:` so the identity stays "junkbot-swift" even when the repo checkout
+    // directory is named something else (e.g. a git worktree).
+    .package(name: "junkbot-swift", path: "../.."),
     .package(url: "https://github.com/swiftwasm/JavaScriptKit.git", from: "0.56.0"),
   ],
   targets: [

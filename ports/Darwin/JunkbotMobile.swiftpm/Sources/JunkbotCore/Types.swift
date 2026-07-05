@@ -112,7 +112,7 @@ enum SoundID: Int32 {
 /// The playable level's boundary rectangle, in world-space pixels. Entities that would cross
 /// this boundary collide with it as if it were a solid wall (see `rectangleLevelBoundsCollision`
 /// in `Collision.swift`).
-public struct LevelBounds {
+public struct LevelBounds: Sendable {
   public var x: Int32
   public var y: Int32
   public var width: Int32
