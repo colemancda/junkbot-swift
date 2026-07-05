@@ -15,6 +15,12 @@
 #   - A Swift toolchain whose Embedded stdlib ships an armv6-none-none-eabi
 #     slice (as of 6.3.2, release toolchains already do -- unlike the DS port's
 #     armv5te, no development snapshot is needed here).
+#   - For sound: NDSP (the audio DSP service) needs a DSP component binary to
+#     even initialize, which on real hardware/most emulators means a
+#     user-dumped "/3ds/dspfirm.cdc" on the SD card (Nintendo's own firmware --
+#     it can't be bundled with this port or this repo). Without it, NDSP
+#     fails to initialize and the game runs silently but still playably (see
+#     common/shim.c's audioAvailable and the top screen's "NO AUDIO" notice).
 #
 # Levels are pre-parsed at build time on the host (tools/LevelDump, which runs
 # JunkbotCore's real text parser + entity bridge natively) into generated
@@ -27,9 +33,12 @@
 # as 16bpp RGB555 (tools/gen_assets.py), and sound effects/music are embedded
 # at native sample rate as 16-bit PCM for NDSP (tools/gen_audio.py,
 # tools/gen_music.py) -- no DS-style 8bpp palette or 8-bit/downsampled audio
-# compromise needed. Audio conversion still shells out to macOS's `afconvert`
-# to decode Ogg Vorbis, so (in addition to everything above) this build
-# currently requires macOS.
+# compromise needed. The top screen's bitmap font is likewise pre-converted
+# (tools/gen_font.py) from font/font.png into an ASCII-byte-indexed glyph
+# table (see source/TextRenderer.swift), instead of libctru's own ANSI
+# console or Sources/JunkbotCore/Font.swift's own API. These conversion steps
+# shell out to macOS's `afconvert`/`sips`, so (in addition to everything
+# above) this build currently requires macOS.
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
@@ -106,11 +115,12 @@ CORE_SWIFT	:=	$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
 PORT_SWIFT	:=	$(wildcard source/*.swift)
 GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/LevelAssets.swift $(BUILD)/AudioAssets.swift \
-			$(BUILD)/MusicAssets.swift
-GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin
+			$(BUILD)/MusicAssets.swift $(BUILD)/FontAssets.swift
+GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin $(BUILD)/font.bin
 
 OFILES		:=	$(BUILD)/junkbot.swift.o $(BUILD)/shim.o \
-			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o $(BUILD)/music_bin.o
+			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o $(BUILD)/music_bin.o \
+			$(BUILD)/font_bin.o
 
 #---------------------------------------------------------------------------------
 .PHONY: all clean
@@ -151,6 +161,17 @@ $(BUILD)/music.stamp: tools/gen_music.py | $(BUILD)
 	@touch $@
 
 $(BUILD)/music.bin $(BUILD)/MusicAssets.swift: $(BUILD)/music.stamp
+
+# Font conversion: font/font.png (the same proportional bitmap font every
+# other port draws with) -> 1bpp glyph atlas + Swift ASCII-byte offset/width
+# table, for the top screen's info panel (see tools/gen_font.py and
+# source/TextRenderer.swift).
+$(BUILD)/font.stamp: tools/gen_font.py $(REPO_ROOT)/font/font.png | $(BUILD)
+	@echo generating font assets
+	python3 tools/gen_font.py $(REPO_ROOT) $(BUILD)
+	@touch $@
+
+$(BUILD)/font.bin $(BUILD)/FontAssets.swift: $(BUILD)/font.stamp
 
 # Level conversion: every campaign level, pre-parsed through JunkbotCore's own
 # parser + entity bridge on the host and frozen as entity-builder Swift.

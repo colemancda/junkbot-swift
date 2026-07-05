@@ -16,24 +16,27 @@
 //    START                restart level
 //    A (or touch)          advance win/lose prompt
 //
+//  The top screen is a bitmap-font info panel (level name, hint, moves
+//  counter, win/lose prompt) - see source/TextRenderer.swift - drawn with the
+//  same proportional font every other port uses, not libctru's ANSI console.
+//
 //---------------------------------------------------------------------------------
 
 import CTRU
 
-// MARK: - Console (top screen) helpers
-
-func consolePrint(_ s: StaticString) {
-  ctru_print_len(
-    UnsafeRawPointer(s.utf8Start).assumingMemoryBound(to: CChar.self), Int32(s.utf8CodeUnitCount))
-}
-
-func consoleClearScreen() { consolePrint("\u{1b}[2J") }
-
 // MARK: - Video / audio setup
+//
+// The bottom (world) screen redraws every dirty frame, so it keeps the
+// default double buffering. The top (text panel) only redraws on a level
+// load or a moves/win-lose update, so its double buffering is disabled -- a
+// write to `topCanvas` (TextRenderer.swift) then sticks until the next one,
+// with no need to redraw it every frame just to keep it from flickering
+// between two out-of-date buffers.
 
 gfxInitDefault()
 gfxSetScreenFormat(GFX_BOTTOM, GSP_RGB565_OES)
-consoleInit(GFX_TOP, nil)
+gfxSetScreenFormat(GFX_TOP, GSP_RGB565_OES)
+gfxSetDoubleBuffering(GFX_TOP, false)
 ctru_audio_init()
 
 // MARK: - Engine + level loading
@@ -64,27 +67,48 @@ func clampScroll() {
   }
 }
 
+/// Fixed screen region redrawn independently: the header/title/hint/controls (which change
+/// only on a level load) stay untouched while the moves counter updates every tick it changes.
+let statusLineY: Int32 = 214
+
 func drawStatusLine() {
-  // Row 21, after a clear-to-end-of-line: "Moves: N (par M)".
-  consolePrint("\u{1b}[21;0H\u{1b}[K Moves: ")
-  ctru_printf_1i("%d", gameEngine.moves)
+  clearRect(x: 0, y: statusLineY, width: topScreenWidth, height: fontGlyphHeight + 3)
+  var x = drawText(" Moves: ", x: 6, y: statusLineY, scale: 1, color: topScreenTextColor)
+  x = drawInt(gameEngine.moves, x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
   let par = embeddedLevels[currentLevelIndex].par
   if par != Int32.max {
-    ctru_printf_1i("  (par %d)", par)
+    x = drawText("  (par ", x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
+    x = drawInt(par, x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
+    drawText(")", x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
   }
   lastShownMoves = gameEngine.moves
+  ctru_present_top(topCanvas, topScreenWidth, topScreenHeight)
 }
 
 func showLevelInfo() {
-  consoleClearScreen()
-  consolePrint("\u{1b}[0;0H JUNKBOT  level ")
-  ctru_printf_2i("%d/%d", Int32(currentLevelIndex + 1), Int32(embeddedLevels.count))
-  consolePrint("\n\n ")
-  consolePrint(embeddedLevels[currentLevelIndex].title)
-  consolePrint("\n\n ")
-  consolePrint(embeddedLevels[currentLevelIndex].hint)
-  consolePrint("\u{1b}[19;0H D-pad scroll   stylus drag\n L/R level  START restart")
-  drawStatusLine()
+  clearTopScreen()
+  var x = drawText(" JUNKBOT  LEVEL ", x: 6, y: 8, scale: 2, color: topScreenTextColor)
+  x = drawInt(Int32(currentLevelIndex + 1), x: x, y: 8, scale: 2, color: topScreenTextColor)
+  x = drawText("/", x: x, y: 8, scale: 2, color: topScreenTextColor)
+  drawInt(Int32(embeddedLevels.count), x: x, y: 8, scale: 2, color: topScreenTextColor)
+
+  let afterTitle = drawWrappedText(
+    embeddedLevels[currentLevelIndex].title, x: 6, y: 32, maxWidth: topScreenWidth - 12, scale: 2,
+    color: topScreenTextColor)
+  drawWrappedText(
+    embeddedLevels[currentLevelIndex].hint, x: 6, y: afterTitle + 6, maxWidth: topScreenWidth - 12,
+    scale: 1, color: topScreenTextColor)
+
+  drawText("D-PAD SCROLL  STYLUS DRAG", x: 6, y: 194, scale: 1, color: topScreenTextColor)
+  drawText("L/R LEVEL  START RESTART", x: 6, y: 204, scale: 1, color: topScreenTextColor)
+  // ndspInit() needs a DSP component binary (a user-dumped /3ds/dspfirm.cdc,
+  // or one handed over by the homebrew launcher) to succeed at all -- when
+  // it didn't, say so instead of leaving the player wondering why there's no
+  // sound (see common/shim.c's audioAvailable).
+  if ctru_audio_available() == 0 {
+    drawText("NO AUDIO: DSP UNAVAILABLE", x: 6, y: 174, scale: 1, color: topScreenTextColor)
+  }
+  drawStatusLine()  // also presents the top screen
 }
 
 func loadLevel(_ index: Int) {
@@ -202,11 +226,13 @@ while aptMainLoop() {
     if outcome != 0 {
       winLoseLatch = outcome
       stopMusic()
-      consolePrint("\u{1b}[10;0H\u{1b}[K")
-      consolePrint(
-        outcome == 1
-          ? "\u{1b}[10;6H*** YOU WIN! ***" : "\u{1b}[10;5H*** TRY AGAIN ***")
-      consolePrint("\u{1b}[12;3Hpress A or tap to continue")
+      clearRect(x: 0, y: 110, width: topScreenWidth, height: 44)
+      drawText(
+        outcome == 1 ? " *** YOU WIN! ***" : " *** TRY AGAIN ***", x: 6, y: 112, scale: 2,
+        color: topScreenTextColor)
+      drawText(
+        "press A or tap to continue", x: 6, y: 136, scale: 1, color: topScreenTextColor)
+      ctru_present_top(topCanvas, topScreenWidth, topScreenHeight)
     }
     if gameEngine.moves != lastShownMoves {
       drawStatusLine()
