@@ -30,9 +30,11 @@ REPO_ROOT=../..
 BUILD_DIR="${BUILD_DIR:-build}"
 mkdir -p "$BUILD_DIR"
 
-DEFAULT_SWIFTC=/Volumes/Crucial-2TB/Developer/build/Ninja-ReleaseAssert/swift-macosx-arm64/bin/swiftc
+# swift-frontend, not swiftc/swift-driver -- see compile-swift.sh's header
+# comment for why the driver isn't portable enough to invoke here.
+DEFAULT_SWIFTC=/Volumes/Crucial-2TB/Developer/build/Ninja-ReleaseAssert/swift-macosx-arm64/bin/swift-frontend
 SWIFTC="${SWIFTC:-$DEFAULT_SWIFTC}"
-if [ ! -x "$SWIFTC" ]; then SWIFTC="$(which swiftc)"; fi
+if [ ! -x "$SWIFTC" ]; then SWIFTC="$(which swift-frontend)"; fi
 export SWIFTC
 
 DEFAULT_LLC=/opt/homebrew/Cellar/llvm/22.1.7_1/bin/llc

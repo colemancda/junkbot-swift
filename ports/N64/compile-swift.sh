@@ -11,13 +11,22 @@
 # Unlike that example (which only imports one bridging header), this port's
 # Swift side imports the CN64 module (module.modulemap + common/n64_umbrella.h)
 # so the whole-module compile matches ports/3DS/ports/NDS's convention.
+#
+# SWIFTC must point at `swift-frontend`, invoked directly with `-frontend`,
+# not the `swiftc`/`swift-driver` wrapper: the driver binary depends on a
+# handful of dylibs (libSwiftDriver.dylib etc.) that live in a *separate*
+# bootstrap build tree outside a normal toolchain install, which makes it
+# unportable -- swift-frontend alone (plus lib/swift/{shims,clang,embedded}
+# and lib/swift/host/compiler's dylibs) is fully self-contained and is
+# exactly what's packaged in the CI-downloaded swift-embedded-mac.tar.gz
+# (see .github/workflows/swift.yml's n64 job).
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-SWIFTC="${SWIFTC:?set SWIFTC=/path/to/mips-enabled/swiftc}"
+SWIFTC="${SWIFTC:?set SWIFTC=/path/to/mips-enabled/swift-frontend}"
 LLC="${LLC:?set LLC=/path/to/llc}"
 
 BUILD_DIR="${BUILD_DIR:-build}"
@@ -72,7 +81,7 @@ echo "LLC:            $LLC"
 echo "Target: mips-none-none-elf"
 
 echo "Step 1: Emitting LLVM IR..."
-"$SWIFTC" \
+"$SWIFTC" -frontend \
   -target mips-none-none-elf \
   -enable-experimental-feature Embedded \
   -wmo -Osize \

@@ -209,6 +209,55 @@ jobs:
         path: ports/3DS/Junkbot.3dsx
         if-no-files-found: error
 
+  n64:
+    name: Nintendo 64 (compile Swift, no ROM yet)
+    runs-on: macos-26
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Embedded Swift has no mips-none-none-elf release or nightly toolchain
+    # (unlike ports/NDS/ports/3DS's armv5te/armv6 slices, which are in public
+    # nightly snapshots) -- this is a custom from-source build, packaged as a
+    # GitHub Release asset. See ports/N64/build.sh/compile-swift.sh for how
+    # it's used locally, and this repo's "0.1.3" release for the asset itself
+    # (re-upload swift-embedded-mac.tar.gz there, or bump the tag below, to update it).
+    #
+    # NOTE: this job only proves the Embedded Swift MIPS compile succeeds
+    # (compile-swift.sh's `-emit-ir` + `llc` + ELF-retag steps). It does NOT
+    # build/upload Junkbot.z64: that needs libdragon's mips64-elf GCC, which
+    # this repo's local build gets from Docker -- and GitHub-hosted macOS
+    # runners don't support Docker (no nested virtualization). Revisit once
+    # there's a self-hosted runner, a native (non-Docker) libdragon toolchain
+    # install, or the job moves to a Linux runner with its own Swift build.
+    - name: Download Swift toolchain (mips-none-none-elf slice)
+      run: |
+        curl -fL "https://github.com/${{ github.repository }}/releases/download/0.1.3/swift-embedded-mac.tar.gz" -o /tmp/swift-embedded-mac.tar.gz
+        mkdir -p "$HOME/swift-embedded-mac"
+        tar -xzf /tmp/swift-embedded-mac.tar.gz -C "$HOME/swift-embedded-mac" --strip-components=1
+        echo "SWIFTC=$HOME/swift-embedded-mac/bin/swift-frontend" >> "$GITHUB_ENV"
+
+    # llc (with the MIPS backend, which mainline LLVM ships by default) lowers
+    # the Embedded Swift IR to a MIPS object -- see compile-swift.sh.
+    - name: Install LLVM (llc)
+      run: |
+        brew install llvm
+        echo "LLC=$(brew --prefix llvm)/bin/llc" >> "$GITHUB_ENV"
+
+    - name: Generate build-time assets
+      run: |
+        cd ports/N64
+        python3 tools/gen_assets.py ../.. build
+        python3 tools/gen_audio.py ../.. build
+        python3 tools/gen_music.py ../.. build
+        python3 tools/gen_font.py ../.. build
+
+    - name: Compile Swift (mips-none-none-elf)
+      run: |
+        cd ports/N64
+        ./compile-swift.sh
+        test -f build/swiftlib.o
+
   linux-sdl2:
     name: Linux (SDL2 port)
     runs-on: ubuntu-latest
