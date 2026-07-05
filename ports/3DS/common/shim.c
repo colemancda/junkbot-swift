@@ -80,6 +80,15 @@ void ctru_print_len(const char *s, int len) {
 static int16_t *linearAudioPCM = NULL;
 static int16_t *linearMusicPCM = NULL;
 
+// ndspInit() fails outright (RD_NOT_FOUND) if it can't find a DSP component
+// binary -- on real hardware/most emulators that means a user-dumped
+// "/3ds/dspfirm.cdc" on the SD card (Nintendo's firmware, which can't be
+// bundled with this port), unless the launcher itself hands one over via the
+// "hb:ndsp" homebrew env handle. Every ctru_play_pcm16/ctru_stop_channel call
+// is a no-op when this is false, instead of driving NDSP channel functions
+// against a DSP module that was never actually loaded.
+static bool audioAvailable = false;
+
 // One NDSP channel (see source/Audio.swift for channel assignment) needs one
 // ndspWaveBuf that stays alive for as long as that channel might be playing;
 // Embedded Swift can't touch this tagged-union struct directly (see shim.h),
@@ -88,7 +97,9 @@ static int16_t *linearMusicPCM = NULL;
 static ndspWaveBuf channelWaveBuf[CTRU_NDSP_CHANNEL_COUNT];
 
 void ctru_audio_init(void) {
-	ndspInit();
+	audioAvailable = R_SUCCEEDED(ndspInit());
+	if (!audioAvailable) return;
+
 	ndspSetOutputMode(NDSP_OUTPUT_STEREO);
 	ndspSetMasterVol(1.0f);
 
@@ -105,6 +116,7 @@ void ctru_audio_init(void) {
 
 void ctru_play_pcm16(int channel, int bank, unsigned sampleOffset, unsigned sampleCount,
                       float rate, int loop) {
+	if (!audioAvailable) return;
 	if (channel < 0 || channel >= CTRU_NDSP_CHANNEL_COUNT || sampleCount == 0) return;
 
 	int16_t *base = bank == 0 ? linearAudioPCM : linearMusicPCM;
@@ -127,18 +139,29 @@ void ctru_play_pcm16(int channel, int bank, unsigned sampleOffset, unsigned samp
 	ndspChnWaveBufAdd(channel, buf);
 }
 
+int ctru_audio_available(void) {
+	return audioAvailable ? 1 : 0;
+}
+
 void ctru_stop_channel(int channel) {
+	if (!audioAvailable) return;
 	if (channel < 0 || channel >= CTRU_NDSP_CHANNEL_COUNT) return;
 	ndspChnWaveBufClear(channel);
 	ndspChnReset(channel);
 }
 
 //---------------------------------------------------------------------------------
-// Bottom-screen present -- see shim.h's module doc for why this transposes.
+// Screen present -- see shim.h's module doc for why this transposes. Each
+// screen is swapped independently (gfxScreenSwapBuffers, not the both-at-once
+// gfxSwapBuffers) since the bottom (world view) redraws every dirty frame
+// while the top (text panel, see source/TextRenderer.swift) only redraws on a
+// level load or a moves/win-lose update -- main.swift's startup
+// gfxSetDoubleBuffering(GFX_TOP, false) makes the latter's writes stick
+// without needing a matching write every frame.
 //---------------------------------------------------------------------------------
-void ctru_present_bottom(const uint16_t *canvas, int width, int height) {
+static void presentScreen(gfxScreen_t screen, const uint16_t *canvas, int width, int height) {
 	u16 fbWidth = 0, fbHeight = 0;
-	uint16_t *fb = (uint16_t *)gfxGetFramebuffer(GFX_BOTTOM, GFX_LEFT, &fbWidth, &fbHeight);
+	uint16_t *fb = (uint16_t *)gfxGetFramebuffer(screen, GFX_LEFT, &fbWidth, &fbHeight);
 	if (!fb) return;
 
 	// fbWidth/fbHeight are the *physical* (portrait) dimensions -- fbWidth is
@@ -153,5 +176,13 @@ void ctru_present_bottom(const uint16_t *canvas, int width, int height) {
 	}
 
 	gfxFlushBuffers();
-	gfxSwapBuffers();
+	gfxScreenSwapBuffers(screen, true);
+}
+
+void ctru_present_bottom(const uint16_t *canvas, int width, int height) {
+	presentScreen(GFX_BOTTOM, canvas, width, height);
+}
+
+void ctru_present_top(const uint16_t *canvas, int width, int height) {
+	presentScreen(GFX_TOP, canvas, width, height);
 }
