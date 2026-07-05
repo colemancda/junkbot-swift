@@ -126,6 +126,12 @@ var renderFrame = RenderFrame()
 /// `tools/gen_backdrops.py`), nearest-neighbor-sampled back up to `bounds`' actual size, cropped
 /// to whatever part of it the current scroll position shows. Returns `false` (nothing drawn) for
 /// a sprite ID with no embedded backdrop data, so the caller can fall back to a flat clear.
+///
+/// Scale factors are precomputed once as 24.8 fixed-point steps and then only ever *added*
+/// per pixel/row - the ARM946E-S has no hardware integer divide, so the naive per-pixel
+/// `(world - origin) * src / bounds` (a real division every one of the 49152 pixels) cost enough
+/// software-divide cycles to visibly slow the whole game down. Incremental fixed-point stepping
+/// needs only 2 divisions total (building the steps), not one per pixel.
 func blitBackdrop(
   spriteID: Int32, bounds: LevelBounds, scrollX: Int32, scrollY: Int32,
   into buffer: UnsafeMutablePointer<UInt16>
@@ -141,22 +147,31 @@ func blitBackdrop(
   let boundsWidth = max(bounds.width, 1)
   let boundsHeight = max(bounds.height, 1)
 
+  // 24.8 fixed-point world-pixel -> backdrop-pixel step (the only two divisions).
+  let stepX = (srcWidth << 8) / boundsWidth
+  let stepY = (srcHeight << 8) / boundsHeight
+  let maxXFixed = (srcWidth - 1) << 8
+  let maxYFixed = (srcHeight - 1) << 8
+
   backdropPaletteTable.withUnsafeBufferPointer { paletteBuffer in
     let palette = paletteBuffer.baseAddress! + paletteOffset
     var dy: Int32 = 0
+    var srcYFixed = (scrollY &- bounds.y) &* stepY
     while dy < screenHeight {
-      let worldY = scrollY &+ dy
-      let srcY = min(max((worldY &- bounds.y) &* srcHeight / boundsHeight, 0), srcHeight - 1)
+      let srcY = min(max(srcYFixed, 0), maxYFixed) >> 8
       let srcRowBase = Int(srcY) * Int(srcWidth)
       let dstRowBase = Int(dy) * Int(screenWidth)
+
+      var srcXFixed = (scrollX &- bounds.x) &* stepX
       var dx: Int32 = 0
       while dx < screenWidth {
-        let worldX = scrollX &+ dx
-        let srcX = min(max((worldX &- bounds.x) &* srcWidth / boundsWidth, 0), srcWidth - 1)
+        let srcX = min(max(srcXFixed, 0), maxXFixed) >> 8
         let index = src[srcRowBase + Int(srcX)]
         buffer[dstRowBase + Int(dx)] = palette[Int(index)]
+        srcXFixed &+= stepX
         dx &+= 1
       }
+      srcYFixed &+= stepY
       dy &+= 1
     }
   }
