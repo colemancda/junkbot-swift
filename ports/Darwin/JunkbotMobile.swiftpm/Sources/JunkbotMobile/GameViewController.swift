@@ -1,6 +1,7 @@
 #if canImport(UIKit)
 import UIKit
 import SpriteKit
+import JunkbotCore
 
 /// Hosts the one `SKView`/`JunkbotScene` this app ever presents - shared between the tvOS
 /// Xcode target's `AppDelegate_tvOS.swift` (sets this directly as `window.rootViewController`)

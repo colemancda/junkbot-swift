@@ -16,7 +16,7 @@ clean:
 
 codegen:
 	python3 tools/generate_render_tables.py
-	swift run -c release --package-path tools/LevelDump LevelDump . Sources/JunkbotCore/Generated/LevelData.swift
+	swift run -c release --package-path tools/LevelDump LevelDump . Sources/JunkbotCore/Generated
 
 # SDL3 dev build - delegates to ports/SDL3.
 sdl3:

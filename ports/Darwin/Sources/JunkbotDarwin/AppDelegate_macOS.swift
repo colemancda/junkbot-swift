@@ -1,6 +1,7 @@
 #if os(macOS)
 import Cocoa
 import SpriteKit
+import JunkbotCore
 
 /// macOS-only: creates the window/`SKView`/`JunkbotScene`. Not shared with iOS/tvOS - see
 /// `AppDelegate_tvOS.swift` for the UIKit equivalent (tvOS only now - iOS moved to
