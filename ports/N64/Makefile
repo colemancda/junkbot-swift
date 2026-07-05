@@ -36,10 +36,17 @@ OBJS = $(BUILD_DIR)/common/shim.o \
 # common/assets.h declares.
 # Note: n64.mk's own link rule already wraps every LDFLAGS entry with -Wl, --
 # do not prefix these with -Wl, ourselves (see its $(patsubst %,-Wl$(COMMA)%,...)).
+# No -lswiftUnicodeDataTables: that archive is only needed by Swift String's
+# grapheme-breaking/case-mapping/normalization tables, and this port's
+# CORE_EXCLUDE/GENERATED_EXCLUDE (compile-swift.sh) keep every file that would
+# call into them (Font.swift, LevelCatalog.swift, the *LevelData.swift files
+# other than JunkbotLevelData.swift) out of the build entirely -- confirmed by
+# `llvm-nm -u build/swiftlib.o` having zero `_swift_stdlib_*` undefined
+# symbols. Linking it anyway would be dead weight against this port's tight
+# 4MB RDRAM budget.
 LDFLAGS += -L$(CURDIR)/swift-libs/mips-none-none-elf \
            -lswiftEmbeddedPlatformPOSIX \
            -lswiftExclusivitySingleThreaded \
-           -lswiftUnicodeDataTables \
            --defsym=sprites_bin=_binary_sprites_bin_start \
            --defsym=sprites_bin_end=_binary_sprites_bin_end \
            --defsym=audio_bin=_binary_audio_bin_start \
