@@ -25,6 +25,18 @@ let spritePixels: UnsafePointer<UInt8> =
 let backdropPixels: UnsafePointer<UInt8> =
   nds_asset_backdrops_bin()!.assumingMemoryBound(to: UInt8.self)
 
+/// Caches the last fully-resolved background (the flat clear color plus `blitBackdrop`'s
+/// per-pixel resample) so `renderWorld` can skip both and just DMA-copy this cache into the
+/// active back buffer when the camera hasn't moved - the common case between D-pad scroll
+/// presses, since the backdrop itself never animates. Recomputed (the slow CPU path) only when
+/// `cachedBackdropSpriteID`/`cachedScrollX`/`cachedScrollY` don't match the current frame's.
+/// `cachedBackdropSpriteID` starts at `-2` (not a valid sprite ID, and distinct from `-1`'s "no
+/// embedded backdrop art" meaning) so the very first frame always misses and populates the cache.
+let backdropCache = UnsafeMutablePointer<UInt16>.allocate(capacity: Int(screenWidth * screenHeight))
+var cachedBackdropSpriteID: Int32 = -2
+var cachedScrollX: Int32 = 0
+var cachedScrollY: Int32 = 0
+
 /// 0xRRGGBBAA (RenderCommand.solidRect's color encoding) -> DS RGB555.
 @inline(__always)
 func rgb15(fromRGBA rgba: UInt32) -> UInt16 {
@@ -205,24 +217,40 @@ func renderWorld(
     width: screenWidth + margin * 2, height: screenHeight + margin * 2)
   gameEngine.buildRenderFrame(into: &renderFrame, editing: false, visibleBounds: visible)
 
-  var clearColor: UInt16 = 0x8000 | (14 << 10) | (17 << 5) | 18  // fallback warm gray
   var backdropSpriteID: Int32 = -1
   if renderFrame.backgroundCount > 0 {
     backdropSpriteID = renderFrame.commands[0].spriteID
+  }
+
+  // The backdrop (flat clear + blitBackdrop's per-pixel resample) never changes unless the
+  // camera scrolls or the level changes - most frames repeat the last one exactly, so recompute
+  // it into `backdropCache` only on a miss, and DMA-copy the cache into the real back buffer
+  // every frame instead. DMA-copying 256x192 halfwords is a bulk hardware transfer; the CPU
+  // per-pixel resample loop it replaces on a cache hit is the single largest fixed per-frame
+  // rendering cost this port has (see GameLoopSimulationTests.swift's investigation notes).
+  if backdropSpriteID != cachedBackdropSpriteID || scrollX != cachedScrollX
+    || scrollY != cachedScrollY
+  {
+    var clearColor: UInt16 = 0x8000 | (14 << 10) | (17 << 5) | 18  // fallback warm gray
     let firstID = Int(backdropSpriteID)
     if firstID >= 0, firstID < spriteAverageColorTable.count,
       spriteAverageColorTable[firstID] != 0
     {
       clearColor = spriteAverageColorTable[firstID]
     }
-  }
-  dmaFillHalfWords(clearColor, buffer, UInt32(screenWidth * screenHeight) * 2)
+    dmaFillHalfWords(clearColor, backdropCache, UInt32(screenWidth * screenHeight) * 2)
 
-  if let bounds = gameEngine.levelBounds {
-    _ = blitBackdrop(
-      spriteID: backdropSpriteID, bounds: bounds, scrollX: scrollX, scrollY: scrollY,
-      into: buffer)
+    if let bounds = gameEngine.levelBounds {
+      _ = blitBackdrop(
+        spriteID: backdropSpriteID, bounds: bounds, scrollX: scrollX, scrollY: scrollY,
+        into: backdropCache)
+    }
+
+    cachedBackdropSpriteID = backdropSpriteID
+    cachedScrollX = scrollX
+    cachedScrollY = scrollY
   }
+  dmaCopy(backdropCache, buffer, UInt32(screenWidth * screenHeight) * 2)
 
   spritePaletteTable.withUnsafeBufferPointer { paletteBuffer in
     let palette = paletteBuffer.baseAddress!
