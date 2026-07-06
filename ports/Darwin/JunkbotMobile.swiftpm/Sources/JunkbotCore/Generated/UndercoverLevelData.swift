@@ -17,7 +17,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(63)
+        entities.reserveCapacity(62)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -79,12 +79,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 495, y: 288, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 495, y: 270, width: 30, height: 18)
           e.fixed = true
           e.colorIndex = 5
           entities.append(e)
@@ -180,9 +174,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 435, y: 270, width: 60, height: 18)
+          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 435, y: 270, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -744,7 +738,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(94)
+        entities.reserveCapacity(90)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 405, y: 306, width: 120, height: 18)
           e.fixed = true
@@ -1144,43 +1138,23 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 59, type: EntityType(rawValue: 0)!, x: 90, y: 288, width: 90, height: 18)
+          var e = Entity(id: 59, type: EntityType(rawValue: 0)!, x: 90, y: 288, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 60, type: EntityType(rawValue: 0)!, x: 120, y: 270, width: 60, height: 18)
+          var e = Entity(id: 60, type: EntityType(rawValue: 0)!, x: 120, y: 270, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 61, type: EntityType(rawValue: 0)!, x: 150, y: 252, width: 30, height: 18)
+          var e = Entity(id: 61, type: EntityType(rawValue: 0)!, x: 150, y: 252, width: 75, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 62, type: EntityType(rawValue: 0)!, x: 180, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 63, type: EntityType(rawValue: 0)!, x: 180, y: 252, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 64, type: EntityType(rawValue: 0)!, x: 180, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -1195,12 +1169,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           var e = Entity(id: 66, type: EntityType(rawValue: 0)!, x: 195, y: 270, width: 60, height: 18)
           e.fixed = true
           e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 67, type: EntityType(rawValue: 0)!, x: 195, y: 252, width: 30, height: 18)
-          e.fixed = true
           e.colorIndex = 5
           entities.append(e)
         }
@@ -3539,7 +3507,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(132)
+        entities.reserveCapacity(131)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 60, y: 108, width: 15, height: 18)
           e.fixed = true
@@ -4150,9 +4118,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 88, type: EntityType(rawValue: 0)!, x: 405, y: 288, width: 15, height: 18)
+          var e = Entity(id: 88, type: EntityType(rawValue: 0)!, x: 405, y: 288, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -4174,13 +4142,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           var e = Entity(id: 91, type: EntityType(rawValue: 0)!, x: 495, y: 270, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 92, type: EntityType(rawValue: 0)!, x: 420, y: 288, width: 90, height: 18)
-          e.fixed = true
-          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -4750,7 +4711,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(55)
+        entities.reserveCapacity(49)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 405, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -4759,35 +4720,16 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 2, type: EntityType(rawValue: 0)!, x: 435, y: 342, width: 60, height: 18)
+          var e = Entity(id: 3, type: EntityType(rawValue: 0)!, x: 405, y: 360, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 3, type: EntityType(rawValue: 0)!, x: 405, y: 360, width: 60, height: 18)
+          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 405, y: 342, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 4, type: EntityType(rawValue: 0)!, x: 465, y: 360, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 405, y: 342, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 495, y: 342, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -4844,15 +4786,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 360, y: 144, width: 45, height: 18)
+          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 330, y: 144, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 330, y: 144, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -4904,16 +4840,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 405, y: 324, width: 60, height: 18)
+          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 405, y: 324, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 465, y: 324, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -4943,16 +4872,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 120, y: 360, width: 45, height: 18)
+          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 120, y: 360, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 165, y: 360, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -5089,7 +5011,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(94)
+        entities.reserveCapacity(92)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 240, y: 378, width: 45, height: 18)
           e.fixed = true
@@ -5576,16 +5498,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 80, type: EntityType(rawValue: 0)!, x: 285, y: 0, width: 90, height: 18)
+          var e = Entity(id: 80, type: EntityType(rawValue: 0)!, x: 285, y: 0, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 81, type: EntityType(rawValue: 0)!, x: 150, y: 0, width: 90, height: 18)
-          e.fixed = true
-          e.widthInStuds = 6
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -5649,14 +5564,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 93, type: EntityType(rawValue: 0)!, x: 375, y: 0, width: 30, height: 18)
+          var e = Entity(id: 94, type: EntityType(rawValue: 0)!, x: 120, y: 0, width: 120, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 94, type: EntityType(rawValue: 0)!, x: 120, y: 0, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -5962,7 +5872,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(139)
+        entities.reserveCapacity(137)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -6655,21 +6565,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 124, type: EntityType(rawValue: 0)!, x: 240, y: 72, width: 45, height: 18)
+          var e = Entity(id: 125, type: EntityType(rawValue: 0)!, x: 210, y: 72, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 125, type: EntityType(rawValue: 0)!, x: 210, y: 72, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 126, type: EntityType(rawValue: 0)!, x: 285, y: 72, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -6883,7 +6781,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(73)
+        entities.reserveCapacity(71)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 180, y: 342, width: 45, height: 18)
           e.fixed = true
@@ -6956,13 +6854,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 75, y: 324, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 75, y: 342, width: 45, height: 18)
           e.fixed = true
           e.widthInStuds = 3
           e.colorIndex = 5
@@ -7093,16 +6984,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 15, y: 342, width: 60, height: 18)
+          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -7693,7 +7577,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(31)
+        entities.reserveCapacity(30)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -7742,15 +7626,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 120, y: 144, width: 90, height: 18)
+          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 120, y: 144, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 210, y: 144, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -8478,7 +8356,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(69)
+        entities.reserveCapacity(66)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 7)!, x: 180, y: 306, width: 45, height: 36)
           e.grabbed = false
@@ -8500,13 +8378,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 285, y: 360, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 360, y: 360, width: 45, height: 18)
           e.fixed = true
           e.widthInStuds = 3
@@ -8514,15 +8385,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 330, y: 360, width: 30, height: 18)
+          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 240, y: 360, width: 120, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 240, y: 360, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -8569,9 +8434,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 420, y: 378, width: 60, height: 18)
+          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 420, y: 378, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -8579,13 +8444,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 60, height: 18)
           e.fixed = true
           e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
@@ -8896,7 +8754,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(83)
+        entities.reserveCapacity(61)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 1)!, x: 0, y: 18, width: 30, height: 72)
           e.grabbed = false
@@ -8910,9 +8768,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 3, type: EntityType(rawValue: 0)!, x: 240, y: 0, width: 45, height: 18)
+          var e = Entity(id: 3, type: EntityType(rawValue: 0)!, x: 240, y: 0, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -8952,13 +8810,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 360, y: 234, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 10, type: EntityType(rawValue: 9)!, x: 240, y: 360, width: 60, height: 18)
           e.fixed = true
           e.on = true
@@ -8966,9 +8817,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 300, y: 234, width: 60, height: 18)
+          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 300, y: 234, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9008,62 +8859,30 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 300, y: 198, width: 60, height: 18)
+          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 300, y: 198, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 18, type: EntityType(rawValue: 0)!, x: 360, y: 198, width: 60, height: 18)
+          var e = Entity(id: 19, type: EntityType(rawValue: 0)!, x: 0, y: 216, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 19, type: EntityType(rawValue: 0)!, x: 0, y: 216, width: 45, height: 18)
+          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 0, y: 198, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 30, y: 198, width: 45, height: 18)
+          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 120, y: 270, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 0, y: 198, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 45, y: 216, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 195, y: 270, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 150, y: 270, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 120, y: 270, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9075,16 +8894,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 300, y: 270, width: 60, height: 18)
+          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 300, y: 270, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 360, y: 270, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9108,14 +8920,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 465, y: 126, width: 30, height: 18)
+          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 465, y: 126, width: 60, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 495, y: 126, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9154,14 +8961,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 465, y: 162, width: 30, height: 18)
+          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 465, y: 162, width: 60, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 495, y: 162, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9173,16 +8975,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 300, y: 306, width: 60, height: 18)
+          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 300, y: 306, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 43, type: EntityType(rawValue: 0)!, x: 360, y: 306, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9194,16 +8989,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 45, type: EntityType(rawValue: 0)!, x: 300, y: 342, width: 60, height: 18)
+          var e = Entity(id: 45, type: EntityType(rawValue: 0)!, x: 300, y: 342, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 46, type: EntityType(rawValue: 0)!, x: 360, y: 342, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9243,22 +9031,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 52, type: EntityType(rawValue: 0)!, x: 285, y: 0, width: 60, height: 18)
+          var e = Entity(id: 53, type: EntityType(rawValue: 0)!, x: 345, y: 0, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 53, type: EntityType(rawValue: 0)!, x: 345, y: 0, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 54, type: EntityType(rawValue: 0)!, x: 390, y: 0, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9324,111 +9099,51 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 66, type: EntityType(rawValue: 0)!, x: 120, y: 252, width: 60, height: 18)
+          var e = Entity(id: 66, type: EntityType(rawValue: 0)!, x: 120, y: 252, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 68, type: EntityType(rawValue: 0)!, x: 120, y: 216, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 72, type: EntityType(rawValue: 0)!, x: 120, y: 234, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 73, type: EntityType(rawValue: 0)!, x: 120, y: 198, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 76, type: EntityType(rawValue: 0)!, x: 0, y: 90, width: 75, height: 18)
+          e.fixed = true
+          e.widthInStuds = 5
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 79, type: EntityType(rawValue: 0)!, x: 0, y: 360, width: 60, height: 18)
           e.fixed = true
           e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 67, type: EntityType(rawValue: 0)!, x: 180, y: 252, width: 60, height: 18)
+          var e = Entity(id: 80, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 60, height: 18)
           e.fixed = true
           e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 68, type: EntityType(rawValue: 0)!, x: 120, y: 216, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 69, type: EntityType(rawValue: 0)!, x: 180, y: 216, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 70, type: EntityType(rawValue: 0)!, x: 165, y: 198, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 71, type: EntityType(rawValue: 0)!, x: 165, y: 234, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 72, type: EntityType(rawValue: 0)!, x: 120, y: 234, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 73, type: EntityType(rawValue: 0)!, x: 120, y: 198, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 74, type: EntityType(rawValue: 0)!, x: 195, y: 198, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 75, type: EntityType(rawValue: 0)!, x: 195, y: 234, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 76, type: EntityType(rawValue: 0)!, x: 0, y: 90, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 77, type: EntityType(rawValue: 0)!, x: 45, y: 90, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 78, type: EntityType(rawValue: 0)!, x: 15, y: 342, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 79, type: EntityType(rawValue: 0)!, x: 0, y: 360, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 80, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 81, type: EntityType(rawValue: 0)!, x: 45, y: 360, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9457,7 +9172,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(77)
+        entities.reserveCapacity(53)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 11)!, x: 225, y: 18, width: 30, height: 18)
           e.fixed = true
@@ -9556,23 +9271,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 210, y: 234, width: 45, height: 18)
+          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 210, y: 234, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 270, y: 234, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 18, type: EntityType(rawValue: 0)!, x: 255, y: 234, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9605,9 +9306,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 195, y: 252, width: 45, height: 18)
+          var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 195, y: 252, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9619,65 +9320,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 240, y: 252, width: 45, height: 18)
+          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 15, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 30, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 45, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 60, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 75, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 90, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 105, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9689,58 +9334,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 35, type: EntityType(rawValue: 0)!, x: 195, y: 378, width: 15, height: 18)
+          var e = Entity(id: 35, type: EntityType(rawValue: 0)!, x: 195, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 36, type: EntityType(rawValue: 0)!, x: 210, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 37, type: EntityType(rawValue: 0)!, x: 225, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 240, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 270, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 255, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 285, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 300, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9752,58 +9348,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 44, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 15, height: 18)
+          var e = Entity(id: 44, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 45, type: EntityType(rawValue: 0)!, x: 405, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 46, type: EntityType(rawValue: 0)!, x: 420, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 47, type: EntityType(rawValue: 0)!, x: 435, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 48, type: EntityType(rawValue: 0)!, x: 450, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 465, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 50, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 51, type: EntityType(rawValue: 0)!, x: 495, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -9973,7 +9520,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(55)
+        entities.reserveCapacity(54)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 345, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -10010,16 +9557,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 270, y: 378, width: 60, height: 18)
+          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 270, y: 378, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 330, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -10287,7 +9827,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(55)
+        entities.reserveCapacity(54)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -10317,15 +9857,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 30, height: 18)
+          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 45, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 510, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
@@ -12586,7 +12120,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(51)
+        entities.reserveCapacity(32)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -12608,112 +12142,70 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 4, type: EntityType(rawValue: 0)!, x: 120, y: 378, width: 90, height: 18)
+          var e = Entity(id: 4, type: EntityType(rawValue: 0)!, x: 120, y: 378, width: 105, height: 18)
+          e.fixed = true
+          e.widthInStuds = 7
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 285, y: 378, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 315, y: 360, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 315, y: 342, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 13, type: EntityType(rawValue: 0)!, x: 375, y: 324, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 375, y: 306, width: 120, height: 18)
+          e.fixed = true
+          e.widthInStuds = 8
+          e.colorIndex = 5
+          entities.append(e)
+        }
+        do {
+          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 435, y: 288, width: 90, height: 18)
           e.fixed = true
           e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 315, y: 378, width: 90, height: 18)
+          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 435, y: 270, width: 90, height: 18)
           e.fixed = true
           e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 210, y: 378, width: 15, height: 18)
+          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 75, y: 342, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 285, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 300, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 135, y: 360, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 315, y: 360, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 375, y: 342, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 315, y: 342, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 13, type: EntityType(rawValue: 0)!, x: 375, y: 324, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 375, y: 306, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 435, y: 288, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 435, y: 270, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 75, y: 342, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
           var e = Entity(id: 18, type: EntityType(rawValue: 0)!, x: 75, y: 324, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 19, type: EntityType(rawValue: 0)!, x: 135, y: 342, width: 60, height: 18)
           e.fixed = true
           e.widthInStuds = 4
           e.colorIndex = 5
@@ -12727,140 +12219,65 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 15, y: 288, width: 60, height: 18)
+          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 75, y: 360, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 15, y: 270, width: 60, height: 18)
+          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 435, y: 360, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 15, y: 306, width: 60, height: 18)
+          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 435, y: 342, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 15, y: 324, width: 60, height: 18)
+          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 0, y: 270, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 15, y: 342, width: 60, height: 18)
+          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 0, y: 288, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 15, y: 360, width: 60, height: 18)
+          var e = Entity(id: 35, type: EntityType(rawValue: 0)!, x: 0, y: 306, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 75, y: 360, width: 60, height: 18)
+          var e = Entity(id: 36, type: EntityType(rawValue: 0)!, x: 0, y: 324, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 375, y: 360, width: 60, height: 18)
+          var e = Entity(id: 37, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 435, y: 360, width: 60, height: 18)
+          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 0, y: 360, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 435, y: 342, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 435, y: 324, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 435, y: 306, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 0, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 0, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 35, type: EntityType(rawValue: 0)!, x: 0, y: 306, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 36, type: EntityType(rawValue: 0)!, x: 0, y: 324, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 37, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 0, y: 360, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 495, y: 360, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 495, y: 342, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -12872,18 +12289,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 495, y: 306, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 43, type: EntityType(rawValue: 0)!, x: 495, y: 288, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 44, type: EntityType(rawValue: 0)!, x: 495, y: 270, width: 30, height: 18)
           e.fixed = true
           e.colorIndex = 5
           entities.append(e)
@@ -12941,7 +12346,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(79)
+        entities.reserveCapacity(42)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 5)!, x: 405, y: 36, width: 30, height: 36)
           e.grabbed = false
@@ -13077,302 +12482,58 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 120, y: 360, width: 30, height: 18)
+          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 120, y: 360, width: 120, height: 18)
           e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 150, y: 360, width: 30, height: 18)
+          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 345, y: 360, width: 90, height: 18)
           e.fixed = true
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 180, y: 360, width: 30, height: 18)
+          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 240, y: 360, width: 105, height: 18)
           e.fixed = true
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 210, y: 360, width: 30, height: 18)
+          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 375, y: 360, width: 30, height: 18)
+          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 120, y: 378, width: 120, height: 18)
           e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 345, y: 360, width: 30, height: 18)
+          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 360, y: 378, width: 120, height: 18)
           e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 315, y: 360, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 285, y: 360, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 240, y: 360, width: 45, height: 18)
+          var e = Entity(id: 54, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 45, height: 18)
           e.fixed = true
           e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 15, height: 18)
+          var e = Entity(id: 62, type: EntityType(rawValue: 0)!, x: 240, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 15, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 30, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 45, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 60, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 35, type: EntityType(rawValue: 0)!, x: 75, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 36, type: EntityType(rawValue: 0)!, x: 90, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 37, type: EntityType(rawValue: 0)!, x: 105, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 120, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 135, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 150, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 165, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 180, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 43, type: EntityType(rawValue: 0)!, x: 195, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 44, type: EntityType(rawValue: 0)!, x: 255, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 45, type: EntityType(rawValue: 0)!, x: 270, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 46, type: EntityType(rawValue: 0)!, x: 285, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 47, type: EntityType(rawValue: 0)!, x: 315, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 48, type: EntityType(rawValue: 0)!, x: 330, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 360, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 50, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 51, type: EntityType(rawValue: 0)!, x: 405, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 52, type: EntityType(rawValue: 0)!, x: 510, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 53, type: EntityType(rawValue: 0)!, x: 495, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 54, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 55, type: EntityType(rawValue: 0)!, x: 465, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 56, type: EntityType(rawValue: 0)!, x: 450, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 57, type: EntityType(rawValue: 0)!, x: 420, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 58, type: EntityType(rawValue: 0)!, x: 375, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 59, type: EntityType(rawValue: 0)!, x: 435, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 60, type: EntityType(rawValue: 0)!, x: 345, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 61, type: EntityType(rawValue: 0)!, x: 300, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 62, type: EntityType(rawValue: 0)!, x: 240, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 63, type: EntityType(rawValue: 0)!, x: 225, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 64, type: EntityType(rawValue: 0)!, x: 210, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -13391,12 +12552,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           var e = Entity(id: 67, type: EntityType(rawValue: 13)!, x: 435, y: 360, width: 60, height: 18)
           e.fixed = true
           e.teleportID = 1
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 68, type: EntityType(rawValue: 0)!, x: 405, y: 360, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
           entities.append(e)
         }
         do {
@@ -13847,7 +13002,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(263)
+        entities.reserveCapacity(115)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 15, height: 18)
           e.fixed = true
@@ -13856,23 +13011,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 2, type: EntityType(rawValue: 0)!, x: 75, y: 378, width: 15, height: 18)
+          var e = Entity(id: 2, type: EntityType(rawValue: 0)!, x: 75, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 3, type: EntityType(rawValue: 0)!, x: 90, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 4, type: EntityType(rawValue: 0)!, x: 105, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -13882,65 +13023,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 120, y: 378, width: 15, height: 18)
+          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 0, y: 288, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 105, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 90, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 75, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 60, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 45, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 30, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 13, type: EntityType(rawValue: 0)!, x: 15, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 0, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14008,156 +13093,23 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 345, y: 360, width: 15, height: 18)
+          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 345, y: 360, width: 60, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 360, y: 360, width: 15, height: 18)
+          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 360, y: 270, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 375, y: 360, width: 15, height: 18)
+          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 315, y: 378, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 390, y: 360, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 375, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 360, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 345, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 330, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 315, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 300, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 285, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 35, type: EntityType(rawValue: 0)!, x: 150, y: 360, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 36, type: EntityType(rawValue: 0)!, x: 165, y: 360, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 37, type: EntityType(rawValue: 0)!, x: 270, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 285, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 315, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 300, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 330, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 345, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 43, type: EntityType(rawValue: 0)!, x: 360, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 44, type: EntityType(rawValue: 0)!, x: 375, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 45, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14183,16 +13135,16 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 120, y: 360, width: 15, height: 18)
+          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 120, y: 360, width: 60, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 50, type: EntityType(rawValue: 0)!, x: 240, y: 270, width: 15, height: 18)
+          var e = Entity(id: 50, type: EntityType(rawValue: 0)!, x: 240, y: 270, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14205,13 +13157,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 52, type: EntityType(rawValue: 0)!, x: 240, y: 342, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 53, type: EntityType(rawValue: 0)!, x: 270, y: 270, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -14232,30 +13177,23 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 56, type: EntityType(rawValue: 0)!, x: 390, y: 288, width: 15, height: 18)
+          var e = Entity(id: 56, type: EntityType(rawValue: 0)!, x: 390, y: 288, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 57, type: EntityType(rawValue: 0)!, x: 390, y: 270, width: 15, height: 18)
+          var e = Entity(id: 58, type: EntityType(rawValue: 0)!, x: 0, y: 0, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 58, type: EntityType(rawValue: 0)!, x: 0, y: 0, width: 15, height: 18)
+          var e = Entity(id: 59, type: EntityType(rawValue: 0)!, x: 0, y: 18, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 59, type: EntityType(rawValue: 0)!, x: 0, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14275,27 +13213,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 62, type: EntityType(rawValue: 0)!, x: 0, y: 72, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 63, type: EntityType(rawValue: 0)!, x: 15, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 64, type: EntityType(rawValue: 0)!, x: 30, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 65, type: EntityType(rawValue: 0)!, x: 45, y: 0, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -14337,296 +13254,44 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 71, type: EntityType(rawValue: 0)!, x: 120, y: 0, width: 15, height: 18)
+          var e = Entity(id: 71, type: EntityType(rawValue: 0)!, x: 120, y: 0, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 72, type: EntityType(rawValue: 0)!, x: 105, y: 0, width: 15, height: 18)
+          var e = Entity(id: 76, type: EntityType(rawValue: 0)!, x: 0, y: 108, width: 60, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 73, type: EntityType(rawValue: 0)!, x: 90, y: 0, width: 15, height: 18)
+          var e = Entity(id: 93, type: EntityType(rawValue: 0)!, x: 240, y: 0, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 74, type: EntityType(rawValue: 0)!, x: 75, y: 0, width: 15, height: 18)
+          var e = Entity(id: 101, type: EntityType(rawValue: 0)!, x: 360, y: 0, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 75, type: EntityType(rawValue: 0)!, x: 60, y: 0, width: 15, height: 18)
+          var e = Entity(id: 108, type: EntityType(rawValue: 0)!, x: 480, y: 0, width: 45, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 76, type: EntityType(rawValue: 0)!, x: 0, y: 108, width: 15, height: 18)
+          var e = Entity(id: 112, type: EntityType(rawValue: 0)!, x: 0, y: 126, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 77, type: EntityType(rawValue: 0)!, x: 15, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 78, type: EntityType(rawValue: 0)!, x: 30, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 79, type: EntityType(rawValue: 0)!, x: 45, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 80, type: EntityType(rawValue: 0)!, x: 135, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 81, type: EntityType(rawValue: 0)!, x: 150, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 82, type: EntityType(rawValue: 0)!, x: 165, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 83, type: EntityType(rawValue: 0)!, x: 180, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 84, type: EntityType(rawValue: 0)!, x: 195, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 85, type: EntityType(rawValue: 0)!, x: 210, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 86, type: EntityType(rawValue: 0)!, x: 135, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 87, type: EntityType(rawValue: 0)!, x: 150, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 88, type: EntityType(rawValue: 0)!, x: 165, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 89, type: EntityType(rawValue: 0)!, x: 180, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 90, type: EntityType(rawValue: 0)!, x: 195, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 91, type: EntityType(rawValue: 0)!, x: 210, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 92, type: EntityType(rawValue: 0)!, x: 225, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 93, type: EntityType(rawValue: 0)!, x: 240, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 94, type: EntityType(rawValue: 0)!, x: 255, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 95, type: EntityType(rawValue: 0)!, x: 270, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 96, type: EntityType(rawValue: 0)!, x: 300, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 97, type: EntityType(rawValue: 0)!, x: 315, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 98, type: EntityType(rawValue: 0)!, x: 285, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 99, type: EntityType(rawValue: 0)!, x: 330, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 100, type: EntityType(rawValue: 0)!, x: 345, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 101, type: EntityType(rawValue: 0)!, x: 360, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 102, type: EntityType(rawValue: 0)!, x: 375, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 103, type: EntityType(rawValue: 0)!, x: 390, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 104, type: EntityType(rawValue: 0)!, x: 405, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 105, type: EntityType(rawValue: 0)!, x: 420, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 106, type: EntityType(rawValue: 0)!, x: 435, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 107, type: EntityType(rawValue: 0)!, x: 450, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 108, type: EntityType(rawValue: 0)!, x: 480, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 109, type: EntityType(rawValue: 0)!, x: 495, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 110, type: EntityType(rawValue: 0)!, x: 510, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 111, type: EntityType(rawValue: 0)!, x: 465, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 112, type: EntityType(rawValue: 0)!, x: 0, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14638,63 +13303,14 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 114, type: EntityType(rawValue: 0)!, x: 105, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 115, type: EntityType(rawValue: 0)!, x: 90, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 116, type: EntityType(rawValue: 0)!, x: 75, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 117, type: EntityType(rawValue: 0)!, x: 60, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 118, type: EntityType(rawValue: 0)!, x: 45, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 119, type: EntityType(rawValue: 0)!, x: 15, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 120, type: EntityType(rawValue: 0)!, x: 30, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 121, type: EntityType(rawValue: 6)!, x: 15, y: 54, width: 30, height: 54)
           e.grabbed = false
           entities.append(e)
         }
         do {
-          var e = Entity(id: 122, type: EntityType(rawValue: 0)!, x: 120, y: 108, width: 15, height: 18)
+          var e = Entity(id: 122, type: EntityType(rawValue: 0)!, x: 120, y: 108, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14706,114 +13322,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 124, type: EntityType(rawValue: 0)!, x: 105, y: 18, width: 15, height: 18)
+          var e = Entity(id: 134, type: EntityType(rawValue: 0)!, x: 195, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 125, type: EntityType(rawValue: 0)!, x: 90, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 126, type: EntityType(rawValue: 0)!, x: 75, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 127, type: EntityType(rawValue: 0)!, x: 60, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 128, type: EntityType(rawValue: 0)!, x: 30, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 129, type: EntityType(rawValue: 0)!, x: 15, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 130, type: EntityType(rawValue: 0)!, x: 45, y: 18, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 131, type: EntityType(rawValue: 0)!, x: 135, y: 360, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 132, type: EntityType(rawValue: 0)!, x: 240, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 133, type: EntityType(rawValue: 0)!, x: 225, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 134, type: EntityType(rawValue: 0)!, x: 195, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 135, type: EntityType(rawValue: 0)!, x: 210, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 136, type: EntityType(rawValue: 0)!, x: 165, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 137, type: EntityType(rawValue: 0)!, x: 180, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 138, type: EntityType(rawValue: 0)!, x: 150, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 139, type: EntityType(rawValue: 0)!, x: 135, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14846,58 +13357,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 144, type: EntityType(rawValue: 0)!, x: 120, y: 270, width: 15, height: 18)
+          var e = Entity(id: 144, type: EntityType(rawValue: 0)!, x: 120, y: 270, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 145, type: EntityType(rawValue: 0)!, x: 135, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 146, type: EntityType(rawValue: 0)!, x: 150, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 147, type: EntityType(rawValue: 0)!, x: 165, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 148, type: EntityType(rawValue: 0)!, x: 180, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 149, type: EntityType(rawValue: 0)!, x: 195, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 150, type: EntityType(rawValue: 0)!, x: 210, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 151, type: EntityType(rawValue: 0)!, x: 225, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14909,30 +13371,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 153, type: EntityType(rawValue: 0)!, x: 465, y: 378, width: 15, height: 18)
+          var e = Entity(id: 153, type: EntityType(rawValue: 0)!, x: 465, y: 378, width: 60, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 154, type: EntityType(rawValue: 0)!, x: 480, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 155, type: EntityType(rawValue: 0)!, x: 495, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 156, type: EntityType(rawValue: 0)!, x: 510, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
@@ -14963,55 +13404,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 161, type: EntityType(rawValue: 0)!, x: 405, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 162, type: EntityType(rawValue: 0)!, x: 420, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 163, type: EntityType(rawValue: 0)!, x: 435, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 164, type: EntityType(rawValue: 0)!, x: 450, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 165, type: EntityType(rawValue: 0)!, x: 465, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 166, type: EntityType(rawValue: 0)!, x: 480, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 167, type: EntityType(rawValue: 0)!, x: 495, y: 288, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 168, type: EntityType(rawValue: 0)!, x: 510, y: 288, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
@@ -15019,79 +13411,16 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 169, type: EntityType(rawValue: 0)!, x: 240, y: 108, width: 15, height: 18)
+          var e = Entity(id: 169, type: EntityType(rawValue: 0)!, x: 240, y: 108, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 170, type: EntityType(rawValue: 0)!, x: 225, y: 108, width: 15, height: 18)
+          var e = Entity(id: 177, type: EntityType(rawValue: 0)!, x: 360, y: 108, width: 45, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 171, type: EntityType(rawValue: 0)!, x: 270, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 172, type: EntityType(rawValue: 0)!, x: 285, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 173, type: EntityType(rawValue: 0)!, x: 300, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 174, type: EntityType(rawValue: 0)!, x: 315, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 175, type: EntityType(rawValue: 0)!, x: 345, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 176, type: EntityType(rawValue: 0)!, x: 330, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 177, type: EntityType(rawValue: 0)!, x: 360, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 178, type: EntityType(rawValue: 0)!, x: 375, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 179, type: EntityType(rawValue: 0)!, x: 390, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
@@ -15131,70 +13460,14 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 185, type: EntityType(rawValue: 0)!, x: 405, y: 126, width: 15, height: 18)
+          var e = Entity(id: 186, type: EntityType(rawValue: 0)!, x: 390, y: 126, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 186, type: EntityType(rawValue: 0)!, x: 390, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 187, type: EntityType(rawValue: 0)!, x: 420, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 188, type: EntityType(rawValue: 0)!, x: 435, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 189, type: EntityType(rawValue: 0)!, x: 465, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 190, type: EntityType(rawValue: 0)!, x: 450, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 191, type: EntityType(rawValue: 0)!, x: 480, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 192, type: EntityType(rawValue: 0)!, x: 495, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
           var e = Entity(id: 193, type: EntityType(rawValue: 0)!, x: 510, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 194, type: EntityType(rawValue: 0)!, x: 510, y: 108, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -15236,79 +13509,22 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 200, type: EntityType(rawValue: 0)!, x: 195, y: 90, width: 15, height: 18)
+          var e = Entity(id: 200, type: EntityType(rawValue: 0)!, x: 195, y: 90, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 201, type: EntityType(rawValue: 0)!, x: 210, y: 90, width: 15, height: 18)
+          var e = Entity(id: 202, type: EntityType(rawValue: 0)!, x: 285, y: 90, width: 45, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 202, type: EntityType(rawValue: 0)!, x: 285, y: 90, width: 15, height: 18)
+          var e = Entity(id: 205, type: EntityType(rawValue: 0)!, x: 465, y: 108, width: 60, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 203, type: EntityType(rawValue: 0)!, x: 300, y: 90, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 204, type: EntityType(rawValue: 0)!, x: 315, y: 90, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 205, type: EntityType(rawValue: 0)!, x: 465, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 206, type: EntityType(rawValue: 0)!, x: 480, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 207, type: EntityType(rawValue: 0)!, x: 495, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 208, type: EntityType(rawValue: 0)!, x: 255, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 209, type: EntityType(rawValue: 0)!, x: 255, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 210, type: EntityType(rawValue: 0)!, x: 255, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
@@ -15381,114 +13597,16 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 223, type: EntityType(rawValue: 0)!, x: 0, y: 270, width: 15, height: 18)
+          var e = Entity(id: 223, type: EntityType(rawValue: 0)!, x: 0, y: 270, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 224, type: EntityType(rawValue: 0)!, x: 15, y: 270, width: 15, height: 18)
+          var e = Entity(id: 236, type: EntityType(rawValue: 0)!, x: 480, y: 270, width: 45, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 225, type: EntityType(rawValue: 0)!, x: 30, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 226, type: EntityType(rawValue: 0)!, x: 45, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 227, type: EntityType(rawValue: 0)!, x: 60, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 228, type: EntityType(rawValue: 0)!, x: 75, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 229, type: EntityType(rawValue: 0)!, x: 90, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 230, type: EntityType(rawValue: 0)!, x: 105, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 231, type: EntityType(rawValue: 0)!, x: 405, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 232, type: EntityType(rawValue: 0)!, x: 420, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 233, type: EntityType(rawValue: 0)!, x: 435, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 234, type: EntityType(rawValue: 0)!, x: 450, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 235, type: EntityType(rawValue: 0)!, x: 465, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 236, type: EntityType(rawValue: 0)!, x: 480, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 237, type: EntityType(rawValue: 0)!, x: 495, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 238, type: EntityType(rawValue: 0)!, x: 510, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
@@ -15839,7 +13957,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(49)
+        entities.reserveCapacity(45)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -15959,13 +14077,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 19, type: EntityType(rawValue: 0)!, x: 120, y: 288, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 0, y: 288, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
@@ -15979,9 +14090,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 75, y: 288, width: 45, height: 18)
+          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 75, y: 288, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16053,16 +14164,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 240, y: 90, width: 60, height: 18)
+          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 240, y: 90, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 300, y: 90, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16099,23 +14203,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 210, y: 180, width: 45, height: 18)
+          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 210, y: 180, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 270, y: 180, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 255, y: 180, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16169,18 +14259,11 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(214)
+        entities.reserveCapacity(200)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 30, y: 54, width: 120, height: 18)
           e.fixed = true
           e.widthInStuds = 8
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 2, type: EntityType(rawValue: 0)!, x: 15, y: 144, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16192,21 +14275,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 4, type: EntityType(rawValue: 0)!, x: 15, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 15, y: 90, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 15, y: 72, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -16227,9 +14296,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 135, y: 90, width: 15, height: 18)
+          var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 135, y: 90, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16241,9 +14309,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 135, y: 126, width: 15, height: 18)
+          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 135, y: 126, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16255,9 +14322,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 13, type: EntityType(rawValue: 0)!, x: 135, y: 162, width: 15, height: 18)
+          var e = Entity(id: 13, type: EntityType(rawValue: 0)!, x: 135, y: 162, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16299,21 +14365,14 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 330, y: 306, width: 60, height: 18)
+          var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 330, y: 306, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
         do {
           var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 255, y: 306, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 255, y: 288, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -16327,21 +14386,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 255, y: 252, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 25, type: EntityType(rawValue: 0)!, x: 255, y: 234, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 26, type: EntityType(rawValue: 0)!, x: 255, y: 216, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -16369,9 +14414,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 375, y: 270, width: 15, height: 18)
+          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 375, y: 270, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16383,9 +14427,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 375, y: 234, width: 15, height: 18)
+          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 375, y: 234, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16397,9 +14440,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 375, y: 198, width: 15, height: 18)
+          var e = Entity(id: 34, type: EntityType(rawValue: 0)!, x: 375, y: 198, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -16689,13 +14731,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 76, type: EntityType(rawValue: 0)!, x: 150, y: 90, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 77, type: EntityType(rawValue: 0)!, x: 210, y: 90, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
@@ -16822,13 +14857,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 95, type: EntityType(rawValue: 0)!, x: 150, y: 126, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 96, type: EntityType(rawValue: 0)!, x: 180, y: 144, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
@@ -16886,13 +14914,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 104, type: EntityType(rawValue: 0)!, x: 390, y: 162, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 105, type: EntityType(rawValue: 0)!, x: 150, y: 162, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -16965,13 +14986,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           var e = Entity(id: 115, type: EntityType(rawValue: 0)!, x: 30, y: 180, width: 120, height: 18)
           e.fixed = true
           e.widthInStuds = 8
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 116, type: EntityType(rawValue: 0)!, x: 15, y: 180, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17049,13 +15063,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 129, type: EntityType(rawValue: 0)!, x: 390, y: 198, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 130, type: EntityType(rawValue: 0)!, x: 450, y: 198, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
@@ -17084,9 +15091,8 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 134, type: EntityType(rawValue: 0)!, x: 240, y: 216, width: 15, height: 18)
+          var e = Entity(id: 134, type: EntityType(rawValue: 0)!, x: 240, y: 216, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17133,30 +15139,26 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 141, type: EntityType(rawValue: 0)!, x: 0, y: 72, width: 15, height: 18)
+          var e = Entity(id: 141, type: EntityType(rawValue: 0)!, x: 0, y: 72, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 142, type: EntityType(rawValue: 0)!, x: 0, y: 108, width: 15, height: 18)
+          var e = Entity(id: 142, type: EntityType(rawValue: 0)!, x: 0, y: 108, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 143, type: EntityType(rawValue: 0)!, x: 0, y: 144, width: 15, height: 18)
+          var e = Entity(id: 143, type: EntityType(rawValue: 0)!, x: 0, y: 144, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 144, type: EntityType(rawValue: 0)!, x: 0, y: 180, width: 15, height: 18)
+          var e = Entity(id: 144, type: EntityType(rawValue: 0)!, x: 0, y: 180, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17420,16 +15422,14 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 182, type: EntityType(rawValue: 0)!, x: 240, y: 252, width: 15, height: 18)
+          var e = Entity(id: 182, type: EntityType(rawValue: 0)!, x: 240, y: 252, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 183, type: EntityType(rawValue: 0)!, x: 240, y: 288, width: 15, height: 18)
+          var e = Entity(id: 183, type: EntityType(rawValue: 0)!, x: 240, y: 288, width: 30, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17498,27 +15498,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
         }
         do {
           var e = Entity(id: 193, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 194, type: EntityType(rawValue: 0)!, x: 390, y: 306, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 195, type: EntityType(rawValue: 0)!, x: 390, y: 270, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 196, type: EntityType(rawValue: 0)!, x: 390, y: 234, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
           e.colorIndex = 5
@@ -17663,7 +15642,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(52)
+        entities.reserveCapacity(49)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 13)!, x: 465, y: 378, width: 60, height: 18)
           e.fixed = true
@@ -17692,16 +15671,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 45, y: 378, width: 60, height: 18)
+          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17750,16 +15722,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 15, height: 18)
+          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 15, y: 342, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17787,16 +15752,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 420, y: 288, width: 60, height: 18)
+          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 375, y: 288, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 375, y: 288, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -17986,7 +15944,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(50)
+        entities.reserveCapacity(40)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 216, width: 90, height: 18)
           e.fixed = true
@@ -18074,9 +16032,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 390, y: 288, width: 45, height: 18)
+          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 390, y: 288, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18095,23 +16053,16 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 390, y: 180, width: 45, height: 18)
+          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 390, y: 180, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 18, type: EntityType(rawValue: 0)!, x: 390, y: 162, width: 45, height: 18)
+          var e = Entity(id: 18, type: EntityType(rawValue: 0)!, x: 390, y: 162, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 19, type: EntityType(rawValue: 0)!, x: 435, y: 180, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18126,25 +16077,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 480, y: 162, width: 45, height: 18)
           e.fixed = true
           e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 22, type: EntityType(rawValue: 0)!, x: 435, y: 162, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 495, y: 378, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 435, y: 288, width: 30, height: 18)
-          e.fixed = true
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18165,42 +16097,22 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 465, y: 288, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 29, type: EntityType(rawValue: 0)!, x: 495, y: 288, width: 30, height: 18)
           e.fixed = true
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 30, type: EntityType(rawValue: 0)!, x: 390, y: 234, width: 45, height: 18)
+          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 345, y: 234, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 31, type: EntityType(rawValue: 0)!, x: 345, y: 234, width: 45, height: 18)
+          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 255, y: 234, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 32, type: EntityType(rawValue: 0)!, x: 300, y: 234, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 33, type: EntityType(rawValue: 0)!, x: 255, y: 234, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18229,49 +16141,28 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 165, y: 126, width: 45, height: 18)
+          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 165, y: 126, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 39, type: EntityType(rawValue: 0)!, x: 210, y: 126, width: 45, height: 18)
+          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 255, y: 126, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 255, y: 126, width: 45, height: 18)
+          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 345, y: 126, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 300, y: 126, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 345, y: 126, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
         do {
           var e = Entity(id: 43, type: EntityType(rawValue: 0)!, x: 390, y: 144, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 44, type: EntityType(rawValue: 0)!, x: 390, y: 126, width: 45, height: 18)
           e.fixed = true
           e.widthInStuds = 3
           e.colorIndex = 5
@@ -18301,9 +16192,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 405, y: 378, width: 90, height: 18)
+          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 405, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18327,7 +16218,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(39)
+        entities.reserveCapacity(38)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 255, y: 306, width: 120, height: 18)
           e.fixed = true
@@ -18419,20 +16310,15 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 14, type: EntityType(rawValue: 0)!, x: 360, y: 288, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 15, type: EntityType(rawValue: 13)!, x: 270, y: 288, width: 60, height: 18)
           e.fixed = true
           e.teleportID = 1
           entities.append(e)
         }
         do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 330, y: 288, width: 30, height: 18)
+          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 330, y: 288, width: 60, height: 18)
           e.fixed = true
+          e.widthInStuds = 4
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18876,7 +16762,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(56)
+        entities.reserveCapacity(53)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -18939,13 +16825,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 135, y: 180, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 105, y: 198, width: 60, height: 18)
           e.fixed = true
           e.widthInStuds = 4
@@ -18953,8 +16832,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 105, y: 180, width: 30, height: 18)
+          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 105, y: 180, width: 75, height: 18)
           e.fixed = true
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -18979,16 +16859,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 45, y: 180, width: 60, height: 18)
+          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 0, y: 180, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 0, y: 180, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -19004,16 +16877,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 15, y: 198, width: 90, height: 18)
+          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 0, y: 198, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 21, type: EntityType(rawValue: 0)!, x: 0, y: 198, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -19233,7 +17099,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(47)
+        entities.reserveCapacity(44)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 342, width: 120, height: 18)
           e.fixed = true
@@ -19296,30 +17162,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 255, y: 0, width: 15, height: 18)
+          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 240, y: 0, width: 45, height: 18)
           e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 11, type: EntityType(rawValue: 0)!, x: 270, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 12, type: EntityType(rawValue: 0)!, x: 240, y: 0, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 13, type: EntityType(rawValue: 0)!, x: 240, y: 216, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
@@ -19457,9 +17302,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 180, y: 216, width: 60, height: 18)
+          var e = Entity(id: 40, type: EntityType(rawValue: 0)!, x: 180, y: 216, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -19907,7 +17752,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(36)
+        entities.reserveCapacity(34)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -19944,16 +17789,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 330, y: 378, width: 60, height: 18)
+          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 330, y: 378, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }
@@ -20086,16 +17924,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 420, y: 108, width: 90, height: 18)
+          var e = Entity(id: 27, type: EntityType(rawValue: 0)!, x: 420, y: 108, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 28, type: EntityType(rawValue: 0)!, x: 510, y: 108, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -20377,7 +18208,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(71)
+        entities.reserveCapacity(68)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 90, y: 378, width: 60, height: 18)
           e.fixed = true
@@ -20424,13 +18255,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 8, type: EntityType(rawValue: 0)!, x: 450, y: 378, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 9, type: EntityType(rawValue: 0)!, x: 510, y: 378, width: 15, height: 18)
           e.fixed = true
           e.widthInStuds = 1
@@ -20438,9 +18262,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 60, height: 18)
+          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 390, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -20791,21 +18615,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 61, type: EntityType(rawValue: 0)!, x: 255, y: 144, width: 45, height: 18)
+          var e = Entity(id: 63, type: EntityType(rawValue: 0)!, x: 225, y: 144, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 62, type: EntityType(rawValue: 0)!, x: 300, y: 144, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 63, type: EntityType(rawValue: 0)!, x: 225, y: 144, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -21803,7 +19615,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(65)
+        entities.reserveCapacity(64)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -22094,15 +19906,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 360, y: 54, width: 30, height: 18)
+          var e = Entity(id: 49, type: EntityType(rawValue: 0)!, x: 360, y: 54, width: 45, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 50, type: EntityType(rawValue: 0)!, x: 390, y: 54, width: 15, height: 18)
-          e.fixed = true
-          e.widthInStuds = 1
+          e.widthInStuds = 3
           e.colorIndex = 5
           entities.append(e)
         }
@@ -22208,7 +20014,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(34)
+        entities.reserveCapacity(33)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 45, y: 90, width: 120, height: 18)
           e.fixed = true
@@ -22244,16 +20050,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 225, y: 378, width: 60, height: 18)
+          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 180, y: 378, width: 105, height: 18)
           e.fixed = true
-          e.widthInStuds = 4
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 180, y: 378, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 7
           e.colorIndex = 5
           entities.append(e)
         }
@@ -22429,7 +20228,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(57)
+        entities.reserveCapacity(54)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -22551,9 +20350,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 300, y: 198, width: 90, height: 18)
+          var e = Entity(id: 20, type: EntityType(rawValue: 0)!, x: 300, y: 198, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -22657,12 +20456,6 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 38, type: EntityType(rawValue: 0)!, x: 390, y: 198, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
           var e = Entity(id: 39, type: EntityType(rawValue: 13)!, x: 360, y: 180, width: 60, height: 18)
           e.fixed = true
           e.teleportID = 1
@@ -22676,15 +20469,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 405, y: 72, width: 90, height: 18)
+          var e = Entity(id: 41, type: EntityType(rawValue: 0)!, x: 405, y: 72, width: 120, height: 18)
           e.fixed = true
-          e.widthInStuds = 6
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 42, type: EntityType(rawValue: 0)!, x: 495, y: 72, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -22713,15 +20500,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 47, type: EntityType(rawValue: 0)!, x: 300, y: 90, width: 30, height: 18)
+          var e = Entity(id: 48, type: EntityType(rawValue: 0)!, x: 210, y: 90, width: 120, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 48, type: EntityType(rawValue: 0)!, x: 210, y: 90, width: 90, height: 18)
-          e.fixed = true
-          e.widthInStuds = 6
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -22786,7 +20567,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(55)
+        entities.reserveCapacity(53)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 120, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -22816,21 +20597,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 5, type: EntityType(rawValue: 0)!, x: 90, y: 378, width: 30, height: 18)
+          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 6, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 30, height: 18)
-          e.fixed = true
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 7, type: EntityType(rawValue: 0)!, x: 30, y: 378, width: 60, height: 18)
-          e.fixed = true
-          e.widthInStuds = 4
+          e.widthInStuds = 8
           e.colorIndex = 5
           entities.append(e)
         }
@@ -23473,7 +21242,7 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
     game: Game.junkbotUndercover,
     makeEntities: {
         var entities: [Entity] = []
-        entities.reserveCapacity(62)
+        entities.reserveCapacity(60)
         do {
           var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 378, width: 120, height: 18)
           e.fixed = true
@@ -23529,9 +21298,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 0, y: 198, width: 45, height: 18)
+          var e = Entity(id: 10, type: EntityType(rawValue: 0)!, x: 0, y: 198, width: 90, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
+          e.widthInStuds = 6
           e.colorIndex = 5
           entities.append(e)
         }
@@ -23562,22 +21331,9 @@ public let undercoverCampaignLevels: [EmbeddedLevel] = [
           entities.append(e)
         }
         do {
-          var e = Entity(id: 15, type: EntityType(rawValue: 0)!, x: 45, y: 198, width: 45, height: 18)
+          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 210, y: 270, width: 75, height: 18)
           e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 16, type: EntityType(rawValue: 0)!, x: 210, y: 270, width: 45, height: 18)
-          e.fixed = true
-          e.widthInStuds = 3
-          e.colorIndex = 5
-          entities.append(e)
-        }
-        do {
-          var e = Entity(id: 17, type: EntityType(rawValue: 0)!, x: 255, y: 270, width: 30, height: 18)
-          e.fixed = true
+          e.widthInStuds = 5
           e.colorIndex = 5
           entities.append(e)
         }

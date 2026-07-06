@@ -276,22 +276,32 @@ extension GameEngine {
     collisionGrid = Array(repeating: [], count: Int(collisionGridCols) * Int(collisionGridRows))
   }
 
+  /// Shared by `insertIntoGrid`/`gridCandidateIndices`: the inclusive `(colStart, colEnd, rowStart,
+  /// rowEnd)` grid-cell range a `(x, y, width, height)` rectangle overlaps, clamped to the grid's
+  /// bounds. Factored out (rather than duplicated at both call sites) to keep this embedded-target
+  /// code's compiled size down - every port shares this file, including code-size-constrained ones.
+  private func gridCellRange(x: Int32, y: Int32, width: Int32, height: Int32) -> (
+    colStart: Int32, colEnd: Int32, rowStart: Int32, rowEnd: Int32
+  ) {
+    (
+      colStart: clampCell(floorDivCell(x - collisionGridOriginX, CELL_W), collisionGridCols),
+      colEnd: clampCell(floorDivCell(x + width - 1 - collisionGridOriginX, CELL_W), collisionGridCols),
+      rowStart: clampCell(floorDivCell(y - collisionGridOriginY, CELL_H), collisionGridRows),
+      rowEnd: clampCell(floorDivCell(y + height - 1 - collisionGridOriginY, CELL_H), collisionGridRows)
+    )
+  }
+
   /// Adds `index` to every grid cell its current bounding box overlaps. No-op if the grid is empty
   /// (no `levelBounds`).
   private func insertIntoGrid(index: Int) {
     guard collisionGridCols > 0, collisionGridRows > 0 else { return }
     let e = entities[index]
-    let colStart = clampCell(floorDivCell(e.x - collisionGridOriginX, CELL_W), collisionGridCols)
-    let colEnd = clampCell(
-      floorDivCell(e.x + e.width - 1 - collisionGridOriginX, CELL_W), collisionGridCols)
-    let rowStart = clampCell(floorDivCell(e.y - collisionGridOriginY, CELL_H), collisionGridRows)
-    let rowEnd = clampCell(
-      floorDivCell(e.y + e.height - 1 - collisionGridOriginY, CELL_H), collisionGridRows)
-    guard colStart <= colEnd, rowStart <= rowEnd else { return }
-    var row = rowStart
-    while row <= rowEnd {
-      var col = colStart
-      while col <= colEnd {
+    let range = gridCellRange(x: e.x, y: e.y, width: e.width, height: e.height)
+    guard range.colStart <= range.colEnd, range.rowStart <= range.rowEnd else { return }
+    var row = range.rowStart
+    while row <= range.rowEnd {
+      var col = range.colStart
+      while col <= range.colEnd {
         let cellIndex = Int(row) * Int(collisionGridCols) + Int(col)
         if !collisionGrid[cellIndex].contains(index) {
           collisionGrid[cellIndex].append(index)
@@ -311,19 +321,14 @@ extension GameEngine {
     guard collisionGridCols > 0, collisionGridRows > 0 else {
       return Array(0..<entities.count)
     }
-    let colStart = clampCell(floorDivCell(x - collisionGridOriginX, CELL_W), collisionGridCols)
-    let colEnd = clampCell(
-      floorDivCell(x + width - 1 - collisionGridOriginX, CELL_W), collisionGridCols)
-    let rowStart = clampCell(floorDivCell(y - collisionGridOriginY, CELL_H), collisionGridRows)
-    let rowEnd = clampCell(
-      floorDivCell(y + height - 1 - collisionGridOriginY, CELL_H), collisionGridRows)
-    guard colStart <= colEnd, rowStart <= rowEnd else { return [] }
+    let range = gridCellRange(x: x, y: y, width: width, height: height)
+    guard range.colStart <= range.colEnd, range.rowStart <= range.rowEnd else { return [] }
     var seen: Set<Int> = []
     var result: [Int] = []
-    var row = rowStart
-    while row <= rowEnd {
-      var col = colStart
-      while col <= colEnd {
+    var row = range.rowStart
+    while row <= range.rowEnd {
+      var col = range.colStart
+      while col <= range.colEnd {
         let cellIndex = Int(row) * Int(collisionGridCols) + Int(col)
         for idx in collisionGrid[cellIndex] where seen.insert(idx).inserted {
           result.append(idx)

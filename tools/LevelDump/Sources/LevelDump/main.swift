@@ -88,17 +88,90 @@ func swiftStringLiteral(_ s: String) -> String {
   return out + "\""
 }
 
+/// Merges runs of adjacent `fixed` bricks (touching x edges, same y/height/color/every-other-field)
+/// into fewer, wider single entities, up to the renderer's 8-stud sprite ceiling
+/// (`RenderList.swift`'s `entitySprite`). Busy levels build floors/walls out of many small brick
+/// segments - level 1 ("New Employee Training") has runs of 14-21 bricks sharing one y - and every
+/// per-tick simulation cost (the two full sorts, `rebuildAccelerationStructures`, and especially
+/// `simulateGravity`'s support-chain search, whose y-bucketed candidate lists are only as small as
+/// the busiest y-band) scales with total entity count, not just what's on screen. This is safe
+/// specifically because it's restricted to `fixed` bricks: they're never grabbable, so merging
+/// changes nothing about what the player can pick up, and the merged sprite is pixel-identical to
+/// the originals (LEGO brick art repeats its stud pattern uniformly with no unique end-cap tiles -
+/// verified by comparing `brick_white_2`/`brick_white_4`/`brick_white_8`'s source art).
+func mergeAdjacentFixedBricks(_ entities: [Entity]) -> [Entity] {
+  /// A merge-eligibility signature: every field except x/width/widthInStuds/id must match (id/x/
+  /// width vary per brick by definition; widthInStuds is what merging changes). Reuses
+  /// `fieldAssignments` (already written to enumerate every non-default stored property) rather
+  /// than hand-listing `Entity`'s fields a second time.
+  func mergeKey(_ e: Entity) -> String? {
+    guard e.type == .brick, e.fixed else { return nil }
+    let otherFields = fieldAssignments(for: e).filter { !$0.hasPrefix("e.widthInStuds") }
+    return "\(e.y)|\(e.height)|\(otherFields.sorted().joined(separator: ","))"
+  }
+
+  // Group eligible bricks' original indices by merge key, preserving first-seen order per group.
+  var order: [String] = []
+  var groups: [String: [Int]] = [:]
+  for (i, e) in entities.enumerated() {
+    guard let key = mergeKey(e) else { continue }
+    if groups[key] == nil {
+      order.append(key)
+      groups[key] = []
+    }
+    groups[key]!.append(i)
+  }
+
+  var replacement: [Int: Entity] = [:]  // first-of-run index -> merged entity
+  var removed: Set<Int> = []
+  for key in order {
+    let indices = groups[key]!.sorted { entities[$0].x < entities[$1].x }
+    var runStart = 0
+    while runStart < indices.count {
+      var runEnd = runStart
+      var widthInStuds = entities[indices[runStart]].widthInStuds
+      while runEnd + 1 < indices.count {
+        let current = entities[indices[runEnd]]
+        let next = entities[indices[runEnd + 1]]
+        guard current.x + current.width == next.x,
+          widthInStuds + next.widthInStuds <= 8
+        else { break }
+        widthInStuds += next.widthInStuds
+        runEnd += 1
+      }
+      if runEnd > runStart {
+        var merged = entities[indices[runStart]]
+        merged.widthInStuds = widthInStuds
+        merged.width = widthInStuds * CELL_W
+        replacement[indices[runStart]] = merged
+        for i in (runStart + 1)...runEnd { removed.insert(indices[i]) }
+      }
+      runStart = runEnd + 1
+    }
+  }
+
+  guard !replacement.isEmpty || !removed.isEmpty else { return entities }
+  var result: [Entity] = []
+  result.reserveCapacity(entities.count - removed.count)
+  for (i, e) in entities.enumerated() {
+    if removed.contains(i) { continue }
+    result.append(replacement[i] ?? e)
+  }
+  return result
+}
+
 /// Renders one `EmbeddedLevel(...)` literal by running `text` through the real parser + entity
 /// bridge, once, on a scratch engine.
 func embeddedLevelLiteral(title: String, text: String, game: Game, indent: String) -> String {
   let level = Level(text: text)
   let engine = GameEngine()
   engine.loadLevel(level)
+  let mergedEntities = mergeAdjacentFixedBricks(engine.entities)
 
   var builder = "{\n"
   builder += "\(indent)      var entities: [Entity] = []\n"
-  builder += "\(indent)      entities.reserveCapacity(\(engine.entities.count))\n"
-  for entity in engine.entities {
+  builder += "\(indent)      entities.reserveCapacity(\(mergedEntities.count))\n"
+  for entity in mergedEntities {
     builder += "\(indent)      do {\n"
     builder +=
       "\(indent)        var e = Entity(id: \(entity.id), type: EntityType(rawValue: \(entity.type.rawValue))!, "

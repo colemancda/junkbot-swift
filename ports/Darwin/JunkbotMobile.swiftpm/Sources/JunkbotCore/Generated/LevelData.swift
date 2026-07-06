@@ -17,7 +17,7 @@ public let titleScreenLevel: EmbeddedLevel = EmbeddedLevel(
   game: Game.junkbot,
   makeEntities: {
       var entities: [Entity] = []
-      entities.reserveCapacity(88)
+      entities.reserveCapacity(87)
       do {
         var e = Entity(id: 1, type: EntityType(rawValue: 0)!, x: 0, y: 360, width: 120, height: 18)
         e.fixed = true
@@ -148,14 +148,9 @@ public let titleScreenLevel: EmbeddedLevel = EmbeddedLevel(
         entities.append(e)
       }
       do {
-        var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 285, y: 342, width: 30, height: 18)
+        var e = Entity(id: 23, type: EntityType(rawValue: 0)!, x: 285, y: 342, width: 60, height: 18)
         e.fixed = true
-        e.colorIndex = 5
-        entities.append(e)
-      }
-      do {
-        var e = Entity(id: 24, type: EntityType(rawValue: 0)!, x: 315, y: 342, width: 30, height: 18)
-        e.fixed = true
+        e.widthInStuds = 4
         e.colorIndex = 5
         entities.append(e)
       }
