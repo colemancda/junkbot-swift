@@ -132,6 +132,11 @@ var renderFrame = RenderFrame()
 /// `(world - origin) * src / bounds` (a real division every one of the 49152 pixels) cost enough
 /// software-divide cycles to visibly slow the whole game down. Incremental fixed-point stepping
 /// needs only 2 divisions total (building the steps), not one per pixel.
+///
+/// (A hardware-affine-background version of this was tried and reverted - see git history/PR
+/// discussion - the BG2 scale/scroll register math came out wrong on first pass, rendering
+/// garbage; reverted to this known-good software version rather than debug PPU affine register
+/// semantics blind. Worth revisiting.)
 func blitBackdrop(
   spriteID: Int32, bounds: LevelBounds, scrollX: Int32, scrollY: Int32,
   into buffer: UnsafeMutablePointer<UInt16>

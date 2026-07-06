@@ -32,6 +32,11 @@ let KEY_TOUCH: UInt32 = 1 << 14
 // the top screen's info panel, which only changes on a level load or a moves-
 // counter/win-lose update. lcdMainOnBottom() puts the main engine's output on
 // the bottom (touch) LCD and the sub engine's on top.
+//
+// (A hardware-affine BG2 backdrop layer - avoiding the software resample in
+// source/Renderer.swift's blitBackdrop entirely - was tried and reverted
+// after its scale/scroll register math rendered garbage on first pass; the
+// backdrop stays software-composited into this same BG3 bitmap for now.)
 
 videoSetMode(MODE_5_2D.rawValue)
 videoSetModeSub(MODE_5_2D.rawValue)
@@ -181,8 +186,21 @@ var stylusDown = false
 var lastTouchWorldX: Int32 = 0
 var lastTouchWorldY: Int32 = 0
 
+/// Whether `backBuffer` holds a fully-rendered frame waiting to be shown. Flipping happens at the
+/// very top of the loop, right after `threadWaitForVBlank()` returns, so the hardware map-base
+/// write always lands as early into VBlank as possible - previously the flip happened at the
+/// *end* of the same iteration's input/tick/render work, whose variable duration could push it
+/// past VBlank into active scanout, tearing the frame. Rendering now always draws into the
+/// buffer that's currently hidden (about to be shown next VBlank, not this one), trading one
+/// frame (~16.7ms) of extra input latency for a flip that's never raced against frame timing.
+var pendingFlip = false
+
 while pmMainLoop() {
   threadWaitForVBlank()
+  if pendingFlip {
+    flipBuffers()
+    pendingFlip = false
+  }
   scanKeys()
   let pressed = keysDown()
   let held = keysHeld()
@@ -271,7 +289,7 @@ while pmMainLoop() {
 
   if frameDirty {
     renderWorld(into: backBuffer, scrollX: scrollX, scrollY: scrollY)
-    flipBuffers()
+    pendingFlip = true
     frameDirty = false
   }
 }
