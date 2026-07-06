@@ -131,13 +131,45 @@ the full write-ups:
 
 ## Performance
 
-Level 1 (~120 entities, mostly off-screen floor segments) was slow enough to notice: `GameEngine`'s
-`sortOrderForRendering` (painter's-algorithm draw ordering) is a bubble-sort variant that scales
-worse than linearly with entity count, and ran every frame at 60Hz over *every* entity regardless
-of visibility. Two fixes, both in shared `Sources/JunkbotCore` code (so every port benefits):
-`canRelease()`/`allConnectedToFixed()` (recomputed every frame while dragging) now use `Set`-backed
-membership checks instead of `Array.contains`; and `buildRenderFrame` takes an optional
-`visibleBounds` rect to cull off-screen entities before the sort, which this port (along with
-`ports/NDS`/`ports/3DS`) passes as the current scrolled viewport plus a margin. See
-`Tests/JunkbotCoreTests/DragPerformanceTests.swift` and the `visibleBounds` tests in
-`Tests/JunkbotCoreTests/RenderListTests.swift` for the measured before/after numbers.
+Level 1 (~120 entities, mostly small floor segments) was slow enough to notice, and stayed
+noticeably slower than level 2 (~40 entities) through several rounds of fixes - all in shared
+`Sources/JunkbotCore` code, so every port benefits:
+
+1. **`sortOrderForRendering`** (painter's-algorithm draw ordering) is a bubble-sort variant that
+   scales worse than linearly with entity count, and ran every frame at 60Hz over *every* entity
+   regardless of visibility. Fixed via an optional `visibleBounds` rect on `buildRenderFrame` that
+   culls off-screen entities before the sort, which this port (along with `ports/NDS`/`ports/3DS`)
+   passes as the current scrolled viewport plus a margin.
+2. **`canRelease()`/`allConnectedToFixed()`** (recomputed every frame while dragging) used
+   `Array.contains` for cycle detection inside a full-entity scan, scaling worse than quadratically;
+   fixed with a `Set`.
+3. Even after both fixes, level 1's `tick()` cost remained ~7-9x level 2's despite only having 3x
+   the entities - `GameLoopSimulationTests.swift`'s phase breakdown traced this to two further,
+   separate issues in `GameEngine`'s simulation, both fixed the same way: a uniform spatial grid
+   (`collisionGrid`, `CELL_W`x`CELL_H` cells) added alongside the existing y-indexed acceleration
+   structures, so per-entity collision/adjacency queries only scan entities actually near the query
+   instead of the whole level:
+   - `connectsToFixed` (walked every unsettled entity's support chain during gravity) had the same
+     `Array`-based cycle-detection cost as (2), plus an unindexed neighbor scan; both fixed.
+   - `entityCollisionTest`/`entityCollisionAll` (the general-purpose collision probes behind
+     walking, jumping, gravity, and most entity AI - 30+ call sites) were still full brute-force
+     scans; now backed by the same spatial grid.
+
+   None of these three structures use `Dictionary`: a `Dictionary`-keyed version of the y-indexed
+   structures once produced a genuine wrong-index lookup on a real, crowded level under Embedded
+   Swift/WASM specifically (never fully root-caused - see `Tests/JunkbotCoreTests/InputTests.swift`'s
+   `titleScreenPyramidRepro`, the regression test for that incident), so every acceleration
+   structure here is a sorted array searched by binary search instead.
+
+   Building the grid surfaced one real, subtle bug worth knowing about if you add a new place that
+   moves an entity: `entityMoved(index:)` must be called on **any** position change (x *or* y), not
+   just y - one call site (`simulateJunkbot`'s crate-push) moved an entity's `x` without calling it,
+   which was harmless before (the older structures only indexed by y) but left the grid's record of
+   that entity one cell stale for the rest of the tick once collision queries started consulting it
+   too, silently missing a real collision. See `entityMoved`'s doc comment in `Collision.swift`.
+
+Net effect: level 1's `tick()`-per-entity cost dropped from ~2.2-2.9x level 2's to ~1.7-2.5x (close
+to the ~1x a purely linear cost would give, with the remainder mostly the two O(n log n)
+`entities.sort` calls every `simulate()` still does). See `Tests/JunkbotCoreTests/DragPerformanceTests.swift`,
+the `visibleBounds` tests in `Tests/JunkbotCoreTests/RenderListTests.swift`, and
+`Tests/JunkbotCoreTests/GameLoopSimulationTests.swift` for the measured before/after numbers.
