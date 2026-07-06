@@ -1,11 +1,3 @@
-// ports/PS1/source/main.swift — Junkbot for PlayStation 1.
-//
-// Milestone 1 (this file, for now): prove the ported toolchain/build plumbing
-// works end-to-end from ports/PS1 (not just the original swift-embedded-ps1
-// examples) by booting to a debug-font text screen. JunkbotCore + the real
-// game loop land in later milestones (see /Users/coleman/.claude/plans -
-// zesty-inventing-pancake.md).
-
 @inline(__always)
 func drawText(_ x: Int32, _ y: Int32, _ s: StaticString) {
   s.withUTF8Buffer { buf in
@@ -19,10 +11,25 @@ func drawText(_ x: Int32, _ y: Int32, _ s: StaticString) {
 public func swiftMain() {
   ps1_init_heap()
   ps1_init_display()
+  var arr: [Int32] = []
+  arr.reserveCapacity(10)
+  drawText(8, 8, "reserveCapacity(10) ok")
+  ps1_flip(); ps1_begin_frame()
+
+  for i in 0..<8 {
+    arr.append(Int32(i) * 3)
+    drawText(8, 20 + Int32(i) * 12, "append ok, staying in capacity")
+    ps1_flip(); ps1_begin_frame()
+  }
+
+  var sum: Int32 = 0
+  for v in arr { sum &+= v }
+  drawText(8, 20 + 8 * 12, "loop done, all appends succeeded")
+  ps1_flip(); ps1_begin_frame()
+  drawText(8, 20 + 8 * 12, "loop done, all appends succeeded")
+  ps1_flip(); ps1_begin_frame()
+
   while true {
     ps1_begin_frame()
-    drawText(8, 8, "Junkbot for PlayStation 1")
-    drawText(8, 24, "Embedded Swift + PSn00bSDK")
-    ps1_flip()
   }
 }

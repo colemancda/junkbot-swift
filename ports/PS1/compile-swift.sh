@@ -12,10 +12,22 @@
 # same invocation shape as ~/Developer/swift-embedded-ps1/Makefile's
 # SWIFTFLAGS_COMMON for its four examples.
 #
-# Milestone 1 (current): compiles only source/*.swift (no JunkbotCore yet) to
-# validate the ported build plumbing in isolation. JunkbotCore integration
-# (with the same CORE_EXCLUDE/GENERATED_EXCLUDE convention ports/N64 uses)
-# lands once the renderer/game-loop milestones start (see the plan doc).
+# JunkbotCore is compiled in alongside source/*.swift, same
+# CORE_EXCLUDE/GENERATED_EXCLUDE convention as ports/N64/compile-swift.sh:
+# Font.swift/LevelCatalog.swift are Foundation-heavy and unreachable from
+# Embedded Swift. UndercoverLevelData.swift/LevelData.swift are excluded
+# because this v1 port only ships the base campaign.
+#
+# JunkbotLevelData.swift is ALSO excluded for now (unlike ports/N64, which
+# compiles it): the full base campaign's entity-builder closures compile to
+# ~1.1MB of MIPS code, which -- combined with the 0.72MB sprite atlas and the
+# renderer's 320x240 RAM framebuffer -- overflows PS1's ~1.98MB usable RAM
+# region (confirmed empirically: `.bss overflowed by 158272 bytes` at link
+# time). source/main.swift hand-builds one small test level via
+# GameEngine.make*() instead, to unblock the rendering pipeline while the
+# real fix (either a PS1-specific trimmed level subset, or shrinking the
+# sprite atlas) is still open -- see the plan doc's flagged "Level/asset
+# budget" risk section.
 
 set -e
 
@@ -30,6 +42,28 @@ mkdir -p "$BUILD_DIR"
 
 COMMON=common
 SWIFT_TARGET=mipsel-none-none-elf
+REPO_ROOT=../..
+
+CORE_EXCLUDE=(Font.swift LevelCatalog.swift)
+GENERATED_EXCLUDE=(UndercoverLevelData.swift LevelData.swift JunkbotLevelData.swift)
+
+core_swift=()
+for f in "$REPO_ROOT"/Sources/JunkbotCore/*.swift; do
+  base="$(basename "$f")"
+  skip=0
+  for ex in "${CORE_EXCLUDE[@]}"; do
+    [ "$base" = "$ex" ] && skip=1
+  done
+  [ "$skip" = 0 ] && core_swift+=("$f")
+done
+for f in "$REPO_ROOT"/Sources/JunkbotCore/Generated/*.swift; do
+  base="$(basename "$f")"
+  skip=0
+  for ex in "${GENERATED_EXCLUDE[@]}"; do
+    [ "$base" = "$ex" ] && skip=1
+  done
+  [ "$skip" = 0 ] && core_swift+=("$f")
+done
 
 SWIFTFLAGS_COMMON=(
   -target "$SWIFT_TARGET"
@@ -50,6 +84,7 @@ SWIFTFLAGS_COMMON=(
 )
 
 port_swift=(source/*.swift)
+gen_swift=("$BUILD_DIR/SpriteAssets.swift")
 
 echo "Compiling Swift code with host compiler..."
 echo "Swift compiler: $SWIFTC"
@@ -59,7 +94,7 @@ echo "Target: $SWIFT_TARGET"
   "${SWIFTFLAGS_COMMON[@]}" \
   -import-objc-header "$COMMON/psx_umbrella.h" \
   -module-name Junkbot \
-  -c "${port_swift[@]}" \
+  -c "${core_swift[@]}" "${port_swift[@]}" "${gen_swift[@]}" \
   -o "$BUILD_DIR/swiftlib.o"
 
 if [ ! -f "$BUILD_DIR/swiftlib.o" ]; then

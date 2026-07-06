@@ -73,22 +73,39 @@ $(BUILD_DIR):
 $(BUILD_DIR)/boot.o: Support/boot.S | $(BUILD_DIR)
 	$(CLANG) $(CLANG_FLAGS) -o $@ $<
 
-$(BUILD_DIR)/shim.o: common/shim.c common/shim.h | $(BUILD_DIR)
+$(BUILD_DIR)/shim.o: common/shim.c common/shim.h common/assets.h | $(BUILD_DIR)
 	$(CLANG) $(CLANG_FLAGS) -o $@ common/shim.c
+
+# Build-time asset conversion (sprite atlas -> 8bpp palette blob + Swift
+# metadata table). Re-run whenever the sprite art or SpriteTable.swift changes;
+# `make` doesn't track those inputs precisely, so this is unconditional, same
+# as ports/N64's equivalent step.
+.PHONY: $(BUILD_DIR)/sprites.bin $(BUILD_DIR)/SpriteAssets.swift
+$(BUILD_DIR)/sprites.bin $(BUILD_DIR)/SpriteAssets.swift: | $(BUILD_DIR)
+	$(PYTHON) tools/gen_assets.py ../.. $(BUILD_DIR)
+
+# Embed sprites.bin as a relocatable object (raw `-I binary` mode, same trick
+# ports/N64 uses) so shim.c's `sprites_bin`/`sprites_bin_end` (common/assets.h)
+# resolve via the --defsym aliases below.
+$(BUILD_DIR)/sprites_bin.o: $(BUILD_DIR)/sprites.bin
+	cd $(BUILD_DIR) && $(OBJCOPY) -I binary -O elf32-tradlittlemips -B mips sprites.bin sprites_bin.o
 
 # Swift object: compiled by compile-swift.sh, not a Make recipe, since it
 # needs SWIFTC/TOOLCHAIN env passthrough and the CORE_EXCLUDE/GENERATED_EXCLUDE
 # file-list logic (see that script). Always re-run it; it's fast and this
 # keeps Make from needing to replicate its source-file globbing.
 .PHONY: $(BUILD_DIR)/swiftlib.o
-$(BUILD_DIR)/swiftlib.o: | $(BUILD_DIR)
+$(BUILD_DIR)/swiftlib.o: $(BUILD_DIR)/SpriteAssets.swift | $(BUILD_DIR)
 	SWIFTC=$(SWIFTC) TOOLCHAIN=$(TOOLCHAIN) BUILD_DIR=$(BUILD_DIR) ./compile-swift.sh
 
-$(BUILD_DIR)/out.elf: $(BUILD_DIR)/boot.o $(BUILD_DIR)/shim.o $(BUILD_DIR)/swiftlib.o Support/psexe.ld
+$(BUILD_DIR)/out.elf: $(BUILD_DIR)/boot.o $(BUILD_DIR)/shim.o $(BUILD_DIR)/swiftlib.o $(BUILD_DIR)/sprites_bin.o Support/psexe.ld
 	$(LLD) $(LLD_FLAGS) -o $@ \
 	    $(BUILD_DIR)/boot.o \
 	    $(BUILD_DIR)/shim.o \
 	    $(BUILD_DIR)/swiftlib.o \
+	    $(BUILD_DIR)/sprites_bin.o \
+	    --defsym=sprites_bin=_binary_sprites_bin_start \
+	    --defsym=sprites_bin_end=_binary_sprites_bin_end \
 	    $(SWIFT_RUNTIME_LIBS) \
 	    $(PSN00B_LIBS)
 

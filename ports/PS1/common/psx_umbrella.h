@@ -10,3 +10,4 @@
 #include "psxcd.h"
 #include "psxetc.h"
 #include "shim.h"
+#include "assets.h"
