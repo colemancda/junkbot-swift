@@ -36,13 +36,16 @@ public final class GameEngine: @unchecked Sendable {
   public var winLoseState: Int32 = 0
 
   // MARK: - Acceleration structures
-  /// Maps a y-coordinate to the indices of every entity whose top edge is at that y, rebuilt each
-  /// tick by `rebuildAccelerationStructures()`. Used to find what's directly above/below a
-  /// position without scanning every entity (see `Collision.swift`).
-  var entitiesByTopY: [Int32: [Int]] = [:]
-  /// Maps a y-coordinate to the indices of every entity whose bottom edge is at that y; the
-  /// counterpart to `entitiesByTopY`.
-  var entitiesByBottomY: [Int32: [Int]] = [:]
+  /// Every entity's top edge y-coordinate paired with its index, kept sorted by `y` (ascending) so
+  /// "what's at this exact y" can be found by binary search instead of scanning every entity (see
+  /// `Collision.swift`). Rebuilt each tick by `rebuildAccelerationStructures()`; a plain sorted
+  /// array rather than `[Int32: [Int]]` deliberately - a `Dictionary`-based version of this once
+  /// produced a genuine wrong-index lookup under the Embedded Swift/WASM build on a real, crowded
+  /// level (never fully root-caused; see `Tests/JunkbotCoreTests/InputTests.swift`'s
+  /// `titleScreenPyramidRepro` for the exact repro), so this avoids `Dictionary` entirely.
+  var entitiesByTopY: [(y: Int32, index: Int)] = []
+  /// The counterpart to `entitiesByTopY`, keyed by each entity's bottom edge y-coordinate instead.
+  var entitiesByBottomY: [(y: Int32, index: Int)] = []
 
   // MARK: - Input
   var mouseWorldX: Int32 = 0

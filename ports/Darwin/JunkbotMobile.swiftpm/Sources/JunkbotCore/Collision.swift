@@ -180,29 +180,29 @@ extension GameEngine {
   // sits there, so "what's directly above/below this position" (used heavily by simulation and
   // `connectsToFixed` below) doesn't need to scan every entity.
 
+  /// Inserts `index` into `sortedByY` at the position keeping it sorted by `.y`, unless an entry
+  /// for the same `(y, index)` pair is already there (mirrors the old `Dictionary` version's
+  /// dedup, which skipped re-appending an index already present in that y's bucket).
+  private func insertSortedByY(_ sortedByY: inout [(y: Int32, index: Int)], y: Int32, index: Int) {
+    let start = lowerBoundByY(sortedByY, y)
+    var i = start
+    while i < sortedByY.count, sortedByY[i].y == y {
+      if sortedByY[i].index == index { return }
+      i += 1
+    }
+    sortedByY.insert((y: y, index: index), at: start)
+  }
+
   /// Registers entity `index`'s current position in the acceleration structures. Must be called
   /// whenever an entity's `y`/`height` changes; does not remove stale entries for its old position
   /// (see `rebuildAccelerationStructures`, which is used instead whenever positions may have moved).
+  /// Callers that read these structures must re-validate the match against the live entity (as
+  /// `connectsToFixed` does) rather than trusting a looked-up index unconditionally, since a stale
+  /// entry can still be present under an entity's old y.
   func entityMoved(index: Int) {
     let e = entities[index]
-    let topY = e.y
-    let bottomY = e.y + e.height
-    if var arr = entitiesByTopY[topY] {
-      if !arr.contains(index) {
-        arr.append(index)
-        entitiesByTopY[topY] = arr
-      }
-    } else {
-      entitiesByTopY[topY] = [index]
-    }
-    if var arr = entitiesByBottomY[bottomY] {
-      if !arr.contains(index) {
-        arr.append(index)
-        entitiesByBottomY[bottomY] = arr
-      }
-    } else {
-      entitiesByBottomY[bottomY] = [index]
-    }
+    insertSortedByY(&entitiesByTopY, y: e.y, index: index)
+    insertSortedByY(&entitiesByBottomY, y: e.y + e.height, index: index)
   }
 
   /// Clears and fully rebuilds `entitiesByTopY`/`entitiesByBottomY` from the current `entities`
@@ -215,6 +215,18 @@ extension GameEngine {
     for i in 0..<entities.count {
       entityMoved(index: i)
     }
+  }
+
+  /// Every index in `sortedByY` whose `y` exactly matches `target` (a contiguous run, since the
+  /// array is sorted by `y`) - the candidate set for "what's directly above/below this position",
+  /// far smaller than every entity on a busy level.
+  private func indices(in sortedByY: [(y: Int32, index: Int)], atY target: Int32) -> ArraySlice<
+    (y: Int32, index: Int)
+  > {
+    let start = lowerBoundByY(sortedByY, target)
+    var end = start
+    while end < sortedByY.count, sortedByY[end].y == target { end += 1 }
+    return sortedByY[start..<end]
   }
 
   /// Whether entity `startIndex` is transitively supported by a `fixed` entity (or the level
@@ -235,6 +247,26 @@ extension GameEngine {
     }
     var visited: Set<Int> = []
 
+    // Candidates come from `entitiesByTopY`/`entitiesByBottomY` (narrowed to the handful of
+    // entities actually at the relevant y, not every entity on the level), but every candidate is
+    // still re-validated below (isBelow/isAbove, x-overlap) exactly as the old brute-force scan
+    // did - the acceleration structures can hold stale entries for an entity's old position (see
+    // `entityMoved`'s doc comment), so a candidate is a hint to check, never a fact to trust.
+    func candidates(from: Entity, includeBelow: Bool, includeAbove: Bool) -> [Int] {
+      var result: [Int] = []
+      if includeBelow {
+        for entry in indices(in: entitiesByTopY, atY: from.y + from.height) {
+          result.append(entry.index)
+        }
+      }
+      if includeAbove {
+        for entry in indices(in: entitiesByBottomY, atY: from.y) {
+          result.append(entry.index)
+        }
+      }
+      return result
+    }
+
     func search(fromIndex: Int) -> Bool {
       let from = entities[fromIndex]
       if let bounds = levelBounds, from.y + from.height >= bounds.y + bounds.height { return true }
@@ -243,7 +275,7 @@ extension GameEngine {
       // JS `connectsToFixed`).
       let includeBelow = fromIndex != startIndex || direction != -1
       let includeAbove = fromIndex != startIndex || direction != 1
-      for otherIdx in 0..<entities.count {
+      for otherIdx in candidates(from: from, includeBelow: includeBelow, includeAbove: includeAbove) {
         guard otherIdx != fromIndex else { continue }
         let other = entities[otherIdx]
         let isBelow = other.y == from.y + from.height  // other's top touches from's bottom
