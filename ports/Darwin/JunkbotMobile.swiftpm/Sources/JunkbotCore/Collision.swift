@@ -233,7 +233,7 @@ extension GameEngine {
       let e = entities[startIndex]
       if e.y + e.height >= bounds.y + bounds.height { return true }
     }
-    var visited: [Int] = []
+    var visited: Set<Int> = []
 
     func search(fromIndex: Int) -> Bool {
       let from = entities[fromIndex]
@@ -253,7 +253,7 @@ extension GameEngine {
         if visited.contains(otherIdx) { continue }
         if other.grabbed { continue }
         guard from.x + from.width > other.x && from.x < other.x + other.width else { continue }
-        visited.append(otherIdx)
+        visited.insert(otherIdx)
         if other.fixed { return true }
         if search(fromIndex: otherIdx) { return true }
       }
