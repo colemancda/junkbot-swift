@@ -84,7 +84,7 @@ echo "Step 1: Emitting LLVM IR..."
 "$SWIFTC" -frontend \
   -target mips-none-none-elf \
   -enable-experimental-feature Embedded \
-  -wmo -Osize \
+  -wmo -O \
   -module-name Junkbot \
   -Xcc -fmodule-map-file="$COMMON/module.modulemap" \
   -I "$COMMON" \
