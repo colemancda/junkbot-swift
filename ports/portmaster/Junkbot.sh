@@ -23,7 +23,13 @@ mkdir -p "$CONFDIR"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
-cd "$GAMEDIR/junkbot"
+# GAMEDIR is already the extracted junkbot/ data folder - PortMaster installs this
+# script's declared items (Junkbot.sh, junkbot/) directly under ports/junkbot/, it does
+# NOT nest a second junkbot/ folder inside that. `cd "$GAMEDIR/junkbot"` looked for a
+# folder that was never there, so the binary launched from the wrong cwd and its
+# executable-relative asset lookup failed - confirmed on real hardware (rg35xxh MUOS via
+# Discord), where this surfaced as "No levels found" at startup.
+cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Two binaries are bundled: junkbot-sdl3.${DEVICE_ARCH} (built against SDL3/SDL3_image/SDL3_mixer)
@@ -71,7 +77,7 @@ fi
 echo "Using $BINARY"
 
 $GPTOKEYB "$BINARY" -c "./junkbot.gptk" &
-pm_platform_helper "$GAMEDIR/junkbot/$BINARY"
+pm_platform_helper "$GAMEDIR/$BINARY"
 "./$BINARY"
 
 $ESUDO kill -9 $(pidof gptokeyb) 2>/dev/null
