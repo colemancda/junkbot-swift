@@ -356,7 +356,17 @@ struct GameLoopSimulationTests {
       }
       engine.finishLoadLevel()
       let clock = ContinuousClock()
-      return clock.measure { engine.simulateGravity() }
+      // Best-of-8: these calls are sub-millisecond, so a single sample is dominated by scheduler
+      // jitter under CPU contention (this suite runs many perf tests back-to-back) rather than the
+      // actual cost being measured - taking the minimum across repeats is standard microbenchmark
+      // practice for filtering that out, since contention/interruption can only make a sample
+      // slower than the true cost, never faster.
+      var best = Duration.seconds(1)
+      for _ in 0..<8 {
+        let d = clock.measure { engine.simulateGravity() }
+        if d < best { best = d }
+      }
+      return best
     }
     return (measure(entityCount: 20), measure(entityCount: 200))
   }
