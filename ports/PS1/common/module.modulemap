@@ -1,0 +1,48 @@
+// PSn00bSDK module map for ports/PS1.
+// Copied from ~/Developer/swift-embedded-ps1/Sources/PSn00bSDK/include/module.modulemap
+// (same PSn00bSDK install layout: psn00bsdk/include/*.h + psn00bsdk/*.a).
+
+module PSn00bSDK [system] {
+
+  module API {
+    header "psxapi.h"
+    export *
+  }
+
+  module GPU {
+    header "psxgpu.h"
+    export *
+  }
+
+  module GTE {
+    header "psxgte.h"
+    export *
+  }
+
+  module Pad {
+    header "psxpad.h"
+    export *
+  }
+
+  module SPU {
+    header "psxspu.h"
+    export *
+  }
+
+  module SIO {
+    header "psxsio.h"
+    export *
+  }
+
+  module CDROM {
+    header "psxcd.h"
+    export *
+  }
+
+  module ETC {
+    header "psxetc.h"
+    export *
+  }
+
+  export *
+}
