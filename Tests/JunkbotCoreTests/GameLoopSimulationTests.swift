@@ -227,4 +227,134 @@ struct GameLoopSimulationTests {
       "level 1's per-entity tick cost (\(level1PerEntityPerTick)as) is more than 3x level 2's (\(level2PerEntityPerTick)as) - entity count alone may not explain the gap"
     )
   }
+
+  /// Reimplements `simulate()`'s exact phase sequence (`Sources/JunkbotCore/Simulation.swift:924`)
+  /// with each phase timed separately, to isolate which specific step drives level 1's super-linear
+  /// per-entity cost found by `tickCostPerEntity` above. Calls the same internal (non-private)
+  /// `GameEngine` methods `simulate()` itself calls, via `@testable import` - no production code
+  /// changes needed to get this breakdown. Skips the drag-index ID remap (irrelevant with no
+  /// active drag in a headless perf run) and the win/lose/rewind bookkeeping (side effects only,
+  /// not costed in `simulate()` either relative to the phases below).
+  @Test("phase breakdown: which part of simulate() drives level 1's per-entity cost?")
+  func simulatePhaseBreakdown() {
+    let (level1Engine, _, _) = loadLevel(0)
+    let (level2Engine, _, _) = loadLevel(1)
+    let frameCount = 300
+
+    func measurePhases(_ engine: GameEngine) -> [String: Duration] {
+      var totals: [String: Duration] = [
+        "sortByY": .zero, "rebuildAccel": .zero, "gravity": .zero, "switches": .zero,
+        "perEntityDispatch": .zero, "removeAll": .zero, "eyebotTargeting": .zero,
+        "wasFloatingReset": .zero, "fansAndLasers": .zero, "sortByID": .zero,
+      ]
+      let clock = ContinuousClock()
+      for _ in 0..<frameCount {
+        totals["sortByY"]! += clock.measure { engine.entities.sort { $0.y > $1.y } }
+        totals["rebuildAccel"]! += clock.measure { engine.rebuildAccelerationStructures() }
+        totals["gravity"]! += clock.measure { engine.simulateGravity() }
+        totals["switches"]! += clock.measure { engine.simulateSwitches() }
+        totals["perEntityDispatch"]! += clock.measure {
+          for i in 0..<engine.entities.count {
+            let e = engine.entities[i]
+            if e.grabbed { continue }
+            switch e.type {
+            case .junkbot: engine.simulateJunkbot(index: i)
+            case .gearbot: engine.simulateGearbot(index: i)
+            case .climbbot: engine.simulateClimbbot(index: i)
+            case .flybot: engine.simulateFlybot(index: i)
+            case .eyebot: engine.doEyebotMovement(index: i)
+            case .jump: engine.simulateJump(index: i)
+            case .teleport: engine.simulateTeleport(index: i)
+            case .pipe: engine.simulatePipe(index: i)
+            case .droplet: engine.simulateDroplet(index: i)
+            case .bin where e.scaredy: engine.simulateScaredy(index: i)
+            default:
+              if engine.entities[i].animationFrame != -1 { engine.entities[i].animationFrame += 1 }
+            }
+          }
+        }
+        totals["removeAll"]! += clock.measure {
+          engine.entities.removeAll(where: { $0.removeBeforeRender })
+        }
+        totals["eyebotTargeting"]! += clock.measure {
+          for i in 0..<engine.entities.count where engine.entities[i].type == .eyebot {
+            engine.doEyebotTargeting(index: i)
+          }
+        }
+        totals["wasFloatingReset"]! += clock.measure {
+          for i in 0..<engine.entities.count {
+            engine.entities[i].wasFloating = engine.entities[i].floating
+            engine.entities[i].floating = false
+          }
+        }
+        totals["fansAndLasers"]! += clock.measure { engine.simulateFansAndLasers() }
+        totals["sortByID"]! += clock.measure { engine.entities.sort { $0.id < $1.id } }
+      }
+      return totals
+    }
+
+    let level1Phases = measurePhases(level1Engine)
+    let level2Phases = measurePhases(level2Engine)
+
+    var worstPhase = ""
+    var worstRatio = 0.0
+    for name in level1Phases.keys.sorted() {
+      let t1 = level1Phases[name]!
+      let t2 = level2Phases[name]!
+      let ratio =
+        Double(t1.components.seconds) + Double(t1.components.attoseconds) * 1e-18
+        > 0
+        ? (Double(t1.components.attoseconds) + Double(t1.components.seconds) * 1e18)
+          / max(Double(t2.components.attoseconds) + Double(t2.components.seconds) * 1e18, 1)
+        : 0
+      print("simulate() phase \(name): level1 \(t1 / frameCount)/tick, level2 \(t2 / frameCount)/tick, \(ratio)x")
+      if ratio > worstRatio {
+        worstRatio = ratio
+        worstPhase = name
+      }
+    }
+    print("Highest level1/level2 ratio phase: \(worstPhase) at \(worstRatio)x")
+
+    #expect(worstRatio > 0, "expected at least one phase to take measurable time")
+  }
+
+  /// Isolates `connectsToFixed` (`Sources/JunkbotCore/Collision.swift:231`) directly, called once
+  /// per unsettled entity inside `simulateGravity` (the phase `simulatePhaseBreakdown` above found
+  /// dominates level 1's tick cost). It has the same anti-pattern `allConnectedToFixed` had before
+  /// being fixed with a `Set` (see `Sources/JunkbotCore/Collision.swift`'s `allConnectedToFixed` and
+  /// `DragPerformanceTests.swift`): a `visited: [Int]` `Array` with O(n) `.contains`/`.append`
+  /// inside a recursive O(n)-per-node search - an unfixed instance of the same bug class, just in
+  /// a different function, and (unlike `allConnectedToFixed`, only called while dragging) called
+  /// unconditionally every tick for every unsettled entity, level 1 or not.
+  @Test("connectsToFixed cost scales worse than linearly with entity count")
+  func connectsToFixedScaling() {
+    func measure(entityCount: Int) -> Duration {
+      let engine = GameEngine()
+      engine.beginLoadLevel(0, 0, 4000, 300)
+      engine.addBrick(0, 282, 20, 5, true)  // fixed floor anchor
+      for i in 0..<entityCount {
+        // Independent, unsupported bricks stacked in a column - each triggers a full
+        // connectsToFixed search in simulateGravity while unsettled.
+        engine.addBrick(Int32(i) * 20, 0, 1, 0, false)
+      }
+      engine.finishLoadLevel()
+      let clock = ContinuousClock()
+      return clock.measure { engine.simulateGravity() }
+    }
+
+    let small = measure(entityCount: 20)
+    let large = measure(entityCount: 200)
+    let smallPerCall = Double(small.components.attoseconds) + Double(small.components.seconds) * 1e18
+    let largePerCall = Double(large.components.attoseconds) + Double(large.components.seconds) * 1e18
+    let ratio = largePerCall / max(smallPerCall, 1)
+
+    print("simulateGravity(): 20 entities -> \(small), 200 entities -> \(large) (\(ratio)x for 10x entities)")
+
+    // Linear scaling would give ~10x; anything approaching/exceeding 100x confirms super-linear
+    // (quadratic or worse) cost, matching the O(n)-per-node recursive search in connectsToFixed.
+    #expect(
+      ratio > 15,
+      "expected super-linear scaling (>15x for 10x entities) from connectsToFixed's O(n)-per-node search, got \(ratio)x"
+    )
+  }
 }
