@@ -96,7 +96,13 @@ extension GameEngine {
     filter: (Entity) -> Bool,
     excluding: Int = -1
   ) -> [(entity: Entity, index: Int)] {
+    // Reserved up front, not just for perf: this is a fresh local array on every call (unlike
+    // GameEngine's own persistent arrays, it can't rely on a one-time warm-up), so without a
+    // reserve it grows one append at a time from empty every single call. Bounded by a generous
+    // constant since the real per-level max isn't known here — see GameEngine.init()'s comment
+    // for why growth-without-reserve matters specifically on ports/PS1.
     var result: [(entity: Entity, index: Int)] = []
+    result.reserveCapacity(16)
     if let bounds = rectangleLevelBoundsCollision(x: x, y: y, width: width, height: height),
       filter(bounds)
     {
@@ -187,13 +193,20 @@ extension GameEngine {
     let e = entities[index]
     let topY = e.y
     let bottomY = e.y + e.height
+    // Not `entitiesByTopY[topY] = [index]` in the new-bucket case: that literal's capacity
+    // exactly matches its 1 element, so the next entity sharing this y (a common case - a row
+    // of bricks resting on the same floor) would immediately grow it past capacity. See
+    // AccelerationStructures.swift's groupIndicesByY for the same fix/reasoning.
     if var arr = entitiesByTopY[topY] {
       if !arr.contains(index) {
         arr.append(index)
         entitiesByTopY[topY] = arr
       }
     } else {
-      entitiesByTopY[topY] = [index]
+      var bucket: [Int] = []
+      bucket.reserveCapacity(8)
+      bucket.append(index)
+      entitiesByTopY[topY] = bucket
     }
     if var arr = entitiesByBottomY[bottomY] {
       if !arr.contains(index) {
@@ -201,7 +214,10 @@ extension GameEngine {
         entitiesByBottomY[bottomY] = arr
       }
     } else {
-      entitiesByBottomY[bottomY] = [index]
+      var bucket: [Int] = []
+      bucket.reserveCapacity(8)
+      bucket.append(index)
+      entitiesByBottomY[bottomY] = bucket
     }
   }
 
@@ -234,6 +250,7 @@ extension GameEngine {
       if e.y + e.height >= bounds.y + bounds.height { return true }
     }
     var visited: [Int] = []
+    visited.reserveCapacity(16)  // see rectangleCollisionAll's reserve comment above
 
     func search(fromIndex: Int) -> Bool {
       let from = entities[fromIndex]

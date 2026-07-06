@@ -10,6 +10,13 @@
 #include <psxsio.h>
 #include <psxapi.h>
 #include "shim.h"
+#include "assets.h"
+
+// Debug-only: a NON-inline equivalent of assets.h's `static inline
+// ps1_asset_sprites_bin()`, to test whether the `static inline` declaration
+// itself (as opposed to a normal externally-linked function) is what breaks
+// when called from a Swift global `let` initializer.
+const uint8_t *ps1_asset_sprites_bin_noninline(void) { return sprites_bin; }
 
 // ---------------------------------------------------------------------------
 // Heap: a bump allocator, NOT PSn00bSDK's InitHeap/malloc.
@@ -50,42 +57,10 @@ static void *bump_alloc(size_t size, size_t alignment) {
 void *malloc(size_t size) { return bump_alloc(size, 8); }
 void  free(void *ptr) { (void)ptr; }
 
-uint32_t debug_last_alignment;
-uint32_t debug_last_size;
-uint32_t debug_last_result_isnull;
-
-static void debug_hex(char *out, uint32_t v) {
-  static const char hex[] = "0123456789ABCDEF";
-  out[0] = '0'; out[1] = 'x';
-  for (int i = 0; i < 8; i++) out[2 + i] = hex[(v >> ((7 - i) * 4)) & 0xF];
-  out[10] = 0;
-}
-
-// Draws onto BOTH buffers (two flips) so the line stays visible on whichever
-// buffer ends up displayed if execution later hangs -- a single flip only
-// guarantees visibility on the buffer that happens to be on-screen at that
-// exact parity, which cost real time to figure out empirically.
-static void debug_line(int y, const char *label, const char *value) {
-  ps1_draw_text(8, y, label);
-  if (value) ps1_draw_text(70, y, value);
-  ps1_flip();
-  ps1_begin_frame();
-  ps1_draw_text(8, y, label);
-  if (value) ps1_draw_text(70, y, value);
-  ps1_flip();
-  ps1_begin_frame();
-}
-
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
-  debug_last_alignment = (uint32_t)alignment;
-  debug_last_size = (uint32_t)size;
-
   void *p = bump_alloc(size, alignment < sizeof(void *) ? sizeof(void *) : alignment);
-  debug_last_result_isnull = (p == NULL);
-
   if (!p) return 12; // ENOMEM
   *memptr = p;
-
   return 0;
 }
 
@@ -184,6 +159,29 @@ void ps1_begin_frame(void) {
 
 void ps1_draw_text(int x, int y, const char *text) {
   s_next = (uint8_t *)FntSort(&s_buf[s_active].ot[0], s_next, x, y, text);
+}
+
+// Debug-only (see shim.h) -- hand-rolled decimal formatting, no libc sprintf
+// dependency, so it can't itself be a new source of doubt while bisecting an
+// Array-growth bug.
+void ps1_draw_int(int x, int y, const char *label, int value) {
+  char buf[48];
+  int n = 0;
+  while (label[n] && n < 32) { buf[n] = label[n]; n++; }
+  if (value == 0) {
+    buf[n++] = '0';
+  } else {
+    char digits[12];
+    int d = 0;
+    int v = value;
+    int neg = v < 0;
+    if (neg) v = -v;
+    while (v > 0) { digits[d++] = '0' + (v % 10); v /= 10; }
+    if (neg) buf[n++] = '-';
+    while (d > 0) buf[n++] = digits[--d];
+  }
+  buf[n] = 0;
+  s_next = (uint8_t *)FntSort(&s_buf[s_active].ot[0], s_next, x, y, buf);
 }
 
 // ---------------------------------------------------------------------------

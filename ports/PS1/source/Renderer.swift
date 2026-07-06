@@ -1,9 +1,19 @@
 // ports/PS1/source/Renderer.swift — software rasterizer for the PS1's single
 // 320x240 screen, adapted directly from ports/N64/source/Renderer.swift.
 //
+// Milestone (current, per user request): statically render a hardcoded
+// viewport -- no Entity, no GameState, no simulation, no input, no audio --
+// to validate the rendering pipeline in isolation. See KNOWN_ISSUES.md
+// "Update 5" for a THIRD confirmed bug found while bisecting this: a global
+// `let` whose initializer is `UnsafeRawPointer(ptr!).assumingMemoryBound(to:)`
+// hangs forever, while the exact same expression works fine as a local
+// variable. `spritePixels` is therefore computed fresh inside
+// renderStaticViewport() every frame (cheap: one function call + a pointer
+// cast, no allocation) instead of once as a global.
+//
 // PS1 VRAM isn't CPU-addressable the way N64's memory-mapped RDRAM
 // framebuffer is -- pixels only reach the screen through a GPU DMA transfer
-// (LoadImage2). So this renders into a RAM-side UInt16 buffer
+// (LoadImage). So this renders into a RAM-side UInt16 buffer
 // (ps1_world_framebuffer(), common/shim.c) using the exact same per-pixel
 // blit algorithm N64 uses, then hands the whole frame to the GPU in one shot
 // (ps1_present_world()) before the HUD text (drawn via the ordering
@@ -15,10 +25,6 @@
 
 let screenWidth: Int32 = 320
 let screenHeight: Int32 = 240
-
-/// `sprites.bin`'s pixel data (palette indices, one byte per pixel).
-let spritePixels: UnsafePointer<UInt8> =
-  UnsafeRawPointer(ps1_asset_sprites_bin()!).assumingMemoryBound(to: UInt8.self)
 
 /// gen_assets.py's palette entries are BGR555 with bit15 forced to 1 (an N64/DS
 /// hardware "opaque" convention). PS1's native 16bpp format is the same B/G/R
@@ -40,34 +46,32 @@ func ditherSkips(x: Int32, y: Int32, alphaPercent: Int32) -> Bool {
 }
 
 func blitSprite(
-  _ cmd: RenderCommand, into buffer: UnsafeMutablePointer<UInt16>, strideElements: Int32,
-  palette: UnsafePointer<UInt16>, scrollX: Int32, scrollY: Int32
+  spriteID: Int32, x: Int32, y: Int32, alpha: Int32,
+  spritePixels: UnsafePointer<UInt8>,
+  into buffer: UnsafeMutablePointer<UInt16>, strideElements: Int32,
+  palette: UnsafePointer<UInt16>
 ) {
-  let id = Int(cmd.spriteID)
+  let id = Int(spriteID)
   guard id >= 0, id < spriteDataOffsetTable.count else { return }
   let offset = spriteDataOffsetTable[id]
   guard offset >= 0 else { return }
 
   let spriteW = spriteWidthTable[id]
   let spriteH = spriteHeightTable[id]
-  let visibleW = cmd.c > 0 ? min(spriteW, cmd.c) : spriteW
 
-  let screenX = cmd.x &- scrollX
-  let screenY = cmd.y &- scrollY
-  let x0 = max(0, screenX), y0 = max(0, screenY)
-  let x1 = min(screenWidth, screenX &+ visibleW)
-  let y1 = min(screenHeight, screenY &+ spriteH)
+  let x0 = max(0, x), y0 = max(0, y)
+  let x1 = min(screenWidth, x &+ spriteW)
+  let y1 = min(screenHeight, y &+ spriteH)
   guard x0 < x1, y0 < y1 else { return }
 
-  let alpha = cmd.a
   let src = spritePixels + Int(offset)
   var dy = y0
   while dy < y1 {
-    let srcRow = src + Int(dy &- screenY) * Int(spriteW)
+    let srcRow = src + Int(dy &- y) * Int(spriteW)
     let dstRow = buffer + Int(dy) * Int(strideElements)
     var dx = x0
     while dx < x1 {
-      let index = srcRow[Int(dx &- screenX)]
+      let index = srcRow[Int(dx &- x)]
       if index != 0,
         alpha >= 100 || !ditherSkips(x: dx, y: dy, alphaPercent: alpha)
       {
@@ -79,76 +83,52 @@ func blitSprite(
   }
 }
 
-func fillRect(
-  _ cmd: RenderCommand, into buffer: UnsafeMutablePointer<UInt16>, strideElements: Int32,
-  scrollX: Int32, scrollY: Int32
-) {
-  let rgba = UInt32(bitPattern: cmd.c)
-  let alpha = Int32((rgba & 0xFF) &* 100 / 255)
-  guard alpha > 0 else { return }
-  let r = UInt16((rgba >> 27) & 0x1F)
-  let g5 = UInt16((rgba >> 19) & 0x1F)
-  let b = UInt16((rgba >> 11) & 0x1F)
-  let color = packPS1(fromBGR555: (b << 10) | (g5 << 5) | r)
-
-  let screenX = cmd.x &- scrollX
-  let screenY = cmd.y &- scrollY
-  let x0 = max(0, screenX), y0 = max(0, screenY)
-  let x1 = min(screenWidth, screenX &+ cmd.a)
-  let y1 = min(screenHeight, screenY &+ cmd.b)
-  guard x0 < x1, y0 < y1 else { return }
-
-  var dy = y0
-  while dy < y1 {
-    let dstRow = buffer + Int(dy) * Int(strideElements)
-    var dx = x0
-    while dx < x1 {
-      if alpha >= 100 || !ditherSkips(x: dx, y: dy, alphaPercent: alpha) {
-        dstRow[Int(dx)] = color
-      }
-      dx &+= 1
-    }
-    dy &+= 1
-  }
-}
-
-var renderFrame = RenderFrame()
-
 /// Set by main.swift: draws HUD overlay text via ps1_draw_text/FntSort,
 /// called after the world raster has been handed to the GPU.
 var hudDrawHook: (() -> Void)?
 
-func renderWorld(scrollX: Int32, scrollY: Int32) {
-  gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
+func renderStaticViewport() {
+  // Computed locally every frame -- see this file's header comment for why
+  // (a global `let` with this exact initializer expression hangs on this
+  // target; the same expression as a local works fine).
+  let spritePixels: UnsafePointer<UInt8> =
+    UnsafeRawPointer(ps1_asset_sprites_bin()!).assumingMemoryBound(to: UInt8.self)
 
   let buffer = ps1_world_framebuffer()!
   let strideElements: Int32 = screenWidth
 
-  var clearBGR555: UInt16 = (14 << 10) | (17 << 5) | 18  // warm gray fallback
-  if renderFrame.backgroundCount > 0 {
-    let firstID = Int(renderFrame.commands[0].spriteID)
-    if firstID >= 0, firstID < spriteAverageColorTable.count,
-      spriteAverageColorTable[firstID] != 0
-    {
-      clearBGR555 = spriteAverageColorTable[firstID]
-    }
-  }
+  let clearBGR555: UInt16 = (14 << 10) | (17 << 5) | 18  // warm gray fallback
   let clearColor = packPS1(fromBGR555: clearBGR555)
   buffer.update(repeating: clearColor, count: Int(strideElements * screenHeight))
 
   spritePaletteTable.withUnsafeBufferPointer { paletteBuffer in
     let palette = paletteBuffer.baseAddress!
-    var index = renderFrame.backgroundCount
-    while index < renderFrame.commands.count {
-      let cmd = renderFrame.commands[index]
-      switch cmd.kind {
-      case .sprite:
-        blitSprite(cmd, into: buffer, strideElements: strideElements, palette: palette, scrollX: scrollX, scrollY: scrollY)
-      case .solidRect:
-        fillRect(cmd, into: buffer, strideElements: strideElements, scrollX: scrollX, scrollY: scrollY)
-      }
-      index += 1
-    }
+
+    // A row of 8 ground bricks, a bin, and Junkbot standing -- a
+    // representative viewport, built from literal sprite IDs/coordinates
+    // (no Entity/GameState/simulation).
+    let brickY: Int32 = 10 * CELL_H
+    blitSprite(spriteID: SpriteID.brickWhiteBase + 8, x: 0 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickRedBase + 8, x: 8 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickGreenBase + 8, x: 16 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickBlueBase + 8, x: 24 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickYellowBase + 8, x: 32 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickWhiteBase + 8, x: 40 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickRedBase + 8, x: 48 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+    blitSprite(spriteID: SpriteID.brickGreenBase + 8, x: 56 * CELL_W, y: brickY, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+
+    // Bin: entitySprite's bin case, x = e.x+4, y = e.y+e.height-h-5 (RenderList.swift).
+    let binH = spriteHeightTable[Int(SpriteID.bin)]
+    blitSprite(spriteID: SpriteID.bin, x: 50 * CELL_W + 4, y: brickY - binH - 5, alpha: 100, spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
+
+    // Junkbot standing (first walk-right keyframe); junkbotFrame's positioning:
+    // x = e.x - frame.dx, y = e.y + e.height - 1 - h - frame.dy (RenderList.swift).
+    let standFrame = junkbotAnim_walk_r[0]
+    let junkbotH = spriteHeightTable[Int(standFrame.spriteID)]
+    blitSprite(
+      spriteID: standFrame.spriteID, x: 2 * CELL_W - standFrame.dx,
+      y: brickY - 1 - junkbotH - standFrame.dy, alpha: 100,
+      spritePixels: spritePixels, into: buffer, strideElements: strideElements, palette: palette)
   }
 
   ps1_present_world()

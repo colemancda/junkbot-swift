@@ -1,4 +1,13 @@
-# Upstream bug: Array/ContiguousArray allocation passes a corrupted byte count on `mipsel-none-none-elf`
+# Upstream bugs: `Array` is broadly unreliable on `mipsel-none-none-elf`
+
+**Escalation (read this first):** what started as one narrow allocation-size bug turned out to
+be the first of at least three distinct failures across ordinary `Array` operations on this
+target — growth-past-capacity, and now confirmed **`removeAll(keepingCapacity: true)` on an
+already-empty, already-reserved array**, which should be one of the cheapest, simplest `Array`
+operations there is (no allocation, no copy, just reset a count). See "Update 2" below. At this
+point the evidence points to something systemically wrong with `Array`'s codegen on this
+backend, not a small number of isolable call sites. Treat every section below as "as
+discovered, in order" — later findings supersede earlier optimism.
 
 ## Summary
 
@@ -166,6 +175,24 @@ theory rather than a fully wrong formula.
    These are present identically in both passing and failing runs, so they're not
    correlated with this bug.
 
+## Update 3: the `-emit-ir`+`llc` "fix" below turned out to be context-sensitive, not reliable
+
+**Read this before trusting the "Update" section directly below.** A standalone, minimal
+reproduction of this bug was built in `~/Developer/swift-embedded-ps1` (`make arraytests` /
+`make arraytests-llc`, see that repo's own `KNOWN_ISSUES.md`) to isolate the exact
+`.append()`-growth shape described below (`var arr: [Int32] = []; arr.append(1); arr.append(2)`)
+with nothing else around it. In that cleaner repro, **both** `swiftc -c` and `-emit-ir`+`llc`
+hang at the same point — the `-emit-ir`+`llc` route did NOT avoid the corruption there, unlike
+in this repo's own (more complex, real-game-code) repro context where it did. So the
+`-emit-ir`+`llc` pipeline is not a dependable workaround in general; it happened to sidestep
+the corruption in this specific repo's repro context but not in a simpler one built later. This
+is now the strongest evidence that the bug is sensitive to register allocation/live-range reuse
+around the growth call site (which differs between repro contexts), not a deterministic
+per-pipeline behavior. `ports/PS1`'s `compile-swift.sh` still uses `-emit-ir`+`llc` (kept for
+consistency with `ports/N64`'s existing pattern and because it's not actively harmful), but
+don't treat it as "the fix" for this bug — see `~/Developer/swift-embedded-ps1/KNOWN_ISSUES.md`
+for the full, corrected picture and the reusable minimal repro.
+
 ## Update: `swiftc -c` (integrated codegen) vs. `-emit-ir` + `llc` (like `ports/N64`)
 
 `ports/N64` doesn't hit this bug despite being just as `Array`-heavy, and it uses a
@@ -259,3 +286,157 @@ buffers / `UnsafeMutableRawPointer`-backed manual collections is built for every
 in the hot path — a much larger, invasive change), `ports/PS1` cannot run real game logic
 beyond what's been verified so far: booting, PSn00bSDK GPU/font rendering, and heap
 allocation via `UnsafeMutableRawPointer`.
+
+## Update 2: a mitigation attempt (`reserveCapacity` everywhere) uncovered a third, more basic failure
+
+Given the growth-copy hang above only triggers when an array grows *past its current
+capacity*, the obvious mitigation was to make `Sources/JunkbotCore` (shared by every port)
+pre-`reserveCapacity` every array that starts empty and grows via `.append()` during
+simulation/input — mirroring what `Generated/JunkbotLevelData.swift`'s codegen already does
+for `entities` (`entities.reserveCapacity(120)` before any append, sized exactly per level).
+This is a legitimate perf win regardless of this bug (fewer reallocations on every port), so it
+was applied broadly:
+
+- `GameEngine.init()`: `wind`/`laserBeams`/`teleportEffects`/`draggingIndices`/`hoveredIndices`
+  (small constants), plus `entitiesByTopY`/`entitiesByBottomY` (the *dictionaries* themselves,
+  not just their bucket arrays — Dictionary's backing storage grows the same way Array's does).
+- `RenderCommand.swift`'s `RenderFrame.init()`: `commands.reserveCapacity(256)`.
+- `Collision.swift`'s `rectangleCollisionAll`/`connectsToFixed`, `Input.swift`'s
+  `possibleGrabsAt`/`findAttachedGroup`: these are fresh *local* arrays rebuilt from empty on
+  every call (can't rely on a one-time warm-up like a class's persistent arrays), so each got
+  its own `reserveCapacity` at declaration.
+- `AccelerationStructures.swift`'s `groupIndicesByY` and `Collision.swift`'s `entityMoved`:
+  both had a `dict[key, default: []].append(...)`-shaped pattern (or the equivalent
+  `dict[key] = [value]` for a brand-new key) — an array literal's capacity exactly matches its
+  element count, so a *second* entity sharing that dictionary key (e.g. two bricks resting on
+  the same floor y-coordinate — an extremely common case) would immediately need to grow past
+  it. Rewrote both to explicitly `reserveCapacity` a fresh bucket before appending.
+
+All of this is committed (it's a real, unconditional improvement for every port, confirmed via
+`swift test --filter JunkbotCoreTests`, 48/48 still passing) but **it did not fix ports/PS1
+end-to-end.** Bisecting a hand-built 10-entity test level (via the same "checkpoint" technique
+as above — a global `public var debugCheckpoint: ((Int32) -> Void)?` in GameEngine.swift,
+temporarily wired to draw+flip from `ports/PS1/source/main.swift`) traced the hang to
+`GameEngine.resetLevel()`, specifically to one of its `*.removeAll(keepingCapacity: true)`
+calls (`teleportEffects.removeAll`, in context — but see below, it's not specific to that array
+or its element type).
+
+**Isolated minimal repro:**
+
+```swift
+var a: [Int32] = []
+a.reserveCapacity(8)
+// ... draws/flips here — this point is reached fine ...
+a.removeAll(keepingCapacity: true)
+// ... never reached ...
+```
+
+This hangs identically whether `a` is `[Int32]` or `[TeleportEffect]` (ruling out
+element-type-specific codegen), on an array that is **empty** and **already has capacity** —
+there is no reallocation, no element copy, no COW divergence (nothing else holds a reference to
+the buffer). `removeAll(keepingCapacity:)` on this input should reduce to approximately
+"check `isKnownUniquelyReferenced` (true, no copy needed), set count to 0, optionally run
+element deinitializers (trivial for `Int32`)". That this hangs too means the bug is not
+isolated to the two array-growth code paths documented above — something more fundamental is
+wrong with `Array`'s (and likely `Dictionary`'s, since its storage uses the same tail-allocated
+buffer-class shape) method codegen on this `-emit-ir` + `llc` `mips1` pipeline.
+
+**Practical conclusion:** `reserveCapacity`-style mitigation is not a viable path to making
+`ports/PS1` run real `JunkbotCore` logic. It was worth doing (real perf win, ruled out the
+growth-copy bug specifically), but the surface area of "which `Array`/`Dictionary` operations
+are safe on this target" is larger and less predictable than initially hoped — each fix so far
+has uncovered a new failure a few calls later, not converged toward a working state. Further
+progress most likely requires either the upstream miscompilation(s) fixed, or (if the game
+needs to ship before that happens) `ports/PS1`-specific game-state code written against a
+hand-rolled fixed-capacity container backed directly by `UnsafeMutableRawPointer`/
+`UnsafeMutableBufferPointer` (proven reliable in this document's very first tests) instead of
+`Array`/`Dictionary` at all — which likely means a PS1-specific fork of the parts of
+`GameEngine`/`Collision`/`Input`/`RenderList` that touch these collections, not something
+achievable by patching `Sources/JunkbotCore` in place without affecting every other port.
+
+## Update 4: `InlineArray` is a confirmed viable escape hatch
+
+`~/Developer/swift-embedded-ps1`'s `Sources/ArrayTests/Main.swift` (test 7) confirms
+`InlineArray<count, Element>` (SE-0453) works correctly on this exact toolchain/target:
+fixed-size, inline storage, no heap allocation, no COW, no growth — so it never touches the
+buffer-class machinery bugs #1/#2 live in. Verified in DuckStation: literal init, subscript
+writes, subscript reads, and a full iteration all produced the correct result.
+
+This means "hand-rolled fixed-capacity container" above doesn't need to be built from raw
+`UnsafeMutableBufferPointer` manually — `InlineArray<N, Element>` plus a manually-tracked
+`count` gives the same fixed-upper-bound shape with much less unsafe code, e.g. something like:
+
+```swift
+struct FixedArray<let N: Int, Element> {
+  var storage: InlineArray<N, Element>
+  var count: Int = 0
+  mutating func append(_ e: Element) { storage[count] = e; count += 1 }
+  // iterate via `for i in 0..<count { ... storage[i] ... }`, swap-remove, etc.
+}
+```
+
+This is still a real, non-trivial fork: every `JunkbotCore` collection this port touches
+(`entities`, `wind`, `laserBeams`, `entitiesByTopY`/`entitiesByBottomY`, `RenderFrame.commands`,
+the various per-call working arrays in `Collision.swift`/`Input.swift`) would need a concrete
+maximum size chosen up front and a rewrite against this shape instead of `Array`/`Dictionary` —
+not something achievable by patching `Sources/JunkbotCore` in place without affecting every
+other port. But it's now a proven-working path rather than a hypothetical one.
+
+## Update 5: a THIRD bug, unrelated to Array entirely — global `let` pointer-cast initializers hang
+
+At the user's request, `ports/PS1` was descoped further: drop `GameState`/`GameEngine`
+entirely (temporarily) and just statically render a hardcoded viewport (literal sprite
+IDs/coordinates, no `Entity`, no simulation, no input) to validate the rendering pipeline in
+isolation. This uncovered a bug that has **nothing to do with `Array`/`Dictionary`**:
+
+```swift
+// Hangs forever as a global:
+let spritePixels: UnsafePointer<UInt8> =
+  UnsafeRawPointer(ps1_asset_sprites_bin()!).assumingMemoryBound(to: UInt8.self)
+
+// The exact same expression, as a local inside a function -- works perfectly:
+func renderStaticViewport() {
+  let spritePixels: UnsafePointer<UInt8> =
+    UnsafeRawPointer(ps1_asset_sprites_bin()!).assumingMemoryBound(to: UInt8.self)
+  // ... reads through spritePixels here are all correct ...
+}
+```
+
+**Isolation, in order:**
+1. A stub `renderWorld` with an empty body still hung — proved the bug wasn't in rendering
+   logic at all.
+2. Removing the call to `renderWorld` entirely and just calling a debug print twice in a row
+   *still* hung, as long as `GameState`/`FixedArray<64, Entity>`/`PS1RenderList.swift` were
+   present in the source directory — this looked at first like it might implicate
+   `FixedArray<64, Entity>`'s `InlineArray(repeating:)` init (a real struct-copy, unlike the
+   small `Dummy` struct already verified safe).
+3. Descoping further (removing `GameState` etc. from the build entirely, per the user's
+   request) and rebuilding from a minimal stub renderer isolated it precisely: a plain buffer
+   clear + `LoadImage` upload + flip, with zero sprite code, ran perfectly at 60 FPS. Adding
+   back sprite-table lookups (`spriteDataOffsetTable`/`spriteWidthTable`/`spriteHeightTable`)
+   alone also worked fine (confirmed via a debug color swatch). Only adding back the pixel-blit
+   loop that dereferences `spritePixels` hung.
+4. Bisecting *that* found the hang occurred on the very first access of `spritePixels` — i.e.
+   during its lazy global initialization, before any loop ran.
+5. Ruled out "lazy global init calling a real C function is broken in general": a global `let`
+   initialized by calling `ps1_world_framebuffer()` (a proven-working, non-inline C function
+   returning an already-typed `uint16_t*`, no cast needed) worked fine as a global.
+6. Ruled out "`static inline` C functions can't be called from a global initializer": added a
+   non-inline equivalent of `ps1_asset_sprites_bin()` — still hung as a global.
+7. Isolated it to the pointer-cast chain itself: `UnsafeRawPointer(ptr!).assumingMemoryBound(to:)`
+   hangs as a global initializer, but the identical expression works immediately when it's a
+   local variable instead.
+
+**Fix:** compute `spritePixels` fresh inside `renderStaticViewport()` every frame instead of
+once as a global `let`. This is cheap (one C call + a pointer cast, no allocation) and, once
+applied, produced the first successful sprite render on this port — a row of colored bricks
+and Junkbot, rendered correctly, running at a real framerate (not hanging) in DuckStation.
+
+**Practical implication:** this is a THIRD, independent codegen bug on this target, distinct
+from the two `Array`-growth bugs above. The common thread across all three is state that's
+supposed to persist across calls (an `Array`'s buffer, a lazily-initialized global) rather
+than being freshly computed on the stack every time — consistent with this backend having
+some kind of systemic issue with values that need to survive past a single expression's
+evaluation, not just `Array` specifically. **General guidance going forward for this target:**
+prefer local computation over global `let`s with non-trivial initializers wherever the cost of
+recomputing is cheap (as it is for a pointer + cast), until this is fixed upstream.

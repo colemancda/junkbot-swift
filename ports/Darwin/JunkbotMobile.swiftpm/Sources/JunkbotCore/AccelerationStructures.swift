@@ -17,8 +17,24 @@ public func groupIndicesByY(_ extents: [YExtent]) -> (byTop: [Int32: [Int]], byB
   var byTop: [Int32: [Int]] = [:]
   var byBottom: [Int32: [Int]] = [:]
   for (i, e) in extents.enumerated() {
-    byTop[e.top, default: []].append(i)
-    byBottom[e.bottom, default: []].append(i)
+    // Not `byTop[e.top, default: []].append(i)`: that shorthand's `default: []` is a fresh
+    // zero-capacity array literal every time a key is first seen, so a second entity sharing
+    // the same top/bottom y (e.g. a row of bricks resting on the same floor) immediately grows
+    // it past capacity. Reserve a small amount up front instead, so sharing a y-coordinate with
+    // a handful of other entities (the common case) never needs to reallocate. See
+    // GameEngine.init()'s reserve comment for why growth-without-reserve matters on ports/PS1.
+    if byTop[e.top] == nil {
+      var bucket: [Int] = []
+      bucket.reserveCapacity(8)
+      byTop[e.top] = bucket
+    }
+    byTop[e.top]!.append(i)
+    if byBottom[e.bottom] == nil {
+      var bucket: [Int] = []
+      bucket.reserveCapacity(8)
+      byBottom[e.bottom] = bucket
+    }
+    byBottom[e.bottom]!.append(i)
   }
   return (byTop, byBottom)
 }

@@ -53,5 +53,15 @@ public struct RenderFrame {
   /// recomputed `canRelease()` itself every animation frame.
   public var placeable: Bool = false
 
-  public init() {}
+  /// Reserves up front for the largest levels (base campaign entity counts run up to ~130;
+  /// see JunkbotLevelData.swift's per-level `entities.reserveCapacity`) plus effect overlays,
+  /// so a long-lived `RenderFrame` (every port keeps one and calls `buildRenderFrame` into it
+  /// every frame, relying on its `commands.removeAll(keepingCapacity: true)`) only ever grows
+  /// its buffer once, on the first frame, rather than repeatedly across a level's first several
+  /// frames — a real per-port perf win, and required on ports/PS1 specifically, where growing
+  /// an array beyond its current capacity hits an experimental-toolchain codegen bug on the
+  /// `mipsel-none-none-elf` target (see ports/PS1/KNOWN_ISSUES.md).
+  public init() {
+    commands.reserveCapacity(256)
+  }
 }

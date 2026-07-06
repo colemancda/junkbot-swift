@@ -26,6 +26,7 @@ extension GameEngine {
   /// even though they aren't `fixed`).
   func possibleGrabsAt(worldX: Int32, worldY: Int32) -> [Int] {
     var result: [Int] = []
+    result.reserveCapacity(16)  // see Collision.swift's rectangleCollisionAll reserve comment
     for i in 0..<entities.count {
       let e = entities[i]
       if e.fixed { continue }
@@ -49,7 +50,13 @@ extension GameEngine {
   /// (in which case the whole grab is disallowed). Index-based port of `main.swift`'s
   /// `possibleGrabsCore`/`findAttached`.
   func findAttachedGroup(startIndex: Int, direction: Int32) -> [Int]? {
-    var attached: [Int] = [startIndex]
+    // Built via reserveCapacity + append rather than the equivalent `[startIndex]` array
+    // literal: a literal's initial capacity exactly matches its element count, so the very
+    // next `.append(other)` below would immediately need to grow past it (see Collision.swift's
+    // reserve comment) — this way the first, and every subsequent, append stays within capacity.
+    var attached: [Int] = []
+    attached.reserveCapacity(16)
+    attached.append(startIndex)
 
     func walkInitialDirection(_ index: Int) -> Bool {
       for other in 0..<entities.count {

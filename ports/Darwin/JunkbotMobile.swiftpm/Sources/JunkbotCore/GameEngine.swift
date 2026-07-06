@@ -10,6 +10,7 @@
 /// (`EntityFactory.swift`), and level text I/O (`LevelText.swift`) are all declared as
 /// `extension GameEngine` methods rather than free functions, so they share its state without
 /// threading it through every call.
+
 public final class GameEngine: @unchecked Sendable {
 
   // MARK: - Entity state
@@ -140,6 +141,33 @@ public final class GameEngine: @unchecked Sendable {
       self.rngState ^= self.rngState << 5
       return Float(self.rngState & 0x7FFF_FFFF) / Float(0x7FFF_FFFF)
     }
+
+    // Pre-reserve capacity for arrays `resetLevel()` only `removeAll(keepingCapacity: true)`s
+    // (so this is a one-time cost per engine instance, not per level load): they start empty
+    // and grow one `.append()` at a time during simulation/input (see Simulation.swift's
+    // `wind.append`/`laserBeams.append`/`teleportEffects.append`, Input.swift's
+    // `draggingIndices`/`hoveredIndices`), unlike `entities`, which JunkbotLevelData.swift's
+    // generated `makeEntities()` already `reserveCapacity`s up front. Avoids the first few
+    // growth reallocations every port pays for on every fresh engine (a real, if small, cost
+    // on every native port); on ports/PS1 specifically, incremental array growth beyond an
+    // existing capacity currently hits an experimental-toolchain codegen bug on this backend's
+    // `mipsel-none-none-elf` target (see ports/PS1/KNOWN_ISSUES.md) — reserving up front avoids
+    // ever exercising that path in the first place. Bounds are generous small constants, not
+    // per-level-exact like the generated entity arrays: unlike `entities`, these don't have a
+    // codegen step that knows the real per-level maximum.
+    wind.reserveCapacity(16)
+    laserBeams.reserveCapacity(16)
+    teleportEffects.reserveCapacity(8)
+    draggingIndices.reserveCapacity(32)
+    hoveredIndices.reserveCapacity(32)
+    // Dictionary storage grows the same way Array's does (a single resizable backing buffer),
+    // so it needs the same up-front reserve, independent of the per-bucket `[Int]` arrays
+    // reserved in Collision.swift's entityMoved/AccelerationStructures.swift's groupIndicesByY:
+    // that only covers a bucket's own growth once its key exists, not the dictionary itself
+    // growing to hold a new distinct y-coordinate key. Bounded generously since the real
+    // per-level distinct-y-coordinate count isn't known here.
+    entitiesByTopY.reserveCapacity(64)
+    entitiesByBottomY.reserveCapacity(64)
   }
 
   // MARK: - Helpers

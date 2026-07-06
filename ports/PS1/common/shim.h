@@ -7,15 +7,16 @@
 
 void ps1_init_heap(void);
 
-extern uint32_t debug_last_alignment;
-extern uint32_t debug_last_size;
-extern uint32_t debug_last_result_isnull;
-
 // Render context: double-buffered DISPENV/DRAWENV + ordering table + FntSort
 // debug-font text (see swift-embedded-ps1's HelloPS1/shim.c reference).
 void ps1_init_display(void);
 void ps1_begin_frame(void);
 void ps1_draw_text(int x, int y, const char *text);
+// Debug-only: draws "<label><decimal value>" via FntPrint (which, unlike
+// ps1_draw_text/FntSort, supports printf-style formatting) -- used for
+// bisecting hangs from Swift without needing any Swift-side string/array
+// formatting code (itself a risk while debugging Array-growth bugs).
+void ps1_draw_int(int x, int y, const char *label, int value);
 void ps1_flip(void);
 
 // World framebuffer: Swift software-rasterizes the game world into this RAM
@@ -29,3 +30,5 @@ void ps1_flip(void);
 // framebuffer, PS1 pixels only reach the screen via a GPU DMA transfer).
 uint16_t *ps1_world_framebuffer(void);
 void ps1_present_world(void);
+
+const uint8_t *ps1_asset_sprites_bin_noninline(void);
