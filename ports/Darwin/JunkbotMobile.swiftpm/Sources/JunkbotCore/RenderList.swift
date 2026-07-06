@@ -35,8 +35,20 @@ extension GameEngine {
   /// Builds the complete world frame. `entitiesOverride` (the JS editor path, whose mirror is
   /// authoritative for editor-only mutations) replaces `self.entities` as the sprite source;
   /// effects/decals/mask still come from engine state.
+  ///
+  /// `visibleBounds`, if given, culls entities whose bounds don't intersect it before the
+  /// entity-sort pass below (`sortOrderForRendering`, which scales worse than linearly with
+  /// entity count - confirmed empirically to make a busy ~120-entity level noticeably slow on
+  /// the N64/DS ports, which render every frame at 60Hz regardless of how many of those entities
+  /// are actually inside their ~320x240ish viewport at once). Callers pass their current scrolled
+  /// viewport rect, expanded by their own margin for entities straddling the edge; `nil` (the
+  /// default) renders every entity unfiltered, as before - used by editing mode (the level editor
+  /// needs the whole level visible regardless of any one viewport) and any caller that hasn't
+  /// adopted culling (background/decal/effect/bounds-mask passes are unaffected either way, since
+  /// none of those scale with entity count the way the sort does).
   public func buildRenderFrame(
-    into frame: inout RenderFrame, editing: Bool, entitiesOverride: [Entity]? = nil
+    into frame: inout RenderFrame, editing: Bool, entitiesOverride: [Entity]? = nil,
+    visibleBounds: LevelBounds? = nil
   ) {
     frame.commands.removeAll(keepingCapacity: true)
 
@@ -57,7 +69,15 @@ extension GameEngine {
     frame.placeable = editing || canRelease()
 
     // 3. Entities, painter-sorted.
-    let renderEntities = entitiesOverride ?? entities
+    let allRenderEntities = entitiesOverride ?? entities
+    let renderEntities: [Entity]
+    if let vb = visibleBounds {
+      renderEntities = allRenderEntities.filter { e in
+        e.x < vb.x + vb.width && e.x + e.width > vb.x && e.y < vb.y + vb.height && e.y + e.height > vb.y
+      }
+    } else {
+      renderEntities = allRenderEntities
+    }
     var boxes: [RenderBox] = []
     boxes.reserveCapacity(renderEntities.count)
     for e in renderEntities {

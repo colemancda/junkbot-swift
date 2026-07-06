@@ -142,7 +142,15 @@ var hudDrawHook: ((UnsafeMutablePointer<UInt16>, Int32) -> Void)?
 /// Instead the screen clears to the backdrop's average color (generated per-
 /// backdrop into `spriteAverageColorTable`).
 func renderWorld(scrollX: Int32, scrollY: Int32) {
-  gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
+  // A busy level can have 100+ entities scattered across a world far larger than one 320x240
+  // screen; culling to what's actually visible (plus a margin for sprites straddling the edge)
+  // keeps buildRenderFrame's entity-sort pass cheap regardless of level size -- see that
+  // function's doc comment for why this matters specifically on the N64's software rasterizer.
+  let margin: Int32 = 64
+  let visible = LevelBounds(
+    x: scrollX - margin, y: scrollY - margin,
+    width: screenWidth + margin * 2, height: screenHeight + margin * 2)
+  gameEngine.buildRenderFrame(into: &renderFrame, editing: false, visibleBounds: visible)
 
   var width: Int32 = 0
   var height: Int32 = 0
