@@ -209,6 +209,108 @@ jobs:
         path: ports/3DS/Junkbot.3dsx
         if-no-files-found: error
 
+  n64:
+    name: Nintendo 64 (compile Swift)
+    runs-on: macos-26
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Embedded Swift has no mips-none-none-elf release or nightly toolchain
+    # (unlike ports/NDS/ports/3DS's armv5te/armv6 slices, which are in public
+    # nightly snapshots) -- this is a custom from-source build, packaged as a
+    # GitHub Release asset. See ports/N64/build.sh/compile-swift.sh for how
+    # it's used locally, and this repo's "0.1.3" release for the asset itself
+    # (re-upload swift-embedded-mac.tar.gz there, or bump the tag below, to update it).
+    #
+    # This job only does the Embedded Swift MIPS compile (compile-swift.sh's
+    # `-emit-ir` + `llc` + ELF-retag steps) -- it can't also link Junkbot.z64,
+    # since that needs libdragon's mips64-elf GCC via Docker, and GitHub-hosted
+    # macOS runners don't support Docker (no nested virtualization). Instead it
+    # uploads the compiled object + generated asset blobs + runtime archives as
+    # an artifact for the n64-rom job below (a Linux runner, where Docker works
+    # natively) to link into the final ROM.
+    - name: Download Swift toolchain (mips-none-none-elf slice)
+      run: |
+        curl -fL "https://github.com/${{ github.repository }}/releases/download/0.1.3/swift-embedded-mac.tar.gz" -o /tmp/swift-embedded-mac.tar.gz
+        mkdir -p "$HOME/swift-embedded-mac"
+        tar -xzf /tmp/swift-embedded-mac.tar.gz -C "$HOME/swift-embedded-mac" --strip-components=1
+        echo "SWIFTC=$HOME/swift-embedded-mac/bin/swift-frontend" >> "$GITHUB_ENV"
+
+    # llc (with the MIPS backend, which mainline LLVM ships by default) lowers
+    # the Embedded Swift IR to a MIPS object -- see compile-swift.sh.
+    - name: Install LLVM (llc)
+      run: |
+        brew install llvm
+        echo "LLC=$(brew --prefix llvm)/bin/llc" >> "$GITHUB_ENV"
+
+    - name: Generate build-time assets
+      run: |
+        cd ports/N64
+        python3 tools/gen_assets.py ../.. build
+        python3 tools/gen_audio.py ../.. build
+        python3 tools/gen_music.py ../.. build
+        python3 tools/gen_font.py ../.. build
+
+    - name: Compile Swift (mips-none-none-elf)
+      run: |
+        cd ports/N64
+        ./compile-swift.sh
+        test -f build/swiftlib.o
+
+    # The runtime archives Junkbot's Embedded Swift object links against --
+    # small (under 1MB total), so bundled into the same artifact as the build
+    # products rather than having the Linux job re-download the whole 131MB
+    # toolchain tarball just for these.
+    - name: Stage runtime archives
+      run: |
+        cd ports/N64
+        mkdir -p swift-libs/mips-none-none-elf
+        cp "$HOME/swift-embedded-mac/lib/swift/embedded/mips-none-none-elf/libswiftEmbeddedPlatformPOSIX.a" swift-libs/mips-none-none-elf/
+        cp "$HOME/swift-embedded-mac/lib/swift/embedded/mips-none-none-elf/libswiftExclusivitySingleThreaded.a" swift-libs/mips-none-none-elf/
+
+    - name: Upload build context for ROM linking
+      uses: actions/upload-artifact@v4
+      with:
+        name: junkbot-n64-build-context
+        path: |
+          ports/N64/build/swiftlib.o
+          ports/N64/build/*.bin
+          ports/N64/swift-libs/mips-none-none-elf/*.a
+        if-no-files-found: error
+
+  n64-rom:
+    name: Nintendo 64 (link ROM)
+    needs: n64
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download build context from the n64 job
+      uses: actions/download-artifact@v4
+      with:
+        name: junkbot-n64-build-context
+        path: ports/N64
+
+    # Docker works natively on Linux-hosted runners (unlike macOS-hosted ones),
+    # so this reuses the exact same Dockerfile/Makefile the local build does.
+    - name: Build libdragon Docker image
+      run: docker build -t junkbot-n64 ports/N64
+
+    - name: Link Junkbot.z64
+      run: |
+        cd ports/N64
+        docker run --rm -v "$(pwd):/workspace" -w /workspace junkbot-n64 make
+        test -f Junkbot.z64
+
+    - name: Upload ROM
+      uses: actions/upload-artifact@v4
+      with:
+        name: junkbot-n64
+        path: ports/N64/Junkbot.z64
+        if-no-files-found: error
+
   linux-sdl2:
     name: Linux (SDL2 port)
     runs-on: ubuntu-latest
