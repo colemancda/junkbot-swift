@@ -33,9 +33,11 @@
 # see source/Audio.swift). The top screen's bitmap font is likewise
 # pre-converted (tools/gen_font.py) from font/font.png into an ASCII-byte
 # glyph table - see source/TextRenderer.swift for why that isn't just
-# Sources/JunkbotCore/Font.swift's own API. These conversion steps shell out
-# to macOS's `afconvert`/`sips`, so (in addition to everything above) this
-# build currently requires macOS.
+# Sources/JunkbotCore/Font.swift's own API. Room backdrops are downscaled
+# (tools/gen_backdrops.py) rather than dropped entirely - see
+# source/Renderer.swift's blitBackdrop and ports/NDS/README.md. These
+# conversion steps shell out to macOS's `afconvert`/`sips`, so (in addition to
+# everything above) this build currently requires macOS.
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
@@ -124,12 +126,13 @@ CORE_SWIFT	:=	$(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_
 			$(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift))
 PORT_SWIFT	:=	$(wildcard source/*.swift)
 GEN_SWIFT	:=	$(BUILD)/SpriteAssets.swift $(BUILD)/AudioAssets.swift \
-			$(BUILD)/MusicAssets.swift $(BUILD)/FontAssets.swift
-GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin $(BUILD)/font.bin
+			$(BUILD)/MusicAssets.swift $(BUILD)/FontAssets.swift $(BUILD)/BackdropAssets.swift
+GEN_BINS	:=	$(BUILD)/sprites.bin $(BUILD)/audio.bin $(BUILD)/music.bin $(BUILD)/font.bin \
+			$(BUILD)/backdrops.bin
 
 OFILES		:=	$(BUILD)/junkbot.swift.o $(BUILD)/shim.o \
 			$(BUILD)/sprites_bin.o $(BUILD)/audio_bin.o $(BUILD)/music_bin.o \
-			$(BUILD)/font_bin.o
+			$(BUILD)/font_bin.o $(BUILD)/backdrops_bin.o
 
 ARM7_ELF	:=	$(CALICO)/bin/ds7_maine.elf
 
@@ -183,6 +186,19 @@ $(BUILD)/font.stamp: tools/gen_font.py $(REPO_ROOT)/font/font.png | $(BUILD)
 	@touch $@
 
 $(BUILD)/font.bin $(BUILD)/FontAssets.swift: $(BUILD)/font.stamp
+
+# Backdrop conversion: the five room backdrops (images/backgrounds/bkgN.png),
+# downscaled (they're only ~10 colors each, so no quality lost to indexing) ->
+# 8bpp palette-index blob + Swift offset/size/palette tables, so the bottom
+# screen can draw real (if blocky) room art instead of a flat average-color
+# clear (see source/Renderer.swift's blitBackdrop).
+$(BUILD)/backdrops.stamp: tools/gen_backdrops.py \
+		$(REPO_ROOT)/Sources/JunkbotCore/Generated/SpriteTable.swift | $(BUILD)
+	@echo generating backdrop assets
+	python3 tools/gen_backdrops.py $(REPO_ROOT) $(BUILD)
+	@touch $@
+
+$(BUILD)/backdrops.bin $(BUILD)/BackdropAssets.swift: $(BUILD)/backdrops.stamp
 
 # bin2s: asset blob -> assembly -> object
 $(BUILD)/%_bin.s: $(BUILD)/%.bin

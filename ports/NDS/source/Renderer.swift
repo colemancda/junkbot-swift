@@ -18,6 +18,13 @@ let screenHeight: Int32 = 192
 let spritePixels: UnsafePointer<UInt8> =
   nds_asset_sprites_bin()!.assumingMemoryBound(to: UInt8.self)
 
+/// `backdrops.bin`'s pixel data (palette indices, one byte per pixel) - the five room backdrops
+/// (`bkg1`...`bkg5`), downscaled at build time (`tools/gen_backdrops.py`) since the full-size
+/// artwork alone would roughly double the ARM9 image's ROM budget. Only ~10 unique colors per
+/// backdrop, so the downscale is lossless in color even though it's blocky in shape.
+let backdropPixels: UnsafePointer<UInt8> =
+  nds_asset_backdrops_bin()!.assumingMemoryBound(to: UInt8.self)
+
 /// 0xRRGGBBAA (RenderCommand.solidRect's color encoding) -> DS RGB555.
 @inline(__always)
 func rgb15(fromRGBA rgba: UInt32) -> UInt16 {
@@ -115,21 +122,86 @@ func fillRect(
 /// capacity across frames).
 var renderFrame = RenderFrame()
 
+/// Draws the current level's downscaled room backdrop (if it has embedded art - see
+/// `tools/gen_backdrops.py`), nearest-neighbor-sampled back up to `bounds`' actual size, cropped
+/// to whatever part of it the current scroll position shows. Returns `false` (nothing drawn) for
+/// a sprite ID with no embedded backdrop data, so the caller can fall back to a flat clear.
+///
+/// Scale factors are precomputed once as 24.8 fixed-point steps and then only ever *added*
+/// per pixel/row - the ARM946E-S has no hardware integer divide, so the naive per-pixel
+/// `(world - origin) * src / bounds` (a real division every one of the 49152 pixels) cost enough
+/// software-divide cycles to visibly slow the whole game down. Incremental fixed-point stepping
+/// needs only 2 divisions total (building the steps), not one per pixel.
+///
+/// (A hardware-affine-background version of this was tried and reverted - see git history/PR
+/// discussion - the BG2 scale/scroll register math came out wrong on first pass, rendering
+/// garbage; reverted to this known-good software version rather than debug PPU affine register
+/// semantics blind. Worth revisiting.)
+func blitBackdrop(
+  spriteID: Int32, bounds: LevelBounds, scrollX: Int32, scrollY: Int32,
+  into buffer: UnsafeMutablePointer<UInt16>
+) -> Bool {
+  guard spriteID >= 0, Int(spriteID) < backdropOffsetTable.count else { return false }
+  let offset = backdropOffsetTable[Int(spriteID)]
+  guard offset >= 0 else { return false }
+
+  let srcWidth = backdropWidthTable[Int(spriteID)]
+  let srcHeight = backdropHeightTable[Int(spriteID)]
+  let paletteOffset = Int(backdropPaletteOffsetTable[Int(spriteID)])
+  let src = backdropPixels + Int(offset)
+  let boundsWidth = max(bounds.width, 1)
+  let boundsHeight = max(bounds.height, 1)
+
+  // 24.8 fixed-point world-pixel -> backdrop-pixel step (the only two divisions).
+  let stepX = (srcWidth << 8) / boundsWidth
+  let stepY = (srcHeight << 8) / boundsHeight
+  let maxXFixed = (srcWidth - 1) << 8
+  let maxYFixed = (srcHeight - 1) << 8
+
+  backdropPaletteTable.withUnsafeBufferPointer { paletteBuffer in
+    let palette = paletteBuffer.baseAddress! + paletteOffset
+    var dy: Int32 = 0
+    var srcYFixed = (scrollY &- bounds.y) &* stepY
+    while dy < screenHeight {
+      let srcY = min(max(srcYFixed, 0), maxYFixed) >> 8
+      let srcRowBase = Int(srcY) * Int(srcWidth)
+      let dstRowBase = Int(dy) * Int(screenWidth)
+
+      var srcXFixed = (scrollX &- bounds.x) &* stepX
+      var dx: Int32 = 0
+      while dx < screenWidth {
+        let srcX = min(max(srcXFixed, 0), maxXFixed) >> 8
+        let index = src[srcRowBase + Int(srcX)]
+        buffer[dstRowBase + Int(dx)] = palette[Int(index)]
+        srcXFixed &+= stepX
+        dx &+= 1
+      }
+      srcYFixed &+= stepY
+      dy &+= 1
+    }
+  }
+  return true
+}
+
 /// Rebuilds the engine's command list and rasterizes it into `buffer`.
 ///
-/// The background pass (`commands[0..<backgroundCount]`, backdrop + decals) is
-/// skipped: those images live on the backgrounds sheet, which at 16bpp would
-/// exceed the DS's 4MB RAM all by itself. Instead the screen clears to the
-/// backdrop's average color (generated per-backdrop into
-/// `spriteAverageColorTable`).
+/// The background pass (`commands[0..<backgroundCount]`, backdrop + decals) mostly stays
+/// skipped: decal images live on the backgrounds sheet, which at 16bpp would exceed the DS's
+/// ROM budget all by itself. The room backdrop itself is the exception - a heavily downscaled
+/// copy is small enough to embed (`blitBackdrop` above) - so only decals fall back to nothing
+/// drawn; the screen clears to the backdrop's own average color first (covers any edge pixels
+/// `blitBackdrop`'s nearest-neighbor sampling doesn't reach, and is the fallback for a sprite ID
+/// with no embedded backdrop art at all).
 func renderWorld(
   into buffer: UnsafeMutablePointer<UInt16>, scrollX: Int32, scrollY: Int32
 ) {
   gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
 
   var clearColor: UInt16 = 0x8000 | (14 << 10) | (17 << 5) | 18  // fallback warm gray
+  var backdropSpriteID: Int32 = -1
   if renderFrame.backgroundCount > 0 {
-    let firstID = Int(renderFrame.commands[0].spriteID)
+    backdropSpriteID = renderFrame.commands[0].spriteID
+    let firstID = Int(backdropSpriteID)
     if firstID >= 0, firstID < spriteAverageColorTable.count,
       spriteAverageColorTable[firstID] != 0
     {
@@ -137,6 +209,12 @@ func renderWorld(
     }
   }
   dmaFillHalfWords(clearColor, buffer, UInt32(screenWidth * screenHeight) * 2)
+
+  if let bounds = gameEngine.levelBounds {
+    _ = blitBackdrop(
+      spriteID: backdropSpriteID, bounds: bounds, scrollX: scrollX, scrollY: scrollY,
+      into: buffer)
+  }
 
   spritePaletteTable.withUnsafeBufferPointer { paletteBuffer in
     let palette = paletteBuffer.baseAddress!
