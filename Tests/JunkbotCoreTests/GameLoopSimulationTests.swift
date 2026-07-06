@@ -153,4 +153,78 @@ struct GameLoopSimulationTests {
     let perFrame = (level1.tickSeconds + level1.renderSeconds) / 60
     #expect(perFrame < 0.005, "level 1 combined tick+render per-frame cost was \(perFrame)s")
   }
+
+  /// Isolated `tick()`-only measurement (no render call in the loop at all), at a larger frame
+  /// count for a stabler average, with the measured ratio printed so it shows up in `swift test`
+  /// output for direct before/after comparison without re-deriving it from the combined numbers.
+  @Test("tick()-only cost: level 1 vs level 2, isolated from rendering")
+  func tickOnlyCostComparison() {
+    let (level1Engine, _, _) = loadLevel(0)
+    let (level2Engine, _, _) = loadLevel(1)
+    let clock = ContinuousClock()
+    let frameCount = 300
+
+    let level1Duration = clock.measure {
+      for _ in 0..<frameCount { level1Engine.tick() }
+    }
+    let level2Duration = clock.measure {
+      for _ in 0..<frameCount { level2Engine.tick() }
+    }
+
+    let level1PerTick = level1Duration / frameCount
+    let level2PerTick = level2Duration / frameCount
+    let level1Entities = level1Engine.entities.count
+    let level2Entities = level2Engine.entities.count
+    let ratio =
+      Double(level1Duration.components.attoseconds) / Double(max(level2Duration.components.attoseconds, 1))
+
+    print(
+      "tick(): level 1 (\(level1Entities) entities) -> \(level1PerTick)/call, "
+        + "level 2 (\(level2Entities) entities) -> \(level2PerTick)/call, \(ratio)x"
+    )
+
+    #expect(level1Duration > level2Duration)
+  }
+
+  /// Normalizes tick() cost per-entity (total tick time / entity count) to check whether the
+  /// gap is explained *entirely* by entity count (ratio near 1.0, meaning simulate()'s per-entity
+  /// work is roughly linear) or whether level 1 pays a super-linear penalty beyond just having
+  /// more entities (ratio > 1.0) - e.g. from the two full `entities.sort` calls in `simulate()`
+  /// (`Sources/JunkbotCore/Simulation.swift`), which are O(n log n) rather than O(n), or from
+  /// `simulateGravity`'s `connectsToFixed` calls, which walk connected-entity chains and so can
+  /// cost more than a flat per-entity constant on a level with many stacked/adjacent bricks.
+  @Test("tick() per-entity cost: is level 1's gap fully explained by entity count alone?")
+  func tickCostPerEntity() {
+    let (level1Engine, _, _) = loadLevel(0)
+    let (level2Engine, _, _) = loadLevel(1)
+    let clock = ContinuousClock()
+    let frameCount = 300
+
+    let level1Duration = clock.measure {
+      for _ in 0..<frameCount { level1Engine.tick() }
+    }
+    let level2Duration = clock.measure {
+      for _ in 0..<frameCount { level2Engine.tick() }
+    }
+
+    let level1PerEntityPerTick =
+      Double(level1Duration.components.attoseconds) / Double(frameCount) / Double(level1Engine.entities.count)
+    let level2PerEntityPerTick =
+      Double(level2Duration.components.attoseconds) / Double(frameCount) / Double(level2Engine.entities.count)
+    let perEntityRatio = level1PerEntityPerTick / max(level2PerEntityPerTick, 1)
+
+    print(
+      "tick() per-entity-per-call: level 1 -> \(level1PerEntityPerTick)as, "
+        + "level 2 -> \(level2PerEntityPerTick)as, ratio \(perEntityRatio)x"
+    )
+
+    // A generous ceiling: some super-linear cost (sorting, connected-chain walks) is expected and
+    // fine, but a per-entity ratio blowing up far past ~3x would point at an actual algorithmic
+    // bug rather than just "more entities costs more", worth a follow-up investigation like the
+    // canRelease() one in DragPerformanceTests.swift.
+    #expect(
+      perEntityRatio < 3,
+      "level 1's per-entity tick cost (\(level1PerEntityPerTick)as) is more than 3x level 2's (\(level2PerEntityPerTick)as) - entity count alone may not explain the gap"
+    )
+  }
 }
