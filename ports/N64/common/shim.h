@@ -43,10 +43,13 @@ void n64_display_show(void);
 // --- Input -------------------------------------------------------------------
 
 // joypad_poll() plus joypad_get_buttons_held(JOYPAD_PORT_1).raw as the low 16
-// bits (0 elsewhere) -- button bit layout matches libdragon's joypad_buttons_t:
-// bit0=A bit1=B bit2=Z bit3=Start bit4=D_up bit5=D_down bit6=D_left
-// bit7=D_right bit8=Y bit9=X bit10=L bit11=R bit12=C_up bit13=C_down
-// bit14=C_left bit15=C_right. Call once per frame before the pressed/released
+// bits (0 elsewhere). Button bit layout is the REVERSE of libdragon's
+// joypad_buttons_t declaration order: this big-endian MIPS target's GCC packs
+// the first-declared bitfield member into the MOST significant bit (confirmed
+// empirically -- source/main.swift's BTN_* constants have the full story):
+// bit15=A bit14=B bit13=Z bit12=Start bit11=D_up bit10=D_down bit9=D_left
+// bit8=D_right bit7=Y bit6=X bit5=L bit4=R bit3=C_up bit2=C_down
+// bit1=C_left bit0=C_right. Call once per frame before the pressed/released
 // variants (those read the same already-polled snapshot).
 uint32_t n64_buttons_held(void);
 uint32_t n64_buttons_pressed(void);

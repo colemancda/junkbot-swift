@@ -27,18 +27,28 @@
 import CN64
 
 // Bit layout of n64_buttons_held/pressed/released (see common/shim.h).
-let BTN_A: UInt32 = 1 << 0
-let BTN_START: UInt32 = 1 << 3
-let BTN_D_UP: UInt32 = 1 << 4
-let BTN_D_DOWN: UInt32 = 1 << 5
-let BTN_D_LEFT: UInt32 = 1 << 6
-let BTN_D_RIGHT: UInt32 = 1 << 7
-let BTN_L: UInt32 = 1 << 10
-let BTN_R: UInt32 = 1 << 11
-let BTN_C_UP: UInt32 = 1 << 12
-let BTN_C_DOWN: UInt32 = 1 << 13
-let BTN_C_LEFT: UInt32 = 1 << 14
-let BTN_C_RIGHT: UInt32 = 1 << 15
+//
+// This is the REVERSE of libdragon's joypad_buttons_t declaration order
+// (a,b,z,start,d_up,d_down,d_left,d_right,y,x,l,r,c_up,c_down,c_left,c_right
+// = bit0..bit15 in *declaration* order). GCC's bitfield allocation for this
+// big-endian MIPS target packs the first-declared field into the MOST
+// significant bit, not the least -- confirmed empirically (holding the key
+// bound to the A button set bit 15, not bit 0) after DWARF debug info
+// initially (and misleadingly) suggested declaration order matched bit
+// position directly; that turned out to be a known GCC MIPS/big-endian
+// data_bit_offset quirk, not the real in-register bit layout.
+let BTN_A: UInt32 = 1 << 15
+let BTN_START: UInt32 = 1 << 12
+let BTN_D_UP: UInt32 = 1 << 11
+let BTN_D_DOWN: UInt32 = 1 << 10
+let BTN_D_LEFT: UInt32 = 1 << 9
+let BTN_D_RIGHT: UInt32 = 1 << 8
+let BTN_L: UInt32 = 1 << 5
+let BTN_R: UInt32 = 1 << 4
+let BTN_C_UP: UInt32 = 1 << 3
+let BTN_C_DOWN: UInt32 = 1 << 2
+let BTN_C_LEFT: UInt32 = 1 << 1
+let BTN_C_RIGHT: UInt32 = 1 << 0
 
 n64_init()
 
@@ -113,10 +123,10 @@ func drawHUD(into buffer: UnsafeMutablePointer<UInt16>, strideElements: Int32) {
   if winLoseLatch != 0 {
     clearRect(x: 40, y: 100, width: screenWidth - 80, height: 40, strideElements: strideElements, into: buffer)
     drawText(
-      winLoseLatch == 1 ? " *** YOU WIN! ***" : " *** TRY AGAIN ***", x: 48, y: 108, scale: 2,
+      winLoseLatch == 1 ? " *** YOU WIN! ***" : " *** TRY AGAIN ***", x: screenWidth / 2 - 130, y: 108, scale: 2,
       color: hudTextColor, strideElements: strideElements, into: buffer)
     drawText(
-      "press A to continue", x: 48, y: 124, scale: 1, color: hudTextColor,
+      "press A to continue", x: screenWidth / 2 - 90, y: 124, scale: 1, color: hudTextColor,
       strideElements: strideElements, into: buffer)
   }
 }
@@ -210,14 +220,19 @@ while true {
   if pressed & BTN_D_UP != 0 { cursorY -= CELL_H }
   if pressed & BTN_D_DOWN != 0 { cursorY += CELL_H }
 
-  // A -> engine mouse events, at the cursor's world position.
+  // A -> engine mouse events, at the cursor's world position. `aDown` folds `pressed` into the
+  // held check: libdragon's `held` snapshot lags `pressed` by one frame on this target (confirmed
+  // empirically -- `held` reads 0 for A on the exact same frame `pressed` reports it), so gating
+  // release on `held` alone released the drag one frame after every grab, before any movement
+  // could register.
+  let aDown = held & BTN_A != 0 || pressed & BTN_A != 0
   if pressed & BTN_A != 0 {
     gameEngine.mouseDown(cursorX, cursorY)
     cursorDown = true
-  } else if held & BTN_A != 0, cursorDown {
+  } else if aDown, cursorDown {
     gameEngine.mouseMove(cursorX, cursorY)
   }
-  if held & BTN_A == 0, cursorDown {
+  if !aDown, cursorDown {
     gameEngine.mouseUp(cursorX, cursorY)
     cursorDown = false
   }
