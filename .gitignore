@@ -42,6 +42,7 @@ web/Package/
 *.smdh
 *.z64
 *.o
+*.psexe
 *.bin
 *.dia
 *.d
@@ -49,6 +50,7 @@ web/Package/
 *.swiftdeps
 *.swiftmodule*
 ports/*/.build*/*
+ports/PS1/psn00bsdk/*
 
 # CocoaPods
 #
