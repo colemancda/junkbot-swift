@@ -377,6 +377,7 @@ extension GameEngine {
       if canPushCrates {
         for crate in cratesInFront {
           entities[crate.index].x += junkbot.facing * CELL_W
+          entityMoved(index: crate.index)
         }
       }
 
@@ -966,6 +967,13 @@ extension GameEngine {
     }
 
     entities.removeAll(where: { $0.removeBeforeRender })
+    // Removing entities shrinks (and re-indexes) `entities`, invalidating the acceleration
+    // structures built above (they still hold indices from before the removal) - anything below
+    // this point that queries them (doEyebotTargeting's raycast, simulateFansAndLasers) needs a
+    // fresh rebuild first, or a stale out-of-range index can slip through and crash the next
+    // `entities[i]` lookup (or, worse, silently reference the wrong entity if the stale index
+    // happens to still be in range after the shrink).
+    rebuildAccelerationStructures()
 
     for i in 0..<entities.count {
       if entities[i].type == .eyebot { doEyebotTargeting(index: i) }

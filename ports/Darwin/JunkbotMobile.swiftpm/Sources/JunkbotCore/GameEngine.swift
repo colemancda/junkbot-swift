@@ -47,6 +47,21 @@ public final class GameEngine: @unchecked Sendable {
   /// The counterpart to `entitiesByTopY`, keyed by each entity's bottom edge y-coordinate instead.
   var entitiesByBottomY: [(y: Int32, index: Int)] = []
 
+  /// A uniform spatial grid (cell size `CELL_W` x `CELL_H`, matching the game's native grid units)
+  /// covering `levelBounds` plus a padding margin, used by `rectangleCollisionTest`/
+  /// `rectangleCollisionAll`/`raycast` (`Collision.swift`) to narrow their entity scan to only the
+  /// cells a query rectangle overlaps, instead of every entity on the level. Flattened as
+  /// `collisionGrid[row * collisionGridCols + col]`; each cell holds the indices of every entity
+  /// whose bounding box overlaps it (an entity spanning multiple cells appears in all of them).
+  /// Empty (`collisionGridCols == 0`) when there's no `levelBounds` to size a grid from - callers
+  /// fall back to a full scan in that case, which only happens for a level with no declared bounds
+  /// (not used by any shipped campaign level - see `EmbeddedLevel.bounds`'s doc comment).
+  var collisionGrid: [[Int]] = []
+  var collisionGridCols: Int32 = 0
+  var collisionGridRows: Int32 = 0
+  var collisionGridOriginX: Int32 = 0
+  var collisionGridOriginY: Int32 = 0
+
   // MARK: - Input
   var mouseWorldX: Int32 = 0
   var mouseWorldY: Int32 = 0
