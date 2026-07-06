@@ -88,9 +88,21 @@ func swiftStringLiteral(_ s: String) -> String {
   return out + "\""
 }
 
+/// Widths (in studs) that actually have brick sprite art. Verified against the generated
+/// `spriteDataOffsetTable` in every port's `build/SpriteAssets.swift`: `brickWhiteBase`/
+/// `brickRedBase`/`brickYellowBase`/`brickImmobileBase` (the default/gray family used by plain
+/// fixed terrain) are all missing widths 5 and 7 (gap slots, offset -1) - only `brickGreenBase`
+/// happens to have full 1-8 coverage. A merge that lands on 5 or 7 studs for any of the gapped
+/// colors silently fails to render (the sprite ID resolves to a gap slot), which is exactly the
+/// "brick disappeared from the floor" bug this constant fixes - restricting to the widths valid
+/// for every color, not just green, since `mergeAdjacentFixedBricks` doesn't know which port's
+/// (possibly gapped) atlas it'll end up paired with.
+let validMergedBrickWidths: Set<Int32> = [1, 2, 3, 4, 6, 8]
+
 /// Merges runs of adjacent `fixed` bricks (touching x edges, same y/height/color/every-other-field)
-/// into fewer, wider single entities, up to the renderer's 8-stud sprite ceiling
-/// (`RenderList.swift`'s `entitySprite`). Busy levels build floors/walls out of many small brick
+/// into fewer, wider single entities, landing only on widths with real sprite art
+/// (`validMergedBrickWidths` above - not simply "anything up to 8", which can produce an
+/// unrenderable 5- or 7-stud brick). Busy levels build floors/walls out of many small brick
 /// segments - level 1 ("New Employee Training") has runs of 14-21 bricks sharing one y - and every
 /// per-tick simulation cost (the two full sorts, `rebuildAccelerationStructures`, and especially
 /// `simulateGravity`'s support-chain search, whose y-bucketed candidate lists are only as small as
@@ -134,7 +146,7 @@ func mergeAdjacentFixedBricks(_ entities: [Entity]) -> [Entity] {
         let current = entities[indices[runEnd]]
         let next = entities[indices[runEnd + 1]]
         guard current.x + current.width == next.x,
-          widthInStuds + next.widthInStuds <= 8
+          validMergedBrickWidths.contains(widthInStuds + next.widthInStuds)
         else { break }
         widthInStuds += next.widthInStuds
         runEnd += 1
