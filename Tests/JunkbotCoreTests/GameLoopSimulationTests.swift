@@ -332,29 +332,44 @@ struct GameLoopSimulationTests {
   /// those properties' doc comments in `GameEngine.swift` for why, given a prior WASM incident with
   /// a `Dictionary`-based version of this exact structure).
   ///
-  /// Measures `simulateGravity()`'s cost at 20 vs. 200 unsupported bricks, either all crammed into
-  /// one y row (`sameY: true`, matching level 1's actual shape - up to 18 entities share one y
-  /// there) or spread across distinct heights one-per-row (`sameY: false`, one entity per
-  /// y-bucket) - the best and worst cases for the y-bucket optimization, respectively.
-  func measureGravityScaling(sameY: Bool) -> (small: Duration, large: Duration) {
+  /// Measures `connectsToFixed(startIndex:)` called from a single "anchor" entity, alone (not the
+  /// enclosing `simulateGravity`, which also calls `entityCollisionTest`/`entityCollisionAll` -
+  /// both still full brute-force scans, see the doc comment below) at 20 vs. 200 *other* entities
+  /// present in the level.
+  ///
+  /// `busyBucket: true` places the anchor directly above a wide row of `entityCount` bricks all
+  /// sharing one y (matching level 1's actual shape - up to 18 real entities share one y there):
+  /// the anchor's upward-adjacency query lands on a single `entitiesByTopY` bucket holding every
+  /// one of them, even though only one (the one it's x-aligned with) is a genuine neighbor - an
+  /// O(n) candidate list per call regardless of the y-bucketing fix. `busyBucket: false` spreads
+  /// those same `entityCount` bricks across distinct heights instead (one per y-bucket, none of
+  /// them where the anchor is actually querying), so the anchor's query bucket stays small (O(1))
+  /// no matter how many other entities exist elsewhere in the level - the case the fix is meant for.
+  func measureConnectsToFixedScaling(busyBucket: Bool) -> (small: Duration, large: Duration) {
     func measure(entityCount: Int) -> Duration {
       let engine = GameEngine()
-      if sameY {
-        engine.beginLoadLevel(0, 0, 4000, 300)
-        engine.addBrick(0, 282, 20, 5, true)  // fixed floor anchor
+      engine.beginLoadLevel(0, 0, 8000, 8000)
+      engine.addBrick(0, 7800, 20, 5, true)  // fixed floor anchor, far from everything below
+      if busyBucket {
+        // A wide row, all sharing y=0 - the anchor above queries entitiesByTopY[18] (its own
+        // bottom edge), which every one of these shares as their top edge.
         for i in 0..<entityCount {
-          engine.addBrick(Int32(i) * 20, 0, 1, 0, false)  // one wide row, all at y=0
+          engine.addBrick(Int32(i) * 20, 0, 1, 0, false)
         }
       } else {
-        engine.beginLoadLevel(0, 0, 8000, 8000)
-        engine.addBrick(0, 7800, 20, 5, true)  // fixed floor anchor, far below the staircase
+        // Same entityCount, but spread across distinct heights far from y=0/18 - none of them
+        // land in the bucket the anchor below actually queries.
         for i in 0..<entityCount {
-          // Distinct (x, y) per brick - no two share a y, and gaps keep them from touching each
-          // other, so each is independently unsupported with its own single-entry y-bucket.
-          engine.addBrick(Int32(i) * 40, Int32(i) * 36, 1, 0, false)
+          engine.addBrick(Int32(i) * 20, Int32(i + 1) * 200, 1, 0, false)
         }
       }
+      // The anchor: one brick directly above the row/spread set at y=-18 (so its bottom edge,
+      // y=0, is exactly where the busyBucket row's top edges sit), x-aligned with only the first
+      // row entity - a realistic "one brick resting near a crowded floor" shape.
+      engine.addBrick(0, -18, 1, 0, false)
+      let anchorIndex = engine.entities.count - 1
       engine.finishLoadLevel()
+
       let clock = ContinuousClock()
       // Best-of-8: these calls are sub-millisecond, so a single sample is dominated by scheduler
       // jitter under CPU contention (this suite runs many perf tests back-to-back) rather than the
@@ -363,7 +378,7 @@ struct GameLoopSimulationTests {
       // slower than the true cost, never faster.
       var best = Duration.seconds(1)
       for _ in 0..<8 {
-        let d = clock.measure { engine.simulateGravity() }
+        let d = clock.measure { _ = engine.connectsToFixed(startIndex: anchorIndex) }
         if d < best { best = d }
       }
       return best
@@ -387,27 +402,40 @@ struct GameLoopSimulationTests {
   /// those properties' doc comments in `GameEngine.swift` for why, given a prior WASM incident with
   /// a `Dictionary`-based version of this exact structure).
   ///
-  /// Compares the two `measureGravityScaling` shapes' ratios *against each other* in a single test
-  /// run (rather than each against a fixed absolute threshold) so system-wide noise - this repo's
-  /// perf tests visibly vary run-to-run, worse under full-suite CPU contention - cancels out
-  /// instead of causing spurious failures: whatever the noise level, the y-bucket optimization
-  /// should still make the spread-out case scale better than the same-y-row case, since only the
-  /// former actually gets small per-bucket candidate lists out of it.
+  /// Compares `measureConnectsToFixedScaling`'s two bucket shapes' ratios *against each other* in a
+  /// single test run (rather than each against a fixed absolute threshold) so system-wide noise -
+  /// this repo's perf tests visibly vary run-to-run, worse under full-suite CPU contention -
+  /// cancels out instead of causing spurious failures: whatever the noise level, a query landing in
+  /// a busy bucket should scale worse than one landing in a near-empty bucket.
   ///
-  /// This is also why the fix barely moved level 1's own measured numbers: its ~120 entities are
-  /// concentrated in a handful of y rows (up to 18 sharing one y - see the real data in
-  /// `Sources/JunkbotCore/Generated/JunkbotLevelData.swift`), much closer to the same-y-row shape
-  /// than the spread-out one.
-  @Test("connectsToFixed's y-bucketing helps a spread-out layout more than a same-y-row layout")
+  /// Note this measures `connectsToFixed` in isolation, not the enclosing `simulateGravity` - that
+  /// function also calls `entityCollisionTest`/`entityCollisionAll` (`Collision.swift:122-144`,
+  /// backed by `rectangleCollisionTest`/`rectangleCollisionAll` at `Collision.swift:69-114`), both
+  /// still full unindexed `for i in 0..<entities.count` scans, unrelated to and unfixed by this
+  /// change. Those two dominate `simulateGravity`'s *total* per-entity cost regardless of this fix
+  /// (confirmed empirically: measuring `simulateGravity()` end-to-end for both bucket shapes showed
+  /// nearly identical scaling despite `connectsToFixed` alone scaling very differently between
+  /// them) - so this fix alone does NOT close level 1's overall tick-cost gap; it only fixes
+  /// `connectsToFixed`'s own contribution. `entityCollisionTest`/`entityCollisionAll` remain a
+  /// larger, separate optimization opportunity affecting general collision detection everywhere in
+  /// the engine, not just gravity.
+  ///
+  /// This is also why the fix barely moved level 1's own measured `simulateGravity`/tick numbers in
+  /// the tests above: even setting aside the other two O(n) scans (untouched regardless of bucket
+  /// shape), its ~120 entities are concentrated in a handful of y rows (up to 18 sharing one y -
+  /// see the real data in `Sources/JunkbotCore/Generated/JunkbotLevelData.swift`) that things above
+  /// or below them genuinely do query, much closer to this test's `busyBucket: true` shape than its
+  /// spread-out one.
+  @Test("connectsToFixed: a query landing in a busy y-bucket scales worse than one in a near-empty bucket")
   func connectsToFixedYBucketingHelpsSpreadLayoutMore() {
-    let sameYRatio = scalingRatio(measureGravityScaling(sameY: true))
-    let spreadYRatio = scalingRatio(measureGravityScaling(sameY: false))
+    let busyRatio = scalingRatio(measureConnectsToFixedScaling(busyBucket: true))
+    let sparseRatio = scalingRatio(measureConnectsToFixedScaling(busyBucket: false))
 
-    print("simulateGravity() scaling for 10x entities: same-y-row \(sameYRatio)x, spread-y \(spreadYRatio)x")
+    print("connectsToFixed() scaling for 10x entities: busy bucket \(busyRatio)x, sparse bucket \(sparseRatio)x")
 
     #expect(
-      spreadYRatio < sameYRatio,
-      "expected the spread-out-in-y layout (\(spreadYRatio)x) to scale better than the same-y-row layout (\(sameYRatio)x), since only the former benefits from y-bucketing"
+      sparseRatio < busyRatio,
+      "expected the sparse-bucket layout (\(sparseRatio)x) to scale better than the busy-bucket layout (\(busyRatio)x), since only a busy bucket returns an O(n) candidate list"
     )
   }
 }
