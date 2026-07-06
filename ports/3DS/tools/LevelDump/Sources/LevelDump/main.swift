@@ -93,23 +93,16 @@ var output = """
   //
   // Every campaign level (levels/_LEVEL_LISTING.txt order), pre-parsed on the
   // host through JunkbotCore's own text parser + entity bridge and frozen as
-  // entity-builder code. Load with:
+  // entity-builder code, using JunkbotCore's own `EmbeddedLevel` type
+  // (`Sources/JunkbotCore/EmbeddedLevel.swift`) rather than a local
+  // redeclaration - the 3DS build compiles this file alongside
+  // `Sources/JunkbotCore/Generated/*.swift`, which also vend `EmbeddedLevel`
+  // values, so a second same-named type here would make every use of
+  // `EmbeddedLevel` ambiguous. Load with:
   //   gameEngine.loadLevelState(entities: level.makeEntities(),
   //                             levelBounds: level.bounds, nextID: 0)
   //   gameEngine.setBackground(backdropSpriteID: level.backdropSpriteID,
-  //                            backgroundDecals: [], decals: [])
-
-  struct EmbeddedLevel {
-    let title: StaticString
-    let hint: StaticString
-    /// Int32.max = no par declared.
-    let par: Int32
-    /// nil = the level declared no explicit playfield size (no boundary).
-    let bounds: LevelBounds?
-    let backdropSpriteID: Int32
-    let makeEntities: () -> [Entity]
-  }
-
+  //                            backgroundDecals: level.backgroundDecals, decals: level.decals)
 
   """
 
@@ -165,11 +158,14 @@ for entry in entries {
         par: \(parLiteral),
         bounds: \(boundsLiteral),
         backdropSpriteID: \(backdropID),
+        backgroundDecals: [],
+        decals: [],
+        game: .junkbot,
         makeEntities: \(builder)),
     """)
 }
 
-output += "let embeddedLevels: [EmbeddedLevel] = [\n"
+output += "let levels3DS: [EmbeddedLevel] = [\n"
 output += levelLiterals.joined(separator: "\n")
 output += "\n]\n"
 

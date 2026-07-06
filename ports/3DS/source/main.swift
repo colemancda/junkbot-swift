@@ -75,7 +75,7 @@ func drawStatusLine() {
   clearRect(x: 0, y: statusLineY, width: topScreenWidth, height: fontGlyphHeight + 3)
   var x = drawText(" Moves: ", x: 6, y: statusLineY, scale: 1, color: topScreenTextColor)
   x = drawInt(gameEngine.moves, x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
-  let par = embeddedLevels[currentLevelIndex].par
+  let par = levels3DS[currentLevelIndex].par
   if par != Int32.max {
     x = drawText("  (par ", x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
     x = drawInt(par, x: x, y: statusLineY, scale: 1, color: topScreenTextColor)
@@ -90,13 +90,13 @@ func showLevelInfo() {
   var x = drawText(" JUNKBOT  LEVEL ", x: 6, y: 8, scale: 2, color: topScreenTextColor)
   x = drawInt(Int32(currentLevelIndex + 1), x: x, y: 8, scale: 2, color: topScreenTextColor)
   x = drawText("/", x: x, y: 8, scale: 2, color: topScreenTextColor)
-  drawInt(Int32(embeddedLevels.count), x: x, y: 8, scale: 2, color: topScreenTextColor)
+  drawInt(Int32(levels3DS.count), x: x, y: 8, scale: 2, color: topScreenTextColor)
 
   let afterTitle = drawWrappedText(
-    embeddedLevels[currentLevelIndex].title, x: 6, y: 32, maxWidth: topScreenWidth - 12, scale: 2,
+    levels3DS[currentLevelIndex].title, x: 6, y: 32, maxWidth: topScreenWidth - 12, scale: 2,
     color: topScreenTextColor)
   drawWrappedText(
-    embeddedLevels[currentLevelIndex].hint, x: 6, y: afterTitle + 6, maxWidth: topScreenWidth - 12,
+    levels3DS[currentLevelIndex].hint, x: 6, y: afterTitle + 6, maxWidth: topScreenWidth - 12,
     scale: 1, color: topScreenTextColor)
 
   drawText("D-PAD SCROLL  STYLUS DRAG", x: 6, y: 194, scale: 1, color: topScreenTextColor)
@@ -115,7 +115,7 @@ func loadLevel(_ index: Int) {
   currentLevelIndex = index
   // Levels are pre-parsed on the host into entity-builder code (see
   // tools/LevelDump) -- no level text exists on-device.
-  let level = embeddedLevels[index]
+  let level = levels3DS[index]
   gameEngine.loadLevelState(
     entities: level.makeEntities(), levelBounds: level.bounds, nextID: 0)
   gameEngine.setBackground(
@@ -162,7 +162,7 @@ while aptMainLoop() {
   if pressed & KEY_L != 0, currentLevelIndex > 0 {
     loadLevel(currentLevelIndex - 1)
   }
-  if pressed & KEY_R != 0, currentLevelIndex + 1 < embeddedLevels.count {
+  if pressed & KEY_R != 0, currentLevelIndex + 1 < levels3DS.count {
     loadLevel(currentLevelIndex + 1)
   }
   if pressed & KEY_START != 0 {
@@ -172,7 +172,7 @@ while aptMainLoop() {
   // Win/lose prompt: A or a fresh touch advances.
   if winLoseLatch != 0 {
     if pressed & (KEY_A | KEY_TOUCH) != 0 {
-      if winLoseLatch == 1, currentLevelIndex + 1 < embeddedLevels.count {
+      if winLoseLatch == 1, currentLevelIndex + 1 < levels3DS.count {
         loadLevel(currentLevelIndex + 1)
       } else {
         loadLevel(currentLevelIndex)
