@@ -226,6 +226,27 @@ jobs:
     - name: Build
       run: swift build --package-path ports/SDL2 -c ${{ matrix.config }} --product JunkbotSDL2
 
+  portmaster:
+    name: PortMaster (aarch64)
+    # arm64 runner so ports/portmaster's linux/arm64 Docker build runs natively - the
+    # whole pipeline (Docker image with source-built SDL2/SDL3 families, both release
+    # binaries with static Swift stdlib, port folder + zip) lives in ports/portmaster.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Build and package port
+      run: make -C ports/portmaster zip
+    - name: Verify archive contents
+      run: unzip -l ports/portmaster/.build-package/junkbot.zip | grep -E 'junkbot-sdl[23]\.aarch64|Junkbot\.sh|port\.json'
+    - name: Upload port archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: junkbot-portmaster-aarch64
+        path: ports/portmaster/.build-package/junkbot.zip
+        if-no-files-found: error
+
   macos-sdl2:
     name: macOS (SDL2 port)
     runs-on: macos-26

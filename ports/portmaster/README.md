@@ -18,30 +18,45 @@ submission needed per SDL version.
 ## Building this port
 
 This directory holds the PortMaster distribution templates (`port.json`, `gameinfo.xml`,
-`Junkbot.sh`, `junkbot.gptk`) and the `Makefile` that builds and assembles them. Run
-`make package` from here to:
-1. Build `ports/SDL3` and `ports/SDL2` in release mode.
-2. Assemble a ready-to-submit port folder at `.build-package/junkbot/` containing both release
-   binaries (`junkbot3.<arch>`, `junkbot2.<arch>`), bundled assets, and these template files.
+`Junkbot.sh`, `junkbot.gptk`), the `Dockerfile` defining the aarch64 Linux build
+environment, and the `Makefile` that builds and assembles everything. With Docker
+running, `make package` from here will:
+1. Build the Docker image (Swift 6.3 on Ubuntu jammy; both SDL families built from
+   source at pinned releases - devices supply their own SDL at runtime, the image only
+   needs them for linking).
+2. Cross-compile `ports/SDL3` and `ports/SDL2` in release mode for aarch64 Linux inside
+   the container (native-speed on Apple Silicon; Linux build products go to a separate
+   `.build-linux-aarch64` scratch dir so they never collide with host dev builds).
+3. Assemble a ready-to-submit port folder at `.build-package/junkbot/` containing both
+   release binaries (`junkbot-sdl3.aarch64`, `junkbot-sdl2.aarch64`), bundled assets, and these
+   template files.
 
-Note: this only packages binaries for the CURRENT host architecture (a dev machine, not a
-cross-compilation setup) - for a real aarch64/x86_64 Linux release, build on/for the target arch
-first, then re-run `make package`.
+`make zip` additionally produces `.build-package/junkbot.zip` (the artifact named by
+`port.json`). `make docker-build` runs just the cross-compile step.
+
+CI also builds this on every push: the `portmaster` job in
+`.github/workflows/swift.yml` runs `make zip` on GitHub's native arm64 runner
+(`ubuntu-24.04-arm`) and uploads the archive as the `junkbot-portmaster-aarch64`
+workflow artifact.
+
+The binaries statically link the Swift runtime (`--static-swift-stdlib`) so no Swift
+installation is needed on the device; glibc is still linked dynamically, hence
+`min_glibc: 2.35` (jammy's) in `port.json`. Only aarch64 is packaged for now - an x86_64
+release would need the same Docker build run on/for that platform.
 
 ## Credits
 
 - Original Junkbot game: LEGO / Media Design Interactive.
 - HTML5 remake this port is based on: Isaiah Odhner.
-- This native Swift/SDL port: TODO — your name/handle.
+- This native Swift/SDL port: colemancda.
 
 ## TODO before submitting to PortMaster
 
-- [ ] Fill in `porter` in `port.json` and this README's credits section.
 - [ ] Add a `screenshot.png` (≥640×480, 4:3, real gameplay — not the title screen).
 - [ ] Add a `cover.png` (used by `gameinfo.xml`).
-- [ ] Fill in `licenses/` with the license text for every bundled dependency (SDL2, SDL3,
-      SDL2_image, SDL3_image, SDL2_mixer, SDL3_mixer, and this project's own license) — required
-      by PortMaster's packaging guidelines and not something this scaffold can fill in for you.
+- [ ] Add this project's own license: create a top-level LICENSE file in the repo and copy
+      it to `licenses/junkbot.txt` (the SDL, PureSwift wrapper, and Swift runtime licenses
+      are already in `licenses/`).
 - [ ] Test the SDL3->SDL2 fallback logic in `Junkbot.sh` on both a device that has SDL3
       system-wide (e.g. ROCKNIX) and one that only has SDL2, to confirm the right binary gets
       picked on each - not verifiable in this dev environment.
