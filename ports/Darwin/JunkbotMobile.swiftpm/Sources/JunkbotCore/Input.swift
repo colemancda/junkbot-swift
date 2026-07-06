@@ -186,7 +186,11 @@ extension GameEngine {
 
     if draggingIndices.allSatisfy({ entities[$0].fixed }) { return true }
 
-    let connectedToFixed = allConnectedToFixed()
+    // `Set`, not the `[Int]` `allConnectedToFixed()` returns: this loop does a membership check
+    // per (dragged entity, other entity) pair, so an O(n) `Array.contains` here made the whole
+    // thing scale quadratically on top of `allConnectedToFixed()`'s own cost (see that function's
+    // doc comment, and DragPerformanceTests.swift, for the measured impact).
+    let connectedToFixed = Set(allConnectedToFixed())
     var connectsCeiling = false
     var connectsFloor = false
 

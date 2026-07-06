@@ -279,8 +279,19 @@ extension GameEngine {
   /// Index-based counterpart of `main.swift`'s `allConnectedToFixedExport`; like that function,
   /// deliberately does not exclude `grabbed` entities from the traversal itself (only callers that
   /// separately check `!grabbed` exclude them) — matches the original JS behavior exactly.
+  ///
+  /// The visited set is a `Set<Int>`, not `[Int]`: this function is recomputed every frame while
+  /// dragging (`canRelease()`, called from `RenderList.swift`'s `buildRenderFrame`), and an
+  /// `Array.contains` membership check inside a full-entity scan made the whole traversal scale
+  /// worse than quadratically (confirmed empirically - see DragPerformanceTests.swift - 200
+  /// entities took 534x longer than 20, not the ~10x linear scaling this should have). `Set`
+  /// membership is O(1), leaving the unavoidable per-node "scan every entity for vertical
+  /// adjacency" cost (still O(n) per visited node, since `entitiesByTopY`/`entitiesByBottomY`
+  /// aren't consulted here despite existing for exactly this query - a further optimization left
+  /// for later, since it'd need care to preserve the x-overlap check these dictionaries don't
+  /// capture on their own).
   func allConnectedToFixed() -> [Int] {
-    var connected: [Int] = []
+    var connected: Set<Int> = []
     func addAnyAttached(_ index: Int) {
       let e = entities[index]
       for other in 0..<entities.count {
@@ -288,15 +299,15 @@ extension GameEngine {
         let o = entities[other]
         guard e.x + e.width > o.x && e.x < o.x + o.width else { continue }
         guard o.y + o.height == e.y || e.y + e.height == o.y else { continue }
-        connected.append(other)
+        connected.insert(other)
         addAnyAttached(other)
       }
     }
     for i in 0..<entities.count where entities[i].fixed {
       guard !connected.contains(i) else { continue }
-      connected.append(i)
+      connected.insert(i)
       addAnyAttached(i)
     }
-    return connected
+    return Array(connected)
   }
 }
