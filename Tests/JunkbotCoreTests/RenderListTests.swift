@@ -285,4 +285,85 @@ struct RenderListTests {
     let windID = id("fanAir_1_1")
     #expect(fanCommands.filter { $0.spriteID == windID }.count == 6)  // 2 columns x extent 3
   }
+
+  // MARK: - visibleBounds culling (ports/N64, ports/NDS, ports/3DS's slow-hardware optimization)
+
+  @Test("visibleBounds culls entities outside it, keeps ones inside or straddling the edge")
+  func visibleBoundsCulling() {
+    // A fixed floor for entities to rest on: 20 studs wide, which is outside `entitySprite`'s
+    // 1-8-stud range for a single brick sprite (so it renders as zero sprite commands regardless
+    // of culling - this test only cares about the 3 single-stud bricks below).
+    let engine = GameEngine()
+    engine.beginLoadLevel(0, 0, 2000, 300)
+    engine.addBrick(0, 282, 20, 5, true)
+    engine.addBrick(100, 0, 1, 0, false)  // fully inside a (0,0,320,240) viewport
+    engine.addBrick(310, 0, 1, 0, false)  // straddles the right edge of a 320-wide viewport
+    engine.addBrick(1000, 0, 1, 0, false)  // far outside
+    engine.finishLoadLevel()
+
+    var culledFrame = RenderFrame()
+    let viewport = LevelBounds(x: 0, y: 0, width: 320, height: 240)
+    engine.buildRenderFrame(into: &culledFrame, editing: false, visibleBounds: viewport)
+
+    var uncutFrame = RenderFrame()
+    engine.buildRenderFrame(into: &uncutFrame, editing: false)
+
+    // All 3 single-stud bricks are present without culling (the floor renders as 0, see above).
+    #expect(spriteCommands(uncutFrame).count == 3)
+    // Culling drops exactly the far-outside brick (x:1000), keeping the fully-inside brick
+    // (x:100) and the one straddling the viewport's right edge (x:310, viewport width 320).
+    #expect(spriteCommands(culledFrame).count == 2)
+  }
+
+  @Test("visibleBounds is nil-by-default backward compatible: same output as omitting it")
+  func visibleBoundsDefaultsToUnfiltered() {
+    let engine = makeEngine()
+    engine.addBrick(100, 0, 1, 0, false)
+    engine.finishLoadLevel()
+
+    var implicitFrame = RenderFrame()
+    engine.buildRenderFrame(into: &implicitFrame, editing: false)
+    var explicitNilFrame = RenderFrame()
+    engine.buildRenderFrame(into: &explicitNilFrame, editing: false, visibleBounds: nil)
+
+    #expect(spriteCommands(implicitFrame).count == spriteCommands(explicitNilFrame).count)
+  }
+
+  @Test("visibleBounds keeps buildRenderFrame's cost from scaling with total (mostly off-screen) entity count")
+  func visibleBoundsControlsCost() {
+    func makeBusyLevel(count: Int) -> GameEngine {
+      let engine = GameEngine()
+      engine.beginLoadLevel(0, 0, Int32(count) * 100 + 1000, 300)
+      engine.addBrick(0, 282, 20, 5, true)
+      for i in 0..<count {
+        // Spread far apart so only a handful ever fall inside any one 320-wide viewport.
+        engine.addBrick(Int32(i) * 100, 0, 1, 0, false)
+      }
+      engine.finishLoadLevel()
+      return engine
+    }
+
+    let clock = ContinuousClock()
+    func avgMs(_ engine: GameEngine, viewport: LevelBounds, iterations: Int) -> Double {
+      var frame = RenderFrame()
+      let elapsed = clock.measure {
+        for _ in 0..<iterations {
+          engine.buildRenderFrame(into: &frame, editing: false, visibleBounds: viewport)
+        }
+      }
+      return (Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18)
+        / Double(iterations) * 1000
+    }
+
+    let viewport = LevelBounds(x: 0, y: 0, width: 320, height: 240)
+    let small = avgMs(makeBusyLevel(count: 20), viewport: viewport, iterations: 200)
+    let large = avgMs(makeBusyLevel(count: 200), viewport: viewport, iterations: 200)
+
+    print("buildRenderFrame() with culling: 20 total entities -> \(small)ms/call, 200 total -> \(large)ms/call (\(large / max(small, 1e-9))x for 10x)")
+
+    // With culling, cost should track the (roughly constant, small) *visible* count, not the
+    // total - generous 8x headroom for noise, nowhere near the ~67x this repo's uncontrolled
+    // sortOrderForRendering scaling measured for a genuine 10x-total-entities increase.
+    #expect(large < small * 8 + 0.001, "buildRenderFrame() with visibleBounds took \(large)ms/call at 200 total entities vs \(small)ms/call at 20 total - culling doesn't seem to be limiting cost")
+  }
 }
