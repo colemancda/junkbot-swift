@@ -131,7 +131,14 @@ let canvas = UnsafeMutablePointer<UInt16>.allocate(capacity: Int(screenWidth * s
 /// unlike the DS port, there's no RAM pressure forcing an average-color clear
 /// instead) into `canvas`, then presents it.
 func renderWorld(scrollX: Int32, scrollY: Int32) {
-  gameEngine.buildRenderFrame(into: &renderFrame, editing: false)
+  // A busy level can have 100+ entities scattered across a world far larger than one 320x240
+  // screen; culling to what's actually visible (plus a margin for sprites straddling the edge)
+  // keeps buildRenderFrame's entity-sort pass cheap regardless of level size.
+  let margin: Int32 = 64
+  let visible = LevelBounds(
+    x: scrollX - margin, y: scrollY - margin,
+    width: screenWidth + margin * 2, height: screenHeight + margin * 2)
+  gameEngine.buildRenderFrame(into: &renderFrame, editing: false, visibleBounds: visible)
 
   canvas.update(repeating: 0, count: Int(screenWidth * screenHeight))
 
