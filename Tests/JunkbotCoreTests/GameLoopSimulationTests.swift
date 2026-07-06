@@ -193,9 +193,15 @@ struct GameLoopSimulationTests {
   /// gap is explained *entirely* by entity count (ratio near 1.0, meaning simulate()'s per-entity
   /// work is roughly linear) or whether level 1 pays a super-linear penalty beyond just having
   /// more entities (ratio > 1.0) - e.g. from the two full `entities.sort` calls in `simulate()`
-  /// (`Sources/JunkbotCore/Simulation.swift`), which are O(n log n) rather than O(n), or from
-  /// `simulateGravity`'s `connectsToFixed` calls, which walk connected-entity chains and so can
-  /// cost more than a flat per-entity constant on a level with many stacked/adjacent bricks.
+  /// (`Sources/JunkbotCore/Simulation.swift`), which are O(n log n) rather than O(n).
+  ///
+  /// Historically (before `entityCollisionTest`/`entityCollisionAll` gained `collisionGrid` -
+  /// `Sources/JunkbotCore/Collision.swift`'s "Collision grid" section) this ratio measured
+  /// ~2.2-2.9x, driven by those two functions' then-brute-force scans inside `simulateGravity`/
+  /// `simulateJunkbot`/etc.; with the grid in place it typically measures ~1.7-2.5x, closer to the
+  /// ~1x a purely linear cost would give (the remaining gap being the O(n log n) sorts above and
+  /// `connectsToFixed`'s connected-chain walks in busy y-buckets, per `simulatePhaseBreakdown` and
+  /// `connectsToFixedYBucketingHelpsSpreadLayoutMore`).
   @Test("tick() per-entity cost: is level 1's gap fully explained by entity count alone?")
   func tickCostPerEntity() {
     let (level1Engine, _, _) = loadLevel(0)
@@ -334,7 +340,7 @@ struct GameLoopSimulationTests {
   ///
   /// Measures `connectsToFixed(startIndex:)` called from a single "anchor" entity, alone (not the
   /// enclosing `simulateGravity`, which also calls `entityCollisionTest`/`entityCollisionAll` -
-  /// both still full brute-force scans, see the doc comment below) at 20 vs. 200 *other* entities
+  /// now backed by a spatial grid too, see the doc comment below) at 20 vs. 200 *other* entities
   /// present in the level.
   ///
   /// `busyBucket: true` places the anchor directly above a wide row of `entityCount` bricks all
@@ -410,22 +416,16 @@ struct GameLoopSimulationTests {
   ///
   /// Note this measures `connectsToFixed` in isolation, not the enclosing `simulateGravity` - that
   /// function also calls `entityCollisionTest`/`entityCollisionAll` (`Collision.swift:122-144`,
-  /// backed by `rectangleCollisionTest`/`rectangleCollisionAll` at `Collision.swift:69-114`), both
-  /// still full unindexed `for i in 0..<entities.count` scans, unrelated to and unfixed by this
-  /// change. Those two dominate `simulateGravity`'s *total* per-entity cost regardless of this fix
-  /// (confirmed empirically: measuring `simulateGravity()` end-to-end for both bucket shapes showed
-  /// nearly identical scaling despite `connectsToFixed` alone scaling very differently between
-  /// them) - so this fix alone does NOT close level 1's overall tick-cost gap; it only fixes
-  /// `connectsToFixed`'s own contribution. `entityCollisionTest`/`entityCollisionAll` remain a
-  /// larger, separate optimization opportunity affecting general collision detection everywhere in
-  /// the engine, not just gravity.
-  ///
-  /// This is also why the fix barely moved level 1's own measured `simulateGravity`/tick numbers in
-  /// the tests above: even setting aside the other two O(n) scans (untouched regardless of bucket
-  /// shape), its ~120 entities are concentrated in a handful of y rows (up to 18 sharing one y -
-  /// see the real data in `Sources/JunkbotCore/Generated/JunkbotLevelData.swift`) that things above
-  /// or below them genuinely do query, much closer to this test's `busyBucket: true` shape than its
-  /// spread-out one.
+  /// backed by `rectangleCollisionTest`/`rectangleCollisionAll` at `Collision.swift:69-114`), which
+  /// (as a follow-up to this fix) are now backed by `collisionGrid` (`GameEngine.swift` /
+  /// `Collision.swift`'s "Collision grid" section) - a uniform `CELL_W`x`CELL_H` spatial grid, not
+  /// a `Dictionary` (same reasoning as `entitiesByTopY`/`entitiesByBottomY`), narrowing their scan
+  /// to entities near the query rectangle instead of every entity in the level. That grid fix is
+  /// what actually closed most of level 1's remaining tick-cost gap (measured ~7-9x tick() ratio
+  /// down to ~5.2x, and per-entity ratio down to ~1.75x - close to the ~3x a purely linear cost at
+  /// level 1's 3x-larger entity count would give); this test's `connectsToFixed`-only measurement
+  /// predates that follow-up and is kept as a narrower, more targeted characterization of just the
+  /// y-bucketing piece.
   @Test("connectsToFixed: a query landing in a busy y-bucket scales worse than one in a near-empty bucket")
   func connectsToFixedYBucketingHelpsSpreadLayoutMore() {
     let busyRatio = scalingRatio(measureConnectsToFixedScaling(busyBucket: true))
