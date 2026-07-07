@@ -1,5 +1,10 @@
 import JunkbotCore
 import SceneKit
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// Drives the live 3D play-mode view: a *persistent* `SCNScene` kept in sync with
 /// `GameEngine.entities` every tick, unlike the offline `tools/Junkbot3D` preview (which rebuilds
@@ -37,6 +42,18 @@ final class Scene3DManager {
   /// scene file every time an entity of that type appears.
   private var modelCache: [String: SCNNode] = [:]
 
+  /// The level backdrop image (`RenderList.swift`'s `backdropSpriteID`, drawn as a 2D sprite at
+  /// world `(-6, -25)` in the 2D path) as a flat plane, added directly to `scene.rootNode` -
+  /// *not* `worldNode` - so it isn't pushed sideways by `worldNode`'s oblique-shear transform: that
+  /// shear only displaces a child node by its own local z times the shear factor, and every entity
+  /// sits at local z=0 (only their baked geometry has nonzero-z depth, which *is* shear-displaced,
+  /// giving bricks their slanted-side look) - so keeping this flat backdrop unsheared at the same
+  /// z=0-equivalent x/y still lines up with the (also effectively unshifted) entities in front of
+  /// it, just sitting behind them at very negative z. Since the camera is a straight orthographic
+  /// projection, that z difference alone doesn't affect x/y screen position.
+  private let backdropNode = SCNNode()
+  private var loadedBackdropSpriteID: Int32 = -1
+
   init() {
     let camera = SCNCamera()
     camera.usesOrthographicProjection = true
@@ -61,6 +78,7 @@ final class Scene3DManager {
       m31: szx, m32: szy, m33: 1, m34: 0,
       m41: 0, m42: 0, m43: 0, m44: 1)
     scene.rootNode.addChildNode(worldNode)
+    scene.rootNode.addChildNode(backdropNode)
 
     let ambient = SCNLight()
     ambient.type = .ambient
@@ -131,6 +149,46 @@ final class Scene3DManager {
     nodesByEntityID.removeAll()
   }
 
+  /// Loads (if not already, or if the level's backdrop changed) `spriteID`'s PNG as
+  /// `backdropNode`'s plane texture, sized to the image's own pixel dimensions - matching
+  /// `RenderList.swift`'s 2D backdrop command, which draws that same PNG at its native size
+  /// rather than scaling it to the level bounds.
+  private func loadBackdropIfNeeded(spriteID: Int32) {
+    guard spriteID != loadedBackdropSpriteID else { return }
+    loadedBackdropSpriteID = spriteID
+    backdropNode.geometry = nil
+    guard spriteID >= 0, spriteID < spriteNameTable.count else { return }
+    let staticName = spriteNameTable[Int(spriteID)]
+    let name = staticName.withUTF8Buffer { String(decoding: $0, as: UTF8.self) }
+    guard !name.isEmpty else { return }
+    let directories = [backgroundsDirectory, backgroundsUndercoverDirectory, spritesDirectory]
+    var image: Any?
+    for directory in directories {
+      let path = directory.appendingPathComponent("\(name).png").path
+      guard FileManager.default.fileExists(atPath: path) else { continue }
+      #if canImport(UIKit)
+      image = UIImage(contentsOfFile: path)
+      #else
+      image = NSImage(contentsOfFile: path)
+      #endif
+      if image != nil { break }
+    }
+    guard let loadedImage = image else { return }
+    #if canImport(UIKit)
+    let size = (loadedImage as! UIImage).size
+    #else
+    let size = (loadedImage as! NSImage).size
+    #endif
+    guard size.width > 0, size.height > 0 else { return }
+    let plane = SCNPlane(width: size.width, height: size.height)
+    let material = SCNMaterial()
+    material.diffuse.contents = loadedImage
+    material.lightingModel = .constant
+    material.isDoubleSided = true
+    plane.materials = [material]
+    backdropNode.geometry = plane
+  }
+
   /// Adds nodes for new entities, updates position/facing for existing ones, and removes nodes
   /// for entities that disappeared (collected bins, popped droplets, etc.) - cheap enough to call
   /// every tick.
@@ -164,55 +222,48 @@ final class Scene3DManager {
 
   /// Frames the camera straight-on (looking down -z at the z=0 plane every entity's *unsheared*
   /// position sits on - the angled look comes from `worldNode`'s oblique-shear transform in
-  /// `init`, not from tilting the camera), with `orthographicScale` fit to the *live* `SCNView`
-  /// aspect ratio the same way the 2D path's `SKScene` (`.aspectFit`) fits the level's logical size
-  /// into the window. Matching this scale exactly (rather than an aspect-agnostic
-  /// `spanX/spanY * constant` heuristic) is what keeps the visible 3D geometry lined up with the 2D
-  /// mouse-drag hit-testing (`GameInput.swift`, `JunkbotCore/Input.swift` - unaware of 3D, works
-  /// purely in world pixel coordinates): the earlier misalignment bug traced to that scale
-  /// heuristic, not to the angled look itself, which is why the angle now comes from shearing the
-  /// content instead of the camera. Call once per level load and whenever the view resizes.
-  func frameCamera(entities: [Entity], bounds: LevelBounds?) {
-    var minX = CGFloat.greatestFiniteMagnitude
-    var minY = CGFloat.greatestFiniteMagnitude
-    var maxX = -CGFloat.greatestFiniteMagnitude
-    var maxY = -CGFloat.greatestFiniteMagnitude
-    if let b = bounds {
-      minX = CGFloat(b.x)
-      minY = CGFloat(b.y)
-      maxX = CGFloat(b.x + b.width)
-      maxY = CGFloat(b.y + b.height)
-    } else {
-      for e in entities {
-        minX = min(minX, CGFloat(e.x))
-        minY = min(minY, CGFloat(e.y))
-        maxX = max(maxX, CGFloat(e.x + e.width))
-        maxY = max(maxY, CGFloat(e.y + e.height))
-      }
-      if minX > maxX {
-        minX = 0
-        minY = 0
-        maxX = 100
-        maxY = 100
-      }
-    }
-    let cx = (minX + maxX) / 2
-    let cy = -(minY + maxY) / 2
-    let spanX = maxX - minX
-    let spanY = maxY - minY
-
-    // Fit `spanX` x `spanY` into the view the same way `.aspectFit` fits the SKScene into the
-    // window: fit to whichever axis is the limiting one, so nothing gets cropped and the other
-    // axis gets extra (letterboxed) space - never a flat, aspect-agnostic scale constant.
-    let viewBounds = scnView?.bounds ?? CGRect(x: 0, y: 0, width: spanX, height: spanY)
+  /// `init`, not from tilting the camera), tracking the *same* scrolling camera the 2D path uses
+  /// (`cameraCenterX`/`cameraCenterY`/`cameraScale`, `windowWidth`/`windowHeight` - see
+  /// `GameShell.swift`) rather than fitting the whole level's bounds into view: the level can be
+  /// larger than one screen (the 2D camera pans/follows Junkbot within it, per `updateCamera()`),
+  /// so framing the *entire* level here instead would show a completely different, non-scrolling
+  /// crop than the 2D path's at any given moment - which is what made entities appear to have
+  /// "jumped" to the wrong place even though each position was individually correct. `windowWidth`/
+  /// `windowHeight` (divided by `cameraScale`) is the world-unit span the 2D logical canvas shows
+  /// before `SKView`'s `.aspectFit` scales that canvas onto the real window - `orthographicScale`
+  /// is fit to the *live* `SCNView` aspect ratio the same way, so the two paths still agree on
+  /// what the limiting axis/letterboxing is even if the real window's aspect ratio doesn't match
+  /// the logical canvas's. Call every tick while the 3D scene is active (like `sync(entities:)`),
+  /// not just on level load - the 2D camera moves continuously as Junkbot walks.
+  func syncCamera() {
+    let canvasW = CGFloat(windowWidth) / CGFloat(cameraScale)
+    let canvasH = CGFloat(windowHeight) / CGFloat(cameraScale)
+    let viewBounds = scnView?.bounds ?? CGRect(x: 0, y: 0, width: canvasW, height: canvasH)
     let viewAspect = viewBounds.height > 0 ? viewBounds.width / viewBounds.height : 1
-    let levelAspect = spanY > 0 ? spanX / spanY : 1
+    let canvasAspect = canvasH > 0 ? canvasW / canvasH : 1
     let halfHeight: CGFloat =
-      viewAspect >= levelAspect ? spanY / 2 : (spanX / 2) / viewAspect
+      viewAspect >= canvasAspect ? canvasH / 2 : (canvasW / 2) / viewAspect
     cameraNode.camera?.orthographicScale = Double(halfHeight)
 
+    let cx = CGFloat(cameraCenterX)
+    let cy = -CGFloat(cameraCenterY)
     cameraNode.position = SCNVector3(cx, cy, 1000)
     cameraNode.look(at: SCNVector3(cx, cy, 0))
+  }
+
+  /// (Re)loads and positions the level backdrop - call once per level load (`reset()`'s
+  /// companion), not every tick: unlike the camera, the backdrop's own world position never
+  /// moves, only the (separately-tracked) camera pans over it.
+  func loadBackdrop(spriteID: Int32) {
+    loadBackdropIfNeeded(spriteID: spriteID)
+    guard let plane = backdropNode.geometry as? SCNPlane else { return }
+    // Matches `RenderList.swift`'s `.sprite(backdropSpriteID, x: -6, y: -25)`: that command draws
+    // the image's top-left corner at world `(-6, -25)`, so its center is offset by half its own
+    // size from there. Flip y and push far behind the entities (very negative z) - see
+    // `backdropNode`'s doc comment for why this stays unsheared and still lines up.
+    let bx = -6 + plane.width / 2
+    let by = -(-25 + plane.height / 2)
+    backdropNode.position = SCNVector3(bx, by, -500)
   }
 }
 
