@@ -1,7 +1,7 @@
 #if os(macOS)
 import Cocoa
 import SpriteKit
-import SceneKit
+import MetalKit
 import JunkbotCore
 
 /// macOS-only: creates the window/`SKView`/`JunkbotScene`. Not shared with iOS/tvOS - see
@@ -67,22 +67,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // actually running fullscreen with no other visible windows - neither alone is enough.
     window.collectionBehavior.insert(.fullScreenPrimary)
 
-    // A container hosting both an `SCNView` (the live 3D play-mode scene, behind, hidden by
+    // A container hosting both an `MTKView` (the live 3D play-mode scene, behind, hidden by
     // default) and the `SKView` (on top always - it owns input handling and draws menu chrome/HUD
-    // even in 3D mode) - see `Scene3DManager.swift`'s doc comment and `GameViewController.swift`'s
-    // identical iOS/tvOS setup.
+    // even in 3D mode) - see `Metal3DManager.swift`'s doc comment (macOS renders 3D mode via
+    // Metal, not SceneKit - `GameViewController.swift`'s iOS/tvOS setup is unaffected and still
+    // uses `SCNView`/`Scene3DManager`).
     let container = NSView(frame: contentRect)
     container.autoresizingMask = [.width, .height]
 
-    let newSCNView = SCNView(frame: contentRect)
-    newSCNView.autoresizingMask = [.width, .height]
-    newSCNView.scene = scene3DManager.scene
-    newSCNView.pointOfView = scene3DManager.cameraNode
-    newSCNView.isHidden = true
-    newSCNView.wantsLayer = true
-    newSCNView.layer?.backgroundColor = NSColor.black.cgColor
-    container.addSubview(newSCNView)
-    scnView = newSCNView
+    let newMTKView = MTKView(frame: contentRect)
+    newMTKView.autoresizingMask = [.width, .height]
+    if let manager = metal3DManager {
+      manager.attach(to: newMTKView)
+    }
+    newMTKView.isHidden = true
+    newMTKView.wantsLayer = true
+    newMTKView.layer?.backgroundColor = NSColor.black.cgColor
+    container.addSubview(newMTKView)
+    metalView = newMTKView
 
     let view = SKView(frame: contentRect)
     view.ignoresSiblingOrder = true

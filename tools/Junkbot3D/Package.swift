@@ -24,6 +24,7 @@ let package = Package(
         .product(name: "JunkbotCore", package: "junkbot-swift"),
         .product(name: "LegoDrawFile", package: "swift-lego-draw"),
         .product(name: "LDrawSceneKit", package: "swift-lego-draw"),
+        .product(name: "LDrawMetal", package: "swift-lego-draw"),
       ]
     )
   ]

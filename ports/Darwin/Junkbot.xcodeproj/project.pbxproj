@@ -12,6 +12,13 @@
 		18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
 		F193E8C43421473AA812D204 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695D2BA05B7E4901AEB92654 /* Settings.swift */; };
 		253CB04789F0419D90D69A84 /* Scene3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6971E52DCF7400899B0F05E /* Scene3DManager.swift */; };
+		ED16F666190E41AC8930B97E /* Metal3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17173D7B480D4063879050D4 /* Metal3DManager.swift */; };
+		82579FD0777B4A49BF605624 /* Metal3DModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */; };
+		A7DD56338AD94A30ABA188BE /* Metal3DBrickGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */; };
+		DF8A0B26AC2C4A258FBDC258 /* Metal3DMatrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAF47E2EF09B4E688BE101E9 /* Metal3DMatrix.swift */; };
+		710CCA359A9E4E1EBFD23B78 /* Metal3DPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05199B95D7764EF194AB2B23 /* Metal3DPalette.swift */; };
+		261FABDECA8B47649D0E452E /* Metal3DSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AB2307E117477BA1D68245 /* Metal3DSpace.swift */; };
+		1309F7A16F1741F2903F299D /* Metal3DShaderSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63063F5CB94040F28DEFAEFA /* Metal3DShaderSource.swift */; };
 		095DB626A58C47FA9AA839BE /* Scene3DSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = F229141792E140B1A0446AA6 /* Scene3DSpace.swift */; };
 		659BA85DF9884405BD050DA8 /* Scene3DPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */; };
 		E079C9B3183544E7B19B645B /* Scene3DEdgeOutline.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */; };
@@ -68,6 +75,13 @@
 		0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		695D2BA05B7E4901AEB92654 /* Settings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		A6971E52DCF7400899B0F05E /* Scene3DManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DManager.swift; sourceTree = "<group>"; };
+		17173D7B480D4063879050D4 /* Metal3DManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DManager.swift; sourceTree = "<group>"; };
+		C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DModel.swift; sourceTree = "<group>"; };
+		9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DBrickGeometry.swift; sourceTree = "<group>"; };
+		EAF47E2EF09B4E688BE101E9 /* Metal3DMatrix.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DMatrix.swift; sourceTree = "<group>"; };
+		05199B95D7764EF194AB2B23 /* Metal3DPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DPalette.swift; sourceTree = "<group>"; };
+		C3AB2307E117477BA1D68245 /* Metal3DSpace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DSpace.swift; sourceTree = "<group>"; };
+		63063F5CB94040F28DEFAEFA /* Metal3DShaderSource.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DShaderSource.swift; sourceTree = "<group>"; };
 		F229141792E140B1A0446AA6 /* Scene3DSpace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DSpace.swift; sourceTree = "<group>"; };
 		6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DPalette.swift; sourceTree = "<group>"; };
 		CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DEdgeOutline.swift; sourceTree = "<group>"; };
@@ -180,6 +194,13 @@
 				0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */,
 				695D2BA05B7E4901AEB92654 /* Settings.swift */,
 				A6971E52DCF7400899B0F05E /* Scene3DManager.swift */,
+				17173D7B480D4063879050D4 /* Metal3DManager.swift */,
+				C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */,
+				9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */,
+				EAF47E2EF09B4E688BE101E9 /* Metal3DMatrix.swift */,
+				05199B95D7764EF194AB2B23 /* Metal3DPalette.swift */,
+				C3AB2307E117477BA1D68245 /* Metal3DSpace.swift */,
+				63063F5CB94040F28DEFAEFA /* Metal3DShaderSource.swift */,
 				F229141792E140B1A0446AA6 /* Scene3DSpace.swift */,
 				6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */,
 				CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */,
@@ -393,6 +414,13 @@
 				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
 				F193E8C43421473AA812D204 /* Settings.swift in Sources */,
 				253CB04789F0419D90D69A84 /* Scene3DManager.swift in Sources */,
+				ED16F666190E41AC8930B97E /* Metal3DManager.swift in Sources */,
+				82579FD0777B4A49BF605624 /* Metal3DModel.swift in Sources */,
+				A7DD56338AD94A30ABA188BE /* Metal3DBrickGeometry.swift in Sources */,
+				DF8A0B26AC2C4A258FBDC258 /* Metal3DMatrix.swift in Sources */,
+				710CCA359A9E4E1EBFD23B78 /* Metal3DPalette.swift in Sources */,
+				261FABDECA8B47649D0E452E /* Metal3DSpace.swift in Sources */,
+				1309F7A16F1741F2903F299D /* Metal3DShaderSource.swift in Sources */,
 				095DB626A58C47FA9AA839BE /* Scene3DSpace.swift in Sources */,
 				659BA85DF9884405BD050DA8 /* Scene3DPalette.swift in Sources */,
 				E079C9B3183544E7B19B645B /* Scene3DEdgeOutline.swift in Sources */,

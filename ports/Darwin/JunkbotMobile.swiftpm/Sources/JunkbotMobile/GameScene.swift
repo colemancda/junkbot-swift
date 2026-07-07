@@ -78,16 +78,32 @@ final class JunkbotScene: SKScene {
     let scene3DShouldBeActive = Settings.render3DEnabled && currentScreen == .playing
     if scene3DShouldBeActive != scene3DWasActive {
       scene3DWasActive = scene3DShouldBeActive
+      // macOS renders 3D mode via `Metal3DManager` (`Metal3DManager.swift`) instead of
+      // `Scene3DManager`/SceneKit - see that file's doc comment. iOS/tvOS are unaffected, still on
+      // the SceneKit path.
+      #if os(macOS)
+      metalView?.isHidden = !scene3DShouldBeActive
+      if scene3DShouldBeActive {
+        metal3DManager?.reset()
+        metal3DManager?.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
+      }
+      #else
       scnView?.isHidden = !scene3DShouldBeActive
       if scene3DShouldBeActive {
         scene3DManager.reset()
         scene3DManager.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
       }
+      #endif
     }
     suppressWorldSpriteDrawing = scene3DShouldBeActive
     if scene3DShouldBeActive {
+      #if os(macOS)
+      metal3DManager?.sync(entities: gameEngine.entities)
+      metal3DManager?.syncCamera()
+      #else
       scene3DManager.sync(entities: gameEngine.entities)
       scene3DManager.syncCamera()
+      #endif
     }
 
     render()

@@ -88,6 +88,28 @@ if CommandLine.arguments.count == 4, CommandLine.arguments[2] == "--bake-all" {
       continue
     }
     print("Junkbot3D: baked \(entry.name).scn")
+
+    // Metal counterpart of the same bake: flattened triangle data (no SceneKit), for the live
+    // app's Metal renderer - see Metal3DExporter.swift's doc comment.
+    guard
+      let metalModel = Metal3DExporter.export(
+        named: entry.name, entityWidth: Float(entry.width), entityHeight: Float(entry.height),
+        repoRoot: repoRoot, ldrawRoot: ldrawRoot, colorTable: colorTable)
+    else {
+      FileHandle.standardError.write(Data("error: failed to bake Metal '\(entry.name)'\n".utf8))
+      failures += 1
+      continue
+    }
+    let metalURL = outputDir.appendingPathComponent("\(entry.name).json")
+    do {
+      let data = try JSONEncoder().encode(metalModel)
+      try data.write(to: metalURL)
+      print("Junkbot3D: baked \(entry.name).json")
+    } catch {
+      FileHandle.standardError.write(Data("error: failed to write \(metalURL.path): \(error)\n".utf8))
+      failures += 1
+      continue
+    }
   }
   exit(failures == 0 ? 0 : 1)
 }
