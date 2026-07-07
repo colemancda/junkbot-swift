@@ -86,6 +86,8 @@ final class JunkbotScene: SKScene {
       if scene3DShouldBeActive {
         metal3DManager?.reset()
         metal3DManager?.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
+        metal3DManager?.loadLevelDecals(
+          backgroundDecals: gameEngine.backgroundDecals, decals: gameEngine.decals)
       }
       #else
       scnView?.isHidden = !scene3DShouldBeActive

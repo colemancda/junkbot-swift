@@ -107,9 +107,12 @@ public final class GameEngine: @unchecked Sendable {
   /// Public so native hosts' own renderers (e.g. Darwin's `Scene3DManager`) can draw it too.
   public var backdropSpriteID: Int32 = -1
   /// Decals drawn behind the backdrop layer boundary (JS: `currentLevel.backgroundDecals`).
-  var backgroundDecals: [DecalInstance] = []
+  /// Public so native hosts' own renderers (e.g. Darwin's `Metal3DManager`) can draw them too -
+  /// matches `backdropSpriteID`'s own doc comment.
+  public var backgroundDecals: [DecalInstance] = []
   /// Decals drawn in front of `backgroundDecals` but behind entities (JS: `currentLevel.decals`).
-  var decals: [DecalInstance] = []
+  /// Public - see `backgroundDecals`'s doc comment.
+  public var decals: [DecalInstance] = []
   /// Dedicated xorshift state for *cosmetic* randomness (scaredy-bin wobble in
   /// `RenderList.swift`) - deliberately separate from `rngState` so building render frames never
   /// perturbs the simulation RNG sequence that replay/rewind determinism depends on.

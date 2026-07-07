@@ -49,6 +49,16 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
   private var backdropWorldPosition: SIMD3<Float> = .zero
   private var loadedBackdropSpriteID: Int32 = -1
 
+  /// Level background decoration (doors, windows, arrows, ...) - `RenderList.swift`'s
+  /// `backgroundDecals`/`decals` layers, drawn between the backdrop and the entities in the 2D
+  /// path's painter's-algorithm order but never handled by the SceneKit 3D path at all (confirmed:
+  /// zero references to decals anywhere in `Scene3DManager.swift`). Loaded once per level
+  /// (`loadLevelDecals()`, called alongside `loadBackdrop`), not per frame - decal placement is
+  /// static, only the camera pans over it.
+  private var decalTextureCache: [Int32: (texture: MTLTexture, size: SIMD2<Float>)] = [:]
+  private var backgroundDecalQuads: [(texture: MTLTexture, worldPosition: SIMD3<Float>, size: SIMD2<Float>)] = []
+  private var foregroundDecalQuads: [(texture: MTLTexture, worldPosition: SIMD3<Float>, size: SIMD2<Float>)] = []
+
   private var combinedVertices: [Metal3DVertex] = []
   private var vertexBuffer: MTLBuffer?
 
@@ -207,16 +217,18 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
     combinedVertices.removeAll()
   }
 
-  // MARK: - Backdrop
+  // MARK: - Backdrop / decals
 
-  func loadBackdrop(spriteID: Int32) {
-    guard spriteID != loadedBackdropSpriteID else { return }
-    loadedBackdropSpriteID = spriteID
-    backdropTexture = nil
-    guard spriteID >= 0, spriteID < spriteNameTable.count else { return }
+  /// Resolves a sprite ID to its PNG (same lookup `loadBackdrop`/`loadLevelDecals` both need:
+  /// name via `spriteNameTable`, then search `backgroundsDirectory`/`backgroundsUndercoverDirectory`/
+  /// `spritesDirectory`) and loads it, caching per sprite ID so repeated decals of the same sprite
+  /// (e.g. two "door" decals) only decode once.
+  private func spriteTexture(spriteID: Int32) -> (texture: MTLTexture, size: SIMD2<Float>)? {
+    if let cached = decalTextureCache[spriteID] { return cached }
+    guard spriteID >= 0, spriteID < spriteNameTable.count else { return nil }
     let staticName = spriteNameTable[Int(spriteID)]
     let name = staticName.withUTF8Buffer { String(decoding: $0, as: UTF8.self) }
-    guard !name.isEmpty else { return }
+    guard !name.isEmpty else { return nil }
 
     let directories = [backgroundsDirectory, backgroundsUndercoverDirectory, spritesDirectory]
     var foundPath: String?
@@ -227,20 +239,53 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
         break
       }
     }
-    guard let path = foundPath else { return }
-
-    guard let texture = Self.loadTexture(path: path, device: device) else {
-      FileHandle.standardError.write(Data("Metal3DManager: failed to load backdrop texture at \(path)\n".utf8))
-      return
+    guard let path = foundPath,
+      let texture = Self.loadTexture(path: path, device: device)
+    else {
+      FileHandle.standardError.write(
+        Data("Metal3DManager: failed to load sprite \(spriteID) (\(name))\n".utf8))
+      return nil
     }
+    let size = SIMD2<Float>(Float(texture.width), Float(texture.height))
+    decalTextureCache[spriteID] = (texture, size)
+    return (texture, size)
+  }
+
+  func loadBackdrop(spriteID: Int32) {
+    guard spriteID != loadedBackdropSpriteID else { return }
+    loadedBackdropSpriteID = spriteID
+    backdropTexture = nil
+    guard let (texture, size) = spriteTexture(spriteID: spriteID) else { return }
     backdropTexture = texture
-    backdropSize = SIMD2<Float>(Float(texture.width), Float(texture.height))
+    backdropSize = size
     // Matches `Scene3DManager.loadBackdrop(spriteID:)`: `RenderList.swift`'s backdrop command
     // draws the image's top-left at world (-6, -25), so its center is offset by half its size
     // from there.
     let bx = -6 + backdropSize.x / 2
     let by = -(-25 + backdropSize.y / 2)
     backdropWorldPosition = SIMD3<Float>(bx, by, -500)
+  }
+
+  /// Level background decoration (doors, windows, arrows, ...) - never drawn by either 3D path
+  /// before now (see this file's property doc comment). Call once per level load, alongside
+  /// `loadBackdrop`. Matches `RenderList.swift`'s two decal layers' exact top-left draw offsets
+  /// (`backgroundDecals`: `(d.x - 3, d.y - 20)`; `decals`: `(d.x - 30, d.y - 64)`), placed between
+  /// the backdrop (z = -500) and entities (z ~= 0) in that same back-to-front order.
+  func loadLevelDecals(backgroundDecals: [DecalInstance], decals: [DecalInstance]) {
+    func quads(
+      _ instances: [DecalInstance], offsetX: Float, offsetY: Float, z: Float
+    ) -> [(texture: MTLTexture, worldPosition: SIMD3<Float>, size: SIMD2<Float>)] {
+      instances.compactMap { d in
+        guard let (texture, size) = spriteTexture(spriteID: d.spriteID) else { return nil }
+        let topLeftX = Float(d.x) - offsetX
+        let topLeftY = Float(d.y) - offsetY
+        let worldPosition = SIMD3<Float>(
+          topLeftX + size.x / 2, -(topLeftY + size.y / 2), z)
+        return (texture, worldPosition, size)
+      }
+    }
+    backgroundDecalQuads = quads(backgroundDecals, offsetX: 3, offsetY: 20, z: -400)
+    foregroundDecalQuads = quads(decals, offsetX: 30, offsetY: 64, z: -300)
   }
 
   // MARK: - Entity sync
@@ -446,6 +491,16 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
 
     if let texture = backdropTexture {
       drawBackdrop(enc, texture: texture)
+    }
+    for quad in backgroundDecalQuads {
+      drawTexturedQuad(
+        enc, texture: quad.texture, transform: Metal3DMatrix.translation(quad.worldPosition),
+        halfWidth: quad.size.x / 2, halfHeight: quad.size.y / 2, depthState: backdropDepthState)
+    }
+    for quad in foregroundDecalQuads {
+      drawTexturedQuad(
+        enc, texture: quad.texture, transform: Metal3DMatrix.translation(quad.worldPosition),
+        halfWidth: quad.size.x / 2, halfHeight: quad.size.y / 2, depthState: backdropDepthState)
     }
 
     if !combinedVertices.isEmpty {
