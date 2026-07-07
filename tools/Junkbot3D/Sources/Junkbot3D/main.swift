@@ -29,9 +29,68 @@ let usage = "usage:\n" +
   "  Junkbot3D <repo_root> --part <name.dat> [colorCode] <output.(png|usdz|scn)>\n" +
   "  Junkbot3D <repo_root> --model <name.ldr> <output.(png|usdz|scn)>\n" +
   "  Junkbot3D <repo_root> --bbox <name.dat>\n" +
+  "  Junkbot3D <repo_root> --bake-all <output_dir>\n" +
   "\n" +
   "  --front renders the real 2D game's actual look: a straight (non-rotated) camera plus the\n" +
-  "  janitorial-android reference's oblique depth shear, instead of the default isometric angle.\n"
+  "  janitorial-android reference's oblique depth shear, instead of the default isometric angle.\n" +
+  "\n" +
+  "  --bake-all writes one bottom-center-anchored, game-scaled .scn per entity type with an\n" +
+  "  authored .ldr model (see SceneBuilder.ldrawModelName's list) - for bundling into the live\n" +
+  "  Darwin app, which can't ship the 600MB LDraw library or parse .ldr files at runtime.\n"
+
+// Bakes every entity type's real-parts model to a bundleable .scn file, using the exact same
+// `LDrawModel.node` anchor/scale logic the offline level-preview path uses, so the live app's
+// bundled assets are pixel-for-pixel what this tool already renders. Dimensions match
+// `EntityFactory.swift`'s `make*` constructors exactly (each entity type has one fixed size).
+if CommandLine.arguments.count == 4, CommandLine.arguments[2] == "--bake-all" {
+  let repoRoot = URL(fileURLWithPath: CommandLine.arguments[1])
+  let outputDir = URL(fileURLWithPath: CommandLine.arguments[3], isDirectory: true)
+  try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
+  let ldrawRoot = repoRoot.appendingPathComponent("tools/Junkbot3D/LDraw/ldraw")
+  let colorTable = LDrawSupport.colorTable(ldrawRoot: ldrawRoot)
+
+  // (model name, entity width in game units, entity height in game units) - CELL_W=15, CELL_H=18.
+  let entries: [(name: String, width: CGFloat, height: CGFloat)] = [
+    ("junkbot", 2 * 15, 4 * 18),
+    ("bin", 2 * 15, 3 * 18),
+    ("gearbot", 2 * 15, 2 * 18),
+    ("climbbot", 2 * 15, 2 * 18),
+    ("flybot", 2 * 15, 2 * 18),
+    ("eyebot", 2 * 15, 2 * 18),
+    ("crate", 3 * 15, 2 * 18),
+    ("fire", 4 * 15, 1 * 18),
+    ("fan", 4 * 15, 1 * 18),
+    ("switch", 2 * 15, 1 * 18),
+    ("pipe", 2 * 15, 1 * 18),
+    ("shield", 2 * 15, 1 * 18),
+    ("teleport", 4 * 15, 1 * 18),
+    ("laser", 2 * 15, 1 * 18),
+    ("jump", 2 * 15, 1 * 18),
+  ]
+
+  var failures = 0
+  for entry in entries {
+    guard
+      let node = LDrawModel.node(
+        named: entry.name, entityWidth: entry.width, entityHeight: entry.height, repoRoot: repoRoot,
+        ldrawRoot: ldrawRoot, colorTable: colorTable)
+    else {
+      FileHandle.standardError.write(Data("error: failed to bake '\(entry.name)'\n".utf8))
+      failures += 1
+      continue
+    }
+    let bakedScene = SCNScene()
+    bakedScene.rootNode.addChildNode(node)
+    let url = outputDir.appendingPathComponent("\(entry.name).scn")
+    guard bakedScene.write(to: url, options: nil, delegate: nil, progressHandler: nil) else {
+      FileHandle.standardError.write(Data("error: failed to write \(url.path)\n".utf8))
+      failures += 1
+      continue
+    }
+    print("Junkbot3D: baked \(entry.name).scn")
+  }
+  exit(failures == 0 ? 0 : 1)
+}
 
 /// Locates an official part's file under the standard LDraw library layout (`parts/`,
 /// `parts/s/`, `p/`, `p/48/`), for the two modes (`--bbox`, `--part`) that need to read one by

@@ -16,6 +16,10 @@ final class JunkbotScene: SKScene {
   /// For `gamepadState.pollSticks(deltaSeconds:)` - SpriteKit's `update(_:)` only gives an
   /// absolute timestamp, not a per-frame delta the way SDL's own frame timer does.
   private var lastFrameTime: TimeInterval?
+  /// Tracks the previous frame's 3D-active state, so entering/leaving 3D mode (toggled via
+  /// `Settings.render3DEnabled`, or just entering/leaving `.playing`) only resets/reframes
+  /// `scene3DManager` on the actual transition, not every frame.
+  private var scene3DWasActive = false
 
   override func didMove(to view: SKView) {
     guard !didStart else { return }
@@ -65,6 +69,26 @@ final class JunkbotScene: SKScene {
     }
     #endif
     musicPlayer.update()
+
+    // Play-mode-only 3D (see `Settings.render3DEnabled`'s doc comment): on the transition into or
+    // out of it, reset `scene3DManager`'s entity-node table (a fresh level's entity IDs mean
+    // nothing to whatever nodes are already tracked) and reframe its camera; every frame while
+    // active, sync it from the latest tick's entities and suppress the 2D world-sprite draw so
+    // the 3D scene shows through the now-transparent `SKView` instead of being drawn over.
+    let scene3DShouldBeActive = Settings.render3DEnabled && currentScreen == .playing
+    if scene3DShouldBeActive != scene3DWasActive {
+      scene3DWasActive = scene3DShouldBeActive
+      scnView?.isHidden = !scene3DShouldBeActive
+      if scene3DShouldBeActive {
+        scene3DManager.reset()
+        scene3DManager.frameCamera(entities: gameEngine.entities, bounds: gameEngine.levelBounds)
+      }
+    }
+    suppressWorldSpriteDrawing = scene3DShouldBeActive
+    if scene3DShouldBeActive {
+      scene3DManager.sync(entities: gameEngine.entities)
+    }
+
     render()
   }
 

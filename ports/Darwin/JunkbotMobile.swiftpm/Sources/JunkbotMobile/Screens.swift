@@ -242,6 +242,14 @@ enum MenuSoundID {
 
 // MARK: - Title screen
 
+/// Shared by the title screen's 3D/2D button and macOS's Cmd+2/Cmd+3 keyboard shortcut
+/// (`AppDelegate_macOS.swift`) so both paths refresh the title screen's button label the same way.
+@GameActor func setRender3DEnabled(_ enabled: Bool) {
+  guard Settings.render3DEnabled != enabled else { return }
+  Settings.render3DEnabled = enabled
+  if currentScreen == .title { showTitleScreen() }
+}
+
 @GameActor func showTitleScreen() {
   currentScreen = .title
   gameEngine.loadLevel(titleScreenLevel)
@@ -260,6 +268,13 @@ enum MenuSoundID {
     Button(x: 16, y: 48, width: 120, height: 24, action: {
       soundBoard.play(MenuSoundID.buttonClick)
       openExternalURL("https://github.com/colemancda/junkbot-swift")
+    }),
+    // Only affects `.playing` (see `Settings.render3DEnabled`'s doc comment) - the title screen
+    // itself always stays 2D, so toggling this here doesn't change what's on screen immediately,
+    // just what the *next* level played will use.
+    Button(x: Float(windowWidth) - 136, y: 16, width: 120, height: 24, action: {
+      soundBoard.play(MenuSoundID.buttonClick)
+      setRender3DEnabled(!Settings.render3DEnabled)
     }),
   ]
 }
@@ -286,6 +301,7 @@ enum MenuSoundID {
   drawButton(menuButtons[0], label: "Play Junkbot", index: 0)
   drawButton(menuButtons[1], label: "Play Undercover", index: 1)
   drawButton(menuButtons[2], label: "Credits", index: 2)
+  drawButton(menuButtons[3], label: Settings.render3DEnabled ? "3D: On" : "3D: Off", index: 3)
 }
 
 // MARK: - Level select

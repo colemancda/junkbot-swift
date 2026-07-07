@@ -43,6 +43,7 @@ let package = Package(
         .copy("font"),
         .copy("levels"),
         .copy("TranscodedAudio"),
+        .copy("Models3D"),
       ]
     )
   ]
