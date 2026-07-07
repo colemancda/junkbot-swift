@@ -1,5 +1,6 @@
 import Foundation
 import JunkbotCore
+import LegoDrawFile
 import SceneKit
 
 /// Turns a loaded level's entities into an `SCNScene` — the offline-preview equivalent of
@@ -8,17 +9,26 @@ import SceneKit
 enum SceneBuilder {
   static func makeScene(
     entities: [Entity], bounds: LevelBounds?, repoRoot: URL, ldrawRoot: URL,
-    colorTable: LDrawColorTable
+    colorTable: LDrawColorTable, obliqueShear: Bool = false
   ) -> SCNScene {
     let scene = SCNScene()
     let root = scene.rootNode
+
+    // All entity geometry lives under `worldNode` (not `root` directly) so `obliqueShear` can
+    // transform just the content, leaving the camera and lights (added straight to `root` below)
+    // unaffected.
+    let worldNode = SCNNode()
+    root.addChildNode(worldNode)
+    if obliqueShear {
+      worldNode.transform = obliqueShearTransform()
+    }
 
     for e in entities {
       guard
         let node = node(for: e, repoRoot: repoRoot, ldrawRoot: ldrawRoot, colorTable: colorTable)
       else { continue }
       node.position = Space.center(of: e)
-      root.addChildNode(node)
+      worldNode.addChildNode(node)
     }
 
     let ambient = SCNLight()
@@ -118,6 +128,50 @@ enum SceneBuilder {
     node.position = SCNVector3(cx + distance * 0.5, cy + distance * 0.42, distance * 0.75)
     node.look(at: SCNVector3(cx, cy, 0))
     return node
+  }
+
+  /// An orthographic camera looking straight down the level's Z axis with no tilt - the same
+  /// "flat" front-elevation view the actual 2D game renders (a straight-on canvas, not an
+  /// isometric angle). Useful for side-by-side comparison against the game's real sprite output,
+  /// since `framingCameraNode`'s iso angle reveals brick depth the game's camera never shows.
+  static func frontCameraNode(entities: [Entity], bounds: LevelBounds?) -> SCNNode {
+    let box = boundingBox(entities: entities, bounds: bounds)
+    let cx = (box.minX + box.maxX) / 2
+    let cy = -(box.minY + box.maxY) / 2  // flipped, matches Space.center
+    let spanX = box.maxX - box.minX
+    let spanY = box.maxY - box.minY
+
+    let camera = SCNCamera()
+    camera.usesOrthographicProjection = true
+    camera.orthographicScale = Double(max(spanX, spanY)) * 0.56
+    camera.zNear = 1
+    camera.zFar = 4000
+
+    let node = SCNNode()
+    node.camera = camera
+    node.position = SCNVector3(cx, cy, 1000)
+    node.look(at: SCNVector3(cx, cy, 0))
+    return node
+  }
+
+  /// The janitorial-android reference's "oblique projection" (`three-stuff/3d-main.js`'s
+  /// `obliqueProjection` shear, applied there as `camera.projectionMatrix.multiply(matrix)` with
+  /// `alpha = PI/4`, `Szx = -0.5*cos(alpha)`, `Szy = -0.5*sin(alpha)`): the real 2D game's actual
+  /// look is a straight (non-rotated) camera plus a depth shear, not an isometric camera angle -
+  /// bricks show a sheared side/top sliver for their 2-stud depth instead of a rotated 3D view.
+  /// Shearing the projection matrix in eye space is equivalent to shearing the world content by
+  /// the same amount before an unrotated orthographic projection (our camera has no rotation, so
+  /// eye space and world space differ only by a translation) - simpler to express as a transform
+  /// on `worldNode` than to reach into SceneKit's camera projection matrix.
+  private static func obliqueShearTransform() -> SCNMatrix4 {
+    let alpha = Double.pi / 4
+    let szx = CGFloat(-0.5 * cos(alpha))
+    let szy = CGFloat(-0.5 * sin(alpha))
+    return SCNMatrix4(
+      m11: 1, m12: 0, m13: 0, m14: 0,
+      m21: 0, m22: 1, m23: 0, m24: 0,
+      m31: szx, m32: szy, m33: 1, m34: 0,
+      m41: 0, m42: 0, m43: 0, m44: 1)
   }
 
   private static func boundingBox(entities: [Entity], bounds: LevelBounds?) -> (

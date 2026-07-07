@@ -1,11 +1,13 @@
 import Foundation
+import LegoDrawFile
 import SceneKit
 
 /// Loads this tool's authored `.ldr` models (`tools/Junkbot3D/Models/*.ldr` - real official LEGO
-/// parts assembled to represent a game entity, see `LDrawLoader.swift`) as bottom-center-anchored,
-/// game-scaled nodes, matching the anchor convention every procedural mesh in `CharacterGeometry`
-/// uses (root position = center of the entity's bounding box; content spans from `-height/2` at
-/// the bottom upward), so callers can position the result identically via `Space.center(of:)`.
+/// parts assembled to represent a game entity, built via `LDrawSupport`/swift-lego-draw) as
+/// bottom-center-anchored, game-scaled nodes, matching the anchor convention every procedural
+/// mesh in `CharacterGeometry` uses (root position = center of the entity's bounding box; content
+/// spans from `-height/2` at the bottom upward), so callers can position the result identically
+/// via `Space.center(of:)`.
 @MainActor
 enum LDrawModel {
   /// LDraw's own unit (1 stud = 20 LDU, 1 brick row = 24 LDU) is a fixed 0.75x of this game's grid
@@ -27,11 +29,12 @@ enum LDrawModel {
   ) -> SCNNode? {
     if let cached = cache[name] { return cached.clone() }
 
-    let modelURL = repoRoot.appendingPathComponent("tools/Junkbot3D/Models")
-      .appendingPathComponent("\(name).ldr")
-    guard
-      let raw = LDrawLoader.loadModel(
-        fileURL: modelURL, colorCode: 16, ldrawRoot: ldrawRoot, colorTable: colorTable)
+    let modelsDirectory = repoRoot.appendingPathComponent("tools/Junkbot3D/Models")
+    let modelURL = modelsDirectory.appendingPathComponent("\(name).ldr")
+    guard let text = try? String(contentsOf: modelURL, encoding: .utf8),
+      let raw = LDrawSupport.buildNode(
+        text: text, extraSearchDirectory: modelsDirectory, colorCode: 16, ldrawRoot: ldrawRoot,
+        colorTable: colorTable)
     else { return nil }
 
     let wrapper = SCNNode()

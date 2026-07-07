@@ -5,8 +5,8 @@
 //     swift run --package-path tools/Junkbot3D Junkbot3D <repo_root> <level.txt> <output.(png|usdz|scn)>
 //
 //   LDraw part mode: loads one real official LDraw part (from the library downloaded to
-//   tools/Junkbot3D/LDraw/ldraw - see LDrawLoader.swift) by filename, e.g. "3001.dat" (2x4 brick)
-//   or "3815.dat" (minifig legs), for verifying the loader / previewing real parts standalone.
+//   tools/Junkbot3D/LDraw/ldraw, via swift-lego-draw - see LDrawSupport.swift) by filename, e.g.
+//   "3001.dat" (2x4 brick) or "3815.dat" (minifig legs), for previewing real parts standalone.
 //     swift run --package-path tools/Junkbot3D Junkbot3D <repo_root> --part <name.dat> [colorCode] <output.(png|usdz|scn)>
 //
 //   LDraw model mode: loads one of our own authored `.ldr` models (tools/Junkbot3D/Models/*.ldr -
@@ -25,10 +25,25 @@ import JunkbotCore
 import SceneKit
 
 let usage = "usage:\n" +
-  "  Junkbot3D <repo_root> <level.txt> <output.(png|usdz|scn)>\n" +
+  "  Junkbot3D <repo_root> <level.txt> <output.(png|usdz|scn)> [--front]\n" +
   "  Junkbot3D <repo_root> --part <name.dat> [colorCode] <output.(png|usdz|scn)>\n" +
   "  Junkbot3D <repo_root> --model <name.ldr> <output.(png|usdz|scn)>\n" +
-  "  Junkbot3D <repo_root> --bbox <name.dat>\n"
+  "  Junkbot3D <repo_root> --bbox <name.dat>\n" +
+  "\n" +
+  "  --front renders the real 2D game's actual look: a straight (non-rotated) camera plus the\n" +
+  "  janitorial-android reference's oblique depth shear, instead of the default isometric angle.\n"
+
+/// Locates an official part's file under the standard LDraw library layout (`parts/`,
+/// `parts/s/`, `p/`, `p/48/`), for the two modes (`--bbox`, `--part`) that need to read one by
+/// bare filename rather than through swift-lego-draw's own resolver (which only kicks in once
+/// we're already inside `LDrawSupport.buildNode`'s parse+resolve pipeline).
+func findPartURL(named name: String, ldrawRoot: URL) -> URL? {
+  for dir in ["parts", "parts/s", "p", "p/48"] {
+    let candidate = ldrawRoot.appendingPathComponent(dir).appendingPathComponent(name)
+    if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+  }
+  return nil
+}
 
 // Quick dimension lookup for authoring .ldr models (stacking parts needs their real Y extent,
 // not a guess) - prints the part's bounding box (in LDraw's own Y-down coordinates, i.e. before
@@ -37,16 +52,19 @@ if CommandLine.arguments.count == 4, CommandLine.arguments[2] == "--bbox" {
   let repoRoot = URL(fileURLWithPath: CommandLine.arguments[1])
   let partName = CommandLine.arguments[3]
   let ldrawRoot = repoRoot.appendingPathComponent("tools/Junkbot3D/LDraw/ldraw")
-  let colorTable = LDrawColorTable(configURL: ldrawRoot.appendingPathComponent("LDConfig.ldr"))
-  guard let node = LDrawLoader.load(
-    partNamed: partName, colorCode: 4, ldrawRoot: ldrawRoot, colorTable: colorTable),
+  let colorTable = LDrawSupport.colorTable(ldrawRoot: ldrawRoot)
+  guard let partURL = findPartURL(named: partName, ldrawRoot: ldrawRoot),
+    let text = try? String(contentsOf: partURL, encoding: .utf8),
+    let node = LDrawSupport.buildNode(
+      text: text, extraSearchDirectory: nil, colorCode: 4, ldrawRoot: ldrawRoot,
+      colorTable: colorTable),
     let childGeometryNode = node.childNodes.first
   else {
     FileHandle.standardError.write(Data("error: failed to load '\(partName)'\n".utf8))
     exit(1)
   }
-  // `node` is the up-flip wrapper (see `LDrawLoader.finish`) - report the pre-flip child's own
-  // bounding box, which is in LDraw's native Y-down space (matches the numbers seen in .dat files).
+  // `node` is the up-flip wrapper (see `LDrawSupport.buildNode`) - report the pre-flip child's
+  // own bounding box, which is in LDraw's native Y-down space (matches the numbers in .dat files).
   let (min, max) = childGeometryNode.boundingBox
   print("\(partName): x=[\(min.x),\(max.x)] y=[\(min.y),\(max.y)] z=[\(min.z),\(max.z)]")
   exit(0)
@@ -103,9 +121,9 @@ if CommandLine.arguments[2] == "--part" {
     exit(2)
   }
   let partName = CommandLine.arguments[3]
-  let colorCode: Int32
+  let colorCode: Int16
   if CommandLine.arguments.count == 6 {
-    colorCode = Int32(CommandLine.arguments[4]) ?? 4
+    colorCode = Int16(CommandLine.arguments[4]) ?? 4
     outputPath = CommandLine.arguments[5]
   } else {
     colorCode = 4  // red, LDraw's conventional default preview color
@@ -113,9 +131,12 @@ if CommandLine.arguments[2] == "--part" {
   }
 
   let ldrawRoot = repoRoot.appendingPathComponent("tools/Junkbot3D/LDraw/ldraw")
-  let colorTable = LDrawColorTable(configURL: ldrawRoot.appendingPathComponent("LDConfig.ldr"))
-  guard let partNode = LDrawLoader.load(
-    partNamed: partName, colorCode: colorCode, ldrawRoot: ldrawRoot, colorTable: colorTable)
+  let colorTable = LDrawSupport.colorTable(ldrawRoot: ldrawRoot)
+  guard let partURL = findPartURL(named: partName, ldrawRoot: ldrawRoot),
+    let text = try? String(contentsOf: partURL, encoding: .utf8),
+    let partNode = LDrawSupport.buildNode(
+      text: text, extraSearchDirectory: nil, colorCode: colorCode, ldrawRoot: ldrawRoot,
+      colorTable: colorTable)
   else {
     FileHandle.standardError.write(
       Data("error: failed to load LDraw part '\(partName)' from \(ldrawRoot.path)\n".utf8))
@@ -133,10 +154,13 @@ if CommandLine.arguments[2] == "--part" {
   outputPath = CommandLine.arguments[4]
 
   let ldrawRoot = repoRoot.appendingPathComponent("tools/Junkbot3D/LDraw/ldraw")
-  let colorTable = LDrawColorTable(configURL: ldrawRoot.appendingPathComponent("LDConfig.ldr"))
-  let modelURL = repoRoot.appendingPathComponent("tools/Junkbot3D/Models").appendingPathComponent(modelName)
-  guard let modelNode = LDrawLoader.loadModel(
-    fileURL: modelURL, colorCode: 16, ldrawRoot: ldrawRoot, colorTable: colorTable)
+  let colorTable = LDrawSupport.colorTable(ldrawRoot: ldrawRoot)
+  let modelsDirectory = repoRoot.appendingPathComponent("tools/Junkbot3D/Models")
+  let modelURL = modelsDirectory.appendingPathComponent(modelName)
+  guard let text = try? String(contentsOf: modelURL, encoding: .utf8),
+    let modelNode = LDrawSupport.buildNode(
+      text: text, extraSearchDirectory: modelsDirectory, colorCode: 16, ldrawRoot: ldrawRoot,
+      colorTable: colorTable)
   else {
     FileHandle.standardError.write(
       Data("error: failed to load LDraw model '\(modelName)' from \(modelURL.path)\n".utf8))
@@ -147,11 +171,12 @@ if CommandLine.arguments[2] == "--part" {
   (scene, cameraNode) = standalonePreviewScene(for: modelNode)
 } else {
   let levelPath = CommandLine.arguments[2]
-  guard CommandLine.arguments.count == 4 else {
+  guard CommandLine.arguments.count == 4 || CommandLine.arguments.count == 5 else {
     FileHandle.standardError.write(Data(usage.utf8))
     exit(2)
   }
   outputPath = CommandLine.arguments[3]
+  let useFrontCamera = CommandLine.arguments.count == 5 && CommandLine.arguments[4] == "--front"
 
   let levelURL =
     levelPath.hasPrefix("/") ? URL(fileURLWithPath: levelPath) : repoRoot.appendingPathComponent(levelPath)
@@ -168,12 +193,13 @@ if CommandLine.arguments[2] == "--part" {
   print("Junkbot3D: loaded \(engine.entities.count) entities, bounds=\(String(describing: engine.levelBounds))")
 
   let ldrawRoot = repoRoot.appendingPathComponent("tools/Junkbot3D/LDraw/ldraw")
-  let colorTable = LDrawColorTable(configURL: ldrawRoot.appendingPathComponent("LDConfig.ldr"))
+  let colorTable = LDrawSupport.colorTable(ldrawRoot: ldrawRoot)
   let builtScene = SceneBuilder.makeScene(
     entities: engine.entities, bounds: engine.levelBounds, repoRoot: repoRoot, ldrawRoot: ldrawRoot,
-    colorTable: colorTable)
-  let builtCameraNode = SceneBuilder.framingCameraNode(
-    entities: engine.entities, bounds: engine.levelBounds)
+    colorTable: colorTable, obliqueShear: useFrontCamera)
+  let builtCameraNode = useFrontCamera
+    ? SceneBuilder.frontCameraNode(entities: engine.entities, bounds: engine.levelBounds)
+    : SceneBuilder.framingCameraNode(entities: engine.entities, bounds: engine.levelBounds)
   builtScene.rootNode.addChildNode(builtCameraNode)
   scene = builtScene
   cameraNode = builtCameraNode

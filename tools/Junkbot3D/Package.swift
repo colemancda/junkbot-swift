@@ -12,13 +12,18 @@ let package = Package(
   dependencies: [
     // Explicit name: path-based identity is the checkout's directory name, which isn't
     // "junkbot-swift" inside a git worktree (mirrors tools/LevelDump).
-    .package(name: "junkbot-swift", path: "../..")
+    .package(name: "junkbot-swift", path: "../.."),
+    // Real LDraw parser + BFC-aware SceneKit builder, replacing this tool's original hand-rolled
+    // loader (which ignored winding/culling and skipped edge-line geometry entirely).
+    .package(url: "https://github.com/MillerTechnologyPeru/swift-lego-draw", branch: "master"),
   ],
   targets: [
     .executableTarget(
       name: "Junkbot3D",
       dependencies: [
-        .product(name: "JunkbotCore", package: "junkbot-swift")
+        .product(name: "JunkbotCore", package: "junkbot-swift"),
+        .product(name: "LegoDrawFile", package: "swift-lego-draw"),
+        .product(name: "LDrawSceneKit", package: "swift-lego-draw"),
       ]
     )
   ]
