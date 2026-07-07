@@ -14,6 +14,12 @@ enum SceneBuilder {
     let scene = SCNScene()
     let root = scene.rootNode
 
+    // `.physicallyBased` materials (see `Palette.material`) derive their indirect-specular term
+    // from `lightingEnvironment` - without one, PBR has nothing to reflect and renders visibly
+    // darker/flatter than `.lambert` did. A flat neutral-gray "environment" (not a real HDRI) is
+    // enough to give faces a believable ambient specular response without needing image assets.
+    scene.lightingEnvironment.contents = Palette.rgb(0xB0, 0xB0, 0xB0)
+
     // All entity geometry lives under `worldNode` (not `root` directly) so `obliqueShear` can
     // transform just the content, leaving the camera and lights (added straight to `root` below)
     // unaffected.
@@ -31,20 +37,37 @@ enum SceneBuilder {
       worldNode.addChildNode(node)
     }
 
+    // Direction/position matches the original JS renderer exactly (`three-stuff/3d-main.js`'s
+    // `THREE.AmbientLight(0xdedede, 0.8)` / `THREE.DirectionalLight(0xffffff, 0.8)` positioned at
+    // `(-1000, 3200, 1500)`, aimed at the origin). Intensity does not translate 1:1 though: JS has
+    // no `physicallyCorrectLights` flag set anywhere, so three's `0.8` is a flat, non-energy-
+    // conserving multiplier on top of a renderer that (unlike SceneKit) freely lets
+    // ambient+diffuse sum past 1.0 and clip to white - SceneKit's lux-calibrated `intensity`
+    // doesn't clip the same way, so reproducing `0.8` numerically read distinctly darker than the
+    // sprites. Both lights are left at SceneKit's own full-brightness default (1000) instead -
+    // matches the sprites' brightness in practice, even though it isn't a literal port of JS's
+    // 0.8 scalar.
     let ambient = SCNLight()
     ambient.type = .ambient
-    ambient.color = Palette.rgb(0xB0, 0xB0, 0xB8)
+    ambient.color = Palette.rgb(0xDE, 0xDE, 0xDE)
+    ambient.intensity = 1000
     let ambientNode = SCNNode()
     ambientNode.light = ambient
     root.addChildNode(ambientNode)
 
     let sun = SCNLight()
     sun.type = .directional
-    sun.color = Palette.rgb(0xFF, 0xFF, 0xF0)
+    sun.color = Palette.rgb(0xFF, 0xFF, 0xFF)
+    sun.intensity = 1000
     sun.castsShadow = false  // PS1/DS-era: no dynamic shadows, keeps the flat low-poly look.
     let sunNode = SCNNode()
     sunNode.light = sun
-    sunNode.eulerAngles = SCNVector3(-Float.pi / 3.2, Float.pi / 5, 0)
+    // A directional light's SceneKit position is otherwise irrelevant (only its orientation
+    // matters), but placing it at the JS light's exact position and using `look(at:)` derives
+    // that orientation the same way JS's `DirectionalLight.position`/implicit origin target do -
+    // rather than hand-deriving the equivalent Euler angles.
+    sunNode.position = SCNVector3(-1000, 3200, 1500)
+    sunNode.look(at: SCNVector3(0, 0, 0))
     root.addChildNode(sunNode)
 
     return scene
