@@ -10,8 +10,30 @@
 #include <psxgpu.h>
 #include <psxsio.h>
 #include <psxapi.h>
+#include <psxpad.h>
 #include "shim.h"
 #include "assets.h"
+
+// ---------------------------------------------------------------------------
+// Pad input -- see shim.h's doc comment.
+// ---------------------------------------------------------------------------
+
+static uint8_t s_pad_buf[34];  // BIOS continuous-poll scratch (port 1 only)
+
+void ps1_init_pad(void) {
+  InitPAD(s_pad_buf, sizeof(s_pad_buf), 0, 0);
+  StartPAD();
+  // Matches common PSn00bSDK sample code: without this, the BIOS driver's
+  // default VSync-latched clearing behavior can leave held-button bits
+  // stale between reads on some BIOS revisions.
+  ChangeClearPAD(0);
+}
+
+uint16_t ps1_pad_held(void) {
+  PADTYPE *pad = (PADTYPE *)s_pad_buf;
+  if (pad->stat != 0) return 0;  // no pad connected / not ready this frame
+  return (uint16_t)~pad->btn;
+}
 
 // Debug-only: a NON-inline equivalent of assets.h's `static inline
 // ps1_asset_sprites_bin()`, to test whether the `static inline` declaration

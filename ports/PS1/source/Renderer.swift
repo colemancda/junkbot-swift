@@ -121,6 +121,35 @@ func fillRect(
 /// called after the world raster has been handed to the GPU.
 var hudDrawHook: (() -> Void)?
 
+/// Set by main.swift: draws directly into the world's RAM framebuffer
+/// (e.g. `drawCursor`) -- must run before `ps1_present_world()` uploads it,
+/// unlike `hudDrawHook`, which draws through the GPU ordering table instead
+/// and only needs to run before the next `ps1_flip()`.
+var worldOverlayHook: (() -> Void)?
+
+/// A small crosshair at the cursor's screen position, matching
+/// ports/N64/source/Renderer.swift's `drawCursor` -- there's no touchscreen
+/// on this target either, so the player needs to see where the D-pad-driven
+/// virtual cursor is. Call after `renderWorld` (writes directly into the
+/// world framebuffer) and before `ps1_flip`.
+func drawCursor(x: Int32, y: Int32, down: Bool) {
+  let buffer = ps1_world_framebuffer()!
+  let strideElements: Int32 = screenWidth
+  // BGR555: red while dragging, yellow otherwise.
+  let color: UInt16 = down ? packPS1(fromBGR555: (4 << 10) | (4 << 5) | 31) : packPS1(fromBGR555: (4 << 10) | (31 << 5) | 31)
+  var d: Int32 = -4
+  while d <= 4 {
+    let px = x + d, py = y + d
+    if px >= 0, px < screenWidth, y >= 0, y < screenHeight {
+      buffer[Int(y) * Int(strideElements) + Int(px)] = color
+    }
+    if py >= 0, py < screenHeight, x >= 0, x < screenWidth {
+      buffer[Int(py) * Int(strideElements) + Int(x)] = color
+    }
+    d += 1
+  }
+}
+
 /// Rebuilds `gameEngine`'s command list into `renderFrame` and rasterizes it
 /// into the RAM framebuffer, then presents it. No viewport scrolling yet
 /// (task #4 -- input/camera); the hand-built test level fits on one screen.
@@ -162,6 +191,8 @@ func renderWorld(_ gameEngine: GameEngine, into renderFrame: inout RenderFrame) 
       index += 1
     }
   }
+
+  worldOverlayHook?()
 
   ps1_present_world()
   hudDrawHook?()

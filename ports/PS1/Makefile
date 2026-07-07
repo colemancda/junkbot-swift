@@ -3,13 +3,16 @@
 # (see that repo's README for why a patched LLVM/clang/lld is required at all —
 # mipsel-none-none-elf + -mno-abicalls has no stock/nightly Swift support).
 #
-# Swift is compiled on the host by compile-swift.sh (plain `swiftc -c`, unlike
-# ports/N64 which needs a separate `llc` lowering step — this toolchain's
-# patches let swiftc emit the mipsel object directly). This Makefile links
-# that object plus boot.o/shim.o/generated-asset .o's against PSn00bSDK's
-# static libs with ld.lld (bundled in the same patched-toolchain tree as
-# swiftc — no separate C toolchain/Docker step needed for linking, unlike N64's
-# libdragon which only has a Linux/Docker linker).
+# Swift is compiled on the host by compile-swift.sh: `swift-frontend -emit-ir`
+# followed by a separate `llc` lowering step (same shape as ports/N64), with an
+# IR-rewriting pass in between (Support/fix_atomics.py) that strips atomic RMW
+# instructions LLVM's Mips backend would otherwise lower to `ll`/`sc` — real
+# MIPS-I (the PS1's R3000A) has no such instructions. See KNOWN_ISSUES.md for
+# the full story. This Makefile links the resulting object plus
+# boot.o/shim.o/generated-asset .o's against PSn00bSDK's static libs with
+# ld.lld (bundled in the same patched-toolchain tree as swift-frontend — no
+# separate C toolchain/Docker step needed for linking, unlike N64's libdragon
+# which only has a Linux/Docker linker).
 #
 # Prerequisites:
 #   - The patched toolchain built per swift-embedded-ps1's README (override

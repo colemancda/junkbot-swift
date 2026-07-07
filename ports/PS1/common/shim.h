@@ -39,3 +39,15 @@ uint16_t *ps1_world_framebuffer(void);
 void ps1_present_world(void);
 
 const uint8_t *ps1_asset_sprites_bin_noninline(void);
+
+// ---------------------------------------------------------------------------
+// Pad input: PSn00bSDK's psxpad.h only declares the raw `PADTYPE`/BIOS
+// structures (its own header says "no handling functions yet") -- this uses
+// the classic BIOS continuous-poll interface (`InitPAD`/`StartPAD`), which
+// has the BIOS write the latest pad state into a buffer every vsync in the
+// background, and returns the button bitmask already inverted (PS1 hardware
+// reports buttons active-low -- 0 = held -- inverted here so Swift can use
+// the natural "bit set = held" convention matching PadButton's bit
+// positions in psxpad.h).
+void ps1_init_pad(void);
+uint16_t ps1_pad_held(void);
