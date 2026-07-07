@@ -1,13 +1,19 @@
-# Upstream bugs: `Array` is broadly unreliable on `mipsel-none-none-elf`
+# Upstream bugs on `mipsel-none-none-elf` — RESOLVED (see Update 6/7 for the actual root causes)
 
-**Escalation (read this first):** what started as one narrow allocation-size bug turned out to
-be the first of at least three distinct failures across ordinary `Array` operations on this
-target — growth-past-capacity, and now confirmed **`removeAll(keepingCapacity: true)` on an
-already-empty, already-reserved array**, which should be one of the cheapest, simplest `Array`
-operations there is (no allocation, no copy, just reset a count). See "Update 2" below. At this
-point the evidence points to something systemically wrong with `Array`'s codegen on this
-backend, not a small number of isolable call sites. Treat every section below as "as
-discovered, in order" — later findings supersede earlier optimism.
+**Read Update 6 and Update 7 first.** Updates 1-5 below are preserved as the literal
+debugging history (useful for anyone hitting similar symptoms on an experimental pre-MIPS32
+Embedded Swift target), but they're all downstream *symptoms* of the same handful of root
+causes, not independent bugs: (1) `swift_retain`/`swift_release` compiling to `ll`/`sc`
+(Load-Linked/Store-Conditional) instructions that don't exist on MIPS-I, fixed with
+`-assume-single-threaded`; (2) the same `ll`/`sc` pattern inlined into dozens of *other*
+ARC/COW-uniqueness sites `-assume-single-threaded` doesn't reach, fixed by mechanically
+rewriting the emitted LLVM IR (`Support/fix_atomics.py`); (3) `swift_once` (gating `Dictionary`/
+`Set`'s lazy hash-seed init) using the identical `ll`/`sc` CAS, fixed by overriding the weak
+`swift_once` symbol with a plain non-atomic C implementation; and (4) an unrelated DuckStation
+recompiler edge case around checked-`%`'s `div`/`teq`/`mfhi` sequence, fixed with a manual
+modulo at the one call site that hit it. With all four fixes in place, the full shared
+`GameEngine`/`RenderList`/`EntityFactory` from `Sources/JunkbotCore` works directly on this
+target — no PS1-local `Array`/`Dictionary` reimplementation needed.
 
 ## Summary
 
@@ -440,3 +446,118 @@ some kind of systemic issue with values that need to survive past a single expre
 evaluation, not just `Array` specifically. **General guidance going forward for this target:**
 prefer local computation over global `let`s with non-trivial initializers wherever the cost of
 recomputing is cheap (as it is for a pointer + cast), until this is fixed upstream.
+
+## Update 6: the actual root cause — `ll`/`sc` don't exist on MIPS-I, and three different
+Swift runtime mechanisms rely on them
+
+Everything above (Updates 1-5) was diagnosed by working *around* the symptoms one call site at
+a time: reserve capacity up front, avoid `removeAll`, avoid binding a global `Array` to a local,
+compute pointers locally instead of as globals. That produced a working but severely
+restricted PS1-local reimplementation (`GameState`/`FixedArray`/`PS1DynArray`, since removed —
+see git history) that duplicated `GameEngine`/`RenderList`/`EntityFactory` instead of using
+them directly, because the real versions use `Array`/`Dictionary` throughout.
+
+The actual root cause, found by disassembling the compiled `.elf` and single-stepping under
+GDB (DuckStation ships a built-in gdbserver; Homebrew's `gdb` was built with
+`--enable-targets=all`, which includes `mips:3000`, so `set architecture mips:3000` + `target
+remote localhost:2345` works despite gdb never being packaged specifically for the PS1):
+
+**`swift_retain`/`swift_release` compile to real LLVM `atomicrmw add`/`atomicrmw sub`
+instructions**, which the Mips backend lowers to `ll`/`sc` (Load-Linked/Store-Conditional) —
+mandatory for a correct atomic read-modify-write on MIPS. **`ll`/`sc` don't exist on MIPS-I**
+(the PS1's R3000A) even when compiling with `-mcpu=mips1`; LLVM's MIPS-I support is documented
+as "highly experimental" (`llc -mattr=help`) and doesn't gate this lowering on the actual ISA
+level. On this target, executing `sc` never reports success, so the retry loop inside
+`swift_retain`/`swift_release` spins forever — a genuine CPU livelock, not a crash, which is
+why it looked for so long like "Array operations hang," since almost anything nontrivial
+touches ARC eventually.
+
+**Fix, part 1 — `-assume-single-threaded`:** this `swift-frontend` flag (confirmed present via
+`-help-hidden`) makes IRGen emit plain non-atomic retain/release instead of atomic RMW. Verified
+by disassembling `swift_retain`/`swift_release` before/after: before, real `ll`/`sc` pairs;
+after, a tail-call into a small non-atomic helper. This alone fixed every `Array` hang from
+Updates 1-2.
+
+**Fix, part 2 — the atomics weren't only in `swift_retain`/`swift_release`.** After fixing
+those two entry points, dozens of *other* functions still contained `ll`/`sc`: every inlined
+copy-on-write uniqueness check, `Array`'s `_consumeAndCreateNew`/`growForAppend`, `Dictionary`'s
+`_NativeDictionaryV.copy`/`_DictionaryStorageC.allocate`, `swift_nonatomic_release` (despite the
+name), `swift_releaseBox`, `swift_release_n`, `__swift_initWithCopy_strong`, etc. —
+`-assume-single-threaded` only changes the two named runtime entry points, not every inlined
+refcount/uniqueness check IRGen emits elsewhere. Rather than chase each one individually,
+`ports/PS1/Support/fix_atomics.py` mechanically rewrites the emitted `.ll` (between
+`swift-frontend -emit-ir` and `llc`, see `compile-swift.sh`): every `atomicrmw`/`cmpxchg`
+becomes a plain `load` + arithmetic/compare + `store` (single-threaded target, real atomicity
+buys nothing), and every `load atomic`/`store atomic` has its ordering qualifier stripped.
+After this, the whole binary has zero `ll`/`sc` instructions (confirmed via `llvm-objdump -d |
+grep`).
+
+**Fix, part 3 — `swift_once` is a *different* runtime function with the *same* underlying bug.**
+With retain/release fixed, constructing `GameEngine()` still hung — `GameEngine.init()` calls
+`entitiesByTopY.reserveCapacity(64)` on a `[Int32: [Int]]` `Dictionary`, and any `Dictionary`/
+`Set` operation needs a lazily-initialized hash seed (`Hasher._seed`), gated by `swift_once`.
+GDB showed the CPU stuck in `swift_once`'s "someone else already claimed this token, wait for
+them" spin loop — reached from `Hasher._hash(seed:_:) <- _HashTable.capacity(forScale:) <-
+_DictionaryStorage`. That branch should only be reachable with a second real thread; on this
+single-threaded target the only way to reach it is the *same* logical call recursing into
+`swift_once` for the same token before the outer call finishes — a self-deadlock, and
+`-assume-single-threaded`/the IR rewrite don't touch it since `swift_once`'s CAS (`ll`/`sc`
+again) is a separate, IRGen-emitted `weak_odr` symbol, not something that goes through
+`atomicrmw`/plain retain-release codegen.
+
+Fix: `swift_once` is `weak_odr` (confirmed via `nm`) and not defined in
+`libswiftEmbeddedPlatformPOSIX.a` — it's baked directly into every compiled module, the same as
+`swift_retain`/`swift_release` were. A weak symbol can be shadowed by a strong definition
+elsewhere at link time — exactly the mechanism this port's bump allocator already uses to
+override libc.a's `malloc`/`free`/`posix_memalign`. `common/shim.c` now defines a plain,
+non-atomic `swift_once`: claim with an ordinary (non-atomic) compare, run the initializer, mark
+done. If the initializer recursively re-enters the same predicate (the exact deadlock
+scenario), the inner call just returns without blocking or re-running the initializer — the
+recursive caller reads whatever's currently in the not-yet-fully-initialized storage (typically
+still zero), which is harmless for a hash seed on an offline single-player game.
+
+With all three fixes in place, `Set`/`Dictionary` work completely (verified with a standalone
+`Set<Int>` insert/contains/iterate test, isolated from `GameEngine` entirely) and `GameEngine()`
+constructs and runs normally.
+
+## Update 7: a fourth, unrelated failure mode — checked `%` traps DuckStation's recompiler
+
+With Updates 1-6 fixed, `GameEngine`/`RenderList`/`EntityFactory` could finally be used
+directly (no more PS1-local `GameState`/`FixedArray` reimplementation) — but the first call to
+`buildRenderFrame()` still hung. Bisected with on-screen (`ps1_draw_text`) and SIO
+(`ps1_log`/`puts`, surfaced via DuckStation's "Redirect SIO to TTY" debug option, or by running
+DuckStation's actual Mach-O binary directly from a terminal instead of via `open -a` so its
+stdout has somewhere to go) checkpoints sprinkled through `RenderList.swift`'s call chain, down
+to a single line in `junkbotFrame()`:
+
+```swift
+let frame = keyframes[Int(e.animationFrame) % keyframes.count]
+```
+
+With `e.animationFrame == 0` and `keyframes.count == 10` (confirmed by printing both values
+immediately beforehand), this should be entirely inert — but execution never returned from it.
+Disassembly shows Swift's checked `%` lowers to the standard MIPS-I-safe sequence (`div`,
+`teq $divisor, $zero, 0x7` — trap only if the divisor is genuinely zero — then `mfhi`), and the
+divisor here is never zero, so the trap should never fire. Yet DuckStation's own log showed its
+recompiler failing to read/compile the code page containing this exact sequence
+("Instruction read failed... falling back to uncached interpreter"), in a region that had
+already been through repeated cache-invalidation churn from BIOS boot. This looks like a
+DuckStation recompiler/interpreter edge case specifically around `teq`-then-`mfhi` sequences
+under cache-invalidation pressure, not a Swift codegen bug — real MIPS-I hardware has no issue
+with `div`/`teq`/`mfhi` (they're base ISA), and `-Ounchecked` (which removes the `teq` trap
+entirely, module-wide) made things *worse* (nothing rendered at all, silently — almost
+certainly because it also removes `Array` bounds checks that were incidentally load-bearing
+elsewhere), so this isn't a "Swift shouldn't trap here" issue either.
+
+**Fix:** replace the checked `%` at this one call site with a manual subtract-based modulo
+(`while idx >= count { idx -= count }`), which never emits `div`/`teq`/`mfhi` at all. Harmless
+on every other port (`keyframes.count` is always a small single-digit constant, so the loop
+runs at most a couple of iterations). This is a targeted, minimal patch to shared
+`RenderList.swift` — not a reason to avoid `%` everywhere in `JunkbotCore`; the other four `%`
+uses in `junkbotFrame` (dying/water-dying/eating/shield-donning animation-frame cycling) are
+unexercised by this port's v1 test level and haven't been confirmed to hit the same issue.
+
+**Result:** with all four fixes applied, the full shared `GameEngine`/`RenderList` render
+pipeline works end-to-end on this target — bricks and Junkbot's sprite render correctly, at a
+real framerate, using the exact same `Sources/JunkbotCore` every other port uses. No PS1-local
+`GameState`/`FixedArray`/`PS1DynArray` reimplementation is needed anymore.
