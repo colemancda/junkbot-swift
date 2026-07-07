@@ -1,0 +1,6 @@
+0 Gearbot - black round body, light-gray gear rings top/bottom
+0 // 4019.dat (Technic Gear 16 Tooth) is authored for a horizontal axle (its flat face is the
+0 // XY plane); rotated 90 degrees about X here so it lies flat like a ring stacked on the body.
+1 0 0 0 0 1 0 0 0 1 0 0 0 1 3941.dat
+1 71 0 -10 0 1 0 0 0 0 -1 0 1 0 4019.dat
+1 71 0 34 0 1 0 0 0 0 -1 0 1 0 4019.dat
