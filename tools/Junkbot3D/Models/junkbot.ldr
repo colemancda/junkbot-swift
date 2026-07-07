@@ -18,10 +18,15 @@
 0 // ============================================================
 0
 0 // ---- Legs: light-gray minifig hips + legs ----
-0 // 3815c01 is the current file (old 970c00 redirects here).
-0 // Sub-parts if you want to pose legs independently for a walk
-0 // cycle: 3815 (hips), 3816 (left leg), 3817 (right leg).
-1 71 0 -40 0 1 0 0 0 1 0 0 0 1 3815c01.dat
+0 // 3815c01 (the old shortcut combining 3815+3816+3817) was obsoleted "due to
+0 // bad leg geometry" (see its own !HISTORY) - it applied a wrong +12 LDU
+0 // offset to both legs, producing a jagged/broken silhouette. Using the
+0 // current non-obsolete parts directly instead, all at identity (they're
+0 // already correctly positioned/mirrored relative to each other):
+0 // 3815b (hips), 3816c (right leg), 3817c (left leg).
+1 71 0 -40 0 1 0 0 0 1 0 0 0 1 3815b.dat
+1 71 0 -40 0 1 0 0 0 1 0 0 0 1 3816c.dat
+1 71 0 -40 0 1 0 0 0 1 0 0 0 1 3817c.dat
 0
 0 // ---- Body: orange 2x2 brick ----
 1 25 0 -60 -10 1 0 0 0 1 0 0 0 1 3003.dat
