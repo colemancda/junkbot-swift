@@ -44,9 +44,17 @@ fragment float4 fragment_main(VertexOut in [[stage_in]]) {
     float3 fillDir = normalize(float3(-1.0, -0.5, -1.0));
 
     float3 n = normalize(in.worldNormal);
-    float key    = max(dot(n, keyDir),  0.0) * 0.75;
-    float fill   = max(dot(n, fillDir), 0.0) * 0.25;
-    float ambient = 0.2;
+    // Weights tuned up from swift-lego-draw's original demo-viewer values (ambient 0.2, key 0.75,
+    // fill 0.25): that combination always multiplies the base color by well under 1.0 on most
+    // faces (max realistic sum ~1.1, only on a face pointed straight at the key light), so colors
+    // read uniformly darker/duller than their true saturation - unlike the SceneKit path's
+    // `.physicallyBased` material + strong ambient, which usually lands close to (or above) 1.0.
+    // A high flat ambient floor keeps colors close to true almost everywhere; the smaller
+    // directional terms add just enough shading for depth cues without darkening the base color
+    // much.
+    float key    = max(dot(n, keyDir),  0.0) * 0.35;
+    float fill   = max(dot(n, fillDir), 0.0) * 0.15;
+    float ambient = 0.8;
 
     float3 rgb = in.color.rgb * (ambient + key + fill);
     return float4(rgb, in.color.a);

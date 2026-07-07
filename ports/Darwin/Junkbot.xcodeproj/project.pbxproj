@@ -12,6 +12,7 @@
 		18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
 		F193E8C43421473AA812D204 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695D2BA05B7E4901AEB92654 /* Settings.swift */; };
 		253CB04789F0419D90D69A84 /* Scene3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6971E52DCF7400899B0F05E /* Scene3DManager.swift */; };
+		EB912983C8334164B87A0D17 /* Metal3DDecalTextures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DDCCCB6C4D4A58A116FC05 /* Metal3DDecalTextures.swift */; };
 		ED16F666190E41AC8930B97E /* Metal3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17173D7B480D4063879050D4 /* Metal3DManager.swift */; };
 		82579FD0777B4A49BF605624 /* Metal3DModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */; };
 		A7DD56338AD94A30ABA188BE /* Metal3DBrickGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */; };
@@ -75,6 +76,7 @@
 		0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		695D2BA05B7E4901AEB92654 /* Settings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		A6971E52DCF7400899B0F05E /* Scene3DManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DManager.swift; sourceTree = "<group>"; };
+		44DDCCCB6C4D4A58A116FC05 /* Metal3DDecalTextures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DDecalTextures.swift; sourceTree = "<group>"; };
 		17173D7B480D4063879050D4 /* Metal3DManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DManager.swift; sourceTree = "<group>"; };
 		C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DModel.swift; sourceTree = "<group>"; };
 		9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DBrickGeometry.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 				0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */,
 				695D2BA05B7E4901AEB92654 /* Settings.swift */,
 				A6971E52DCF7400899B0F05E /* Scene3DManager.swift */,
+				44DDCCCB6C4D4A58A116FC05 /* Metal3DDecalTextures.swift */,
 				17173D7B480D4063879050D4 /* Metal3DManager.swift */,
 				C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */,
 				9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */,
@@ -414,6 +417,7 @@
 				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
 				F193E8C43421473AA812D204 /* Settings.swift in Sources */,
 				253CB04789F0419D90D69A84 /* Scene3DManager.swift in Sources */,
+				EB912983C8334164B87A0D17 /* Metal3DDecalTextures.swift in Sources */,
 				ED16F666190E41AC8930B97E /* Metal3DManager.swift in Sources */,
 				82579FD0777B4A49BF605624 /* Metal3DModel.swift in Sources */,
 				A7DD56338AD94A30ABA188BE /* Metal3DBrickGeometry.swift in Sources */,

@@ -16,6 +16,9 @@ enum Metal3DPalette {
   }
 
   static let black = SIMD4<Float>(0, 0, 0, 1)
+  /// Brick edge-outline color (`Metal3DBrickGeometry.edgeOutline`) - 90% transparent so the
+  /// silhouette lines read as a subtle seam rather than a hard black stroke.
+  static let outline = SIMD4<Float>(0, 0, 0, 0.1)
 
   static func rgb(_ r: Int, _ g: Int, _ b: Int) -> SIMD4<Float> {
     SIMD4<Float>(Float(r) / 255, Float(g) / 255, Float(b) / 255, 1)

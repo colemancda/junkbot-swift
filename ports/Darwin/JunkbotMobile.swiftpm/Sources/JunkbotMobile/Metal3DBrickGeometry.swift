@@ -152,7 +152,7 @@ enum Metal3DBrickGeometry {
     let w = abs(d.x) > 0.001 ? abs(d.x) : thickness
     let h = abs(d.y) > 0.001 ? abs(d.y) : thickness
     let l = abs(d.z) > 0.001 ? abs(d.z) : thickness
-    return box(width: w, height: h, length: l, color: Metal3DPalette.black).map {
+    return box(width: w, height: h, length: l, color: Metal3DPalette.outline).map {
       Metal3DVertex(position: $0.position + mid, normal: $0.normal, color: $0.color)
     }
   }

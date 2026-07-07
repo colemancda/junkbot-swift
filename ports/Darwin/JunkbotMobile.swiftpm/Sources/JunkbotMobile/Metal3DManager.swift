@@ -1,3 +1,4 @@
+import ImageIO
 import JunkbotCore
 import Metal
 import MetalKit
@@ -27,7 +28,17 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
   private let backdropPipeline: MTLRenderPipelineState
   private let entityDepthState: MTLDepthStencilState
   private let backdropDepthState: MTLDepthStencilState
+  private let decalDepthState: MTLDepthStencilState
   private let samplerState: MTLSamplerState
+
+  /// Junkbot's chest recycle emblem (`Metal3DDecalTextures.chestEmblem`) - the baked LDraw body
+  /// brick carries no UVs to texture directly, so this is a small transparent-background quad
+  /// drawn just in front of the body's own surface each frame `sync(entities:)` sees a Junkbot,
+  /// same technique the offline tool's `DecalTextures.swift` uses for the trash bin's sticker.
+  /// Built lazily (needs `device`, not available at property-init time) and cached for the
+  /// process's lifetime - one flat-colored glyph, reused by every Junkbot instance.
+  private var junkbotDecalTexture: MTLTexture?
+  private var pendingDecalQuads: [(transform: float4x4, halfWidth: Float, halfHeight: Float)] = []
 
   /// Applied to entity content only, matching `Scene3DManager.worldNode`'s transform - the level
   /// backdrop stays unsheared (see `drawBackdrop`), same split as the SceneKit path.
@@ -111,6 +122,14 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
     bpd.vertexDescriptor = bd
     bpd.colorAttachments[0].pixelFormat = .bgra8Unorm
     bpd.depthAttachmentPixelFormat = .depth32Float
+    // Blending on: harmless for the (fully-opaque) backdrop PNG, and needed for the Junkbot decal
+    // quad this same pipeline/vertex layout also draws (a transparent-background glyph - see
+    // `drawTexturedQuad`).
+    bpd.colorAttachments[0].isBlendingEnabled = true
+    bpd.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+    bpd.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+    bpd.colorAttachments[0].sourceAlphaBlendFactor = .one
+    bpd.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
     guard let backdropPipeline = try? device.makeRenderPipelineState(descriptor: bpd) else {
       return nil
     }
@@ -133,6 +152,17 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
       return nil
     }
     self.backdropDepthState = backdropDepthState
+
+    // Decals draw after entities, testing depth (so anything genuinely in front of Junkbot still
+    // occludes the emblem) but not writing it (so drawing order among decals/entities afterward
+    // doesn't matter).
+    let decalDS = MTLDepthStencilDescriptor()
+    decalDS.depthCompareFunction = .lessEqual
+    decalDS.isDepthWriteEnabled = false
+    guard let decalDepthState = device.makeDepthStencilState(descriptor: decalDS) else {
+      return nil
+    }
+    self.decalDepthState = decalDepthState
 
     let samplerDescriptor = MTLSamplerDescriptor()
     samplerDescriptor.minFilter = .linear
@@ -199,9 +229,10 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
     }
     guard let path = foundPath else { return }
 
-    let loader = MTKTextureLoader(device: device)
-    guard let texture = try? loader.newTexture(URL: URL(fileURLWithPath: path), options: [.SRGB: false])
-    else { return }
+    guard let texture = Self.loadTexture(path: path, device: device) else {
+      FileHandle.standardError.write(Data("Metal3DManager: failed to load backdrop texture at \(path)\n".utf8))
+      return
+    }
     backdropTexture = texture
     backdropSize = SIMD2<Float>(Float(texture.width), Float(texture.height))
     // Matches `Scene3DManager.loadBackdrop(spriteID:)`: `RenderList.swift`'s backdrop command
@@ -237,6 +268,7 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
 
   func sync(entities: [Entity]) {
     combinedVertices.removeAll(keepingCapacity: true)
+    pendingDecalQuads.removeAll(keepingCapacity: true)
     for e in entities {
       if e.type == .brick {
         appendBrick(e)
@@ -250,7 +282,12 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
   private func appendBrick(_ e: Entity) {
     let local = Metal3DBrickGeometry.vertices(widthInStuds: e.widthInStuds, colorIndex: e.colorIndex)
     let worldTransform = obliqueShear * Metal3DMatrix.translation(Metal3DSpace.center(of: e))
-    appendLocal(local, transform: worldTransform)
+    // Matches `RenderList.swift`'s `alpha: Int32 = e.grabbed ? (placeable ? 80 : 30) : 100` (the
+    // 2D path's held-brick feedback) - 3D mode is play-only (never `.editing`, see
+    // `Scene3DManager.swift`'s doc comment), so `placeable` there simplifies to `canRelease()`
+    // alone.
+    let alpha: Float = e.grabbed ? (gameEngine.canRelease() ? 0.8 : 0.3) : 1.0
+    appendLocal(local, transform: worldTransform, alphaOverride: alpha)
   }
 
   private func appendModel(_ model: Metal3DBakedModel, entity e: Entity, name: String) {
@@ -285,18 +322,72 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
       }
       let transform = entityWorldTransform * submesh.transformMatrix * legRotation
       appendBaked(submesh, transform: transform)
+      // Body is submesh index 3 (see `Metal3DExporter.swift`'s doc comment for the fixed
+      // hips/rightLeg/leftLeg/body/head/lid order) - queue the chest emblem quad just in front of
+      // its own front (-z) face, sized to most of its footprint. Doesn't move with the leg rig
+      // (only legs 1/2 are rigged), so uses `entityWorldTransform` directly, not `transform`.
+      if isRigged && i == 3 {
+        queueChestDecal(bodySubmesh: submesh, entityWorldTransform: entityWorldTransform)
+      }
     }
   }
 
-  private func appendLocal(_ local: [Metal3DVertex], transform: float4x4) {
+  /// Queues `junkbotDecalTexture`'s chest emblem on the body piece's own camera-facing side - see
+  /// `Metal3DDecalTextures.swift`'s doc comment for why a flat quad instead of a real texture on
+  /// the body's own (UV-less) baked geometry.
+  private func queueChestDecal(bodySubmesh: Metal3DBakedSubmesh, entityWorldTransform: float4x4) {
+    let count = bodySubmesh.vertexCount
+    guard count > 0 else { return }
+    let placement = bodySubmesh.transformMatrix
+    var minP = SIMD3<Float>(repeating: .greatestFiniteMagnitude)
+    var maxP = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
+    for idx in 0..<count {
+      let local = SIMD3<Float>(
+        bodySubmesh.positions[idx * 3], bodySubmesh.positions[idx * 3 + 1],
+        bodySubmesh.positions[idx * 3 + 2])
+      let p4 = placement * SIMD4<Float>(local, 1)
+      let p = SIMD3<Float>(p4.x, p4.y, p4.z)
+      minP = simd_min(minP, p)
+      maxP = simd_max(maxP, p)
+    }
+    // `entityWorldTransform` includes `rotationY(facing)` (see `appendModel` - it turns the model
+    // to face the level's travel axis instead of the offline preview's default camera-facing
+    // pose), which maps body-*local* X straight to *world* Z (verified against
+    // `Metal3DMatrix.rotationY`: for either `facing` sign, `world.z == local.x` exactly) - i.e.
+    // once rotated, it's local X (the brick's own left-right width), not local Z, that ends up
+    // facing toward/away from the camera. A decal offset along local Z (tried first) only nudges
+    // it sideways and sits at the body's own mid-depth, so its own opaque geometry z-fights/
+    // occludes it. Push to the body's local +X extreme instead (`maxP.x`, larger local x -> larger
+    // world z -> closer to the camera at z=+1000) plus a small epsilon to clear the surface.
+    let center = SIMD3<Float>(maxP.x + 0.5, (minP.y + maxP.y) / 2, (minP.z + maxP.z) / 2)
+    // The quad spans body-local Y (vertical) and Z (lateral post-rotation, i.e. the body's own
+    // depth extent, now facing along the travel axis) - halfWidth/halfHeight below name the local
+    // Z/Y spans respectively; the extra `rotationY(.pi / 2)` factor below remaps
+    // `drawTexturedQuad`'s local-XY-plane corners onto that Y/Z plane (local (x, y, 0) -> (0, y,
+    // x), so the quad's own "x" axis lands on body-local Z, matching `halfWidth`).
+    let halfWidth = (maxP.z - minP.z) * 0.3
+    let halfHeight = (maxP.y - minP.y) * 0.25
+    guard halfWidth > 0, halfHeight > 0 else { return }
+    let transform =
+      entityWorldTransform * Metal3DMatrix.translation(center) * Metal3DMatrix.rotationY(.pi / 2)
+    pendingDecalQuads.append((transform: transform, halfWidth: halfWidth, halfHeight: halfHeight))
+  }
+
+  /// `alphaOverride`, when given, replaces (not multiplies) each vertex's own alpha - used for a
+  /// grabbed brick's held/placeable feedback (see `appendBrick`) without baking that per-frame,
+  /// per-entity state into `Metal3DBrickGeometry`'s (studs, color)-keyed cache.
+  private func appendLocal(_ local: [Metal3DVertex], transform: float4x4, alphaOverride: Float? = nil)
+  {
     combinedVertices.reserveCapacity(combinedVertices.count + local.count)
     for v in local {
       let p = transform * SIMD4<Float>(v.position, 1)
       let n = transform * SIMD4<Float>(v.normal, 0)
+      var color = v.color
+      if let alphaOverride { color.w = alphaOverride }
       combinedVertices.append(
         Metal3DVertex(
           position: SIMD3<Float>(p.x, p.y, p.z),
-          normal: simd_normalize(SIMD3<Float>(n.x, n.y, n.z)), color: v.color))
+          normal: simd_normalize(SIMD3<Float>(n.x, n.y, n.z)), color: color))
     }
   }
 
@@ -378,9 +469,61 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
       }
     }
 
+    if !pendingDecalQuads.isEmpty {
+      if junkbotDecalTexture == nil {
+        junkbotDecalTexture = Metal3DDecalTextures.chestEmblem(
+          strokeColor: SIMD4<Float>(0.45, 0.24, 0.06, 1), device: device)
+      }
+      if let texture = junkbotDecalTexture {
+        for quad in pendingDecalQuads {
+          drawTexturedQuad(
+            enc, texture: texture, transform: quad.transform, halfWidth: quad.halfWidth,
+            halfHeight: quad.halfHeight, depthState: decalDepthState)
+        }
+      }
+    }
+
     enc.endEncoding()
     cmdBuf.present(drawable)
     cmdBuf.commit()
+  }
+
+  /// `MTKTextureLoader` fails outright ("Image decoding failed") on this project's backdrop PNGs
+  /// - they're 8-bit indexed/colormap PNGs, a format it apparently can't decode - so this decodes
+  /// via `CGImageSource`/`CGContext` into a plain RGBA8 buffer instead, which handles any PNG
+  /// color format, then uploads that buffer directly.
+  private static func loadTexture(path: String, device: MTLDevice) -> MTLTexture? {
+    guard
+      let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+      let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
+    else { return nil }
+
+    let width = cgImage.width, height = cgImage.height
+    guard width > 0, height > 0 else { return nil }
+
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    guard
+      let context = CGContext(
+        data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: bytesPerRow,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+    else { return nil }
+    // Flip vertically: `CGContext`'s origin is bottom-left, but the pixel buffer we upload below
+    // needs top-left-origin row order (matches the backdrop quad's UVs, which assume that too).
+    context.translateBy(x: 0, y: CGFloat(height))
+    context.scaleBy(x: 1, y: -1)
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+      pixelFormat: .rgba8Unorm, width: width, height: height, mipmapped: false)
+    descriptor.usage = .shaderRead
+    guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+    texture.replace(
+      region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: pixels,
+      bytesPerRow: bytesPerRow)
+    return texture
   }
 
   private func drawBackdrop(_ enc: MTLRenderCommandEncoder, texture: MTLTexture) {
@@ -400,6 +543,41 @@ final class Metal3DManager: NSObject, MTKViewDelegate {
       enc.setVertexBytes(raw.baseAddress!, length: raw.count, index: 0)
     }
     // Backdrop is unsheared (see this file's doc comment): view-projection only, no oblique shear.
+    var mvp = viewProjection
+    enc.setVertexBytes(&mvp, length: MemoryLayout<float4x4>.size, index: 1)
+    enc.setFragmentTexture(texture, index: 0)
+    enc.setFragmentSamplerState(samplerState, index: 0)
+    enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: quad.count)
+  }
+
+  /// Draws a `halfWidth`x`halfHeight` quad in `transform`'s local XY plane (unlike
+  /// `drawBackdrop`'s axis-aligned quad, `transform` here carries an arbitrary rotation - the
+  /// decal needs to sit flush against and rotate with its entity's own front face).
+  private func drawTexturedQuad(
+    _ enc: MTLRenderCommandEncoder, texture: MTLTexture, transform: float4x4, halfWidth: Float,
+    halfHeight: Float, depthState: MTLDepthStencilState
+  ) {
+    func corner(_ x: Float, _ y: Float) -> SIMD3<Float> {
+      let p = transform * SIMD4<Float>(x, y, 0, 1)
+      return SIMD3<Float>(p.x, p.y, p.z)
+    }
+    let c00 = corner(-halfWidth, -halfHeight)
+    let c10 = corner(halfWidth, -halfHeight)
+    let c11 = corner(halfWidth, halfHeight)
+    let c01 = corner(-halfWidth, halfHeight)
+    let quad: [Metal3DBackdropVertex] = [
+      .init(position: c00, uv: SIMD2(0, 1)),
+      .init(position: c10, uv: SIMD2(1, 1)),
+      .init(position: c11, uv: SIMD2(1, 0)),
+      .init(position: c00, uv: SIMD2(0, 1)),
+      .init(position: c11, uv: SIMD2(1, 0)),
+      .init(position: c01, uv: SIMD2(0, 0)),
+    ]
+    enc.setRenderPipelineState(backdropPipeline)
+    enc.setDepthStencilState(depthState)
+    quad.withUnsafeBytes { raw in
+      enc.setVertexBytes(raw.baseAddress!, length: raw.count, index: 0)
+    }
     var mvp = viewProjection
     enc.setVertexBytes(&mvp, length: MemoryLayout<float4x4>.size, index: 1)
     enc.setFragmentTexture(texture, index: 0)
