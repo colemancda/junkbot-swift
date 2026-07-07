@@ -1,3 +1,7 @@
+# Official LDraw parts library (~600MB extracted) - downloaded via
+# https://library.ldraw.org/library/updates/complete.zip, not vendored in the repo.
+tools/Junkbot3D/LDraw/
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
