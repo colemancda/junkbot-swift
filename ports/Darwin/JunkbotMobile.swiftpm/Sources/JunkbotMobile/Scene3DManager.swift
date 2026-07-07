@@ -80,6 +80,12 @@ final class Scene3DManager {
     scene.rootNode.addChildNode(worldNode)
     scene.rootNode.addChildNode(backdropNode)
 
+    // `.physicallyBased` materials (bricks via `Scene3DPalette.material`, and every baked LDraw
+    // entity model via `swift-lego-draw`'s `LDrawMaterialCache`) derive their indirect-specular term
+    // from `lightingEnvironment` - without one, PBR has nothing to reflect and renders flat/dark.
+    // Matches `tools/Junkbot3D/Sources/Junkbot3D/SceneBuilder.swift`'s flat neutral-gray fill.
+    scene.lightingEnvironment.contents = Scene3DPalette.rgb(0xB0, 0xB0, 0xB0)
+
     let ambient = SCNLight()
     ambient.type = .ambient
     ambient.color = Scene3DPalette.rgb(0xB0, 0xB0, 0xB8)
@@ -184,6 +190,11 @@ final class Scene3DManager {
     let material = SCNMaterial()
     material.diffuse.contents = loadedImage
     material.lightingModel = .constant
+    // `.constant` sums ambient + diffuse + emission rather than being truly unlit - without
+    // zeroing the material's own ambient term, the scene's ambient light (`init`'s `ambient`
+    // node) washes the backdrop out with a white/gray tint instead of showing the image's exact
+    // pixel colors, unlike the 2D path's plain sprite blit.
+    material.ambient.contents = Scene3DPalette.rgb(0, 0, 0)
     material.isDoubleSided = true
     plane.materials = [material]
     backdropNode.geometry = plane

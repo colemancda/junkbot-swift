@@ -32,13 +32,19 @@ enum Scene3DPalette {
     PlatformColor(red: CGFloat(r) / 255, green: CGFloat(g) / 255, blue: CGFloat(b) / 255, alpha: 1)
   }
 
-  /// A flat, unlit-ish LEGO plastic material. `.lambert` keeps shading cheap and matte, which
-  /// reads as the low-poly PS1/DS look better than glossy `.blinn`/`.phong` highlights.
+  /// Matches `tools/Junkbot3D/Sources/Junkbot3D/Palette.swift`'s `.physicallyBased` material (and
+  /// the baked LDraw entity models', via `swift-lego-draw`'s `LDrawMaterialCache`) exactly - not
+  /// `.lambert`, which was tried first but is energy-*non-conserving*: with `locksAmbientWithDiffuse`
+  /// summing the scene's bright ambient light on top of the directional light's diffuse term, faces
+  /// clipped to a washed-out near-white instead of showing their true color. `.physicallyBased`
+  /// needs `scene.lightingEnvironment` set (`Scene3DManager.init`) or its indirect-specular term has
+  /// nothing to reflect and renders flat gray.
   static func material(_ color: PlatformColor) -> SCNMaterial {
     let m = SCNMaterial()
     m.diffuse.contents = color
-    m.lightingModel = .lambert
-    m.locksAmbientWithDiffuse = true
+    m.lightingModel = .physicallyBased
+    m.metalness.contents = 0.0
+    m.roughness.contents = 0.35
     return m
   }
 }
