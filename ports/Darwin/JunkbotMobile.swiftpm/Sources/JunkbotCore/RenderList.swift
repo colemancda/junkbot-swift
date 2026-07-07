@@ -343,7 +343,19 @@ extension GameEngine {
     } else {
       keyframes = e.facing == 1 ? junkbotAnim_walk_r : junkbotAnim_walk_l
     }
-    let frame = keyframes[Int(e.animationFrame) % keyframes.count]
+    // Not `Int(e.animationFrame) % keyframes.count` -- see KNOWN_ISSUES.md:
+    // on ports/PS1 specifically, this exact checked-modulo lowering (MIPS
+    // `div`+`teq`+`mfhi`, the trap-on-zero-divisor check Swift inserts for
+    // `%`) triggers a DuckStation recompiler/interpreter bug that silently
+    // hangs the emulated CPU, even though the divisor here is always
+    // `keyframes.count` (never zero) so the trap itself never legitimately
+    // fires. A manual subtract-based modulo sidesteps the `div`/`teq`
+    // sequence entirely; harmless on every other port (`keyframes.count` is
+    // always a small single-digit constant).
+    var idx = Int(e.animationFrame)
+    while idx >= keyframes.count { idx -= keyframes.count }
+    while idx < 0 { idx += keyframes.count }
+    let frame = keyframes[idx]
     // The editor palette clamps the walk cycle's horizontal offset so the preview doesn't
     // wander off its button (JS: `if (junkbot.isPreviewEntity && offset.x >= 5) offset.x = 5`).
     let dx = isPreview && frame.dx >= 5 ? 5 : frame.dx

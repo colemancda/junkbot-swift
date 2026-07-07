@@ -7,6 +7,13 @@
 
 void ps1_init_heap(void);
 
+// SIO-based logging: DuckStation's "Redirect SIO to TTY" debug option (or
+// real hardware's serial port) surfaces this in a log window instead of
+// needing to draw text to the screen and flip buffers (which costs 2 frame
+// flips per debug line -- see ps1_draw_text/ps1_draw_int above). Routes
+// through libpsxapi.a's puts, which calls this file's putchar -> AddSIO.
+void ps1_log(const char *message);
+
 // Render context: double-buffered DISPENV/DRAWENV + ordering table + FntSort
 // debug-font text (see swift-embedded-ps1's HelloPS1/shim.c reference).
 void ps1_init_display(void);

@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <psxgpu.h>
 #include <psxsio.h>
 #include <psxapi.h>
@@ -73,7 +74,11 @@ void arc4random_buf(void *buf, size_t nbytes) {
   }
 }
 
-int putchar(int c) { AddSIO(c); return c; }
+// PSn00bSDK's stdio.h declares `void putchar(int)` (non-standard return type)
+// -- match it exactly now that this file includes <stdio.h> for puts().
+void putchar(int c) { AddSIO(c); }
+
+void ps1_log(const char *message) { puts(message); }
 
 void exit(int code) { (void)code; while (1) {} }
 
@@ -93,6 +98,56 @@ double ceil(double x) {
   double t = (double)(long long)x;
   if (t < x) t += 1.0;
   return t;
+}
+
+// ---------------------------------------------------------------------------
+// swift_once override -- see KNOWN_ISSUES.md.
+//
+// Swift's IRGen emits `swift_once` directly into every module as a `weak_odr`
+// symbol (confirmed via `nm`/IR dump -- it's not in libswiftEmbeddedPlatformPOSIX.a,
+// it's baked into swiftlib.o itself), the same pattern already exploited here for
+// `malloc`/`free`/`posix_memalign` (this file's bump allocator overrides the
+// weak libc.a versions by simple strong-symbol shadowing at link time).
+//
+// The generated `swift_once` claims a "who's initializing this" token via
+// `ll`/`sc` (Load-Linked/Store-Conditional) -- which don't exist on MIPS-I
+// (the PS1's R3000A), the same instruction pair whose absence caused the
+// `swift_retain`/`swift_release` hangs fixed by `-assume-single-threaded`.
+// That flag has no effect on `swift_once`, though: it only changes ARC
+// codegen. Any `Dictionary`/`Set` operation needs a lazily-initialized hash
+// seed (`Hasher._seed`), gated by exactly this `swift_once` -- so
+// constructing so much as one `Dictionary` deadlocks on this target.
+//
+// Confirmed via GDB (DuckStation's built-in gdbserver, `mips:3000` target in
+// a Homebrew-installed cross-capable gdb): stuck in swift_once's "someone
+// else already claimed this, wait for them" spin loop, reached from
+// `Hasher._hash(seed:_:) <- _HashTable.capacity(forScale:) <-
+// _DictionaryStorage` -- i.e. the SAME logical call recursing into
+// `swift_once` for the same token before the outer call finishes, which can
+// only deadlock on a single-threaded target (there's no other thread that
+// could ever finish and unblock the wait).
+//
+// This target only ever runs one thread, so the real fix is trivial: a
+// plain, non-atomic check-and-run. If the initializer recursively re-enters
+// this same predicate (the exact scenario that deadlocks upstream), the
+// inner call sees "in progress" and just returns without running fn again
+// or blocking -- the recursive caller reads whatever's currently in the
+// target's storage (typically still its zero-initialized value, e.g. an
+// all-zero hash seed), which is semantically harmless here: a
+// single-player, non-networked puzzle game has no need for
+// hash-flooding-attack resistance, so a weaker/degenerate seed costs
+// nothing. Matches the exact signature swift_once's callers expect (see the
+// `jalr $25`/`move $4,$6` calling convention in the disassembly this was
+// reverse-engineered from: predicate, fn, context, in that order, void fn
+// itself taking just the context pointer).
+typedef long swift_once_t;
+
+void swift_once(swift_once_t *predicate, void (*fn)(void *), void *context) {
+  if (*predicate == 0) {
+    *predicate = 1;   // claim it -- blocks recursive re-entry from re-running fn
+    fn(context);
+    *predicate = -1;  // done -- matches the `bltz`/`bgez` fast-path check upstream
+  }
 }
 
 // ---------------------------------------------------------------------------
