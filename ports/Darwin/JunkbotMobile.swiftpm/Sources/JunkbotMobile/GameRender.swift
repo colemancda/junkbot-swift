@@ -159,9 +159,12 @@ final class VirtualCursor {
 /// Set by `GameScene.swift` while the live 3D scene (`Scene3DManager`) is showing behind the
 /// transparent `SKView` in play mode (see `Settings.render3DEnabled`) - `renderWorld(editing:)`
 /// skips its sprite-drawing loop in that case, so the 2D world doesn't get drawn *on top of* the
-/// 3D one. Defaults to always-false, so this has zero effect unless Darwin's 3D mode opts in;
-/// HUD/menu drawing (`drawLevelToast`, dialogs, buttons) is unaffected either way, since none of
-/// it goes through `renderWorld`.
+/// 3D one (the `SKView` sits *above* the `SCNView`, so drawing the backdrop here would still
+/// paint over the 3D scene despite being logically "behind" it - the backdrop is instead drawn as
+/// the 3D scene's own `SCNScene.background`, see `Scene3DManager.syncBackground(entities:)`).
+/// Defaults to always-false, so this has zero effect unless Darwin's 3D mode opts in; HUD/menu
+/// drawing (`drawLevelToast`, dialogs, buttons) is unaffected either way, since none of it goes
+/// through `renderWorld`.
 @GameActor var suppressWorldSpriteDrawing = false
 
 /// Draws the gameplay world (entities/effects/mask) at the given screen-space camera offset.

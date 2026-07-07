@@ -25,7 +25,7 @@ import JunkbotCore
 import SceneKit
 
 let usage = "usage:\n" +
-  "  Junkbot3D <repo_root> <level.txt> <output.(png|usdz|scn)> [--front]\n" +
+  "  Junkbot3D <repo_root> <level.txt> <output.(png|usdz|scn)> [--front] [--frame N]\n" +
   "  Junkbot3D <repo_root> --part <name.dat> [colorCode] <output.(png|usdz|scn)>\n" +
   "  Junkbot3D <repo_root> --model <name.ldr> <output.(png|usdz|scn)>\n" +
   "  Junkbot3D <repo_root> --bbox <name.dat>\n" +
@@ -230,12 +230,22 @@ if CommandLine.arguments[2] == "--part" {
   (scene, cameraNode) = standalonePreviewScene(for: modelNode)
 } else {
   let levelPath = CommandLine.arguments[2]
-  guard CommandLine.arguments.count == 4 || CommandLine.arguments.count == 5 else {
+  guard CommandLine.arguments.count >= 4 else {
     FileHandle.standardError.write(Data(usage.utf8))
     exit(2)
   }
   outputPath = CommandLine.arguments[3]
-  let useFrontCamera = CommandLine.arguments.count == 5 && CommandLine.arguments[4] == "--front"
+  let trailingArgs = Array(CommandLine.arguments.dropFirst(4))
+  let useFrontCamera = trailingArgs.contains("--front")
+  // `--frame N` overrides every entity's `animationFrame` after loading, for rendering a single
+  // pose out of a walk cycle (`CharacterGeometry.junkbot`'s procedural leg-swing/bob rig) instead
+  // of whatever frame 0 (the level's just-loaded rest state) happens to look like.
+  let overrideFrame: Int32? = {
+    guard let flagIndex = trailingArgs.firstIndex(of: "--frame"),
+      flagIndex + 1 < trailingArgs.count, let value = Int32(trailingArgs[flagIndex + 1])
+    else { return nil }
+    return value
+  }()
 
   let levelURL =
     levelPath.hasPrefix("/") ? URL(fileURLWithPath: levelPath) : repoRoot.appendingPathComponent(levelPath)
@@ -248,6 +258,13 @@ if CommandLine.arguments[2] == "--part" {
 
   let engine = GameEngine()
   engine.loadLevel(fromText: levelText)
+  if let overrideFrame {
+    engine.entities = engine.entities.map { entity in
+      var entity = entity
+      entity.animationFrame = overrideFrame
+      return entity
+    }
+  }
 
   print("Junkbot3D: loaded \(engine.entities.count) entities, bounds=\(String(describing: engine.levelBounds))")
 

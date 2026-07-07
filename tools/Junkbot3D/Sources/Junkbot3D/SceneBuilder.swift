@@ -107,7 +107,8 @@ enum SceneBuilder {
     if let modelName = ldrawModelName(for: e.type),
       let modelNode = LDrawModel.node(
         named: modelName, entityWidth: CGFloat(e.width), entityHeight: CGFloat(e.height),
-        repoRoot: repoRoot, ldrawRoot: ldrawRoot, colorTable: colorTable)
+        repoRoot: repoRoot, ldrawRoot: ldrawRoot, colorTable: colorTable,
+        animationFrame: e.animationFrame)
     {
       // Same convention as `CharacterGeometry`'s procedural meshes: models are authored with
       // their front/back asymmetry (e.g. Junkbot's roof tile sitting toward local -z) as if

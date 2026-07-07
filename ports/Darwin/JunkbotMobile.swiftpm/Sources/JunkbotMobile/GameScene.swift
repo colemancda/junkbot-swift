@@ -81,12 +81,13 @@ final class JunkbotScene: SKScene {
       scnView?.isHidden = !scene3DShouldBeActive
       if scene3DShouldBeActive {
         scene3DManager.reset()
-        scene3DManager.frameCamera(entities: gameEngine.entities, bounds: gameEngine.levelBounds)
+        scene3DManager.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
       }
     }
     suppressWorldSpriteDrawing = scene3DShouldBeActive
     if scene3DShouldBeActive {
       scene3DManager.sync(entities: gameEngine.entities)
+      scene3DManager.syncCamera()
     }
 
     render()

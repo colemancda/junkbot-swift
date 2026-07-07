@@ -13,11 +13,29 @@ enum CharacterGeometry {
   /// `EntityFactory.swift` sets `width: 2 * CELL_W`), so Junkbot's torso is literally the same
   /// footprint as a 2-stud `BrickGeometry` brick. See `junkbot_character_design` memory for the
   /// design history (this replaced an earlier minifig-body and single-mechanical-leg guess).
+  /// Walk-cycle length: matches `junkbotAnim_walk_r`/`_l`'s 10 keyframes (`JunkbotKeyframes.swift`)
+  /// so `e.animationFrame % walkCycleLength` lines up with the same cadence the 2D sprite swap
+  /// uses, even though the 3D rig is posed procedurally instead of swapping baked art frames.
+  static let walkCycleLength: Int32 = 10
+  /// Per-leg swing (radians) at the extremes of the stride - a boxy single-material leg reads
+  /// fine with a modest swing; anything larger starts clipping into the torso.
+  private static let legSwingAmplitude: Double = .pi / 7
+  /// Vertical bob (scene units = game pixels, per `Space`'s 1:1 mapping) at mid-stride, roughly
+  /// matching the peak `dy` (6px) in the 2D keyframe table's bounce.
+  private static let bobAmplitude: CGFloat = 5
+
   static func junkbot(_ e: Entity) -> SCNNode {
     let root = SCNNode()
     let w = CGFloat(e.width)  // 2 studs
     let h = CGFloat(e.height)  // 4 rows
     let d = Space.depth  // 2 studs
+
+    // Walk-cycle phase: legs swing oppositely (out of phase by pi) around the hip, and the whole
+    // figure bobs up on a full-rectified sine (positive twice per cycle, matching a real gait's
+    // double bounce - one bounce per footfall) so it lands back at rest height on either leg.
+    let phase = 2 * Double.pi * Double(e.animationFrame % walkCycleLength) / Double(walkCycleLength)
+    let legSwing = sin(phase) * legSwingAmplitude
+    let bob = CGFloat(abs(sin(phase))) * bobAmplitude
 
     let bodyColor = e.armored ? Palette.enemyBody : Palette.rgb(0xE8, 0x86, 0x18)
     let tileColor = Palette.rgb(0xF4, 0xD8, 0x20)
@@ -53,10 +71,21 @@ enum CharacterGeometry {
         width: legPieceBulk, height: legPieceH, length: legPieceVisibleWidth, chamferRadius: 1)
       legPiece.firstMaterial = Palette.material(legColor)
       let legPieceNode = SCNNode(geometry: legPiece)
-      legPieceNode.position = SCNVector3(0, legPieceH / 2, side * legPieceVisibleWidth * 0.65)
+      // Offset *below* the pivot (not centered on it) so rotating the pivot swings the leg like a
+      // hinge at the hip instead of spinning it in place around its own center.
+      legPieceNode.position = SCNVector3(0, -legPieceH / 2, 0)
       legPieceNode.addChildNode(
         EdgeOutline.box(width: legPieceBulk, height: legPieceH, length: legPieceVisibleWidth))
-      legNode.addChildNode(legPieceNode)
+
+      // A pivot node at hip height carries the swing rotation; the two legs swing oppositely
+      // (`side` flips the sign) and the local-z offset (screen-visible spread between the legs)
+      // moves with the swing instead of staying fixed, matching how a real hinge would translate
+      // the whole leg forward/back as it swings around local X.
+      let pivotNode = SCNNode()
+      pivotNode.position = SCNVector3(0, legPieceH, side * legPieceVisibleWidth * 0.65)
+      pivotNode.eulerAngles.x = CGFloat(side * legSwing)
+      pivotNode.addChildNode(legPieceNode)
+      legNode.addChildNode(pivotNode)
     }
     hipNode.addChildNode(EdgeOutline.box(width: w * 0.95, height: hipH, length: d * 0.85))
     legNode.position = SCNVector3(0, -h / 2, 0)
@@ -74,7 +103,10 @@ enum CharacterGeometry {
     sideMat.lightingModel = .lambert
     torso.materials = [frontMat, sideMat, plainMat, plainMat, plainMat, plainMat]
     let torsoNode = SCNNode(geometry: torso)
-    torsoNode.position = SCNVector3(0, -h / 2 + legH + torsoH / 2, 0)
+    // Bob only the upper body (torso/roof/tile) so the legs stay planted and swing at the hip -
+    // matches a real gait's silhouette (rising over the stance leg) better than bobbing the whole
+    // figure, which would visibly lift the feet off the ground at the bounce's peak.
+    torsoNode.position = SCNVector3(0, -h / 2 + legH + torsoH / 2 + bob, 0)
     torsoNode.addChildNode(EdgeOutline.box(width: w, height: torsoH, length: d))
     root.addChildNode(torsoNode)
 

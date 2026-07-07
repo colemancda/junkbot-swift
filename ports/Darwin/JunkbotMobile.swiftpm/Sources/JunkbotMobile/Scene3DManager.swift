@@ -203,6 +203,7 @@ final class Scene3DManager {
         if e.type != .brick {
           existing.eulerAngles.y = e.facing == 1 ? .pi / 2 : -.pi / 2
         }
+        if e.type == .junkbot { Self.applyWalkCycle(to: existing, animationFrame: e.animationFrame) }
         continue
       }
       guard let newNode = node(for: e) else { continue }
@@ -210,6 +211,7 @@ final class Scene3DManager {
       if e.type != .brick {
         newNode.eulerAngles.y = e.facing == 1 ? .pi / 2 : -.pi / 2
       }
+      if e.type == .junkbot { Self.applyWalkCycle(to: newNode, animationFrame: e.animationFrame) }
       worldNode.addChildNode(newNode)
       nodesByEntityID[e.id] = newNode
     }
@@ -264,6 +266,35 @@ final class Scene3DManager {
     let bx = -6 + plane.width / 2
     let by = -(-25 + plane.height / 2)
     backdropNode.position = SCNVector3(bx, by, -500)
+  }
+
+  /// Walk-cycle length: matches `junkbotAnim_walk_r`/`_l`'s 10 keyframes (`JunkbotKeyframes.swift`)
+  /// so `animationFrame % walkCycleLength` lines up with the same cadence the 2D sprite swap uses.
+  private static let walkCycleLength: Int32 = 10
+  /// Per-leg swing (radians) at the extremes of the stride - matches `tools/Junkbot3D`'s
+  /// `LDrawModel.legSwingAmplitude`, which this mirrors.
+  private static let legSwingAmplitude: Double = .pi / 6
+
+  /// Swings `junkbot.scn`'s two independent leg nodes (`3816.dat`/`3817.dat`, baked by
+  /// `tools/Junkbot3D --bake-all` from `junkbot.ldr`) opposite each other, driven by the entity's
+  /// own `animationFrame` - mirrors `tools/Junkbot3D/Sources/Junkbot3D/LDrawModel.swift`'s
+  /// `node(named:...)` leg-rig logic exactly, since the baked `.scn`'s node tree has the same
+  /// shape (`node -> raw -> topModel -> [hips, rightLeg, leftLeg, body, head, lid]`) as what that
+  /// tool builds and bakes. Node names aren't preserved through baking/`LDrawSceneBuilder`, so
+  /// this relies on the same fixed authored subfile order as the offline tool does - see that
+  /// file's comment for how the order was verified.
+  private static func applyWalkCycle(to node: SCNNode, animationFrame: Int32) {
+    guard let legs = node.childNodes.first?.childNodes.first?.childNodes, legs.count >= 3 else {
+      return
+    }
+    // Divide by `walkCycleLength - 1`, not `walkCycleLength`, so the *last* sampled frame
+    // (walkCycleLength - 1) lands on a full 2*pi - back at sin = 0, legs neutral/studs-aligned -
+    // same as frame 0, instead of stopping mid-swing right before the loop wraps.
+    let phase =
+      2 * Double.pi * Double(animationFrame % walkCycleLength) / Double(walkCycleLength - 1)
+    let swing = sin(phase) * legSwingAmplitude
+    legs[1].eulerAngles.x = CGFloat(swing)
+    legs[2].eulerAngles.x = CGFloat(-swing)
   }
 }
 

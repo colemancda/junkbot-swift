@@ -27,11 +27,6 @@ enum BrickGeometry {
     body.firstMaterial = Palette.material(Palette.brickColor(colorIndex: colorIndex))
     let brick = SCNNode(geometry: body)
 
-    // Full silhouette outline (every hard edge, LDView-style - see `EdgeOutline`'s doc comment)
-    // rather than just a bottom seam, so stacked bricks read as separate pieces and each brick's
-    // full outline matches the original 2D sprite art.
-    brick.addChildNode(EdgeOutline.box(width: width, height: Space.rowH, length: Space.depth))
-
     // A studs-wide x 2-studs-deep grid on the top face (the level is 2 studs deep front-to-back).
     let studMat = body.firstMaterial!
     let studRowsDeep = 2
