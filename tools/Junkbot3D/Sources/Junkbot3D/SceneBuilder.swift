@@ -1,3 +1,4 @@
+import Foundation
 import JunkbotCore
 import SceneKit
 
@@ -5,12 +6,17 @@ import SceneKit
 /// `RenderList.buildRenderFrame`, but building a 3D node tree instead of a 2D command list.
 @MainActor
 enum SceneBuilder {
-  static func makeScene(entities: [Entity], bounds: LevelBounds?) -> SCNScene {
+  static func makeScene(
+    entities: [Entity], bounds: LevelBounds?, repoRoot: URL, ldrawRoot: URL,
+    colorTable: LDrawColorTable
+  ) -> SCNScene {
     let scene = SCNScene()
     let root = scene.rootNode
 
     for e in entities {
-      guard let node = node(for: e) else { continue }
+      guard
+        let node = node(for: e, repoRoot: repoRoot, ldrawRoot: ldrawRoot, colorTable: colorTable)
+      else { continue }
       node.position = Space.center(of: e)
       root.addChildNode(node)
     }
@@ -34,16 +40,51 @@ enum SceneBuilder {
     return scene
   }
 
-  private static func node(for e: Entity) -> SCNNode? {
-    switch e.type {
-    case .brick:
+  /// Entity type -> authored `.ldr` model name (`tools/Junkbot3D/Models/<name>.ldr`), for every
+  /// type with a real-parts model built (see the LDraw-loader work in `LDrawModel.swift`/
+  /// `LDrawLoader.swift`). `.brick` isn't here: `BrickGeometry`'s procedural mesh already matches
+  /// the game's exact stud grid and needs no model file. `.droplet` has no model yet.
+  private static func ldrawModelName(for type: EntityType) -> String? {
+    switch type {
+    case .junkbot: return "junkbot"
+    case .bin: return "bin"
+    case .gearbot: return "gearbot"
+    case .climbbot: return "climbbot"
+    case .flybot: return "flybot"
+    case .eyebot: return "eyebot"
+    case .crate: return "crate"
+    case .fire: return "fire"
+    case .fan: return "fan"
+    case .switch: return "switch"
+    case .pipe: return "pipe"
+    case .shield: return "shield"
+    case .teleport: return "teleport"
+    case .laser: return "laser"
+    case .jump: return "jump"
+    default: return nil
+    }
+  }
+
+  private static func node(
+    for e: Entity, repoRoot: URL, ldrawRoot: URL, colorTable: LDrawColorTable
+  ) -> SCNNode? {
+    if e.type == .brick {
       return BrickGeometry.node(widthInStuds: e.widthInStuds, colorIndex: e.colorIndex)
-    case .junkbot:
-      return CharacterGeometry.junkbot(e)
-    case .gearbot, .climbbot, .flybot, .eyebot:
-      return CharacterGeometry.robot(e)
-    case .bin:
-      return CharacterGeometry.bin(e)
+    }
+    if let modelName = ldrawModelName(for: e.type),
+      let modelNode = LDrawModel.node(
+        named: modelName, entityWidth: CGFloat(e.width), entityHeight: CGFloat(e.height),
+        repoRoot: repoRoot, ldrawRoot: ldrawRoot, colorTable: colorTable)
+    {
+      // Same convention as `CharacterGeometry`'s procedural meshes: models are authored with
+      // their front/back asymmetry (e.g. Junkbot's roof tile sitting toward local -z) as if
+      // facing the camera, so rotate to face down the level's travel axis instead - see
+      // `CharacterGeometry.junkbot`'s doc comment for why.
+      modelNode.eulerAngles.y = e.facing == 1 ? .pi / 2 : -.pi / 2
+      return modelNode
+    }
+
+    switch e.type {
     case .levelBounds, .unknown:
       return nil
     default:

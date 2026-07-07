@@ -167,7 +167,11 @@ if CommandLine.arguments[2] == "--part" {
 
   print("Junkbot3D: loaded \(engine.entities.count) entities, bounds=\(String(describing: engine.levelBounds))")
 
-  let builtScene = SceneBuilder.makeScene(entities: engine.entities, bounds: engine.levelBounds)
+  let ldrawRoot = repoRoot.appendingPathComponent("tools/Junkbot3D/LDraw/ldraw")
+  let colorTable = LDrawColorTable(configURL: ldrawRoot.appendingPathComponent("LDConfig.ldr"))
+  let builtScene = SceneBuilder.makeScene(
+    entities: engine.entities, bounds: engine.levelBounds, repoRoot: repoRoot, ldrawRoot: ldrawRoot,
+    colorTable: colorTable)
   let builtCameraNode = SceneBuilder.framingCameraNode(
     entities: engine.entities, bounds: engine.levelBounds)
   builtScene.rootNode.addChildNode(builtCameraNode)
