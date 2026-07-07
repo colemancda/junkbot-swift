@@ -1,9 +1,18 @@
 #if canImport(Metal)
-/// Two-directional-light diffuse shading (key 0.75 + fill 0.25 + 0.2 flat ambient) over per-vertex
-/// color - copied verbatim from `swift-lego-draw`'s `LDrawMetal` product's `LDrawMSLSource.swift`
-/// (not imported as a package dependency: the macOS Xcode target and the iOS `JunkbotMobile.swiftpm`
-/// manifest are two separate build graphs, so a copy here avoids wiring a new SwiftPM dependency
-/// into both). Vertex positions/normals arriving here are already in *world* space (baked in by
+/// Lighting ported from the original JS reference's own three.js scene setup
+/// (`three-stuff/3d-main.js`'s `setupScene`, ~line 107): `THREE.AmbientLight(0xdedede, 0.8)` plus
+/// `THREE.DirectionalLight(0xffffff, 0.8)` positioned at `(-1000, 3200, 1500)` (aimed at the
+/// origin, matching `tools/Junkbot3D/Sources/Junkbot3D/SceneBuilder.swift`'s SceneKit port of the
+/// same light, and this file's `sunDirection` below). three.js's (non-"physically correct") light
+/// model adds the ambient term flatly and multiplies the directional term by `N·L` - reproduced
+/// exactly here (`ambient + directional * NdotL`) rather than the two made-up "key/fill" terms
+/// this shader used before, which had no reference behind their weights. `LDrawLoader.js`'s solid-
+/// part materials also carry `roughness`/`metalness` (a real PBR specular term) - not reproduced
+/// here, since the baked vertex format (`Metal3DVertex`) only carries position/normal/color, no
+/// per-part material data; this stays a pure Lambertian diffuse term, same simplification the
+/// original (pre-Metal) `LDrawMSLSource.swift` this file replaced also made.
+///
+/// Vertex positions/normals arriving here are already in *world* space (baked in by
 /// `Metal3DManager` on the CPU each frame, since every entity needs its own transform but this
 /// pipeline draws one combined vertex buffer per frame - see that file's doc comment) - `uniforms`
 /// only carries the camera's view-projection matrix, and `normalMatrix` is passed as identity.
@@ -40,23 +49,17 @@ vertex VertexOut vertex_main(
 }
 
 fragment float4 fragment_main(VertexOut in [[stage_in]]) {
-    float3 keyDir  = normalize(float3( 1.0,  2.0,  1.5));
-    float3 fillDir = normalize(float3(-1.0, -0.5, -1.0));
+    // `normalize(lightPosition - origin)`, i.e. the direction *toward* the light - matches
+    // `3d-main.js`'s `directionalLight.position.set(-1000, 3200, 1500)` aimed at the scene origin.
+    float3 sunDirection = normalize(float3(-1000.0, 3200.0, 1500.0));
+    float3 ambientColor = float3(0xde, 0xde, 0xde) / 255.0 * 0.8;
+    float3 sunColor = float3(1.0, 1.0, 1.0) * 0.8;
 
     float3 n = normalize(in.worldNormal);
-    // Weights tuned up from swift-lego-draw's original demo-viewer values (ambient 0.2, key 0.75,
-    // fill 0.25): that combination always multiplies the base color by well under 1.0 on most
-    // faces (max realistic sum ~1.1, only on a face pointed straight at the key light), so colors
-    // read uniformly darker/duller than their true saturation - unlike the SceneKit path's
-    // `.physicallyBased` material + strong ambient, which usually lands close to (or above) 1.0.
-    // A high flat ambient floor keeps colors close to true almost everywhere; the smaller
-    // directional terms add just enough shading for depth cues without darkening the base color
-    // much.
-    float key    = max(dot(n, keyDir),  0.0) * 0.35;
-    float fill   = max(dot(n, fillDir), 0.0) * 0.15;
-    float ambient = 0.8;
+    float ndotl = max(dot(n, sunDirection), 0.0);
+    float3 light = ambientColor + sunColor * ndotl;
 
-    float3 rgb = in.color.rgb * (ambient + key + fill);
+    float3 rgb = in.color.rgb * light;
     return float4(rgb, in.color.a);
 }
 
