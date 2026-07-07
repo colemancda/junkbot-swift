@@ -18,6 +18,13 @@ final class Scene3DManager {
   let scene = SCNScene()
   let cameraNode = SCNNode()
 
+  /// Every entity node is parented here, not directly under `scene.rootNode` - this is what the
+  /// oblique-shear transform (set in `init`) applies to, so the camera itself (added straight to
+  /// `scene.rootNode`, not `worldNode`) stays untilted and its projection keeps the uniform,
+  /// aspect-correct scale 2D hit-testing (`GameInput.swift`, `JunkbotCore/Input.swift`) assumes.
+  /// See `init`'s comment for where the shear itself comes from.
+  let worldNode = SCNNode()
+
   /// Persistent entity-id -> node table, so `sync(entities:)` only touches what actually changed
   /// since the last tick (new/removed entities), rather than tearing down and rebuilding
   /// everything - smooth animation (Junkbot walking, bricks being dragged) needs stable node
@@ -37,6 +44,23 @@ final class Scene3DManager {
     camera.zFar = 4000
     cameraNode.camera = camera
     scene.rootNode.addChildNode(cameraNode)
+
+    // The real 2D game's own "3D-ish" look, per `three-stuff/3d-main.js`'s `obliqueProjection`
+    // GUI option (`Syx=0, Szx=-0.5*cos(pi/4), Sxy=0, Szy=-0.5*sin(pi/4), Sxz=0, Syz=0` sheared
+    // into the projection matrix there) - ported here as `tools/Junkbot3D`'s
+    // `SceneBuilder.obliqueShearTransform()`/`--front` mode already does, applied to the *content*
+    // (`worldNode`) instead of the camera's projection matrix so a straight orthographic camera
+    // still does the projecting: shearing the camera/projection instead would tilt the same flat
+    // (z=0) 2D hit-testing space that broke the earlier isometric-camera attempt.
+    let alpha = Double.pi / 4
+    let szx = CGFloat(-0.5 * cos(alpha))
+    let szy = CGFloat(-0.5 * sin(alpha))
+    worldNode.transform = SCNMatrix4(
+      m11: 1, m12: 0, m13: 0, m14: 0,
+      m21: 0, m22: 1, m23: 0, m24: 0,
+      m31: szx, m32: szy, m33: 1, m34: 0,
+      m41: 0, m42: 0, m43: 0, m44: 1)
+    scene.rootNode.addChildNode(worldNode)
 
     let ambient = SCNLight()
     ambient.type = .ambient
@@ -128,7 +152,7 @@ final class Scene3DManager {
       if e.type != .brick {
         newNode.eulerAngles.y = e.facing == 1 ? .pi / 2 : -.pi / 2
       }
-      scene.rootNode.addChildNode(newNode)
+      worldNode.addChildNode(newNode)
       nodesByEntityID[e.id] = newNode
     }
 
@@ -138,17 +162,16 @@ final class Scene3DManager {
     }
   }
 
-  /// Frames the camera straight-on (looking down -z at the z=0 plane every entity sits on), with
-  /// `orthographicScale` fit to the *live* `SCNView` aspect ratio the same way the 2D path's
-  /// `SKScene` (`.aspectFit`) fits the level's logical size into the window - matching this
-  /// exactly (rather than an angle, or an aspect-agnostic `spanX/spanY * constant` heuristic) is
-  /// what makes the visible 3D geometry land exactly where the 2D mouse-drag hit-testing
-  /// (`GameInput.swift`, `JunkbotCore/Input.swift` - unaware of 3D, works purely in world pixel
-  /// coordinates) expects it. A tilted/isometric camera was tried and reverted: tilting shears an
-  /// orthographic projection of a flat z=0 scene relative to that flat 2D hit-testing space, so
-  /// bricks/Junkbot would visually sit somewhere other than their true (2D) grab area no matter
-  /// how the scale is tuned - only a straight-on camera projects with the uniform, aspect-correct
-  /// scale 2D hit-testing assumes. Call once per level load and whenever the view resizes.
+  /// Frames the camera straight-on (looking down -z at the z=0 plane every entity's *unsheared*
+  /// position sits on - the angled look comes from `worldNode`'s oblique-shear transform in
+  /// `init`, not from tilting the camera), with `orthographicScale` fit to the *live* `SCNView`
+  /// aspect ratio the same way the 2D path's `SKScene` (`.aspectFit`) fits the level's logical size
+  /// into the window. Matching this scale exactly (rather than an aspect-agnostic
+  /// `spanX/spanY * constant` heuristic) is what keeps the visible 3D geometry lined up with the 2D
+  /// mouse-drag hit-testing (`GameInput.swift`, `JunkbotCore/Input.swift` - unaware of 3D, works
+  /// purely in world pixel coordinates): the earlier misalignment bug traced to that scale
+  /// heuristic, not to the angled look itself, which is why the angle now comes from shearing the
+  /// content instead of the camera. Call once per level load and whenever the view resizes.
   func frameCamera(entities: [Entity], bounds: LevelBounds?) {
     var minX = CGFloat.greatestFiniteMagnitude
     var minY = CGFloat.greatestFiniteMagnitude
