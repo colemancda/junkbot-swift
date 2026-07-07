@@ -85,6 +85,7 @@ echo "Step 1: Emitting LLVM IR..."
 "$SWIFT_FRONTEND" -frontend \
   -target "$SWIFT_TARGET" \
   -enable-experimental-feature Embedded \
+  -assume-single-threaded \
   -wmo -Osize \
   -Xcc -march=mips1 \
   -Xcc -mabi=o32 \
