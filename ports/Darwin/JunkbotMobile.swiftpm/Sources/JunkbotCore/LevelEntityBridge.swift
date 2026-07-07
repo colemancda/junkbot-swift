@@ -108,6 +108,7 @@ extension GameEngine {
     levelTitle = level.title
     levelHint = level.hint
     levelPar = level.par ?? Int.max
+    rebuildAccelerationStructures()
     winLoseState = winOrLose()
 
     // Resolve background layers for the renderer (RenderList.swift). Unresolvable names (a few

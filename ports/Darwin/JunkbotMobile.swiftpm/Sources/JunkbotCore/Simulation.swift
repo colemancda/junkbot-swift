@@ -986,6 +986,12 @@ extension GameEngine {
 
     simulateFansAndLasers()
     entities.sort { $0.id < $1.id }
+    // This sort (like the y-sort at the top of this function) invalidates every index the
+    // acceleration structures built above still hold - rebuild once more so they're valid for
+    // whatever runs next tick (a mouseDown's findAttachedGroup/connectsToFixed, first and
+    // foremost), or a stale index can silently point at the wrong entity after this reorder (see
+    // the removeAll rebuild's doc comment above for the same class of bug).
+    rebuildAccelerationStructures()
 
     // Remap the grab state's indices captured at the top of this function (IDs survive the
     // sorts/removals above; indices don't). An entity that vanished mid-drag just drops out of
