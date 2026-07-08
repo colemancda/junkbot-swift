@@ -1,4 +1,6 @@
+#if canImport(simd)
 import simd
+#endif
 
 /// `Metal3D*`'s counterpart to `Scene3DPalette.swift` - same color table (matching
 /// `RenderList.entitySprite`'s sprite families) as plain RGBA rather than a platform color/

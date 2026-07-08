@@ -1,4 +1,7 @@
+import Foundation
+#if canImport(simd)
 import simd
+#endif
 
 /// Small `float4x4` builders shared by `Metal3DManager`/`Metal3DBrickGeometry` - kept local rather
 /// than pulled from `swift-lego-draw` (whose equivalents are either `private` or perspective-only,
@@ -16,7 +19,10 @@ enum Metal3DMatrix {
   }
 
   static func rotationX(_ angle: Float) -> float4x4 {
-    let c = cos(angle), s = sin(angle)
+    // `cos`/`sin` only have a `Double` overload via Glibc on Linux/Android (unlike Darwin's
+    // Foundation, which also exposes `Float` ones) - compute in `Double`, convert once, portable
+    // to both without changing Darwin's result (same underlying libm call either way).
+    let c = Float(cos(Double(angle))), s = Float(sin(Double(angle)))
     return float4x4(
       columns: (
         SIMD4<Float>(1, 0, 0, 0),
@@ -27,7 +33,7 @@ enum Metal3DMatrix {
   }
 
   static func rotationY(_ angle: Float) -> float4x4 {
-    let c = cos(angle), s = sin(angle)
+    let c = Float(cos(Double(angle))), s = Float(sin(Double(angle)))
     return float4x4(
       columns: (
         SIMD4<Float>(c, 0, -s, 0),

@@ -111,6 +111,36 @@ if CommandLine.arguments.count == 4, CommandLine.arguments[2] == "--bake-all" {
       continue
     }
   }
+
+  // Junkbot's chest recycle emblem, transparent-background - used by both the Metal (macOS) and
+  // Vulkan (Android) renderers as a small textured quad drawn in front of the body brick's own
+  // (UV-less) baked geometry, instead of baking it into the LDraw model's own surface. Baked here
+  // (not at runtime) because `CoreGraphics`, needed to rasterize it, doesn't exist on Android at
+  // all - see `Vulkan3DManager.swift`'s doc comment.
+  let emblemSize: CGFloat = 128
+  let emblemImage = NSImage(size: NSSize(width: emblemSize, height: emblemSize))
+  emblemImage.lockFocus()
+  DecalTextures.drawRecycleLoop(
+    center: NSPoint(x: emblemSize / 2, y: emblemSize / 2), radius: 34,
+    strokeColor: NSColor(calibratedRed: 0.45, green: 0.24, blue: 0.06, alpha: 1), lineWidth: 9)
+  emblemImage.unlockFocus()
+  if let tiff = emblemImage.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+    let png = rep.representation(using: .png, properties: [:])
+  {
+    let emblemURL = outputDir.appendingPathComponent("junkbot_decal.png")
+    do {
+      try png.write(to: emblemURL)
+      print("Junkbot3D: baked junkbot_decal.png")
+    } catch {
+      FileHandle.standardError.write(
+        Data("error: failed to write \(emblemURL.path): \(error)\n".utf8))
+      failures += 1
+    }
+  } else {
+    FileHandle.standardError.write(Data("error: failed to rasterize junkbot_decal.png\n".utf8))
+    failures += 1
+  }
+
   exit(failures == 0 ? 0 : 1)
 }
 

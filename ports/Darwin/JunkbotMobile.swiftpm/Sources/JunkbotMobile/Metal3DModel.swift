@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(simd)
 import simd
+#endif
 
 /// One vertex in the combined per-frame buffer `Metal3DManager` uploads - layout must match
 /// `Metal3DShaderSource`'s `VertexIn` struct exactly (`position`@0, `normal`@16, `color`@32,
@@ -45,7 +47,7 @@ struct Metal3DBakedModel: Codable {
 /// Loads (and caches, once per process) each entity type's baked-model JSON from the bundled
 /// `Models3D` directory - the Metal counterpart of `Scene3DManager.loadedModel(named:)`, which
 /// loads the same directory's `.scn` siblings instead.
-@MainActor
+@GameActor
 enum Metal3DModelCache {
   private static var cache: [String: Metal3DBakedModel] = [:]
 

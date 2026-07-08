@@ -5,7 +5,11 @@ plugins {
 // app/ -> AndroidApp/ -> Android/ -> ports/ -> repo root
 def repoRoot = rootDir.parentFile.parentFile.parentFile
 def stagedAssetsDir = layout.buildDirectory.dir('stagedAssets').get().asFile
-def gameAssetDirs = ['images', 'font', 'levels', 'audio']
+// `Models3D` is the same baked-entity-model directory (`.json`, used by `Vulkan3DManager.swift`/
+// `Metal3DModel.swift`; the `.scn` siblings are Darwin/SceneKit-only, harmless to also ship) the
+// macOS Metal renderer already consumes - see `tools/Junkbot3D/Sources/Junkbot3D/main.swift`'s
+// `--bake-all`, which also writes `Models3D/junkbot_decal.png` for both renderers' chest emblem.
+def gameAssetDirs = ['images', 'font', 'levels', 'audio', 'Models3D']
 
 android {
     namespace 'org.junkbot.game'
@@ -45,6 +49,11 @@ tasks.register('stageGameAssets', Copy) {
     gameAssetDirs.each { dir ->
         from(new File(repoRoot, dir)) { into dir }
     }
+    // Precompiled SPIR-V (`ports/Android/Shaders/*.spv`, committed output of `glslc` run against
+    // the `.vert`/`.frag` sources in that same directory - see `Vulkan3DManager.swift`'s doc
+    // comment) - lives under `ports/Android/`, not repo root like the other asset dirs above, so
+    // it needs its own `from`/`into` pair rather than fitting `gameAssetDirs`'s pattern.
+    from(new File(rootDir.parentFile, 'Shaders')) { into 'Shaders' }
 }
 
 tasks.register('writeAssetManifest') {

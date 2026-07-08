@@ -1,11 +1,14 @@
+import Foundation
+#if canImport(simd)
 import simd
+#endif
 
 /// `Metal3D*`'s counterpart to `Scene3DBrickGeometry.swift`/`Scene3DEdgeOutline.swift`: the same
 /// box-plus-stud-cylinders brick shape and black edge silhouette, as raw triangles instead of
 /// `SCNBox`/`SCNCylinder`/`SCNGeometryElement(primitiveType: .line)` (the shared triangle pipeline
 /// only draws triangles, so the outline is thin black boxes along each edge rather than true
 /// `GL_LINES`-style geometry - visually equivalent at this scale).
-@MainActor
+@GameActor
 enum Metal3DBrickGeometry {
   private static var cache: [Int64: [Metal3DVertex]] = [:]
 
@@ -95,8 +98,10 @@ enum Metal3DBrickGeometry {
     for i in 0..<segments {
       let a0 = Float(i) * angleStep
       let a1 = Float(i + 1) * angleStep
-      let n0 = SIMD3<Float>(cos(a0), 0, sin(a0))
-      let n1 = SIMD3<Float>(cos(a1), 0, sin(a1))
+      // `cos`/`sin` only have a `Double` overload via Glibc on Linux/Android - see
+      // `Metal3DMatrix.swift`'s `rotationX`/`rotationY` for the same fix.
+      let n0 = SIMD3<Float>(Float(cos(Double(a0))), 0, Float(sin(Double(a0))))
+      let n1 = SIMD3<Float>(Float(cos(Double(a1))), 0, Float(sin(Double(a1))))
       let p0b = center + n0 * radius - SIMD3<Float>(0, halfH, 0)
       let p1b = center + n1 * radius - SIMD3<Float>(0, halfH, 0)
       let p0t = center + n0 * radius + SIMD3<Float>(0, halfH, 0)

@@ -1,5 +1,7 @@
 import JunkbotCore
+#if canImport(simd)
 import simd
+#endif
 
 /// `Metal3D*`'s counterpart to `Scene3DSpace.swift` - same game-pixel-to-scene-unit mapping (+x
 /// right, +y **down** in the game, flipped to +y **up** here), expressed in `simd` types instead

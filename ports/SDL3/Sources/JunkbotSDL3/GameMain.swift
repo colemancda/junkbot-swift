@@ -124,15 +124,25 @@ let cameraScale: Double = 1
 // Module-level `let`s (not locals of `junkbotMain()`) so `window`/`renderer` are visible from
 // other files (Screens.swift, TextRenderer.swift, etc.).
 @GameActor let window: SDLWindow = {
+  // `.highPixelDensity` requests a backing buffer that matches the display's real pixel density
+  // (e.g. 2x on Retina) instead of a 1x buffer the OS then has to upscale/blur to fill the screen
+  // - without it, everything rendered looks visibly softer than the original (non-Retina-aware)
+  // Director/Flash build.
+  //
+  // `.vulkan` (Android only) - `Vulkan3DManager.swift` builds a `VkSurfaceKHR` from this same
+  // window via `SDL_Vulkan_CreateSurface` for the live 3D play-mode view; every other port still
+  // renders everything (2D and, on Darwin, its own separate Metal/SceneKit view) through
+  // `SDLRenderer` alone, so this flag is scoped to Android only.
+  #if os(Android)
+  let windowOptions: BitMaskOptionSet<SDLWindow.Option> = [.resizable, .highPixelDensity, .vulkan]
+  #else
+  let windowOptions: BitMaskOptionSet<SDLWindow.Option> = [.resizable, .highPixelDensity]
+  #endif
   do {
     let window = try SDLWindow(
       title: "Junkbot",
       frame: (x: .centered, y: .centered, width: Int(windowWidth), height: Int(windowHeight)),
-      // `.highPixelDensity` requests a backing buffer that matches the display's real pixel
-      // density (e.g. 2x on Retina) instead of a 1x buffer the OS then has to upscale/blur to
-      // fill the screen - without it, everything rendered looks visibly softer than the
-      // original (non-Retina-aware) Director/Flash build.
-      options: [.resizable, .highPixelDensity])
+      options: windowOptions)
     // Don't allow shrinking below the default size - `windowWidth`/`windowHeight` are also the
     // fixed logical resolution the integer-scale renderer setup (below) scales up from, so a
     // smaller window would force a sub-1x (fractional/cropped) scale instead of a clean integer one.
@@ -646,6 +656,31 @@ final class CursorSet {
       cursorSet.apply(gameEngine.cursorHint(worldX: lastMouseWorldX, worldY: lastMouseWorldY))
     }
     musicPlayer.update()
+
+    // Play-mode-only 3D (see `Settings.render3DEnabled`'s doc comment) - mirrors Darwin's
+    // `GameScene.swift`'s identical `scene3DShouldBeActive`/`reset`/`loadBackdrop`/
+    // `loadLevelDecals`/`sync`/`syncCamera`/`suppressWorldSpriteDrawing` sequence, calling
+    // `vulkan3DManager` (`Vulkan3DManager.swift`) instead of `metal3DManager`. Every other SDL
+    // port (desktop SDL2/SDL3) has no 3D renderer at all, so this whole block is Android-only.
+    #if os(Android)
+    let scene3DShouldBeActive = Settings.render3DEnabled && currentScreen == .playing
+    if scene3DShouldBeActive != androidScene3DWasActive {
+      androidScene3DWasActive = scene3DShouldBeActive
+      if scene3DShouldBeActive {
+        vulkan3DManager?.reset()
+        vulkan3DManager?.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
+        vulkan3DManager?.loadLevelDecals(
+          backgroundDecals: gameEngine.backgroundDecals, decals: gameEngine.decals)
+      }
+    }
+    suppressWorldSpriteDrawing = scene3DShouldBeActive
+    if scene3DShouldBeActive {
+      vulkan3DManager?.sync(entities: gameEngine.entities)
+      vulkan3DManager?.syncCamera()
+      vulkan3DManager?.draw()
+    }
+    #endif
+
     render()
     SDL.delay(nanoseconds: 1_000_000)
   }
