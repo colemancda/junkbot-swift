@@ -195,7 +195,13 @@ func blitBackdrop(
   return true
 }
 
-/// Rebuilds the engine's command list and rasterizes it into `buffer`.
+/// Rebuilds the engine's command list and rasterizes the *backdrop only* into `buffer` (BG3's
+/// bitmap) - bricks/entities no longer draw here at all, see `Renderer3D.swift`'s doc comment
+/// (they're a separate 3D-GPU layer, `MODE_5_3D`'s BG0, composited on top by hardware; `main.swift`
+/// calls `Renderer3D.drawWorld` right after this function each frame). `blitSprite`/`fillRect`
+/// above are kept (used by neither this function nor `Renderer3D` today) only in case some future
+/// 2D-only overlay still needs bitmap blitting; the world's own bricks/entities never call them
+/// anymore.
 ///
 /// The background pass (`commands[0..<backgroundCount]`, backdrop + decals) mostly stays
 /// skipped: decal images live on the backgrounds sheet, which at 16bpp would exceed the DS's
@@ -251,19 +257,4 @@ func renderWorld(
     cachedScrollY = scrollY
   }
   dmaCopy(backdropCache, buffer, UInt32(screenWidth * screenHeight) * 2)
-
-  spritePaletteTable.withUnsafeBufferPointer { paletteBuffer in
-    let palette = paletteBuffer.baseAddress!
-    var index = renderFrame.backgroundCount
-    while index < renderFrame.commands.count {
-      let cmd = renderFrame.commands[index]
-      switch cmd.kind {
-      case .sprite:
-        blitSprite(cmd, into: buffer, palette: palette, scrollX: scrollX, scrollY: scrollY)
-      case .solidRect:
-        fillRect(cmd, into: buffer, scrollX: scrollX, scrollY: scrollY)
-      }
-      index += 1
-    }
-  }
 }

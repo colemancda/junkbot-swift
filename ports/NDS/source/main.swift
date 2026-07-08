@@ -25,25 +25,31 @@ let KEY_TOUCH: UInt32 = 1 << 14
 
 // MARK: - Video setup
 //
-// Both engines run MODE_5 bitmap BGs: the main engine double-buffered (flipping
-// between the two halves of VRAM A+B, the double_buffer libnds example's
-// setup) for the bottom/touch screen's 60Hz world redraws, the sub engine
-// single-buffered (redrawn in place, on demand - see TextRenderer.swift) for
-// the top screen's info panel, which only changes on a level load or a moves-
-// counter/win-lose update. lcdMainOnBottom() puts the main engine's output on
-// the bottom (touch) LCD and the sub engine's on top.
+// The main engine (bottom/touch screen) runs MODE_5_3D: the same BG layout MODE_5_2D always used
+// (BG3 = a large bitmap background) plus BG0, the 3D engine's own layer, composited on top in
+// hardware - bricks/entities move entirely onto BG0 (Renderer3D.swift, NitroGL), while BG3 keeps
+// doing exactly what it always did: the software-composited room backdrop (Renderer.swift's
+// blitBackdrop), double-buffered the same way as before. The sub engine (top/text screen) is
+// unaffected - still plain MODE_5_2D, single-buffered, redrawn in place (TextRenderer.swift).
+// lcdMainOnBottom() puts the main engine's output on the bottom (touch) LCD and the sub engine's
+// on top.
 //
-// (A hardware-affine BG2 backdrop layer - avoiding the software resample in
-// source/Renderer.swift's blitBackdrop entirely - was tried and reverted
-// after its scale/scroll register math rendered garbage on first pass; the
-// backdrop stays software-composited into this same BG3 bitmap for now.)
+// (An EARLIER hardware-affine BG2 backdrop layer - avoiding the software resample in
+// source/Renderer.swift's blitBackdrop entirely - was tried and reverted after its scale/scroll
+// register math rendered garbage on first pass; the backdrop stays software-composited into BG3
+// for that reason, unrelated to and unaffected by this 3D-layer addition.)
 
-videoSetMode(MODE_5_2D.rawValue)
+videoSetMode(MODE_5_3D.rawValue)
 videoSetModeSub(MODE_5_2D.rawValue)
 lcdMainOnBottom()
 vramSetPrimaryBanks(
   VRAM_A_MAIN_BG_0x06000000, VRAM_B_MAIN_BG_0x06020000,
   VRAM_C_SUB_BG, VRAM_D_LCD)
+
+// No `GL_TEXTURE_2D` (every brick/entity is a flat-colored box, see Renderer3D.swift) - VRAM A/B
+// stay dedicated to BG3's bitmap double-buffer exactly as before; the 3D engine needs no texture
+// VRAM bank of its own here.
+Renderer3D.setup()
 
 let bg = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0)
 /// The buffer currently being drawn into (the one NOT displayed).
@@ -289,6 +295,7 @@ while pmMainLoop() {
 
   if frameDirty {
     renderWorld(into: backBuffer, scrollX: scrollX, scrollY: scrollY)
+    Renderer3D.drawWorld(scrollX: scrollX, scrollY: scrollY)
     pendingFlip = true
     frameDirty = false
   }
