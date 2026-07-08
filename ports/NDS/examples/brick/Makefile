@@ -51,7 +51,7 @@ SWIFTFLAGS	:=	-target armv5te-none-none-eabi \
 			-Xcc -I$(CALICO)/include \
 			-Xcc -fmodule-map-file=$(COMMON)module.modulemap
 
-PORT_SWIFT	:=	BrickModel.swift main.swift
+PORT_SWIFT	:=	Mesh.swift Models.swift main.swift
 OFILES		:=	$(BUILD)/brick.swift.o $(BUILD)/shim.o
 ARM7_ELF	:=	$(CALICO)/bin/ds7_maine.elf
 

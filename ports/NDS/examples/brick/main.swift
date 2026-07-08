@@ -1,86 +1,114 @@
 //---------------------------------------------------------------------------------
 //
-//  Standalone viewer for the hand-authored low-poly 2x1 brick (BrickModel.swift).
+//  Model gallery for the hand-authored low-poly Junkbot entity models
+//  (Models.swift). A Nintendo DS "turntable": the top screen spins the current
+//  model under one directional light; the bottom screen is a text console
+//  showing debug info (name, part/triangle counts, a rough poly-budget note).
+//  L / R cycle through the models.
 //
-//  A minimal Nintendo DS 3D "turntable": sets up the DS's fixed-function 3D
-//  engine (MODE_0_3D) with one directional light and slowly spins the brick so
-//  every face and stud is visible, for iterating on the model's geometry in an
-//  emulator without building/running the whole game. Nothing here is wired into
-//  the game itself yet.
+//  Standalone - for iterating on the models in an emulator, not wired into the
+//  game.
 //
 //---------------------------------------------------------------------------------
 
 import CNDS
 
+let KEY_L: UInt32 = 1 << 9
+let KEY_R: UInt32 = 1 << 8
+
 // f32 (20.12) and DS-angle (32768 = full circle) literals, computed by hand - the libnds
 // `floattof32`/`degreesToAngle` macros are function-like and don't import into Swift.
 @inline(__always) func f32(_ d: Double) -> Int32 { Int32((d * 4096).rounded()) }
 @inline(__always) func deg(_ d: Double) -> Int32 { Int32((d * 32768 / 360).rounded()) }
+@inline(__always) func rgb15(_ r: UInt16, _ g: UInt16, _ b: UInt16) -> UInt16 { r | (g << 5) | (b << 10) }
 
-// MARK: - Video / 3D setup
+// MARK: - Bottom-screen text console (sub engine)
+
+_ = consoleDemoInit()
+
+/// Prints a `StaticString` through the libnds console (`nds_print_len` wraps `iprintf("%.*s")`,
+/// since Embedded Swift can't call variadic `iprintf` directly - see `common/shim.h`).
+func put(_ s: StaticString) {
+  s.withUTF8Buffer { buf in
+    guard let base = buf.baseAddress else { return }
+    base.withMemoryRebound(to: CChar.self, capacity: buf.count) {
+      nds_print_len($0, Int32(buf.count))
+    }
+  }
+}
+
+func showInfo(index: Int) {
+  let model = Models.all[index]
+  put("\u{1b}[2J")  // clear screen
+  nds_printf_2i("\u{1b}[1;2HMODEL  %d / %d", Int32(index + 1), Int32(Models.all.count))
+  put("\u{1b}[3;2H")
+  model.name.withUTF8Buffer { buf in
+    if let base = buf.baseAddress {
+      base.withMemoryRebound(to: CChar.self, capacity: buf.count) {
+        nds_print_len($0, Int32(buf.count))
+      }
+    }
+  }
+  nds_printf_1i("\u{1b}[5;2HParts:     %d", Int32(model.partCount))
+  nds_printf_1i("\u{1b}[6;2HTriangles: %d", Int32(model.triangleCount))
+  nds_printf_1i("\u{1b}[7;2HVertices:  %d", Int32(model.triangleCount * 3))
+  // The DS geometry engine handles ~2048 polys/frame; note how many of these models fit at once.
+  let budget = model.triangleCount > 0 ? 2048 / model.triangleCount : 0
+  nds_printf_1i("\u{1b}[9;2H~%d fit in one frame", Int32(budget))
+  put("\u{1b}[22;2HL / R  change model")
+}
+
+// MARK: - Top-screen 3D setup (main engine)
 
 videoSetMode(MODE_0_3D.rawValue)
-// A texture VRAM bank must be mapped for the 3D engine even though this flat-colored model uses
-// no textures (the engine still expects bank A available).
 vramSetBankA(VRAM_A_TEXTURE)
 
 glInit()
-// Opaque dark slate background so the brick stands out.
 glClearColor(4, 5, 8, 31)
 glClearDepth(fixed12d3(GL_MAX_DEPTH))
 glViewport(0, 0, 255, 191)
 
-// Perspective projection - a spinning model reads better with perspective than the game's flat
-// oblique-ortho look. 45deg vertical FOV, 256:192 aspect.
 glMatrixMode(GL_PROJECTION)
 glLoadIdentity()
 gluPerspectivef32(deg(45), f32(256.0 / 192.0), f32(0.1), f32(40))
 
-// Identity modelview so the light direction below is set in view space, and material shininess
-// zeroed (no specular). One white directional light from the upper-front, so the top studs catch
-// the most light.
+// Identity modelview so the light direction is set in view space; one white directional light
+// from the upper-front so tops catch the most light.
 glMatrixMode(GL_MODELVIEW)
 glLoadIdentity()
-glLight(0, RGB15(31, 31, 31), v10(154), v10(-358), v10(-307))
+glLight(0, rgb15(31, 31, 31), Int16(154), Int16(-358), Int16(-307))
 glMaterialShinyness()
 glMaterialf(GL_SPECULAR, 0)
 glMaterialf(GL_EMISSION, 0)
-// Enable light 0; cull nothing for now (verify the model looks right before trusting winding).
 glPolyFmt(POLY_ALPHA(31) | UInt32(POLY_CULL_NONE.rawValue) | UInt32(POLY_FORMAT_LIGHT0.rawValue))
-
-// MARK: - Helpers
-
-/// `RGB15`/`v10` are function-like macros; build them by hand.
-@inline(__always) func RGB15(_ r: UInt16, _ g: UInt16, _ b: UInt16) -> UInt16 {
-  r | (g << 5) | (b << 10)
-}
-@inline(__always) func v10(_ n: Int32) -> Int16 { Int16(n) }
-
-/// A red LEGO brick, dimmed for the diffuse/ambient split (lit face ~full, shadowed ~half).
-func material5(_ r: Int, _ g: Int, _ b: Int, num: Int, den: Int) -> UInt16 {
-  RGB15(
-    UInt16((r * num / den) >> 3), UInt16((g * num / den) >> 3), UInt16((b * num / den) >> 3))
-}
-let brickR = 0xC4, brickG = 0x28, brickB = 0x1C
 
 // MARK: - Main loop
 
+var current = 0
 var angle: Int32 = 0
+showInfo(index: current)
 
 while pmMainLoop() {
   threadWaitForVBlank()
+  scanKeys()
+  let pressed = keysDown()
 
-  // Turntable transform: back the camera off, tilt down slightly to see the tops, and spin.
+  if pressed & KEY_R != 0 {
+    current = (current + 1) % Models.all.count
+    showInfo(index: current)
+  }
+  if pressed & KEY_L != 0 {
+    current = (current + Models.all.count - 1) % Models.all.count
+    showInfo(index: current)
+  }
+
   glMatrixMode(GL_MODELVIEW)
   glLoadIdentity()
   glTranslatef32(0, 0, f32(-5))
-  glRotateXi(deg(24))
+  glRotateXi(deg(22))
   glRotateYi(angle)
-
-  glMaterialf(GL_DIFFUSE, material5(brickR, brickG, brickB, num: 45, den: 100))
-  glMaterialf(GL_AMBIENT, material5(brickR, brickG, brickB, num: 55, den: 100))
-  BrickModel.draw()
+  Models.all[current].mesh.draw()
 
   glFlush(0)
-  angle = (angle &+ 180) & 0xFFFF
+  angle = (angle &+ 170) & 0xFFFF
 }
