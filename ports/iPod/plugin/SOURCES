@@ -1,0 +1,6 @@
+junkbot.c
+#ifdef SIMULATOR
+junkbot_stub.c
+#else
+rockbox_shim.c
+#endif
