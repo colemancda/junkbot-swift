@@ -55,10 +55,20 @@ SWIFTFLAGS := -target armv4t-none-none-eabi \
               -Xcc -fmodule-map-file=plugin/module.modulemap
 
 CORE_EXCLUDE := Font.swift LevelCatalog.swift
+# The generated level data (~1.6MB of entity-builder code every other port
+# compiles in) alone overflows PLUGIN_RAM; this port ships it as levels.bin
+# instead (see LEVELPACK below), so exclude it -- and EmbeddedLevelCatalog,
+# whose whole body is already #if !hasFeature(Embedded), stays harmless.
+GEN_EXCLUDE  := LevelData.swift JunkbotLevelData.swift UndercoverLevelData.swift
 CORE_SWIFT := $(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/,$(CORE_EXCLUDE)), \
               $(wildcard $(REPO_ROOT)/Sources/JunkbotCore/*.swift)) \
-              $(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift)
-PORT_SWIFT := $(wildcard source/*.swift)
+              $(filter-out $(addprefix $(REPO_ROOT)/Sources/JunkbotCore/Generated/,$(GEN_EXCLUDE)), \
+              $(wildcard $(REPO_ROOT)/Sources/JunkbotCore/Generated/*.swift))
+# LevelBinCodec.swift is shared with the LevelPack host tool (single source of
+# truth for the levels.bin field order).
+LEVELPACK  := tools/LevelPack
+PORT_SWIFT := $(wildcard source/*.swift) \
+              $(LEVELPACK)/Sources/LevelPack/LevelBinCodec.swift
 GEN_SWIFT  := $(BUILD)/SpriteAssets.swift
 
 .PHONY: all swift assets toolchain rockbox-tree sync rock sim run-sim install clean distclean
@@ -82,7 +92,16 @@ $(BUILD)/assets.stamp: tools/gen_assets.py \
 
 $(BUILD)/SpriteAssets.swift $(BUILD)/sprites.bin: $(BUILD)/assets.stamp
 
-assets: $(BUILD)/sprites.bin
+# levels.bin: the campaign levels serialized by the LevelPack host tool (which
+# runs JunkbotCore natively, imports the same embeddedLevels the other ports
+# compile in, and round-trip-verifies the blob through the device decoder).
+$(BUILD)/levels.bin: $(LEVELPACK)/Sources/LevelPack/main.swift \
+		$(LEVELPACK)/Sources/LevelPack/LevelBinCodec.swift \
+		$(REPO_ROOT)/Sources/JunkbotCore/Generated/LevelData.swift | $(BUILD)
+	@echo generating level assets
+	swift run -c release --package-path $(LEVELPACK) LevelPack $@
+
+assets: $(BUILD)/sprites.bin $(BUILD)/levels.bin
 
 #---------------------------------------------------------------------------------
 # Stage 1: Swift -> armv4t object -> audited static archive.
@@ -182,12 +201,12 @@ sim: sync
 run-sim: sim
 	sh scripts/run-sim.sh
 
-install: $(BUILD)/junkbot.rock $(BUILD)/sprites.bin
+install: $(BUILD)/junkbot.rock $(BUILD)/sprites.bin $(BUILD)/levels.bin
 	@test -n "$(IPOD)" || { echo "usage: make install IPOD=/Volumes/<ipod>"; exit 1; }
 	cp $(BUILD)/junkbot.rock "$(IPOD)/.rockbox/rocks/games/"
 	mkdir -p "$(IPOD)/.rockbox/junkbot"
-	cp $(BUILD)/sprites.bin "$(IPOD)/.rockbox/junkbot/"
-	@echo "installed to $(IPOD)/.rockbox/rocks/games/junkbot.rock + $(IPOD)/.rockbox/junkbot/sprites.bin"
+	cp $(BUILD)/sprites.bin $(BUILD)/levels.bin "$(IPOD)/.rockbox/junkbot/"
+	@echo "installed junkbot.rock + sprites.bin + levels.bin to $(IPOD)"
 
 clean:
 	rm -rf $(BUILD)
