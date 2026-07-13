@@ -28,10 +28,13 @@ static int cursor_x = GAME_W / 2, cursor_y = GAME_H / 2;
 
 int junkbot_shim_init(void) { return 0; }
 
-int junkbot_init(unsigned short *canvas, const void *sprites, int sprites_bytes)
+int junkbot_init(unsigned short *canvas, const void *sprites, int sprites_bytes,
+                 const void *levels, int levels_bytes)
 {
     (void)sprites;
     (void)sprites_bytes;
+    (void)levels;
+    (void)levels_bytes;
     fb = canvas;
     return 0;
 }
