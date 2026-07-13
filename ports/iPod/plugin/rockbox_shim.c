@@ -251,7 +251,7 @@ void __stack_chk_fail(void)
 /* ------------------------------------------------------------------------ */
 /* libm: Rockbox has none. The engine's drag-to-grid and collision math      */
 /* rounds Doubles (floor/ceil/round); the soft-float arithmetic under these  */
-/* (__aeabi_d*/__aeabi_i2d/__aeabi_d2lz ...) comes from libgcc at link time. */
+/* (__aeabi_dadd, __aeabi_i2d, __aeabi_d2iz ...) comes from libgcc at link.  */
 /* The float variants + sinf/cosf/fmodf are provided for completeness / the  */
 /* eventual audio phase, and are cheap.                                      */
 /* ------------------------------------------------------------------------ */
