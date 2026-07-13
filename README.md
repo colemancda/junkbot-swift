@@ -20,6 +20,7 @@ under `ports/`:
 | [`ports/N64`](ports/N64) | ✅ Working | Nintendo 64 build in Embedded Swift (mips-none-none-elf) against the open-source [libdragon](https://github.com/DragonMinded/libdragon) SDK; software-rasterized (no RDP texture pipeline - TMEM is too small for the sprite count). Verified end-to-end in ares: analog-stick/D-pad-driven cursor grab/drag/drop, sound effects/music, HUD overlay, level switching. |
 | [`ports/NDS`](ports/NDS) | ✅ Working | Nintendo DS build in Embedded Swift (armv5te), no maxmod/streaming. Verified end-to-end in melonDS: touch-drag gameplay on the bottom screen, sound effects/music, and a bitmap-font info panel on the top screen. |
 | [`ports/3DS`](ports/3DS) | ✅ Builds | Embedded Swift ARM11 build; same scrollable-bottom-screen design as `ports/NDS`. Builds and links end-to-end; not yet run on real hardware or an emulator. |
+| [`ports/iPod`](ports/iPod) | ✅ Working | [Rockbox](https://www.rockbox.org) plugin for the iPod Nano 2G in Embedded Swift (armv4t, the Nano's FPU-less ARM940T), linked into `junkbot.rock` by Rockbox's own build system. Sprites and all 121 levels load from `/.rockbox/junkbot/` at startup instead of being compiled in (the level data alone is 3x a plugin's entire 512 KB code budget). Click-wheel cursor controls; installed and run on a real Nano 2G. |
 
 See each port's own README (where present) for build details, and root `.github/workflows/` for
 what's verified in CI.
