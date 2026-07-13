@@ -28,9 +28,15 @@ import CRockbox
 private let engine = GameEngine()
 private var renderFrame = RenderFrame()
 
-/// The currently-loaded level's index into `embeddedLevels` (the campaign data
-/// compiled into JunkbotCore — see Generated/LevelData.swift).
+/// The level catalog decoded from levels.bin (loaded from the filesystem by the
+/// C host — unlike every other port, the ~1.6MB of pre-parsed level data is NOT
+/// compiled in; it wouldn't fit a Rockbox plugin's 512KB code budget). Set by
+/// `junkbot_init`; see tools/LevelPack/Sources/LevelPack/LevelBinCodec.swift.
+private var levelCatalog: LevelBinCatalog!
+/// The currently-loaded level's index into `levelCatalog`, and its decoded
+/// metadata (kept for the title/hint pointers the C host displays).
 private var currentLevelIndex = 0
+private var currentLevelMeta: LevelBinCatalog.Meta!
 
 /// World-space coordinate of the viewport's (game canvas's) top-left pixel.
 private var scrollX: Int32 = 0
@@ -81,13 +87,15 @@ private func followCursor() {
 }
 
 private func loadLevel(_ index: Int) {
-  guard index >= 0, index < embeddedLevels.count else { return }
+  guard index >= 0, index < levelCatalog.count else { return }
   currentLevelIndex = index
-  let level = embeddedLevels[index]
-  engine.loadLevelState(entities: level.makeEntities(), levelBounds: level.bounds, nextID: 0)
+  let meta = levelCatalog.meta(index)
+  currentLevelMeta = meta
+  engine.loadLevelState(
+    entities: levelCatalog.entities(meta), levelBounds: meta.bounds, nextID: 0)
   engine.setBackground(
-    backdropSpriteID: level.backdropSpriteID,
-    backgroundDecals: level.backgroundDecals, decals: level.decals)
+    backdropSpriteID: meta.backdropSpriteID,
+    backgroundDecals: meta.backgroundDecals, decals: meta.decals)
   winLoseLatch = 0
   tickAccumulator = 0
 
@@ -111,20 +119,28 @@ private func loadLevel(_ index: Int) {
 
 // MARK: - C entry points
 
-/// One-time setup. `canvasPtr` is the C-owned 176x120 RGB565 buffer; `spritesPtr`
-/// / `spritesBytes` is `sprites.bin` already loaded into the audio buffer by the
-/// host. Returns 0 on success, -1 on a bad argument.
+/// One-time setup. `canvasPtr` is the C-owned 176x120 RGB565 buffer;
+/// `spritesPtr`/`spritesBytes` is `sprites.bin` and `levelsPtr`/`levelsBytes`
+/// is `levels.bin`, both already loaded into the audio buffer by the host.
+/// Returns 0 on success, -1 on a bad argument, -2 if levels.bin fails header
+/// validation (wrong magic/version — e.g. stale against this binary).
 @_cdecl("junkbot_init")
 public func junkbot_init(
   _ canvasPtr: UnsafeMutablePointer<UInt16>?,
   _ spritesPtr: UnsafeRawPointer?,
-  _ spritesBytes: Int32
+  _ spritesBytes: Int32,
+  _ levelsPtr: UnsafeRawPointer?,
+  _ levelsBytes: Int32
 ) -> Int32 {
-  guard let canvasPtr, let spritesPtr,
-    spritesBytes > 0
+  guard let canvasPtr, let spritesPtr, spritesBytes > 0,
+    let levelsPtr, levelsBytes > 0
   else { return -1 }
+  guard let catalog = LevelBinCatalog(base: levelsPtr, byteCount: Int(levelsBytes)),
+    catalog.count > 0
+  else { return -2 }
   canvas = canvasPtr
   spritePixels = spritesPtr.assumingMemoryBound(to: UInt16.self)
+  levelCatalog = catalog
   engine.initialize()
   engine.onPlaySound = { id in rb_audio_sfx(id) }
   loadLevel(0)
@@ -132,7 +148,7 @@ public func junkbot_init(
 }
 
 @_cdecl("junkbot_level_count")
-public func junkbot_level_count() -> Int32 { Int32(embeddedLevels.count) }
+public func junkbot_level_count() -> Int32 { Int32(levelCatalog.count) }
 
 @_cdecl("junkbot_current_level")
 public func junkbot_current_level() -> Int32 { Int32(currentLevelIndex) }
@@ -142,7 +158,7 @@ public func junkbot_load_level(_ index: Int32) { loadLevel(Int(index)) }
 
 @_cdecl("junkbot_next_level")
 public func junkbot_next_level() {
-  if currentLevelIndex + 1 < embeddedLevels.count { loadLevel(currentLevelIndex + 1) }
+  if currentLevelIndex + 1 < levelCatalog.count { loadLevel(currentLevelIndex + 1) }
 }
 
 @_cdecl("junkbot_prev_level")
@@ -207,20 +223,15 @@ public func junkbot_winlose() -> Int32 { winLoseLatch }
 @_cdecl("junkbot_moves")
 public func junkbot_moves() -> Int32 { engine.moves }
 
-/// Null-terminated ASCII title/hint of the current level, for the C host's
-/// intro/status text (`StaticString` literals live in static storage for the
-/// program's lifetime, so returning the pointer is safe).
+/// Null-terminated UTF-8 title/hint of the current level, for the C host's
+/// intro/status text. The pointers alias levels.bin's storage in the audio
+/// buffer (strings are NUL-terminated in the file for exactly this), which
+/// stays loaded for the plugin's lifetime.
 @_cdecl("junkbot_level_title")
-public func junkbot_level_title() -> UnsafePointer<CChar>? {
-  UnsafeRawPointer(embeddedLevels[currentLevelIndex].title.utf8Start)
-    .assumingMemoryBound(to: CChar.self)
-}
+public func junkbot_level_title() -> UnsafePointer<CChar>? { currentLevelMeta.title }
 
 @_cdecl("junkbot_level_hint")
-public func junkbot_level_hint() -> UnsafePointer<CChar>? {
-  UnsafeRawPointer(embeddedLevels[currentLevelIndex].hint.utf8Start)
-    .assumingMemoryBound(to: CChar.self)
-}
+public func junkbot_level_hint() -> UnsafePointer<CChar>? { currentLevelMeta.hint }
 
 /// Rebuilds and rasterizes the world into the canvas, then overlays the cursor.
 /// C blits the canvas afterwards.
