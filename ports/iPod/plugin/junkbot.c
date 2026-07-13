@@ -26,7 +26,8 @@
 
 /* Embedded Swift entry points (libjunkbot.a; see source/Plugin.swift). The
  * simulator build substitutes junkbot_stub.c for all of these. */
-extern int junkbot_init(unsigned short *canvas, const void *sprites, int sprites_bytes);
+extern int junkbot_init(unsigned short *canvas, const void *sprites, int sprites_bytes,
+                        const void *levels, int levels_bytes);
 extern int junkbot_level_count(void);
 extern int junkbot_current_level(void);
 extern void junkbot_load_level(int index);
@@ -46,6 +47,7 @@ extern const char *junkbot_level_hint(void);
 extern int junkbot_shim_init(void);
 
 #define SPRITES_PATH ROCKBOX_DIR "/junkbot/sprites.bin"
+#define LEVELS_PATH  ROCKBOX_DIR "/junkbot/levels.bin"
 
 /* Game canvas: the Swift renderer rasterizes 176x120 RGB565 here; a 12px status
  * strip sits above it. Must match source/Renderer.swift's screenWidth/height. */
@@ -58,26 +60,46 @@ extern int junkbot_shim_init(void);
 static fb_data canvas[GAME_W * GAME_H];
 
 /* ------------------------------------------------------------------------ */
-/* Asset load: sprites.bin -> audio buffer (best-effort; a missing file is a  */
-/* hard error since nothing can be drawn without it).                         */
+/* Asset load: sprites.bin + levels.bin -> audio buffer, back to back (each   */
+/* at a 4-byte-aligned offset; both are arrays of 32-bit-or-smaller records). */
+/* Missing files are hard errors: nothing can be drawn or loaded without them.*/
 /* ------------------------------------------------------------------------ */
-static int load_sprites(const void **out, int *out_bytes)
+static int load_asset(const char *path, unsigned char *buf, size_t avail,
+                      const void **out, int *out_bytes)
 {
-    int fd = rb->open(SPRITES_PATH, O_RDONLY);
-    size_t need, have;
-    void *buf;
+    int fd = rb->open(path, O_RDONLY);
+    size_t need;
 
     if (fd < 0)
         return -1;
     need = (size_t)rb->filesize(fd);
-    buf = rb->plugin_get_audio_buffer(&have);
-    if (buf == NULL || have < need || rb->read(fd, buf, need) != (ssize_t)need) {
+    if (avail < need || rb->read(fd, buf, need) != (ssize_t)need) {
         rb->close(fd);
         return -1;
     }
     rb->close(fd);
     *out = buf;
     *out_bytes = (int)need;
+    return 0;
+}
+
+static int load_assets(const void **sprites, int *sprites_bytes,
+                       const void **levels, int *levels_bytes)
+{
+    size_t have;
+    unsigned char *buf = rb->plugin_get_audio_buffer(&have);
+    size_t offset;
+
+    if (buf == NULL)
+        return -1;
+    if (load_asset(SPRITES_PATH, buf, have, sprites, sprites_bytes) != 0)
+        return -1;
+    offset = ((size_t)*sprites_bytes + 3) & ~(size_t)3;
+    if (offset > have)
+        return -1;
+    if (load_asset(LEVELS_PATH, buf + offset, have - offset,
+                   levels, levels_bytes) != 0)
+        return -2;
     return 0;
 }
 
@@ -307,9 +329,10 @@ static int play_level(void)
 enum plugin_status plugin_start(const void *parameter)
 {
     enum plugin_status status = PLUGIN_OK;
-    const void *sprites = NULL;
-    int sprites_bytes = 0;
+    const void *sprites = NULL, *levels = NULL;
+    int sprites_bytes = 0, levels_bytes = 0;
     bool running = true;
+    int r;
 
     (void)parameter;
 
@@ -317,8 +340,10 @@ enum plugin_status plugin_start(const void *parameter)
         rb->splash(HZ * 2, "junkbot: allocator init failed");
         return PLUGIN_ERROR;
     }
-    if (load_sprites(&sprites, &sprites_bytes) != 0) {
-        rb->splash(HZ * 3, "junkbot: cannot load " SPRITES_PATH);
+    r = load_assets(&sprites, &sprites_bytes, &levels, &levels_bytes);
+    if (r != 0) {
+        rb->splash(HZ * 3, r == -2 ? "junkbot: cannot load " LEVELS_PATH
+                                   : "junkbot: cannot load " SPRITES_PATH);
         return PLUGIN_ERROR;
     }
 
@@ -326,8 +351,10 @@ enum plugin_status plugin_start(const void *parameter)
     rb->cpu_boost(true);
 #endif
 
-    if (junkbot_init(canvas, sprites, sprites_bytes) != 0) {
-        rb->splash(HZ * 2, "junkbot: engine init failed");
+    r = junkbot_init(canvas, sprites, sprites_bytes, levels, levels_bytes);
+    if (r != 0) {
+        rb->splash(HZ * 2, r == -2 ? "junkbot: bad levels.bin (rebuild/reinstall)"
+                                   : "junkbot: engine init failed");
         status = PLUGIN_ERROR;
         goto out;
     }
