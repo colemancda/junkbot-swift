@@ -10,6 +10,20 @@
 		152EA5995C9C9C6B110D1845 /* MenuFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFA5608579FE48ABF7AF444 /* MenuFocus.swift */; };
 		18D26B5957FD09484257240C /* GameInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01D4F1BF8AFC96EBF664693 /* GameInput.swift */; };
 		18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
+		F193E8C43421473AA812D204 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695D2BA05B7E4901AEB92654 /* Settings.swift */; };
+		253CB04789F0419D90D69A84 /* Scene3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6971E52DCF7400899B0F05E /* Scene3DManager.swift */; };
+		EB912983C8334164B87A0D17 /* Metal3DDecalTextures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DDCCCB6C4D4A58A116FC05 /* Metal3DDecalTextures.swift */; };
+		ED16F666190E41AC8930B97E /* Metal3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17173D7B480D4063879050D4 /* Metal3DManager.swift */; };
+		82579FD0777B4A49BF605624 /* Metal3DModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */; };
+		A7DD56338AD94A30ABA188BE /* Metal3DBrickGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */; };
+		DF8A0B26AC2C4A258FBDC258 /* Metal3DMatrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAF47E2EF09B4E688BE101E9 /* Metal3DMatrix.swift */; };
+		710CCA359A9E4E1EBFD23B78 /* Metal3DPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05199B95D7764EF194AB2B23 /* Metal3DPalette.swift */; };
+		261FABDECA8B47649D0E452E /* Metal3DSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AB2307E117477BA1D68245 /* Metal3DSpace.swift */; };
+		1309F7A16F1741F2903F299D /* Metal3DShaderSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63063F5CB94040F28DEFAEFA /* Metal3DShaderSource.swift */; };
+		095DB626A58C47FA9AA839BE /* Scene3DSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = F229141792E140B1A0446AA6 /* Scene3DSpace.swift */; };
+		659BA85DF9884405BD050DA8 /* Scene3DPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */; };
+		E079C9B3183544E7B19B645B /* Scene3DEdgeOutline.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */; };
+		B5CCB8F6D1114F2EA363811C /* Scene3DBrickGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E098501B8847A3A8E6E75C /* Scene3DBrickGeometry.swift */; };
 		1B6F3BFF58CA2CD13B2E4179 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
 		1C7934037DC924DB297410D6 /* font in Resources */ = {isa = PBXBuildFile; fileRef = D9009696D9CE05B4ACA7A84D /* font */; };
 		1EF74139078942C159051F64 /* JunkbotCore in Frameworks */ = {isa = PBXBuildFile; productRef = D5211C6EA65765510BAFF083 /* JunkbotCore */; };
@@ -31,12 +45,20 @@
 		739FD37E738A260F597ABB5E /* images in Resources */ = {isa = PBXBuildFile; fileRef = 7ABC53CD87E62119ECA82612 /* images */; };
 		7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */; };
 		8FBDE6E6645466B3726FF02D /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
+		04B59FD75637474B8526D62A /* Models3D in Resources */ = {isa = PBXBuildFile; fileRef = 53110F6A28164C558E20B19D /* Models3D */; };
 		90F5B9DCC79643FCCC2D4AA9 /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */; };
 		912DE7A95E8968CA2B005875 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 684AC0DE31432A873EFAC6DE /* SpriteKit.framework */; };
 		959CD4E53BF5DE386E4AA4B8 /* GameRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEAF26A80A6A4F478587CB4 /* GameRender.swift */; };
 		9A0281724423EAE25FA2969A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 71665DDCD5EBC42503E7AA6E /* Cocoa.framework */; };
 		9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */; };
+		27390B420FC141F1A8012241 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695D2BA05B7E4901AEB92654 /* Settings.swift */; };
+		03E0D2F3394849CB81E308F1 /* Scene3DManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6971E52DCF7400899B0F05E /* Scene3DManager.swift */; };
+		AF62B02192074A4C99204127 /* Scene3DSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = F229141792E140B1A0446AA6 /* Scene3DSpace.swift */; };
+		57E0B852366B442DA6406C0E /* Scene3DPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */; };
+		7209C23999274AAD8B45A6C8 /* Scene3DEdgeOutline.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */; };
+		28BBAD3D063C4078888279D6 /* Scene3DBrickGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E098501B8847A3A8E6E75C /* Scene3DBrickGeometry.swift */; };
 		AF47BCD7C94989952E1BE5DF /* levels in Resources */ = {isa = PBXBuildFile; fileRef = E028F9E26A0BC48651D4803F /* levels */; };
+		1E7416731A994EDD8F351598 /* Models3D in Resources */ = {isa = PBXBuildFile; fileRef = 53110F6A28164C558E20B19D /* Models3D */; };
 		C2613056D83422AC4550578A /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C786F84ECF2F6E04A100A222 /* Audio.swift */; };
 		D010B2569820B3548176DEF5 /* TextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2FF96610A7B608B6819333 /* TextRenderer.swift */; };
 		D59B2C8D2724F77938240E8D /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C786F84ECF2F6E04A100A222 /* Audio.swift */; };
@@ -52,6 +74,20 @@
 /* Begin PBXFileReference section */
 		0091656AA7788DA242224F6C /* SpriteKitRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpriteKitRenderer.swift; sourceTree = "<group>"; };
 		0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		695D2BA05B7E4901AEB92654 /* Settings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		A6971E52DCF7400899B0F05E /* Scene3DManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DManager.swift; sourceTree = "<group>"; };
+		44DDCCCB6C4D4A58A116FC05 /* Metal3DDecalTextures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DDecalTextures.swift; sourceTree = "<group>"; };
+		17173D7B480D4063879050D4 /* Metal3DManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DManager.swift; sourceTree = "<group>"; };
+		C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DModel.swift; sourceTree = "<group>"; };
+		9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DBrickGeometry.swift; sourceTree = "<group>"; };
+		EAF47E2EF09B4E688BE101E9 /* Metal3DMatrix.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DMatrix.swift; sourceTree = "<group>"; };
+		05199B95D7764EF194AB2B23 /* Metal3DPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DPalette.swift; sourceTree = "<group>"; };
+		C3AB2307E117477BA1D68245 /* Metal3DSpace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DSpace.swift; sourceTree = "<group>"; };
+		63063F5CB94040F28DEFAEFA /* Metal3DShaderSource.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Metal3DShaderSource.swift; sourceTree = "<group>"; };
+		F229141792E140B1A0446AA6 /* Scene3DSpace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DSpace.swift; sourceTree = "<group>"; };
+		6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DPalette.swift; sourceTree = "<group>"; };
+		CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DEdgeOutline.swift; sourceTree = "<group>"; };
+		F4E098501B8847A3A8E6E75C /* Scene3DBrickGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Scene3DBrickGeometry.swift; sourceTree = "<group>"; };
 		286E503B2E4868136B5FFAE0 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		28D166B8DC14C501136B5EC9 /* GameShell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameShell.swift; sourceTree = "<group>"; };
 		799030F6F7D1EFEE8AC4F52A /* GameActor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameActor.swift; sourceTree = "<group>"; };
@@ -75,6 +111,7 @@
 		DA2FF96610A7B608B6819333 /* TextRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextRenderer.swift; sourceTree = "<group>"; };
 		DCA10430D63931E5188B9F0C /* Junkbot-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Junkbot-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E028F9E26A0BC48651D4803F /* levels */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = levels; path = ../levels; sourceTree = "<group>"; };
+		53110F6A28164C558E20B19D /* Models3D */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = Models3D; path = ../Models3D; sourceTree = "<group>"; };
 		E1D32DA1FFDCC9BBBB19FBA1 /* Screens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Screens.swift; sourceTree = "<group>"; };
 		E494E35EB768F3928863BF16 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
 		F2686A242A10DB985CE6BA08 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -157,6 +194,20 @@
 				28D166B8DC14C501136B5EC9 /* GameShell.swift */,
 				799030F6F7D1EFEE8AC4F52A /* GameActor.swift */,
 				0A8F6C40EBAEC0E77CED2D55 /* GameScene.swift */,
+				695D2BA05B7E4901AEB92654 /* Settings.swift */,
+				A6971E52DCF7400899B0F05E /* Scene3DManager.swift */,
+				44DDCCCB6C4D4A58A116FC05 /* Metal3DDecalTextures.swift */,
+				17173D7B480D4063879050D4 /* Metal3DManager.swift */,
+				C0F7B2F9CA7D4E0DB7F9CD05 /* Metal3DModel.swift */,
+				9BBA165C73564B5CA75B0B25 /* Metal3DBrickGeometry.swift */,
+				EAF47E2EF09B4E688BE101E9 /* Metal3DMatrix.swift */,
+				05199B95D7764EF194AB2B23 /* Metal3DPalette.swift */,
+				C3AB2307E117477BA1D68245 /* Metal3DSpace.swift */,
+				63063F5CB94040F28DEFAEFA /* Metal3DShaderSource.swift */,
+				F229141792E140B1A0446AA6 /* Scene3DSpace.swift */,
+				6DEAB03F8ADF4BF19A4F26AA /* Scene3DPalette.swift */,
+				CA83A0819E894F4CAC9EE093 /* Scene3DEdgeOutline.swift */,
+				F4E098501B8847A3A8E6E75C /* Scene3DBrickGeometry.swift */,
 				66F04F1189E2EB31ED8D0372 /* AppDelegate_macOS.swift */,
 				B2A0B482D4732EC2C47E1087 /* AppDelegate_tvOS.swift */,
 				A2C55B46A59424E0DB53E587 /* GameViewController.swift */,
@@ -184,6 +235,7 @@
 				7ABC53CD87E62119ECA82612 /* images */,
 				D9009696D9CE05B4ACA7A84D /* font */,
 				E028F9E26A0BC48651D4803F /* levels */,
+				53110F6A28164C558E20B19D /* Models3D */,
 			);
 			name = Assets;
 			path = ..;
@@ -294,6 +346,7 @@
 				739FD37E738A260F597ABB5E /* images in Resources */,
 				DF4E924609CA7E170346FB3B /* font in Resources */,
 				8FBDE6E6645466B3726FF02D /* levels in Resources */,
+				04B59FD75637474B8526D62A /* Models3D in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,6 +357,7 @@
 				2189918BCF1E0990F43A3A33 /* images in Resources */,
 				1C7934037DC924DB297410D6 /* font in Resources */,
 				AF47BCD7C94989952E1BE5DF /* levels in Resources */,
+				1E7416731A994EDD8F351598 /* Models3D in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +415,20 @@
 				2DA2339799CC53EC541AED9F /* GameShell.swift in Sources */,
 				D7F05D5C1B61EA4D076442A8 /* GameActor.swift in Sources */,
 				18E371AC64EA0A17C16EA356 /* GameScene.swift in Sources */,
+				F193E8C43421473AA812D204 /* Settings.swift in Sources */,
+				253CB04789F0419D90D69A84 /* Scene3DManager.swift in Sources */,
+				EB912983C8334164B87A0D17 /* Metal3DDecalTextures.swift in Sources */,
+				ED16F666190E41AC8930B97E /* Metal3DManager.swift in Sources */,
+				82579FD0777B4A49BF605624 /* Metal3DModel.swift in Sources */,
+				A7DD56338AD94A30ABA188BE /* Metal3DBrickGeometry.swift in Sources */,
+				DF8A0B26AC2C4A258FBDC258 /* Metal3DMatrix.swift in Sources */,
+				710CCA359A9E4E1EBFD23B78 /* Metal3DPalette.swift in Sources */,
+				261FABDECA8B47649D0E452E /* Metal3DSpace.swift in Sources */,
+				1309F7A16F1741F2903F299D /* Metal3DShaderSource.swift in Sources */,
+				095DB626A58C47FA9AA839BE /* Scene3DSpace.swift in Sources */,
+				659BA85DF9884405BD050DA8 /* Scene3DPalette.swift in Sources */,
+				E079C9B3183544E7B19B645B /* Scene3DEdgeOutline.swift in Sources */,
+				B5CCB8F6D1114F2EA363811C /* Scene3DBrickGeometry.swift in Sources */,
 				631E7D9DD515F05DE6D763B1 /* AppDelegate_macOS.swift in Sources */,
 				D59B2C8D2724F77938240E8D /* Audio.swift in Sources */,
 				F8562D8447D1D905F9E409D6 /* GamepadInput.swift in Sources */,
@@ -380,6 +448,12 @@
 				70B4A03C67495B53584D7663 /* GameShell.swift in Sources */,
 				0629B113A100F1FD1ECB4231 /* GameActor.swift in Sources */,
 				9BAF1D1C16C05C755900F883 /* GameScene.swift in Sources */,
+				27390B420FC141F1A8012241 /* Settings.swift in Sources */,
+				03E0D2F3394849CB81E308F1 /* Scene3DManager.swift in Sources */,
+				AF62B02192074A4C99204127 /* Scene3DSpace.swift in Sources */,
+				57E0B852366B442DA6406C0E /* Scene3DPalette.swift in Sources */,
+				7209C23999274AAD8B45A6C8 /* Scene3DEdgeOutline.swift in Sources */,
+				28BBAD3D063C4078888279D6 /* Scene3DBrickGeometry.swift in Sources */,
 				7C93ABA5E3DC25BF4B45EB28 /* AppDelegate_tvOS.swift in Sources */,
 				292A3D3E7EFB7F723BEA7A84 /* GameViewController.swift in Sources */,
 				C2613056D83422AC4550578A /* Audio.swift in Sources */,

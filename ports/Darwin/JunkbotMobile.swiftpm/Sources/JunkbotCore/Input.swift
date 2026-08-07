@@ -21,9 +21,15 @@ extension GameEngine {
   var dragResolveThreshold: Int32 { CELL_H / 2 }
 
   /// Indices of every grabbable (not `fixed`, not already `grabbed`, `brick`/`jump`/`shield`)
-  /// entity whose bounds contain the given world position. Matches JS's play-mode allowlist in
-  /// `possibleGrabs` exactly (other types, e.g. crates or hazards, are never play-mode-draggable
-  /// even though they aren't `fixed`).
+  /// entity whose bounds contain the given world position, ordered topmost (smallest `y`) first.
+  /// Matches JS's play-mode allowlist in `possibleGrabs` exactly (other types, e.g. crates or
+  /// hazards, are never play-mode-draggable even though they aren't `fixed`).
+  ///
+  /// Ordering matters because callers (`mouseDown`, `cursorHint`) take `.first` as *the* grab
+  /// target - entity array order is just level-file declaration order (no relation to stacking),
+  /// so without sorting by `y` a click on a stack could silently pick a lower brick instead of the
+  /// one actually visible/clicked at the top, dragging it (and whatever merely rests on it) out
+  /// from under the bricks stacked above.
   func possibleGrabsAt(worldX: Int32, worldY: Int32) -> [Int] {
     var result: [Int] = []
     for i in 0..<entities.count {
@@ -35,6 +41,7 @@ extension GameEngine {
         result.append(i)
       }
     }
+    result.sort { entities[$0].y < entities[$1].y }
     return result
   }
 

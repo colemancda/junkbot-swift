@@ -1,6 +1,7 @@
 #if os(macOS)
 import Cocoa
 import SpriteKit
+import MetalKit
 import JunkbotCore
 
 /// macOS-only: creates the window/`SKView`/`JunkbotScene`. Not shared with iOS/tvOS - see
@@ -66,10 +67,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // actually running fullscreen with no other visible windows - neither alone is enough.
     window.collectionBehavior.insert(.fullScreenPrimary)
 
+    // A container hosting both an `MTKView` (the live 3D play-mode scene, behind, hidden by
+    // default) and the `SKView` (on top always - it owns input handling and draws menu chrome/HUD
+    // even in 3D mode) - see `Metal3DManager.swift`'s doc comment (macOS renders 3D mode via
+    // Metal, not SceneKit - `GameViewController.swift`'s iOS/tvOS setup is unaffected and still
+    // uses `SCNView`/`Scene3DManager`).
+    let container = NSView(frame: contentRect)
+    container.autoresizingMask = [.width, .height]
+
+    let newMTKView = MTKView(frame: contentRect)
+    newMTKView.autoresizingMask = [.width, .height]
+    if let manager = metal3DManager {
+      manager.attach(to: newMTKView)
+    }
+    newMTKView.isHidden = true
+    newMTKView.wantsLayer = true
+    newMTKView.layer?.backgroundColor = NSColor.black.cgColor
+    container.addSubview(newMTKView)
+    metalView = newMTKView
+
     let view = SKView(frame: contentRect)
     view.ignoresSiblingOrder = true
     // The view tracks the window's actual (resizable) size...
     view.autoresizingMask = [.width, .height]
+    view.allowsTransparency = true
     let scene = JunkbotScene(size: contentRect.size)
     // ...while the *scene* stays fixed at that same logical size - `.aspectFit` scales it
     // uniformly (fractionally, not integer-only) to fill as much of the actual window as
@@ -80,7 +101,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // window grew past the level's own bounds, since there's nothing beyond them to draw).
     scene.scaleMode = .aspectFit
     view.presentScene(scene)
-    window.contentView = view
+    container.addSubview(view)
+    window.contentView = container
     window.makeKeyAndOrderFront(nil)
     // Launch straight into fullscreen rather than requiring the user to click the window's
     // fullscreen button manually - `.aspectFit`'s scale-to-fit presentation already looks right
@@ -98,9 +120,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // GameController) is the standard macOS-side workaround; `GamepadInput.swift`'s own `.escape`
     // case is compiled out on macOS (`#if !os(macOS)`) to avoid a double-fire if that ever changes.
     NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-      guard event.keyCode == 53 /* kVK_Escape */ else { return event }
-      Task { @MainActor in escapePressed() }
-      return nil
+      if event.keyCode == 53 /* kVK_Escape */ {
+        Task { @MainActor in escapePressed() }
+        return nil
+      }
+      // Cmd+2 (force 2D) / Cmd+3 (force 3D) - mirrors the title screen's 3D/2D button
+      // (`Screens.swift`'s `setRender3DEnabled`). Only meaningful on macOS ("Cmd" is Mac
+      // terminology), so kept in this local monitor alongside Escape rather than in
+      // `GamepadInput.swift`'s cross-platform `GCKeyboard` handler.
+      if event.modifierFlags.contains(.command) {
+        if event.keyCode == 19 /* ANSI_2 */ {
+          Task { @MainActor in setRender3DEnabled(false) }
+          return nil
+        }
+        if event.keyCode == 20 /* ANSI_3 */ {
+          Task { @MainActor in setRender3DEnabled(true) }
+          return nil
+        }
+      }
+      return event
     }
   }
 

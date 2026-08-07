@@ -37,12 +37,17 @@ let package = Package(
     // way to drive its installed executor's job queue without calling the raw C function
     // ourselves (see AndroidMain.swift's poll loop).
     .systemLibrary(name: "CAndroidLooper"),
+    // The NDK's own `vulkan/vulkan.h` (+ `vulkan_android.h` platform header) - no Swift/Vulkan
+    // wrapper package exists anywhere, so `Vulkan3DManager.swift` calls the raw C API directly.
+    // `libvulkan.so` ships on-device (API 24+, every Vulkan-capable device) - not bundled by us.
+    .systemLibrary(name: "CVulkan"),
     // The exact same sources as ports/SDL3's JunkbotSDL3 executable (Sources/JunkbotSDL3 is a
     // symlink into ../SDL3), minus main.swift's top-level code - library targets can't contain
     // top-level code, and Android's entry point is `SDL_main` below instead.
     .target(
       name: "JunkbotGame",
       dependencies: [
+        "CVulkan",
         .product(name: "JunkbotCore", package: "junkbot-swift"),
         .product(name: "SDL3Swift", package: "SDL"),
         .product(name: "SDL3Image", package: "SDL"),
@@ -53,7 +58,11 @@ let package = Package(
         .product(name: "AndroidLooper", package: "swift-android-native"),
       ],
       path: "Sources/JunkbotSDL3",
-      exclude: ["main.swift"]
+      exclude: ["main.swift"],
+      // The `Vulkan3DManager*.swift` files (also under `Sources/JunkbotSDL3` - see that
+      // directory's own doc comments) call the raw Vulkan C API - `libvulkan.so` ships on-device
+      // (API 24+, every Vulkan-capable device), not bundled by us.
+      linkerSettings: [.linkedLibrary("vulkan")]
     ),
     .target(
       name: "JunkbotAndroid",

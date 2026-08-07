@@ -104,8 +104,12 @@ import JunkbotCore
   // MARK: - Frame lifecycle
 
   func clear(r: UInt8, g: UInt8, b: UInt8, a: UInt8) {
+    // Transparent instead of the normal opaque backdrop while the live 3D scene is showing
+    // through behind this view (see `suppressWorldSpriteDrawing`'s doc comment) - otherwise this
+    // opaque fill would hide the `SCNView` sitting behind the `SKView` entirely.
+    let alpha = suppressWorldSpriteDrawing ? 0 : CGFloat(a) / 255
     scene?.backgroundColor = SKColor(
-      red: CGFloat(r) / 255, green: CGFloat(g) / 255, blue: CGFloat(b) / 255, alpha: CGFloat(a) / 255)
+      red: CGFloat(r) / 255, green: CGFloat(g) / 255, blue: CGFloat(b) / 255, alpha: alpha)
     for node in frameNodes { node.removeFromParent() }
     frameNodes.removeAll(keepingCapacity: true)
   }

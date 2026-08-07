@@ -16,6 +16,10 @@ final class JunkbotScene: SKScene {
   /// For `gamepadState.pollSticks(deltaSeconds:)` - SpriteKit's `update(_:)` only gives an
   /// absolute timestamp, not a per-frame delta the way SDL's own frame timer does.
   private var lastFrameTime: TimeInterval?
+  /// Tracks the previous frame's 3D-active state, so entering/leaving 3D mode (toggled via
+  /// `Settings.render3DEnabled`, or just entering/leaving `.playing`) only resets/reframes
+  /// `scene3DManager` on the actual transition, not every frame.
+  private var scene3DWasActive = false
 
   override func didMove(to view: SKView) {
     guard !didStart else { return }
@@ -65,6 +69,45 @@ final class JunkbotScene: SKScene {
     }
     #endif
     musicPlayer.update()
+
+    // Play-mode-only 3D (see `Settings.render3DEnabled`'s doc comment): on the transition into or
+    // out of it, reset `scene3DManager`'s entity-node table (a fresh level's entity IDs mean
+    // nothing to whatever nodes are already tracked) and reframe its camera; every frame while
+    // active, sync it from the latest tick's entities and suppress the 2D world-sprite draw so
+    // the 3D scene shows through the now-transparent `SKView` instead of being drawn over.
+    let scene3DShouldBeActive = Settings.render3DEnabled && currentScreen == .playing
+    if scene3DShouldBeActive != scene3DWasActive {
+      scene3DWasActive = scene3DShouldBeActive
+      // macOS renders 3D mode via `Metal3DManager` (`Metal3DManager.swift`) instead of
+      // `Scene3DManager`/SceneKit - see that file's doc comment. iOS/tvOS are unaffected, still on
+      // the SceneKit path.
+      #if os(macOS)
+      metalView?.isHidden = !scene3DShouldBeActive
+      if scene3DShouldBeActive {
+        metal3DManager?.reset()
+        metal3DManager?.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
+        metal3DManager?.loadLevelDecals(
+          backgroundDecals: gameEngine.backgroundDecals, decals: gameEngine.decals)
+      }
+      #else
+      scnView?.isHidden = !scene3DShouldBeActive
+      if scene3DShouldBeActive {
+        scene3DManager.reset()
+        scene3DManager.loadBackdrop(spriteID: gameEngine.backdropSpriteID)
+      }
+      #endif
+    }
+    suppressWorldSpriteDrawing = scene3DShouldBeActive
+    if scene3DShouldBeActive {
+      #if os(macOS)
+      metal3DManager?.sync(entities: gameEngine.entities)
+      metal3DManager?.syncCamera()
+      #else
+      scene3DManager.sync(entities: gameEngine.entities)
+      scene3DManager.syncCamera()
+      #endif
+    }
+
     render()
   }
 

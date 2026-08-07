@@ -1,0 +1,1 @@
+../../JunkbotMobile.swiftpm/Sources/JunkbotMobile/Metal3DShaderSource.swift

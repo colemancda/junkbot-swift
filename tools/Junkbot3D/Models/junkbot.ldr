@@ -1,0 +1,45 @@
+0 Junkbot - minifig-scale figure (starter base model)
+0 Name: junkbot.ldr
+0 Author: generated for Alsey
+0 !LDRAW_ORG Model
+0
+0 // ============================================================
+0 // NOTES
+0 // -Y is UP in LDraw. 1 brick = 24 LDU tall, 1 stud = 20 LDU.
+0 // Vertical/side offsets below are APPROXIMATE. Open in LeoCAD
+0 // or Studio and nudge each part to seat it - the minifig-leg
+0 // assembly and the slope have origins that won't line up to
+0 // the exact LDU without hand-adjustment.
+0 //
+0 // Colors used:
+0 //   25 = Orange              (head + body)
+0 //   14 = Yellow              (lid)
+0 //   71 = Light Bluish Gray   (legs + key)
+0 // ============================================================
+0
+0 // ---- Legs: light-gray minifig hips + legs, as separate parts (not the fused ----
+0 // 3815c01) so each leg can be rotated independently for the walk cycle. Offsets
+0 // match 3815c01.dat's own subfile placements: legs sit 12 LDU below the hips,
+0 // and each leg's own origin is already at its hip pivot point, so rotating a leg
+0 // node about local X swings it like a hinge with no extra pivot offset needed.
+0 // 3816 = right leg, 3817 = left leg.
+1 71 0 -40 10 1 0 0 0 1 0 0 0 1 3815.dat
+1 71 0 -28 10 1 0 0 0 1 0 0 0 1 3816.dat
+1 71 0 -28 10 1 0 0 0 1 0 0 0 1 3817.dat
+0
+0 // ---- Body: orange 2x2 brick ----
+1 25 0 -60 0 1 0 0 0 1 0 0 0 1 3003.dat
+0
+0 // ---- Head: orange 2x2 45-degree slope ----
+0 // Swap to 3039p05.dat for the printed grille face
+0 // (note: that print is BLACK on the slope, not orange-on-orange).
+1 25 0 -84 10 1 0 0 0 1 0 0 0 1 3039.dat
+0
+0 // ---- Lid: yellow 1x2 tile, sitting on the flat top/back of the head ----
+1 14 0 -92 10 1 0 0 0 1 0 0 0 1 3069b.dat
+0
+0 // ---- Wind-up key: light gray, poking out the left side ----
+0 // 4234 is oversized vs the sprite; rotated 90 deg about Z here.
+0 // Reposition / rescale to taste.
+0
+0 STEP

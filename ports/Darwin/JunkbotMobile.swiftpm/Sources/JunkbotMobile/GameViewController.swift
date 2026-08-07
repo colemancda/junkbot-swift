@@ -1,6 +1,7 @@
 #if canImport(UIKit)
 import UIKit
 import SpriteKit
+import SceneKit
 import JunkbotCore
 
 /// Hosts the one `SKView`/`JunkbotScene` this app ever presents - shared between the tvOS
@@ -10,18 +11,39 @@ import JunkbotCore
 /// not a `UIApplicationDelegate`). Locking to landscape only makes sense on iOS (phones/iPads
 /// support portrait); tvOS has no orientation concept at all (always fullscreen), hence the
 /// `#if os(iOS)` guard below.
+///
+/// Also hosts an `SCNView` (`scnView` global, `Scene3DManager.swift`) as a sibling *behind* the
+/// `SKView` - the live 3D play-mode scene. The `SKView` stays on top always (it owns input
+/// handling and draws menu chrome/HUD even in 3D mode); `JunkbotScene.update(_:)` toggles the
+/// `SCNView`'s visibility and makes the `SKView`'s background transparent while 3D is active, so
+/// the 3D scene shows through underneath (see `suppressWorldSpriteDrawing`'s doc comment in
+/// `GameRender.swift`).
 public final class GameViewController: UIViewController {
   public override func loadView() {
-    let skView = SKView(frame: UIScreen.main.bounds)
+    let container = UIView(frame: UIScreen.main.bounds)
+
+    let newSCNView = SCNView(frame: container.bounds)
+    newSCNView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    newSCNView.scene = scene3DManager.scene
+    newSCNView.pointOfView = scene3DManager.cameraNode
+    newSCNView.isHidden = true
+    newSCNView.backgroundColor = .black
+    container.addSubview(newSCNView)
+    scnView = newSCNView
+
+    let skView = SKView(frame: container.bounds)
     // The view tracks whatever size its container (the tvOS `UIWindow` or the iOS Playground's
     // SwiftUI-hosted controller) actually gives it...
     skView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    view = skView
+    skView.allowsTransparency = true
+    container.addSubview(skView)
+
+    view = container
   }
 
   public override func viewDidLoad() {
     super.viewDidLoad()
-    guard let skView = view as? SKView else { return }
+    guard let skView = view.subviews.compactMap({ $0 as? SKView }).first else { return }
     skView.ignoresSiblingOrder = true
     // Load the title screen level before creating the scene, so its fixed logical size can match
     // the level's actual bounds instead of an arbitrary fixed guess - matching `ports/SDL3`'s

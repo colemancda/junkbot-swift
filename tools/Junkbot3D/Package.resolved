@@ -1,0 +1,15 @@
+{
+  "originHash" : "b0de355637fc74cfa98f3165759bf09adc267925d262a9866c5cef0e00b2c7f8",
+  "pins" : [
+    {
+      "identity" : "swift-lego-draw",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/MillerTechnologyPeru/swift-lego-draw",
+      "state" : {
+        "branch" : "master",
+        "revision" : "4117023f6eb26e235a533385e990b2d3718a5c7c"
+      }
+    }
+  ],
+  "version" : 3
+}
