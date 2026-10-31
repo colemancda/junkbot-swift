@@ -55,6 +55,9 @@ enum Screen: Equatable {
 
 // MARK: - Save data
 
+// Embedded builds have no Foundation or `Codable`, so they provide `loadSaveData()`/
+// `writeSaveData()` themselves (`ports/iOS9`'s `SaveStorage.swift`).
+#if !hasFeature(Embedded)
 /// `SaveData` lives at the macOS-conventional Application Support location (not repo-relative,
 /// unlike every other asset path here - this is real user data, not a dev-time repo asset).
 let saveDataURL: URL = {
@@ -82,6 +85,7 @@ func loadSaveData() -> SaveData {
     FileHandle.standardError.write(Data("Failed to write save data: \(error)\n".utf8))
   }
 }
+#endif
 
 @GameActor var saveData = loadSaveData()
 
@@ -142,9 +146,9 @@ let levelToastNanoseconds: UInt64 = 2_500_000_000
     cameraCenterX = Double(bounds.x) + Double(bounds.width) / 2
     cameraCenterY = Double(bounds.y) + Double(bounds.height) / 2
   } else if !gameEngine.entities.isEmpty {
-    let minX = gameEngine.entities.map(\.x).min() ?? 0
+    let minX = gameEngine.entities.map { $0.x }.min() ?? 0
     let maxX = gameEngine.entities.map { $0.x + $0.width }.max() ?? 0
-    let minY = gameEngine.entities.map(\.y).min() ?? 0
+    let minY = gameEngine.entities.map { $0.y }.min() ?? 0
     let maxY = gameEngine.entities.map { $0.y + $0.height }.max() ?? 0
     cameraCenterX = Double(minX + maxX) / 2
     cameraCenterY = Double(minY + maxY) / 2
