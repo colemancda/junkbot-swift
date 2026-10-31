@@ -22,7 +22,12 @@ import JunkbotCore
 /// top-left. `flippedY(_:height:)` converts at every draw call, including inside texture-rect
 /// sub-region clipping.
 @MainActor final class SpriteKitRenderer: @preconcurrency GameRenderer {
+  #if hasFeature(Embedded)
+  /// Embedded Swift has no weak references; the one scene lives as long as the app anyway.
+  private var scene: SKScene?
+  #else
   private weak var scene: SKScene?
+  #endif
 
   private var texturesByHandle: [Int: SKTexture] = [:]
   private var alphaByHandle: [Int: Float] = [:]
