@@ -5,7 +5,9 @@
 // `levels/*.txt` at runtime - no `repoRoot`, no file I/O, no text parsing. `LevelCatalog` itself
 // stays around unused-by-ports (see its own doc comment) since it's what `tools/LevelDump` uses
 // to produce that generated data in the first place, and its round-trip is exercised by tests.
-#if !hasFeature(Embedded)
+// Embedded ports with room for the `String` machinery (`ports/iOS9`) opt in with
+// `-D EMBEDDED_LEVEL_CATALOG`.
+#if !hasFeature(Embedded) || EMBEDDED_LEVEL_CATALOG
 
 /// One level within `EmbeddedLevelCatalog`'s pagination - `title`/`par` as plain `String`/`Int?`
 /// (matching `LevelCatalogEntry`'s field types) since, unlike the underlying `EmbeddedLevel`,

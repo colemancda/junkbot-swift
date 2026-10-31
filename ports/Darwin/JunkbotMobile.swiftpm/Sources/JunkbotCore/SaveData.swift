@@ -1,13 +1,12 @@
 // `Codable` synthesis for `[String: Int]` isn't supported in this project's embedded-Swift/WASM
 // build (confirmed: `make all` fails with "type 'SaveData' does not conform to protocol
 // 'Encodable'" / "cannot automatically synthesize 'Encodable' because '[String : Int]' does not
-// conform to 'Encodable'"). SaveData is SDL3-only anyway - the browser build has its own
-// localStorage-based persistence and never touches this type - so it's gated out of the WASM
-// build entirely, same as `LevelCatalog.swift`/`LevelParse.swift`. Pure stdlib otherwise -
-// `Codable` itself is a standard-library protocol, not Foundation (actual `JSONEncoder`/
-// `JSONDecoder` use lives in each native port's own main.swift, which imports Foundation itself
-// for that).
-#if !hasFeature(Embedded)
+// conform to 'Encodable'"), so the `Codable` conformance is gated out of Embedded builds. The
+// browser build has its own localStorage-based persistence and never touches this type; the
+// embedded iOS 9 port (`ports/iOS9`) stores it in its own line-based format instead. Pure stdlib
+// otherwise - `Codable` itself is a standard-library protocol, not Foundation (actual
+// `JSONEncoder`/`JSONDecoder` use lives in each native port's own main.swift, which imports
+// Foundation itself for that).
 
 /// Best-moves-per-level persistence, mirroring the *shape* of `src/game.js`'s relevant
 /// `storageKeys` (`score(levelName)`) - storage-mechanism-agnostic: the browser build keys
@@ -16,7 +15,7 @@
 /// Deliberately has no locking/"is this level group unlocked" concept - the browser build never
 /// implemented level locking either (confirmed: `// @TODO: once there's any locking` in
 /// `src/game.js`), so completion is purely informational here, same as there.
-public struct SaveData: Codable, Equatable, Sendable {
+public struct SaveData: Equatable, Sendable {
   /// Best (lowest) move count achieved per level, keyed by level title (matches
   /// `storageKeys.score`'s keying - level titles are unique across a game's level list).
   public var bestMoves: [String: Int]
@@ -49,4 +48,7 @@ public struct SaveData: Codable, Equatable, Sendable {
     return moves <= par
   }
 }
+
+#if !hasFeature(Embedded)
+extension SaveData: Codable {}
 #endif

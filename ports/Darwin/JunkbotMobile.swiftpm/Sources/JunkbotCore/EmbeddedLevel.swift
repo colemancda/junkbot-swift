@@ -49,8 +49,9 @@ public struct EmbeddedLevel: Sendable {
 // (see `Sources/JunkbotCore/Level.swift`'s note). Embedded targets (ports/NDS, the WASM build)
 // don't need this convenience - they read `EmbeddedLevel.title`/`.hint` directly as
 // `StaticString` for display and only need `loadLevelState`/`setBackground` from this level's
-// data, not the engine's own `levelTitle`/`levelHint`/`levelPar` properties.
-#if !hasFeature(Embedded)
+// data, not the engine's own `levelTitle`/`levelHint`/`levelPar` properties. Embedded ports that
+// do want it (`ports/iOS9`, for the shared menus) opt in with `-D EMBEDDED_LEVEL_CATALOG`.
+#if !hasFeature(Embedded) || EMBEDDED_LEVEL_CATALOG
 extension GameEngine {
   /// Loads a pre-parsed `EmbeddedLevel`: entities/bounds via `loadLevelState`, plus the metadata
   /// (`levelTitle`/`levelHint`/`levelPar`) and background layers `loadLevel(_:Level)` would
